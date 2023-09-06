@@ -1,0 +1,12 @@
+apiVersion: clusterinventory.kyma-project.io/v1
+kind: ClusterInventory
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterinventory
+    app.kubernetes.io/instance: clusterinventory-sample
+    app.kubernetes.io/part-of: cluster-inventory
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: cluster-inventory
+  name: clusterinventory-sample
+spec:
+  # TODO(user): Add fields here

@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- clusterinventory_v1_clusterinventory.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples
