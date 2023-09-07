@@ -12,7 +12,8 @@ func TestDynamicKubeconfig(t *testing.T) {
 		// when
 
 		// then
-		require.True(t, true)
+                :x
+                :x
 	})
 
 	t.Run("TBD: should return valid dynamic kubeconfig", func(t *testing.T) {
