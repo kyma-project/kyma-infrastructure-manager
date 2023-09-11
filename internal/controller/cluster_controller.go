@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"go.uber.org/zap"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -31,6 +32,7 @@ import (
 type ClusterReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	log    *zap.SugaredLogger
 }
 
 //+kubebuilder:rbac:groups=clusterinventory.kyma-project.io,resources=clusters,verbs=get;list;watch;create;update;patch;delete
@@ -49,7 +51,10 @@ type ClusterReconciler struct {
 func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	r.log.
+		With("name", req.Name).
+		With("ns", req.Namespace).
+		With("DISPER-TEST", "YOLO")
 
 	return ctrl.Result{}, nil
 }
