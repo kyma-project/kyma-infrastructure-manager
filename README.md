@@ -3,13 +3,11 @@
 # Infrastructure manager
 
 ## Overview
-<!--- mandatory section --->
 
 This project **will be** responsible for managing [Kyma](https://kyma-project.io/#/) clusters infrastructure. Buil using [kubebuilder framework](https://github.com/kubernetes-sigs/kubebuilder)
 It's main responsibilities **will be**:
 - Provisioning and deprovisioning Kyma clusters
 - Generating dynamic kubeconfigs
-
 
 ## Prerequisites
 
