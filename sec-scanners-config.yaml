@@ -1,0 +1,8 @@
+module-name: infrastructure-manager
+protecode:
+  - europe-docker.pkg.dev/kyma-project/prod/infrastructure-manager:0.0.1
+whitesource:
+  language: golang-mod
+  subprojects: false
+  exclude:
+    - "**/*_test.go"
