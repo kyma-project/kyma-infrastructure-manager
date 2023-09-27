@@ -129,6 +129,19 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
+.PHONY: k3d-import-img
+k3d-import-img: 
+	k3d image import $(IMG) -c im
+
+.PHONY: apply-sample-cr
+apply-sample-cr: 
+	kubectl apply -f config/samples/infrastructuremanager_v1_gardenercluster.yaml
+
+.PHONE: local-build-and-deploy
+local-build-and-deploy: docker-build k3d-import-img deploy gardener-secret-deploy apply-sample-cr
+
+.PHONY: local-rebuild-and-redeploy
+local-rebuild-and-redeploy: undeploy local-build-and-deploy: 
 ##@ Build Dependencies
 
 ## Location to install dependencies to
