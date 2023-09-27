@@ -141,7 +141,7 @@ apply-sample-cr:
 local-build-and-deploy: docker-build k3d-import-img deploy gardener-secret-deploy apply-sample-cr
 
 .PHONY: local-rebuild-and-redeploy
-local-rebuild-and-redeploy: undeploy local-build-and-deploy: 
+local-rebuild-and-redeploy: undeploy local-build-and-deploy
 ##@ Build Dependencies
 
 ## Location to install dependencies to
