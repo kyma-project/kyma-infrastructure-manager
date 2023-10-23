@@ -1,4 +1,4 @@
-apiVersion: clusterinventory.kyma-project.io/v1
+apiVersion: infrastructuremanager.kyma-project.io/v1
 kind: GardenerCluster
 metadata:
   labels:

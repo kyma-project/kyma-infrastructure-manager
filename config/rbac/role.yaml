@@ -5,6 +5,17 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
   - infrastructuremanager.kyma-project.io
   resources:
   - gardenerclusters
@@ -21,12 +32,4 @@ rules:
   resources:
   - gardenerclusters/finalizers
   verbs:
-  - update
-- apiGroups:
-  - infrastructuremanager.kyma-project.io
-  resources:
-  - gardenerclusters/status
-  verbs:
-  - get
-  - patch
   - update

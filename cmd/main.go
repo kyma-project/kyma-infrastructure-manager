@@ -18,11 +18,16 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
+	"time"
 
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardener_apis "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller"
 	"github.com/kyma-project/infrastructure-manager/internal/gardener"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -30,6 +35,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -46,11 +52,15 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+const defaultExpirationTime = 24 * time.Hour
+
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
 	var gardenerKubeconfigPath string
+	var gardenerProjectName string
+	var expirationTime time.Duration
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -58,6 +68,8 @@ func main() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&gardenerKubeconfigPath, "gardener-kubeconfig-path", "/gardener/kubeconfig/kubeconfig", "Kubeconfig file for Gardener cluster")
+	flag.StringVar(&gardenerProjectName, "gardener-project-name", "gardener-project", "Name of the Gardener project")
+	flag.DurationVar(&expirationTime, "kubeconfig-expiration-time", defaultExpirationTime, "Dynamic kubeconfig expiration time")
 
 	opts := zap.Options{
 		Development: true,
@@ -93,9 +105,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	provider := gardener.KubeconfigProvider{}
+	gardenerNamespace := fmt.Sprintf("garden-%s", gardenerProjectName)
+	expirationInSeconds := int64(expirationTime.Seconds())
+	kubeconfigProvider, err := setupKubernetesKubeconfigProvider(gardenerKubeconfigPath, gardenerNamespace, expirationInSeconds)
 
-	if err = (controller.NewGardenerClusterController(mgr, provider, logger)).SetupWithManager(mgr); err != nil {
+	if err != nil {
+		setupLog.Error(err, "unable to initialize kubeconfig provider", "controller", "GardenerCluster")
+		os.Exit(1)
+	}
+
+	if err = (controller.NewGardenerClusterController(mgr, kubeconfigProvider, logger)).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GardenerCluster")
 		os.Exit(1)
 	}
@@ -110,15 +129,39 @@ func main() {
 		os.Exit(1)
 	}
 
-	_, err = gardener.NewClientFromFile(gardenerKubeconfigPath)
-	if err != nil {
-		setupLog.Error(err, "failed to load Gardener kubeconfig")
-		os.Exit(1)
-	}
-
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func setupKubernetesKubeconfigProvider(kubeconfigPath string, namespace string, expirationInSeconds int64) (gardener.KubeconfigProvider, error) {
+	restConfig, err := gardener.NewRestConfigFromFile(kubeconfigPath)
+	if err != nil {
+		return gardener.KubeconfigProvider{}, err
+	}
+
+	gardenerClientSet, err := gardener_apis.NewForConfig(restConfig)
+	if err != nil {
+		return gardener.KubeconfigProvider{}, err
+	}
+
+	gardenerClient, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		return gardener.KubeconfigProvider{}, err
+	}
+
+	shootClient := gardenerClientSet.Shoots(namespace)
+	dynamicKubeconfigAPI := gardenerClient.SubResource("adminkubeconfig")
+
+	err = v1beta1.AddToScheme(gardenerClient.Scheme())
+	if err != nil {
+		return gardener.KubeconfigProvider{}, errors.Wrap(err, "failed to register Gardener schema")
+	}
+
+	return gardener.NewKubeconfigProvider(shootClient,
+		dynamicKubeconfigAPI,
+		namespace,
+		expirationInSeconds), nil
 }

@@ -62,7 +62,7 @@ type KubeconfigProvider interface {
 }
 
 //+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=gardenerclusters,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=gardenerclusters/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=gardenerclusters/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -74,7 +74,7 @@ type KubeconfigProvider interface {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.15.0/pkg/reconcile
 func (r *GardenerClusterController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) { //nolint:revive
-	r.log.Info("Starting reconciliation loop")
+	r.log.Info(fmt.Sprintf("Starting reconciliation loop for GardenerCluster resource: %v", req.NamespacedName))
 
 	var cluster infrastructuremanagerv1.GardenerCluster
 
@@ -95,8 +95,6 @@ func (r *GardenerClusterController) Reconcile(ctx context.Context, req ctrl.Requ
 
 	secret, err := r.getSecret(cluster.Spec.Shoot.Name)
 	if err != nil {
-		r.log.Error(err, "could not get the Secret for "+cluster.Spec.Shoot.Name)
-
 		if !k8serrors.IsNotFound(err) {
 			return ctrl.Result{
 				Requeue:      true,
@@ -106,10 +104,7 @@ func (r *GardenerClusterController) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	if secret == nil {
-		r.log.Error(err, "Secret not found, and will be created")
-
 		err = r.createSecret(ctx, cluster)
-
 		if err != nil {
 			return r.ResultWithoutRequeue(), err
 		}
