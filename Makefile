@@ -131,11 +131,12 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 .PHONY: k3d-import-img
 k3d-import-img: 
-	k3d image import $(IMG) -c im
+	k3d cluster create $(K3D_CLUSTER_NAME)
+	k3d image import $(IMG) -c $(K3D_CLUSTER_NAME)
 
 .PHONY: apply-sample-cr
 apply-sample-cr: 
-	kubectl apply -f config/samples/infrastructuremanager_v1_gardenercluster.yaml
+	kubectl apply -f config/samples/clusterinventory_v1_gardenercluster.yaml
 
 .PHONE: local-build-and-deploy
 local-build-and-deploy: docker-build k3d-import-img deploy gardener-secret-deploy apply-sample-cr
