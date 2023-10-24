@@ -131,7 +131,6 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 .PHONY: k3d-import-img
 k3d-import-img: 
-	k3d cluster create $(K3D_CLUSTER_NAME)
 	k3d image import $(IMG) -c $(K3D_CLUSTER_NAME)
 
 .PHONY: apply-sample-cr

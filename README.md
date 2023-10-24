@@ -51,7 +51,9 @@ make docker-build
   k3d
   </summary>
 
+
    ```bash
+   k3d cluster create $K3D_CLUSTER_NAME
    k3d image import $IMG -c $K3D_CLUSTER_NAME
    ```
   </details>
