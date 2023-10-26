@@ -6,7 +6,7 @@ metadata:
     kyma-project.io/runtime-id: runtime-id
     kyma-project.io/broker-plan-id: plan-id
     kyma-project.io/broker-plan-name: plan-name
-    kyma-project.io/global-account-id: global-account-id
+    kyma-project.io/global-account-id: global-account-i
     kyma-project.io/subaccount-id: subAccount-id
     kyma-project.io/shoot-name: shoot-name
     kyma-project.io/region: region

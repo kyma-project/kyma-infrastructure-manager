@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -73,6 +74,21 @@ const (
 	DeletingState   State = "Deleting"
 )
 
+type ConditionReason string
+
+const (
+	ConditionReasonSecretCreated             State = "SecretCreated"
+	ConditionReasonSecretNotFound            State = "SecretNotFound"
+	ConditionReasonGardenClusterNotRetrieved State = "GardenClusterNotRetrieved"
+	ConditionReasonGardenClusterNotFound     State = "GardenClusterNotFound"
+)
+
+type ConditionType string
+
+const (
+	ConditionTypeUnknown State = "Unknown"
+)
+
 // GardenerClusterStatus defines the observed state of GardenerCluster
 type GardenerClusterStatus struct {
 	// State signifies current state of Gardener Cluster.
@@ -84,6 +100,18 @@ type GardenerClusterStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+func (cluster *GardenerCluster) UpdateState(r State, s State, msg string) {
+	cluster.Status.State = s
+	condition := metav1.Condition{
+		Type:               string(ConditionTypeUnknown),
+		Status:             "True",
+		LastTransitionTime: metav1.Now(),
+		Reason:             string(r),
+		Message:            msg,
+	}
+	meta.SetStatusCondition(&cluster.Status.Conditions, condition)
 }
 
 func init() {

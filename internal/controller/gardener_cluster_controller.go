@@ -80,7 +80,10 @@ func (r *GardenerClusterController) Reconcile(ctx context.Context, req ctrl.Requ
 
 	err := r.Client.Get(ctx, req.NamespacedName, &cluster)
 	if err != nil {
+		cluster.UpdateState(infrastructuremanagerv1.ErrorState, infrastructuremanagerv1.ConditionReasonGardenClusterNotRetrieved, "Couldn't retrieve the Garden Cluster CR")
+
 		if k8serrors.IsNotFound(err) {
+			cluster.UpdateState(infrastructuremanagerv1.DeletingState, infrastructuremanagerv1.ConditionReasonGardenClusterNotFound, "CR not found, secret will be deleted")
 			err = r.deleteSecret(req.NamespacedName.Name)
 			if err != nil {
 				r.log.Error(err, "failed to delete secret")
@@ -95,7 +98,10 @@ func (r *GardenerClusterController) Reconcile(ctx context.Context, req ctrl.Requ
 
 	secret, err := r.getSecret(cluster.Spec.Shoot.Name)
 	if err != nil {
+		r.log.Error(err, "could not get the Secret for "+cluster.Spec.Shoot.Name)
+		cluster.UpdateState(infrastructuremanagerv1.ErrorState, infrastructuremanagerv1.ConditionReasonSecretNotFound, "Secret not found, and will be created")
 		if !k8serrors.IsNotFound(err) {
+
 			return ctrl.Result{
 				Requeue:      true,
 				RequeueAfter: defaultRequeuInSeconds,
@@ -104,12 +110,16 @@ func (r *GardenerClusterController) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	if secret == nil {
+		r.log.Error(err, "Secret not found, and will be created")
+		cluster.UpdateState(infrastructuremanagerv1.ErrorState, infrastructuremanagerv1.ConditionReasonSecretNotFound, "Secret not found, and will be created")
 		err = r.createSecret(ctx, cluster)
 		if err != nil {
 			return r.ResultWithoutRequeue(), err
 		}
+
 	}
 
+	cluster.UpdateState(infrastructuremanagerv1.ConditionReasonSecretCreated, infrastructuremanagerv1.ReadyState, "GardenCluster is ready")
 	return ctrl.Result{}, nil
 }
 
