@@ -135,7 +135,7 @@ k3d-import-img:
 
 .PHONY: apply-sample-cr
 apply-sample-cr: 
-	kubectl apply -f config/samples/clusterinventory_v1_gardenercluster.yaml
+	kubectl apply -f config/samples/infrastructuremanager_v1_gardenercluster.yaml
 
 .PHONE: local-build-and-deploy
 local-build-and-deploy: docker-build k3d-import-img deploy gardener-secret-deploy apply-sample-cr
