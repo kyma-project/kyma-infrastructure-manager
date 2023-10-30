@@ -3,21 +3,21 @@ kind: GardenerCluster
 metadata:
   labels:
     kyma-project.io/instance-id: instance-id
-    kyma-project.io/runtime-id: runtime-id
+    kyma-project.io/runtime-id: md-id
     kyma-project.io/broker-plan-id: plan-id
     kyma-project.io/broker-plan-name: plan-name
     kyma-project.io/global-account-id: global-account-i
     kyma-project.io/subaccount-id: subAccount-id
-    kyma-project.io/shoot-name: shoot-name
+    kyma-project.io/shoot-name: md-im
     kyma-project.io/region: region
     operator.kyma-project.io/kyma-name: kymaName
-  name: runtime-id
+  name: md-id
   namespace: kcp-system
 spec:
   shoot:
-    name: shoot-name
+    name: md-im
   kubeconfig:
     secret:
-      name: kubeconfig-runtime-id
+      name: kubeconfig-md-im
       namespace: kcp-system
       key: "config"
