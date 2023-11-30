@@ -4,7 +4,7 @@
 
 ## Overview
 
-This project manages the [Kyma](https://kyma-project.io/#/) cluster infrastructure. It's built using the [kubebuilder](https://github.com/kubernetes-sigs/kubebuilder) framework.
+This project manages the [Kyma](https://kyma-prxxxxoject.io/#/) cluster infrastructure. It's built using the [kubebuilder](https://github.com/kubernetes-sigs/kubebuilder) framework.
 
 It's currently responsible for generating and rotating Secrets containing dynamic kubeconfigs.
 
@@ -79,7 +79,7 @@ make gardener-secret-deploy
 ```
 
 ## Usage
-Infrastructure Manager is responsible for creating and rotating Secrets of clusters defined in the `GardenerCluster` custom resources (CRs). The sample CR is available [here](config/samples/infrastructuremanager_v1_gardenercluster.yaml).   
+Infrastructure Manager is responsible for creating and rotating Secrets of clusters defined in the `GardenerCluster` custom resources (CRs). The sample CR is available [here](config/samples/inxxxfrastructuremanager_v1_gardenercluster.yaml).   
 
 ### Time-based rotation
 Secrets are rotated based on `kubeconfig-expiration-time`. See [Configuration](docs/README.md#configuration) for more details.
