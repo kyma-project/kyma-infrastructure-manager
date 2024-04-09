@@ -16,6 +16,46 @@ metadata:
 spec:
   shoot:
     name: shoot-name
+    kubernetes:
+      version: "1.28.7"
+      kubeAPIServer:
+        # spec.shoot.kubernetes.kubeAPIServer.oidcConfig was added to meet the following requirement: https://github.com/kyma-project/kyma/issues/18305
+        # the object will be passed by KEB, if not specified defaults will be set
+        # It follows the structure of the shoot spec, and allows creating [OpenIDConnect CR](https://github.com/gardener/gardener-extension-shoot-oidc-service/blob/5fd98637da01deb3f7a99403cd893ee86acd26a8/example/40-openidconnect.yaml#L8)
+        # TODO: when registering new provider KIM also needs to specify permissions for the accounts authenticated by the new provider.
+        oidcConfig:
+          clientID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+          groupsClaim: groups
+          issuerURL: https://my.cool.tokens.com
+          signingAlgs:
+          - RS256
+          usernameClaim: sub
+          usernamePrefix: '-'
+    # spec.shoot.provider was added to meet the following requirements:
+    # - https://github.com/kyma-project/infrastructure-manager/issues/46
+    # - https://github.com/kyma-project/kyma/issues/18195
+   # It follows the structure of the shoot spec
+    provider:
+      type: gcp
+      workers:
+        - cri:
+            name: containerd
+          name: worker-klbc9
+          machine:
+            type: n1-standard-2
+            image:
+              name: gardenlinux
+              version: 1312.3.0
+            architecture: amd64
+          maximum: 2
+          minimum: 1
+          maxSurge: 1
+          maxUnavailable: 0
+          volume:
+            type: pd-balanced
+            size: 50Gi
+          zones:
+            - europe-west1-d
   kubeconfig:
     secret:
       name: kubeconfig-runtime-id
