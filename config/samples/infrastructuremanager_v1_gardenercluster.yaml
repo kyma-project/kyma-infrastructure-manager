@@ -34,9 +34,25 @@ spec:
     # spec.shoot.provider was added to meet the following requirements:
     # - https://github.com/kyma-project/infrastructure-manager/issues/46
     # - https://github.com/kyma-project/kyma/issues/18195
-   # It follows the structure of the shoot spec
+   # It follows the structure of the shoot spec (Provider struct from https://github.com/gardener/gardener/blob/master/pkg/apis/core/types_shoot.go)
     provider:
       type: gcp
+      purpose: evaluation
+      region: eu-central-1
+      # this field is not obligatory
+      # if not provided the KIM will use HAP to provide secretBindingName
+      secretBindingName: "some secret"
+      seedName: aws-eu5
+      controlPlaneConfig:
+        apiVersion: gcp.provider.extensions.gardener.cloud/v1alpha1
+        kind: ControlPlaneConfig
+        zone: us-central1-b
+      infrastructureConfig:
+        apiVersion: gcp.provider.extensions.gardener.cloud/v1alpha1
+        kind: InfrastructureConfig
+        networks:
+          worker: 10.250.0.0/22
+          workers: 10.250.0.0/22
       workers:
         - cri:
             name: containerd
