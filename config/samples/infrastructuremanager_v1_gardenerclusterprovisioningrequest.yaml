@@ -16,9 +16,30 @@ metadata:
 spec:
   shoot:
     name: shoot-name
+    # There is an ongoing effort in Gardener to change the dns object semantics the spec.dns will contain primary provider only, the additional ones will be specified in the extension's config). Please see: https://github.com/gardener/gardener/issues/9176
+    # We can follow DNS object structure from the Gardener as we can assume the backward compatibility (please see the above ticket)
+    # If the dns object is not set the defaults will be used
+    dns:
+      domain: mycool.domain.com
+      providers:
+      - domains:
+        include:
+          - mycool.domain.com
+        primary: true
+        # If the secret is not set default secret will be used
+        secretName: domain-names-secret
+        type: aws-route53
     kubernetes:
       version: "1.28.7"
       kubeAPIServer:
+        auditConfig:
+          # This is optional. If additional Audit Policy is specified it will be merged with default one.
+          # If the additional Audit Policy is specified KIM will create a config map with the merged policy, and pass it to the Gardener
+          additionalAuditPolicy: |
+            - level: Request
+                resources:
+                - group: "my.cool.group.io"
+                - group: "some.other.group.io"
         # spec.shoot.kubernetes.kubeAPIServer.oidcConfig was added to meet the following requirement: https://github.com/kyma-project/kyma/issues/18305
         # the object will be passed by KEB, if not specified defaults will be set
         # It follows the structure of the shoot spec, and allows creating [OpenIDConnect CR](https://github.com/gardener/gardener-extension-shoot-oidc-service/blob/5fd98637da01deb3f7a99403cd893ee86acd26a8/example/40-openidconnect.yaml#L8)
