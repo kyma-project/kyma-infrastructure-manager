@@ -1,0 +1,31 @@
+# permissions for end users to edit gardenerclusterprovisionings.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: gardenerclusterprovisioning-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: infrastructure-manager
+    app.kubernetes.io/part-of: infrastructure-manager
+    app.kubernetes.io/managed-by: kustomize
+  name: gardenerclusterprovisioning-editor-role
+rules:
+- apiGroups:
+  - infrastructuremanager.kyma-project.io
+  resources:
+  - gardenerclusterprovisionings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - infrastructuremanager.kyma-project.io
+  resources:
+  - gardenerclusterprovisionings/status
+  verbs:
+  - get

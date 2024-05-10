@@ -1,0 +1,58 @@
+metadata:
+  annotations:
+    compass.provisioner.kyma-project.io/operation-id: a0b3d21d-4439-486a-9016-072c10da7fdf
+    compass.provisioner.kyma-project.io/runtime-id: 57bc9639-d752-4f67-8b9e-7cd12514575f
+    gardener.cloud/created-by: system:serviceaccount:garden-kyma-dev:compass-provisioner
+    kcp.provisioner.kyma-project.io/operation-id: a0b3d21d-4439-486a-9016-072c10da7fdf
+    kcp.provisioner.kyma-project.io/runtime-id: 57bc9639-d752-4f67-8b9e-7cd12514575f
+  creationTimestamp: "2024-02-29T19:08:29Z"
+  finalizers:
+  - gardener.cloud/reference-protection
+  - gardener
+  generation: 92
+  labels:
+    account: 32246602-008e-4319-b2bb-a9233d6a25c1
+    dnsrecord.extensions.gardener.cloud/aws-route53: "true"
+    extensions.extensions.gardener.cloud/shoot-cert-service: "true"
+    extensions.extensions.gardener.cloud/shoot-dns-service: "true"
+    extensions.extensions.gardener.cloud/shoot-lakom-service: "true"
+    extensions.extensions.gardener.cloud/shoot-networking-filter: "true"
+    extensions.extensions.gardener.cloud/shoot-networking-problemdetector: "true"
+    networking.extensions.gardener.cloud/calico: "true"
+    operatingsystemconfig.extensions.gardener.cloud/gardenlinux: "true"
+    owner.do-not-delete: "true"
+    owner.email: amir.balaie-at-sap.com
+    provider.extensions.gardener.cloud/gcp: "true"
+    seed.gardener.cloud/gcp-ha-us1: "true"
+    shoot.gardener.cloud/status: healthy
+    subaccount: b00c6577-ee55-403d-bacb-2f20cb0a8e7a
+  name: b7695d7
+  namespace: garden-kyma-dev
+  resourceVersion: "5817087264"
+  uid: 44ad448a-3fd6-4ff5-a7b3-09ec93c43d47
+spec:
+  kubernetes:
+    kubeAPIServer:
+      additionalOidcConfig: null
+      oidcConfig:
+        clientID: 9bd05ed7-a930-44e6-8c79-e6defeb7dec9
+        groupsClaim: groups
+        issuerURL: https://kymatest.accounts400.ondemand.com
+        signingAlgs:
+        - RS256
+        usernameClaim: sub
+        usernamePrefix: '-'
+  name: b7695d7
+  networking:
+    administrators: null
+    filiering:
+      egress:
+        enabled: false
+      ingress:
+        enabled: false
+  provider:
+    region: ""
+    secretBindingName: ""
+    type: gcp
+  purpose: ""
+status: {}
