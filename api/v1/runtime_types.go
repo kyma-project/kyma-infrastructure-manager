@@ -86,6 +86,7 @@ type APIServer struct {
 
 type Provider struct {
 	Type    string            `json:"type"`
+	Zones   []string          `json:"zones"`
 	Workers []gardener.Worker `json:"workers"`
 }
 
