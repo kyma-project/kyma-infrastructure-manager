@@ -6,16 +6,46 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func ToShoot(runtime imv1.Runtime) gardenerv1beta.Shoot {
-	return gardenerv1beta.Shoot{
+type Converter struct {
+	runtime imv1.Runtime
+}
+
+type Extender func(imv1.Runtime, *gardenerv1beta.Shoot) error
+
+func dns(imv1.Runtime, *gardenerv1beta.Shoot) error {
+	return nil
+}
+
+func oidc(imv1.Runtime, *gardenerv1beta.Shoot) error {
+	return nil
+}
+
+func networking(imv1.Runtime, *gardenerv1beta.Shoot) error {
+	return nil
+}
+
+func (c Converter) ToShoot() gardenerv1beta.Shoot {
+	s := gardenerv1beta.Shoot{
 		ObjectMeta: v1.ObjectMeta{
-			Name:        runtime.Spec.Shoot.Name,
-			Namespace:   runtime.Namespace,
-			Labels:      getLabels(runtime),
-			Annotations: getAnnotations(runtime),
+			Name:        c.runtime.Spec.Shoot.Name,
+			Namespace:   c.runtime.Namespace,
+			Labels:      getLabels(c.runtime),
+			Annotations: getAnnotations(c.runtime),
 		},
-		Spec: getShootSpec(runtime.Spec.Shoot),
+		Spec: gardenerv1beta.ShootSpec{},
+		//	getShootSpec(c.runtime.Spec.Shoot),
 	}
+
+	extenders := []Extender{
+		dns,
+		oidc,
+		networking,
+	}
+
+	for _, e := range extenders {
+
+	}
+
 }
 
 func getLabels(_ imv1.Runtime) map[string]string {
