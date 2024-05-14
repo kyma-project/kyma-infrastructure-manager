@@ -19,7 +19,6 @@ package v1
 import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 //+kubebuilder:object:root=true
@@ -86,10 +85,8 @@ type APIServer struct {
 }
 
 type Provider struct {
-	Type                 string               `json:"type"`
-	ControlPlaneConfig   runtime.RawExtension `json:"controlPlaneConfig"`
-	InfrastructureConfig runtime.RawExtension `json:"infrastructureConfig"`
-	Workers              []gardener.Worker    `json:"workers"`
+	Type    string            `json:"type"`
+	Workers []gardener.Worker `json:"workers"`
 }
 
 type Networking struct {
