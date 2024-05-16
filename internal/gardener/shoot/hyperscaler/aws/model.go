@@ -1,13 +1,8 @@
 package aws
 
 import (
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-const infrastructureConfigKind = "InfrastructureConfig"
-const controlPlaneConfigKind = "ControlPlaneConfig"
-const apiVersion = "aws.provider.extensions.gardener.cloud/v1alpha1"
 
 // This types are copied from https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-azure/pkg/apis/azure/types_infrastructure.go as it does not contain json tags
 
@@ -52,18 +47,18 @@ type VPC struct {
 	CIDR *string `json:"cidr,omitempty"`
 }
 
-func ToInfrastructure(shoot imv1.RuntimeShoot) InfrastructureConfig {
-	return InfrastructureConfig{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       infrastructureConfigKind,
-			APIVersion: apiVersion,
-		},
-		Networks: Networks{
-			Zones: generateAWSZones(shoot.Networking.Nodes, shoot.Provider.Zones),
-			VPC: VPC{
-				CIDR: &shoot.Networking.Nodes,
-			},
-		},
-	}
-	return InfrastructureConfig{}
+// This types are copied from https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-aws/pkg/apis/aws/types_controlplane.go
+
+// ControlPlaneConfig contains configuration settings for the control plane.
+type ControlPlaneConfig struct {
+	metav1.TypeMeta
+
+	// CloudControllerManager contains configuration settings for the cloud-controller-manager.
+	CloudControllerManager *CloudControllerManagerConfig `json:"cloudControllerManager,omitempty"`
+}
+
+// CloudControllerManagerConfig contains configuration settings for the cloud-controller-manager.
+type CloudControllerManagerConfig struct {
+	// FeatureGates contains information about enabled feature gates.
+	FeatureGates map[string]bool
 }
