@@ -25,7 +25,6 @@ import (
 	. "github.com/onsi/gomega"    //nolint:revive
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	apimachneryruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -55,9 +54,7 @@ var _ = Describe("Runtime Controller", func() {
 						Shoot: imv1.RuntimeShoot{
 							Networking: imv1.Networking{},
 							Provider: imv1.Provider{
-								ControlPlaneConfig:   apimachneryruntime.RawExtension{Raw: []byte("{}")},
-								InfrastructureConfig: apimachneryruntime.RawExtension{Raw: []byte("{}")},
-								Workers:              []gardener.Worker{},
+								Workers: []gardener.Worker{},
 							},
 						},
 						Security: imv1.Security{

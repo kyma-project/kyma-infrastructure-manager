@@ -14,7 +14,7 @@ type extender func(imv1.RuntimeShoot, *gardenerv1beta.Shoot) error
 
 func NewConverter(defaultKubernetesVersion, defaultImage string) Converter {
 	extenders := []extender{
-		labelsExtender,
+		annotationsExtender,
 		newKubernetesExtender(defaultKubernetesVersion),
 		networkingExtender,
 		providerExtender,

@@ -1,11 +1,9 @@
 package azure
 
-import imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-
-func GetInfrastructureConfig(runtimeShoot imv1.RuntimeShoot) ([]byte, error) {
+func GetInfrastructureConfig(workersCidr string, zones []string) ([]byte, error) {
 	return nil, nil
 }
 
-func GetControlPlaneConfig(runtimeShoot imv1.RuntimeShoot) ([]byte, error) {
+func GetControlPlaneConfig() ([]byte, error) {
 	return nil, nil
 }

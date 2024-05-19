@@ -297,12 +297,6 @@ spec:
                     type: object
                   provider:
                     properties:
-                      controlPlaneConfig:
-                        type: object
-                        x-kubernetes-preserve-unknown-fields: true
-                      infrastructureConfig:
-                        type: object
-                        x-kubernetes-preserve-unknown-fields: true
                       type:
                         type: string
                       workers:
@@ -1001,8 +995,6 @@ spec:
                           type: object
                         type: array
                     required:
-                    - controlPlaneConfig
-                    - infrastructureConfig
                     - type
                     - workers
                     type: object

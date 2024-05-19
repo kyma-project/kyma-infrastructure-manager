@@ -5,6 +5,6 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 )
 
-func labelsExtender(imv1.RuntimeShoot, *gardenerv1beta.Shoot) error {
+func annotationsExtender(imv1.RuntimeShoot, *gardenerv1beta.Shoot) error {
 	return nil
 }
