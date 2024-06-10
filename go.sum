@@ -19,8 +19,8 @@ github.com/gardener/gardener v1.96.0 h1:GehgYnaEH8fS7KYgYMNZbg8WmTZF11lwpx5JhMzM
 github.com/gardener/gardener v1.96.0/go.mod h1:wXAk6DzltkuJzWvAmIvw1/GscfCn2Po3LWWCr4oCbiQ=
 github.com/gardener/gardener-extension-provider-aws v1.54.1 h1:6/FXgahE6kc8fyvQFGdadNDwhkdcZYWWl0G4dVhzXOU=
 github.com/gardener/gardener-extension-provider-aws v1.54.1/go.mod h1:rIpiezRIgQLmYbDBUyuS6bBioGePZ/W4t/4JcLgLahA=
-github.com/gardener/gardener-extension-provider-gcp v1.35.0 h1:/QOiUx1uKb0LX6GEj0De5jZD0ULqQA3gZyo7Zl7qKRA=
-github.com/gardener/gardener-extension-provider-gcp v1.35.0/go.mod h1:B7cJNdDPBHWAMaDv3L0o26VBOYUnajDvaJOyB+qmDMA=
+github.com/gardener/gardener-extension-provider-gcp v1.36.1 h1:aiN9eMdC7TC51qn7m/10laQyEahEBjI0Rp1smnNPPLU=
+github.com/gardener/gardener-extension-provider-gcp v1.36.1/go.mod h1:7ck2wAfLFS8TRZ6lrAou2OIvZh/0ML0KB2kFGaZa8ZY=
 github.com/gardener/gardener-extension-provider-openstack v1.39.2 h1:H0g/Zvo8ypMRXkKVUxujrRMVdJpPyx2pC6Tz5KF/oUQ=
 github.com/gardener/gardener-extension-provider-openstack v1.39.2/go.mod h1:uLc3FaABRhQxtFTUm8gG/e9VQxfiRIGioyRzxy+xfi4=
 github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
