@@ -15,8 +15,8 @@ github.com/evanphx/json-patch/v5 v5.9.0 h1:kcBlZQbplgElYIlo/n1hJbls2z/1awpXxpRi0
 github.com/evanphx/json-patch/v5 v5.9.0/go.mod h1:VNkHZ/282BpEyt/tObQO8s5CMPmYYq14uClGH4abBuQ=
 github.com/fsnotify/fsnotify v1.7.0 h1:8JEhPFa5W2WU7YfeZzPNqzMP6Lwt7L2715Ggo0nosvA=
 github.com/fsnotify/fsnotify v1.7.0/go.mod h1:40Bi/Hjc2AVfZrqy+aj+yEI+/bRxZnMJyTJwOpGvigM=
-github.com/gardener/gardener v1.96.0 h1:GehgYnaEH8fS7KYgYMNZbg8WmTZF11lwpx5JhMzMJ/0=
-github.com/gardener/gardener v1.96.0/go.mod h1:wXAk6DzltkuJzWvAmIvw1/GscfCn2Po3LWWCr4oCbiQ=
+github.com/gardener/gardener v1.96.3 h1:QSpNuM/rC2ZC/b9hnpZ5rtZ2qtoh+oSECM7VhBeQLJE=
+github.com/gardener/gardener v1.96.3/go.mod h1:wXAk6DzltkuJzWvAmIvw1/GscfCn2Po3LWWCr4oCbiQ=
 github.com/gardener/gardener-extension-provider-aws v1.54.1 h1:6/FXgahE6kc8fyvQFGdadNDwhkdcZYWWl0G4dVhzXOU=
 github.com/gardener/gardener-extension-provider-aws v1.54.1/go.mod h1:rIpiezRIgQLmYbDBUyuS6bBioGePZ/W4t/4JcLgLahA=
 github.com/gardener/gardener-extension-provider-gcp v1.35.0 h1:/QOiUx1uKb0LX6GEj0De5jZD0ULqQA3gZyo7Zl7qKRA=
