@@ -17,3 +17,8 @@ Changes proposed in this pull request:
 
 **Related issue(s)**
 <!-- If you refer to a particular issue, provide its number. For example, `Resolves #123`, `Fixes #43`, or `See also #33`. -->
+
+**Confirm that everything was done **
+- [ ] Related issues are linked
+- [ ] It's clear why is this PR was created and what it does
+- [ ] All necessary steps are delivered (like e.g. tests, documentation, merging) 
