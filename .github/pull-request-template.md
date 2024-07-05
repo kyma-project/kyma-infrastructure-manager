@@ -19,6 +19,13 @@ Changes proposed in this pull request:
 <!-- If you refer to a particular issue, provide its number. For example, `Resolves #123`, `Fixes #43`, or `See also #33`. -->
 
 **Confirm that everything was done**
-- [ ] Related issues are linked
+- [ ] PR title starts with prefix
+    - feat:     A new feature
+    - fix:      A bug fix
+    - docs:     Documentation only changes
+    - refactor: A code change that neither fixes a bug nor adds a feature
+    - test:     Adding tests
+    - chore:    Maintain. Changes to the build process or auxiliary tools/libraries/workflows etc.
+- [ ] Related issues are linked (for links to internal trackers you can use the issue ids like `backlog#4567`)
 - [ ] It's clear why is this PR was created and what it does
 - [ ] All necessary steps are delivered (like e.g. tests, documentation, merging) 
