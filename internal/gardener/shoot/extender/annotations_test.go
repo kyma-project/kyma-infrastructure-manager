@@ -29,7 +29,9 @@ func TestAnnotationsExtender(t *testing.T) {
 				},
 			},
 			expectedAnnotations: map[string]string{
-				"infrastructuremanager.kyma-project.io/runtime-id": "runtime-id"},
+				"infrastructuremanager.kyma-project.io/runtime-id": "runtime-id",
+				"confirmation.gardener.cloud/force-deletion":       "true",
+			},
 		},
 		{
 			name: "Create licence type annotation",
@@ -49,7 +51,8 @@ func TestAnnotationsExtender(t *testing.T) {
 			},
 			expectedAnnotations: map[string]string{
 				"infrastructuremanager.kyma-project.io/runtime-id":   "runtime-id",
-				"infrastructuremanager.kyma-project.io/licence-type": "licence"},
+				"infrastructuremanager.kyma-project.io/licence-type": "licence",
+				"confirmation.gardener.cloud/force-deletion":         "true"},
 		},
 		{
 			name: "Create restricted EU access annotation for cf-eu11 region",
@@ -69,7 +72,8 @@ func TestAnnotationsExtender(t *testing.T) {
 			},
 			expectedAnnotations: map[string]string{
 				"infrastructuremanager.kyma-project.io/runtime-id":   "runtime-id",
-				"support.gardener.cloud/eu-access-for-cluster-nodes": "true"},
+				"support.gardener.cloud/eu-access-for-cluster-nodes": "true",
+				"confirmation.gardener.cloud/force-deletion":         "true"},
 		},
 		{
 			name: "Create restricted EU access annotation for cf-ch20 region",
@@ -89,7 +93,8 @@ func TestAnnotationsExtender(t *testing.T) {
 			},
 			expectedAnnotations: map[string]string{
 				"infrastructuremanager.kyma-project.io/runtime-id":   "runtime-id",
-				"support.gardener.cloud/eu-access-for-cluster-nodes": "true"},
+				"support.gardener.cloud/eu-access-for-cluster-nodes": "true",
+				"confirmation.gardener.cloud/force-deletion":         "true"},
 		},
 	} {
 		// given

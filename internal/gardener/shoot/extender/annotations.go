@@ -11,10 +11,11 @@ import (
 //- support.gardener.cloud/eu-access-for-cluster-nodes
 
 const (
-	ShootRuntimeIDAnnotation          = "infrastructuremanager.kyma-project.io/runtime-id"
-	ShootLicenceTypeAnnotation        = "infrastructuremanager.kyma-project.io/licence-type"
-	RuntimeIDLabel                    = "kyma-project.io/runtime-id"
-	ShootRestrictedEUAccessAnnotation = "support.gardener.cloud/eu-access-for-cluster-nodes"
+	RuntimeIDLabel                            = "kyma-project.io/runtime-id"
+	ShootRuntimeIDAnnotation                  = "infrastructuremanager.kyma-project.io/runtime-id"
+	ShootLicenceTypeAnnotation                = "infrastructuremanager.kyma-project.io/licence-type"
+	GardenerShootRestrictedEUAccessAnnotation = "support.gardener.cloud/eu-access-for-cluster-nodes"
+	GardenerForceDeletionAnnotation           = "confirmation.gardener.cloud/force-deletion"
 )
 
 func ExtendWithAnnotations(runtime imv1.Runtime, shoot *gardener.Shoot) error {
@@ -33,8 +34,10 @@ func getAnnotations(runtime imv1.Runtime) map[string]string {
 	}
 
 	if isEuAccess(runtime.Spec.Shoot.PlatformRegion) {
-		annotations[ShootRestrictedEUAccessAnnotation] = "true"
+		annotations[GardenerShootRestrictedEUAccessAnnotation] = "true"
 	}
+
+	annotations[GardenerForceDeletionAnnotation] = "true"
 
 	return annotations
 }
