@@ -36,6 +36,10 @@ type KubernetesConfig struct {
 	DefaultVersion string `json:"defaultVersion" validate:"required"`
 }
 
+type AuditLogConfig struct {
+	PolicyConfigMapName string
+}
+
 type ReaderGetter = func() (io.Reader, error)
 
 type ConverterConfig struct {
@@ -44,6 +48,7 @@ type ConverterConfig struct {
 	Provider     ProviderConfig     `json:"provider"`
 	MachineImage MachineImageConfig `json:"machineImage" validate:"required"`
 	Gardener     GardenerConfig     `json:"gardener" validate:"required"`
+	AuditLog     AuditLogConfig
 }
 
 func (c *ConverterConfig) Load(f ReaderGetter) error {
@@ -64,11 +69,12 @@ type MachineImageConfig struct {
 
 func NewConverter(config ConverterConfig) Converter {
 	extenders := []Extend{
-		extender.ExtendWithAnnotations,
-		extender.ExtendWithLabels,
 		extender.NewKubernetesVersionExtender(config.Kubernetes.DefaultVersion),
 		extender.NewProviderExtender(config.Provider.AWS.EnableIMDSv2, config.MachineImage.DefaultVersion),
 		extender.NewDNSExtender(config.DNS.SecretName, config.DNS.DomainPrefix, config.DNS.ProviderType),
+		extender.NewAuditLogExtender(config.AuditLog.PolicyConfigMapName),
+		extender.ExtendWithAnnotations,
+		extender.ExtendWithLabels,
 		extender.ExtendWithOIDC,
 		extender.ExtendWithCloudProfile,
 		extender.ExtendWithNetworkFilter,
