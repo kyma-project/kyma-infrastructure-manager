@@ -74,8 +74,6 @@ func main() {
 	var enableRuntimeReconciler bool
 	var converterConfigFilepath string
 	var shootSpecDumpEnabled bool
-	var auditLogPolicyConfigMap string
-	var auditLogTenantConfigPath string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -90,8 +88,6 @@ func main() {
 	flag.BoolVar(&enableRuntimeReconciler, "runtime-reconciler-enabled", defaultRuntimeReconcilerEnabled, "Feature flag for all runtime reconciler functionalities")
 	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "A file path to the gardener shoot converter configuration.")
 	flag.BoolVar(&shootSpecDumpEnabled, "shoot-spec-dump-enabled", false, "Feature flag to allow persisting specs of created shoots")
-	flag.StringVar(&auditLogPolicyConfigMap, "audit-log-policy-config-map", "", "A name of the Config Map with audit log policy configuration")
-	flag.StringVar(&auditLogTenantConfigPath, "audit-log-tenant-config-path", "", "A file path to the audit log tenant configuration")
 
 	opts := zap.Options{
 		Development: true,
@@ -165,11 +161,6 @@ func main() {
 	if err = converterConfig.Load(getReader); err != nil {
 		setupLog.Error(err, "unable to load converter configuration")
 		os.Exit(1)
-	}
-
-	if auditLogPolicyConfigMap != "" && auditLogTenantConfigPath != "" {
-		converterConfig.AuditLog.PolicyConfigMapName = auditLogPolicyConfigMap
-		converterConfig.AuditLog.TenantConfigPath = auditLogTenantConfigPath
 	}
 
 	validate := validator.New(validator.WithRequiredStructEnabled())
