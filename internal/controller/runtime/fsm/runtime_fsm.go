@@ -29,9 +29,12 @@ type writerGetter = func(filePath string) (io.Writer, error)
 
 // runtime reconciler specific configuration
 type RCCfg struct {
-	Finalizer       string
-	PVCPath         string
-	ShootNamesapace string
+	ProvisionTimeout   time.Duration
+	DeprovisionTimeout time.Duration
+	UpdateTimeout      time.Duration
+	Finalizer          string
+	PVCPath            string
+	ShootNamesapace    string
 	shoot.ConverterConfig
 }
 
@@ -98,7 +101,7 @@ loop:
 	}, err
 }
 
-func NewFsm(log logr.Logger, cfg RCCfg, k8s K8s) Fsm {
+func NewFsm(log logr.Logger, cfg RCCfg, k8s K8s, timeoutProvision, timeoutDeprovision, timeoutUpdate time.Duration) Fsm {
 	return &fsm{
 		fn:             sFnTakeSnapshot,
 		writerProvider: getWriterForFilesystem,

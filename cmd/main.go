@@ -62,6 +62,10 @@ const defaultExpirationTime = 24 * time.Hour
 const defaultRuntimeReconcilerEnabled = true
 const defaultGardenerRequestTimeout = 60 * time.Second
 
+const defaultProvisioingTimeout = 15 * time.Minute
+const defaultDeprovisioningTimeout = 15 * time.Minute
+const defaultUpgradeTimeout = 15 * time.Minute
+
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
@@ -74,6 +78,9 @@ func main() {
 	var enableRuntimeReconciler bool
 	var converterConfigFilepath string
 	var shootSpecDumpEnabled bool
+	var provisionTimeout time.Duration
+	var deprovisionTimeout time.Duration
+	var upgradeTimeout time.Duration
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -88,6 +95,9 @@ func main() {
 	flag.BoolVar(&enableRuntimeReconciler, "runtime-reconciler-enabled", defaultRuntimeReconcilerEnabled, "Feature flag for all runtime reconciler functionalities")
 	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "converter_config.json", "A file path to the gardener shoot converter configuration.")
 	flag.BoolVar(&shootSpecDumpEnabled, "shoot-spec-dump-enabled", false, "Feature flag to allow persisting specs of created shoots")
+	flag.DurationVar(&provisionTimeout, "provisioning-timeout", defaultProvisioingTimeout, "Runtime provisioning timeout")
+	flag.DurationVar(&deprovisionTimeout, "deprovisioning-timeout", defaultDeprovisioningTimeout, "Runtime deprovisioning timeout")
+	flag.DurationVar(&upgradeTimeout, "kubeconfig-expiration-time", defaultUpgradeTimeout, "Runtime upgrade timeout")
 
 	opts := zap.Options{
 		Development: true,
@@ -170,9 +180,12 @@ func main() {
 	}
 
 	cfg := fsm.RCCfg{
-		Finalizer:       infrastructuremanagerv1.Finalizer,
-		ShootNamesapace: gardenerNamespace,
-		ConverterConfig: converterConfig,
+		Finalizer:          infrastructuremanagerv1.Finalizer,
+		ShootNamesapace:    gardenerNamespace,
+		ConverterConfig:    converterConfig,
+		ProvisionTimeout:   provisionTimeout,
+		DeprovisionTimeout: deprovisionTimeout,
+		UpdateTimeout:      upgradeTimeout,
 	}
 	if shootSpecDumpEnabled {
 		cfg.PVCPath = "/testdata/kim"
