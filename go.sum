@@ -27,8 +27,8 @@ github.com/gardener/gardener-extension-provider-aws v1.56.1 h1:aoPCFOKm1gZA/qYlX
 github.com/gardener/gardener-extension-provider-aws v1.56.1/go.mod h1:kyUkLDvIEbxg5Kv4XsOa0CBFxbwmf5KFeKsJ/oVcijw=
 github.com/gardener/gardener-extension-provider-gcp v1.37.0 h1:lRvh4syK7h8JzG9tVCI+O7Q1vEvXuK7DGs6vAaoQ1Pw=
 github.com/gardener/gardener-extension-provider-gcp v1.37.0/go.mod h1:/bDiE8xZz2vfP8u3A5Pr2IqVo0VX9keL5ntjExqhB5A=
-github.com/gardener/gardener-extension-provider-openstack v1.41.0 h1:AlzWuvw3DhkeXsQ6AnSHqp7tkWjtBZB+e7oCFpnFVBY=
-github.com/gardener/gardener-extension-provider-openstack v1.41.0/go.mod h1:DqpbvoN61U7qSzRFXv3UyRTLkopd2yIXhtPRLzfE2Ro=
+github.com/gardener/gardener-extension-provider-openstack v1.41.2 h1:9oZuubIOGcI5q9+dUkZf5vTG8R79mUgQvC3B/SB1C0A=
+github.com/gardener/gardener-extension-provider-openstack v1.41.2/go.mod h1:DqpbvoN61U7qSzRFXv3UyRTLkopd2yIXhtPRLzfE2Ro=
 github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
 github.com/go-logr/logr v1.4.2/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
 github.com/go-logr/zapr v1.3.0 h1:XGdV8XW8zdwFiwOA2Dryh1gj2KRQyOOoNmBy4EplIcQ=

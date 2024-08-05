@@ -6,7 +6,7 @@ require (
 	github.com/gardener/gardener v1.100.0
 	github.com/gardener/gardener-extension-provider-aws v1.56.1
 	github.com/gardener/gardener-extension-provider-gcp v1.37.0
-	github.com/gardener/gardener-extension-provider-openstack v1.41.0
+	github.com/gardener/gardener-extension-provider-openstack v1.41.2
 	github.com/go-logr/logr v1.4.2
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/onsi/ginkgo/v2 v2.19.1
