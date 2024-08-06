@@ -12,6 +12,12 @@ import (
 func sFnWaitForShootReconcile(_ context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Waiting for shoot reconcile state")
 
+	if s.instance.HasTimeoutElapsed(m.UpdateTimeout) {
+		m.log.Info(fmt.Sprintf("Shoot creation timeout for %s", s.shoot.Name))
+		s.instance.UpdateStatePending(imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonShootProcessingTimeout, "False", "Shoot reconcile timeout")
+		return updateStatusAndStop()
+	}
+
 	switch s.shoot.Status.LastOperation.State {
 	case gardener.LastOperationStateProcessing, gardener.LastOperationStatePending, gardener.LastOperationStateAborted:
 		m.log.Info(fmt.Sprintf("Shoot %s is in %s state, scheduling for retry", s.shoot.Name, s.shoot.Status.LastOperation.State))

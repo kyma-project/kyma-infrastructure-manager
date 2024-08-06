@@ -19,20 +19,30 @@ func ensureStatusConditionIsSetAndContinue(instance *imv1.Runtime, condType imv1
 	return switchState(next)
 }
 
+func ensurePendingStatusConditionIsSetAndRequeue(instance *imv1.Runtime, condType imv1.RuntimeConditionType, condReason imv1.RuntimeConditionReason, message string) (stateFn, *ctrl.Result, error) {
+	if !instance.IsStateWithConditionAndStatusSet(imv1.RuntimeStatePending, condType, condReason, "Unknown") {
+		instance.UpdateStatePending(condType, condReason, "Unknown", message)
+		return updateStatusAndRequeue()
+	}
+
+	return updateStatusAndRequeueAfter(gardenerRequeueDuration)
+}
+
 func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Waiting for shoot creation state")
 
+	if s.instance.HasTimeoutElapsed(m.ProvisionTimeout) {
+		m.log.Info(fmt.Sprintf("Shoot creation timeout for %s", s.shoot.Name))
+		s.instance.UpdateStatePending(imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonShootCreationTimeout, "False", "Shoot creation timeout")
+		return updateStatusAndStop()
+	}
+
 	switch s.shoot.Status.LastOperation.State {
 	case gardener.LastOperationStateProcessing, gardener.LastOperationStatePending, gardener.LastOperationStateAborted:
+
 		m.log.Info(fmt.Sprintf("Shoot %s is in %s state, scheduling for retry", s.shoot.Name, s.shoot.Status.LastOperation.State))
 
-		s.instance.UpdateStatePending(
-			imv1.ConditionTypeRuntimeProvisioned,
-			imv1.ConditionReasonShootCreationPending,
-			"Unknown",
-			"Shoot creation in progress")
-
-		return updateStatusAndRequeueAfter(gardenerRequeueDuration)
+		return ensurePendingStatusConditionIsSetAndRequeue(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonShootCreationPending, "Shoot creation in progress")
 
 	case gardener.LastOperationStateFailed:
 		if gardenerhelper.HasErrorCode(s.shoot.Status.LastErrors, gardener.ErrorInfraRateLimitsExceeded) {

@@ -101,7 +101,7 @@ loop:
 	}, err
 }
 
-func NewFsm(log logr.Logger, cfg RCCfg, k8s K8s, timeoutProvision, timeoutDeprovision, timeoutUpdate time.Duration) Fsm {
+func NewFsm(log logr.Logger, cfg RCCfg, k8s K8s) Fsm {
 	return &fsm{
 		fn:             sFnTakeSnapshot,
 		writerProvider: getWriterForFilesystem,

@@ -18,6 +18,7 @@ package v1
 
 import (
 	"fmt"
+	"time"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -34,6 +35,7 @@ const (
 	Finalizer                              = "runtime-controller.infrastructure-manager.kyma-project.io/deletion-hook"
 	AnnotationGardenerCloudDelConfirmation = "confirmation.gardener.cloud/deletion"
 	LabelControlledByProvisioner           = "kyma-project.io/controlled-by-provisioner"
+	AnnotationRuntimeOperationStarted      = "kyma-project.io/runtime-operation-started"
 )
 
 const (
@@ -70,12 +72,14 @@ const (
 type RuntimeConditionReason string
 
 const (
-	ConditionReasonProcessing          = RuntimeConditionReason("Processing")
-	ConditionReasonProcessingErr       = RuntimeConditionReason("ProcessingErr")
-	ConditionReasonProcessingCompleted = RuntimeConditionReason("ProcessingCompleted")
+	ConditionReasonProcessing             = RuntimeConditionReason("Processing")
+	ConditionReasonShootProcessingTimeout = RuntimeConditionReason("ShootProcessingTimeout")
+	ConditionReasonProcessingErr          = RuntimeConditionReason("ProcessingErr")
+	ConditionReasonProcessingCompleted    = RuntimeConditionReason("ProcessingCompleted")
 
 	ConditionReasonInitialized            = RuntimeConditionReason("Initialised")
 	ConditionReasonShootCreationPending   = RuntimeConditionReason("Pending")
+	ConditionReasonShootCreationTimeout   = RuntimeConditionReason("ShootCreationTimeout")
 	ConditionReasonShootCreationCompleted = RuntimeConditionReason("ShootCreationCompleted")
 
 	ConditionReasonGardenerCRCreated      = RuntimeConditionReason("GardenerClusterCRCreated")
@@ -83,14 +87,15 @@ const (
 	ConditionReasonConfigurationCompleted = RuntimeConditionReason("ConfigurationCompleted")
 	ConditionReasonConfigurationErr       = RuntimeConditionReason("ConfigurationError")
 
-	ConditionReasonDeletion           = RuntimeConditionReason("Deletion")
-	ConditionReasonDeletionErr        = RuntimeConditionReason("DeletionErr")
-	ConditionReasonConversionError    = RuntimeConditionReason("ConversionErr")
-	ConditionReasonCreationError      = RuntimeConditionReason("CreationErr")
-	ConditionReasonGardenerError      = RuntimeConditionReason("GardenerErr")
-	ConditionReasonKubernetesAPIErr   = RuntimeConditionReason("KubernetesErr")
-	ConditionReasonSerializationError = RuntimeConditionReason("SerializationErr")
-	ConditionReasonDeleted            = RuntimeConditionReason("Deleted")
+	ConditionReasonDeletion             = RuntimeConditionReason("Deletion")
+	ConditionReasonShootDeletionTimeout = RuntimeConditionReason("ShootShootDeletionTimeout")
+	ConditionReasonDeletionErr          = RuntimeConditionReason("DeletionErr")
+	ConditionReasonConversionError      = RuntimeConditionReason("ConversionErr")
+	ConditionReasonCreationError        = RuntimeConditionReason("CreationErr")
+	ConditionReasonGardenerError        = RuntimeConditionReason("GardenerErr")
+	ConditionReasonKubernetesAPIErr     = RuntimeConditionReason("KubernetesErr")
+	ConditionReasonSerializationError   = RuntimeConditionReason("SerializationErr")
+	ConditionReasonDeleted              = RuntimeConditionReason("Deleted")
 )
 
 //+kubebuilder:object:root=true
@@ -269,6 +274,14 @@ func (k *Runtime) IsStateWithConditionAndStatusSet(runtimeState State, c Runtime
 	return k.IsConditionSetWithStatus(c, r, s)
 }
 
+func (k *Runtime) IsConditionSetLongerThan(runtimeState State, c RuntimeConditionType, r RuntimeConditionReason, s metav1.ConditionStatus) bool {
+	if k.Status.State != runtimeState {
+		return false
+	}
+
+	return k.IsConditionSetWithStatus(c, r, s)
+}
+
 func (k *Runtime) IsConditionSetWithStatus(c RuntimeConditionType, r RuntimeConditionReason, s metav1.ConditionStatus) bool {
 	condition := meta.FindStatusCondition(k.Status.Conditions, string(c))
 	if condition != nil && condition.Reason == string(r) && condition.Status == s {
@@ -300,4 +313,27 @@ func (k *Runtime) ValidateRequiredLabels() error {
 func (k *Runtime) IsControlledByProvisioner() bool {
 	value, found := k.Labels[LabelControlledByProvisioner]
 	return !found || value != "false"
+}
+
+func (k *Runtime) HasTimeoutElapsed(timeLimit time.Duration) bool {
+	if k.Annotations == nil {
+		return false
+	}
+
+	opStartTimeString := k.Annotations[AnnotationRuntimeOperationStarted]
+	if opStartTimeString == "" {
+		return false
+	}
+
+	lastSyncTime, err := time.Parse(time.RFC3339, opStartTimeString)
+	if err != nil {
+
+		return false
+	}
+
+	if time.Now().After(lastSyncTime.Add(timeLimit)) {
+		return true
+	}
+
+	return false
 }
