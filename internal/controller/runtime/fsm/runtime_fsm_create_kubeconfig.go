@@ -17,6 +17,7 @@ func sFnCreateKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 
 	runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
 
+	// get section
 	var cluster imv1.GardenerCluster
 	err := m.Get(ctx, types.NamespacedName{
 		Namespace: s.instance.Namespace,
@@ -43,6 +44,7 @@ func sFnCreateKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 		return updateStatusAndRequeueAfter(controlPlaneRequeueDuration)
 	}
 
+	// wait section
 	if cluster.Status.State != imv1.ReadyState {
 		m.log.Info("GardenerCluster CR is not ready yet, requeue", "Name", runtimeID, "State", cluster.Status.State)
 		return requeueAfter(controlPlaneRequeueDuration)

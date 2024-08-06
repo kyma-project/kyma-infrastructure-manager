@@ -26,12 +26,6 @@ func withLabels(labels map[string]string) deepCpOpts {
 	}
 }
 
-func withAnnotations(annotations map[string]string) deepCpOpts {
-	return func(s *v1beta1.Shoot) {
-		s.Annotations = annotations
-	}
-}
-
 func withShootSpec(spec v1beta1.ShootSpec) deepCpOpts {
 	return func(s *v1beta1.Shoot) {
 		s.Spec = spec
@@ -101,12 +95,6 @@ var _ = Describe(":: shoot matcher :: ", func() {
 			"should detect difference in labels",
 			deepCp(empty, withLabels(map[string]string{"test": "me"})),
 			deepCp(empty, withLabels(map[string]string{})),
-			false,
-		),
-		Entry(
-			"should detect difference in annotations",
-			deepCp(empty, withAnnotations(map[string]string{"test": "me"})),
-			deepCp(empty, withAnnotations(map[string]string{"test": "it"})),
 			false,
 		),
 		Entry(

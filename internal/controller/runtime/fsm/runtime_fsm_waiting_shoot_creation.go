@@ -19,6 +19,14 @@ func ensureStatusConditionIsSetAndContinue(instance *imv1.Runtime, condType imv1
 	return switchState(next)
 }
 
+func ensureTerminatingStatusConditionAndContinue(instance *imv1.Runtime, condType imv1.RuntimeConditionType, condReason imv1.RuntimeConditionReason, message string, next stateFn) (stateFn, *ctrl.Result, error) {
+	if !instance.IsStateWithConditionAndStatusSet(imv1.RuntimeStateTerminating, condType, condReason, "True") {
+		instance.UpdateStateDeletion(condType, condReason, "True", message)
+		return updateStatusAndRequeue()
+	}
+	return switchState(next)
+}
+
 func ensurePendingStatusConditionIsSetAndRequeue(instance *imv1.Runtime, condType imv1.RuntimeConditionType, condReason imv1.RuntimeConditionReason, message string) (stateFn, *ctrl.Result, error) {
 	if !instance.IsStateWithConditionAndStatusSet(imv1.RuntimeStatePending, condType, condReason, "Unknown") {
 		instance.UpdateStatePending(condType, condReason, "Unknown", message)

@@ -67,6 +67,7 @@ const (
 	ConditionTypeRuntimeProvisionedDryRun RuntimeConditionType = "ProvisionedDryRun"
 	ConditionTypeRuntimeKubeconfigReady   RuntimeConditionType = "KubeconfigReady"
 	ConditionTypeRuntimeConfigured        RuntimeConditionType = "Configured"
+	ConditionTypeRuntimeDeprovisioned     RuntimeConditionType = "Deprovisioned"
 )
 
 type RuntimeConditionReason string
@@ -88,6 +89,8 @@ const (
 	ConditionReasonConfigurationErr       = RuntimeConditionReason("ConfigurationError")
 
 	ConditionReasonDeletion             = RuntimeConditionReason("Deletion")
+	ConditionReasonGardenerCRDeleted    = RuntimeConditionReason("GardenerClusterCRDeleted")
+	ConditionReasonGardenerShootDeleted = RuntimeConditionReason("GardenerShootDeleted")
 	ConditionReasonShootDeletionTimeout = RuntimeConditionReason("ShootShootDeletionTimeout")
 	ConditionReasonDeletionErr          = RuntimeConditionReason("DeletionErr")
 	ConditionReasonConversionError      = RuntimeConditionReason("ConversionErr")
@@ -222,7 +225,6 @@ func (k *Runtime) UpdateStateDeletion(c RuntimeConditionType, r RuntimeCondition
 		k.Status.State = RuntimeStateFailed
 	}
 
-	k.Status.State = RuntimeStateTerminating
 	condition := metav1.Condition{
 		Type:               string(c),
 		Status:             metav1.ConditionStatus(status),
@@ -267,14 +269,6 @@ func (k *Runtime) IsConditionSet(c RuntimeConditionType, r RuntimeConditionReaso
 }
 
 func (k *Runtime) IsStateWithConditionAndStatusSet(runtimeState State, c RuntimeConditionType, r RuntimeConditionReason, s metav1.ConditionStatus) bool {
-	if k.Status.State != runtimeState {
-		return false
-	}
-
-	return k.IsConditionSetWithStatus(c, r, s)
-}
-
-func (k *Runtime) IsConditionSetLongerThan(runtimeState State, c RuntimeConditionType, r RuntimeConditionReason, s metav1.ConditionStatus) bool {
 	if k.Status.State != runtimeState {
 		return false
 	}

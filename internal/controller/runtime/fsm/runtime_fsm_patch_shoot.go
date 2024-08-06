@@ -30,7 +30,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	if err != nil {
 		m.log.Error(err, "Failed to patch shoot object, exiting with no retry")
-		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonGardenerError, "Shoot patch error")
+		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, "Shoot patch error")
 	}
 
 	if updatedShoot.Generation == s.shoot.Generation {
@@ -46,13 +46,8 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		imv1.ConditionTypeRuntimeProvisioned,
 		imv1.ConditionReasonProcessing,
 		"Unknown",
-		"Shoot is pending",
+		"Shoot is pending for update",
 	)
-
-	shouldDumpShootSpec := m.PVCPath != ""
-	if shouldDumpShootSpec {
-		return switchState(sFnDumpShootSpec)
-	}
 
 	return updateStatusAndRequeueAfter(gardenerRequeueDuration)
 }
@@ -63,13 +58,13 @@ func convertShoot(instance *imv1.Runtime, cfg shoot.ConverterConfig) (gardener.S
 	}
 
 	converter := gardener_shoot.NewConverter(cfg)
-	shoot, err := converter.ToShoot(*instance)
+	newShoot, err := converter.ToShoot(*instance)
 
 	if err == nil {
-		setObjectFields(&shoot)
+		setObjectFields(&newShoot)
 	}
 
-	return shoot, err
+	return newShoot, err
 }
 
 // workaround

@@ -38,11 +38,16 @@ func persist(path string, s interface{}, saveFunc writerGetter) error {
 func sFnDumpShootSpec(_ context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	paths := createFilesPath(m.PVCPath, s.shoot.Namespace, s.shoot.Name)
 
-	shootCp := s.shoot.DeepCopy()
-	runtimeCp := s.instance.DeepCopy()
-	shootCp.ManagedFields = nil
+	// To make comparison easier we don't store object obtained from the cluster as it contains additional fields that are not relevant for the comparison.
+	// We use object created by the converter instead (the Provisioner uses the same approach)
+	convertedShoot, err := convertShoot(&s.instance, m.ConverterConfig)
+	if err != nil {
+		return updateStatusAndStopWithError(err)
+	}
 
-	if err := persist(paths["shoot"], shootCp, m.writerProvider); err != nil {
+	runtimeCp := s.instance.DeepCopy()
+
+	if err := persist(paths["shoot"], convertedShoot, m.writerProvider); err != nil {
 		return updateStatusAndStopWithError(err)
 	}
 
