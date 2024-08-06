@@ -3,19 +3,18 @@ package fsm
 import (
 	"context"
 	"fmt"
-
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func sFnWaitForShootReconcile(_ context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+func sFnWaitForShootReconcile(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Waiting for shoot reconcile state")
 
 	if s.instance.HasTimeoutElapsed(m.UpdateTimeout) {
 		m.log.Info(fmt.Sprintf("Shoot creation timeout for %s", s.shoot.Name))
 		s.instance.UpdateStatePending(imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonShootProcessingTimeout, "False", "Shoot reconcile timeout")
-		return updateStatusAndStop()
+		return updateStatusAndRequeue() // Requeue to clear annotation
 	}
 
 	switch s.shoot.Status.LastOperation.State {

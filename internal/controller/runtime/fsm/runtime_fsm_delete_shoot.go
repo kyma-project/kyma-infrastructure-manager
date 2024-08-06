@@ -2,6 +2,8 @@ package fsm
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"k8s.io/utils/ptr"
@@ -14,8 +16,23 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 
 	// wait section
 	if !s.shoot.GetDeletionTimestamp().IsZero() {
+		if s.instance.HasTimeoutElapsed(m.DeprovisionTimeout) {
+			m.log.Info(fmt.Sprintf("Runtime deprovision timeout for %s", s.shoot.Name))
+			s.instance.UpdateStateDeletion(imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonShootDeletionTimeout, "False", "Runtime deprovisioning timeout")
+			return updateStatusAndRequeue() // Requeue to clear annotation
+		}
+
 		m.log.Info("Waiting for shoot to be deleted", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
 		return requeueAfter(gardenerRequeueDuration)
+	}
+
+	if s.instance.Annotations == nil {
+		s.instance.Annotations = make(map[string]string)
+	}
+	if _, found := s.instance.Annotations[imv1.AnnotationRuntimeOperationStarted]; !found {
+		s.instance.Annotations[imv1.AnnotationRuntimeOperationStarted] = time.Now().UTC().Format(time.RFC3339)
+		m.Update(ctx, &s.instance)
+		return requeue()
 	}
 
 	// action section

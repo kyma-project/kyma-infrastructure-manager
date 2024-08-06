@@ -101,7 +101,14 @@ var _ = BeforeSuite(func() {
 	customTracker = NewCustomTracker(tracker, []*gardener_api.Shoot{})
 	gardenerTestClient = fake.NewClientBuilder().WithScheme(clientScheme).WithObjectTracker(customTracker).Build()
 
-	runtimeReconciler = NewRuntimeReconciler(mgr, gardenerTestClient, logger, fsm.RCCfg{Finalizer: infrastructuremanagerv1.Finalizer})
+	testConfig := fsm.RCCfg{
+		Finalizer:          infrastructuremanagerv1.Finalizer,
+		ProvisionTimeout:   5 * time.Minute,
+		DeprovisionTimeout: 5 * time.Minute,
+		UpdateTimeout:      5 * time.Minute,
+	}
+
+	runtimeReconciler = NewRuntimeReconciler(mgr, gardenerTestClient, logger, testConfig)
 	Expect(runtimeReconciler).NotTo(BeNil())
 	err = runtimeReconciler.SetupWithManager(mgr)
 	Expect(err).To(BeNil())
@@ -196,7 +203,7 @@ func fixShootsSequenceForProvisioning(shoot *gardener_api.Shoot) []*gardener_api
 
 	// processedShoot := processingShoot.DeepCopy() // will add specific data later
 
-	return []*gardener_api.Shoot{missingShoot, missingShoot, missingShoot, initialisedShoot, dnsShoot, pendingShoot, processingShoot, readyShoot, readyShoot, readyShoot, readyShoot}
+	return []*gardener_api.Shoot{missingShoot, missingShoot, missingShoot, missingShoot, initialisedShoot, dnsShoot, pendingShoot, processingShoot, readyShoot, readyShoot, readyShoot, readyShoot}
 }
 
 func fixShootsSequenceForUpdate(shoot *gardener_api.Shoot) []*gardener_api.Shoot {
@@ -223,7 +230,7 @@ func fixShootsSequenceForUpdate(shoot *gardener_api.Shoot) []*gardener_api.Shoot
 
 	// processedShoot := processingShoot.DeepCopy() // will add specific data later
 
-	return []*gardener_api.Shoot{pendingShoot, processingShoot, readyShoot, readyShoot}
+	return []*gardener_api.Shoot{pendingShoot, pendingShoot, processingShoot, readyShoot, readyShoot}
 }
 
 func fixShootsSequenceForDelete(shoot *gardener_api.Shoot) []*gardener_api.Shoot {
@@ -252,7 +259,7 @@ func fixShootsSequenceForDelete(shoot *gardener_api.Shoot) []*gardener_api.Shoot
 	pendingDeleteShoot.Status.LastOperation.Type = gardener_api.LastOperationTypeDelete
 	pendingDeleteShoot.Status.LastOperation.State = gardener_api.LastOperationStatePending
 
-	return []*gardener_api.Shoot{currentShoot, currentShoot, currentShoot, pendingDeleteShoot, nil}
+	return []*gardener_api.Shoot{currentShoot, currentShoot, currentShoot, currentShoot, pendingDeleteShoot, nil}
 }
 
 func fixConverterConfigForTests() gardener_shoot.ConverterConfig {

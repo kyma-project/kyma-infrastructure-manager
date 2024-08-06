@@ -2,6 +2,7 @@ package fsm
 
 import (
 	"context"
+	"time"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -22,6 +23,15 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	}
 
 	m.log.Info("Shoot converted successfully", "Name", updatedShoot.Name, "Namespace", updatedShoot.Namespace)
+
+	if s.instance.Annotations == nil {
+		s.instance.Annotations = make(map[string]string)
+	}
+	if _, found := s.instance.Annotations[imv1.AnnotationRuntimeOperationStarted]; !found {
+		s.instance.Annotations[imv1.AnnotationRuntimeOperationStarted] = time.Now().UTC().Format(time.RFC3339)
+		m.Update(ctx, &s.instance)
+		return requeue()
+	}
 
 	err = m.ShootClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
 		FieldManager: "kim",
