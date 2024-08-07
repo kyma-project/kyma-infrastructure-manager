@@ -27,8 +27,13 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 		return updateStatusAndRequeueAfter(gardenerRequeueDuration)
 	}
 
-	if s.instance.Status.State == imv1.RuntimeStateReady && lastOperation.State == gardener.LastOperationStateSucceeded ||
-		s.instance.Status.State == imv1.RuntimeStateFailed { // to make possible to recover from timeout during previous operation
+	if s.instance.HasRuntimeOperationTimedOut() {
+		// recovering from previous operation timeout after manual intervention
+		m.log.Info("Patching Gardener shoot after previously operation timeout")
+		return switchState(sFnPatchExistingShoot)
+	}
+
+	if s.instance.Status.State == imv1.RuntimeStateReady && lastOperation.State == gardener.LastOperationStateSucceeded {
 		// only allow to patch if full previous cycle was completed
 		m.log.Info("Gardener shoot already exists, updating")
 		return switchState(sFnPatchExistingShoot)

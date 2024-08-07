@@ -18,8 +18,8 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	if !s.shoot.GetDeletionTimestamp().IsZero() {
 		if s.instance.HasTimeoutElapsed(m.DeprovisionTimeout) {
 			m.log.Info(fmt.Sprintf("Runtime deprovision timeout for %s", s.shoot.Name))
-			s.instance.UpdateStateDeletion(imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonShootDeletionTimeout, "False", "Runtime deprovisioning timeout")
-			return updateStatusAndRequeue() // Requeue to clear annotation
+			s.instance.UpdateStateDeletion(imv1.ConditionTypeRuntimeDeprovisioned, imv1.ConditionReasonShootDeletionTimeout, "False", "Runtime deprovisioning timeout")
+			return updateStatusAndStop()
 		}
 
 		m.log.Info("Waiting for shoot to be deleted", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)

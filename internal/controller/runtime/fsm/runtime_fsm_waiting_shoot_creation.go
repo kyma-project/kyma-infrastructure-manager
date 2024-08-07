@@ -42,7 +42,7 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 	if s.instance.HasTimeoutElapsed(m.ProvisionTimeout) {
 		m.log.Info(fmt.Sprintf("Shoot creation timeout for %s", s.shoot.Name))
 		s.instance.UpdateStatePending(imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonShootCreationTimeout, "False", "Shoot creation timeout")
-		return updateStatusAndRequeue() // Requeue to clear annotation
+		return updateStatusAndStop()
 	}
 
 	switch s.shoot.Status.LastOperation.State {

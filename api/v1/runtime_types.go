@@ -331,3 +331,13 @@ func (k *Runtime) HasTimeoutElapsed(timeLimit time.Duration) bool {
 
 	return false
 }
+
+func (k *Runtime) HasRuntimeOperationTimedOut() bool {
+	if k.Status.State != RuntimeStateFailed {
+		return false
+	}
+
+	return k.IsConditionSet(ConditionTypeRuntimeProvisioned, ConditionReasonShootCreationTimeout) ||
+		k.IsConditionSet(ConditionTypeRuntimeDeprovisioned, ConditionReasonShootDeletionTimeout) ||
+		k.IsConditionSet(ConditionTypeRuntimeProvisioned, ConditionReasonShootProcessingTimeout)
+}

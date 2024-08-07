@@ -33,18 +33,6 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 		return updateStatusAndRequeue()
 	}
 
-	if s.instance.Status.State == imv1.RuntimeStateFailed || s.instance.Status.State == imv1.RuntimeStateReady {
-		if s.instance.Annotations != nil {
-			if val, found := s.instance.Annotations[imv1.AnnotationRuntimeOperationStarted]; found {
-				if val != "" {
-					s.instance.Annotations[imv1.AnnotationRuntimeOperationStarted] = ""
-					m.Update(ctx, &s.instance)
-					return stop()
-				}
-			}
-		}
-	}
-
 	if instanceIsNotBeingDeleted && s.shoot == nil {
 		m.log.Info("Gardener shoot does not exist, creating new one")
 		if !dryRunMode {
