@@ -18,8 +18,10 @@ package runtime
 
 import (
 	"context"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"path/filepath"
 	"testing"
+	"time"
 
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -33,6 +35,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	clienttesting "k8s.io/client-go/testing"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -136,6 +139,12 @@ func setupGardenerTestClientForUpdate() {
 	setupShootClientWithSequence(shoots)
 }
 
+func setupGardenerTestClientForDelete() {
+	baseShoot := getBaseShootForTestingSequence()
+	shoots := fixShootsSequenceForDelete(&baseShoot)
+	setupShootClientWithSequence(shoots)
+}
+
 func setupShootClientWithSequence(shoots []*gardener_api.Shoot) {
 	clientScheme := runtime.NewScheme()
 	_ = gardener_api.AddToScheme(clientScheme)
@@ -158,20 +167,6 @@ func getBaseShootForTestingSequence() gardener_api.Shoot {
 	return convertedShoot
 }
 
-// func setupGardenerTestClientForDeleting() {
-//	runtimeStub := CreateRuntimeStub("test-resource")
-//	converterConfig := fixConverterConfigForTests()
-//	converter := gardener_shoot.NewConverter(converterConfig)
-//	convertedShoot, err := converter.ToShoot(*runtimeStub)
-//	if err != nil {
-//		panic(err)
-//	}
-//
-//	shoots := fixGardenerShootsForProvisioning(&convertedShoot)
-//
-//	objectTestTracker.SetShootListForTracker(shoots)
-//}
-
 func fixShootsSequenceForProvisioning(shoot *gardener_api.Shoot) []*gardener_api.Shoot {
 	var missingShoot *gardener_api.Shoot
 	initialisedShoot := shoot.DeepCopy()
@@ -179,7 +174,7 @@ func fixShootsSequenceForProvisioning(shoot *gardener_api.Shoot) []*gardener_api
 	dnsShoot := initialisedShoot.DeepCopy()
 
 	dnsShoot.Spec.DNS = &gardener_api.DNS{
-		Domain: ptrTo("test.domain"),
+		Domain: ptr.To("test.domain"),
 	}
 
 	pendingShoot := dnsShoot.DeepCopy()
@@ -208,7 +203,7 @@ func fixShootsSequenceForUpdate(shoot *gardener_api.Shoot) []*gardener_api.Shoot
 	pendingShoot := shoot.DeepCopy()
 
 	pendingShoot.Spec.DNS = &gardener_api.DNS{
-		Domain: ptrTo("test.domain"),
+		Domain: ptr.To("test.domain"),
 	}
 
 	pendingShoot.Status = gardener_api.ShootStatus{
@@ -231,6 +226,35 @@ func fixShootsSequenceForUpdate(shoot *gardener_api.Shoot) []*gardener_api.Shoot
 	return []*gardener_api.Shoot{pendingShoot, processingShoot, readyShoot, readyShoot}
 }
 
+func fixShootsSequenceForDelete(shoot *gardener_api.Shoot) []*gardener_api.Shoot {
+	currentShoot := shoot.DeepCopy()
+
+	currentShoot.Spec.DNS = &gardener_api.DNS{
+		Domain: ptr.To("test.domain"),
+	}
+
+	// To workaround limitation that apply patches are not supported in the fake client.
+	// We need to set the annotation manually.  https://github.com/kubernetes/kubernetes/issues/115598
+	currentShoot.Annotations = map[string]string{
+		"confirmation.gardener.cloud/deletion": "true",
+	}
+
+	currentShoot.Status = gardener_api.ShootStatus{
+		LastOperation: &gardener_api.LastOperation{
+			Type:  gardener_api.LastOperationTypeCreate,
+			State: gardener_api.LastOperationStateSucceeded,
+		},
+	}
+
+	pendingDeleteShoot := currentShoot.DeepCopy()
+
+	pendingDeleteShoot.SetDeletionTimestamp(&metav1.Time{Time: time.Now()})
+	pendingDeleteShoot.Status.LastOperation.Type = gardener_api.LastOperationTypeDelete
+	pendingDeleteShoot.Status.LastOperation.State = gardener_api.LastOperationStatePending
+
+	return []*gardener_api.Shoot{currentShoot, currentShoot, currentShoot, pendingDeleteShoot, nil}
+}
+
 func fixConverterConfigForTests() gardener_shoot.ConverterConfig {
 	return gardener_shoot.ConverterConfig{
 		Kubernetes: gardener_shoot.KubernetesConfig{
@@ -251,8 +275,4 @@ func fixConverterConfigForTests() gardener_shoot.ConverterConfig {
 			ProjectName: "kyma-dev", //nolint:godox TODO: should be parametrised
 		},
 	}
-}
-
-func ptrTo[T any](v T) *T {
-	return &v
 }

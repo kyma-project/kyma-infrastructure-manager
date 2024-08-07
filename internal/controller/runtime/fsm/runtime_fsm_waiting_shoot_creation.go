@@ -19,6 +19,14 @@ func ensureStatusConditionIsSetAndContinue(instance *imv1.Runtime, condType imv1
 	return switchState(next)
 }
 
+func ensureTerminatingStatusConditionAndContinue(instance *imv1.Runtime, condType imv1.RuntimeConditionType, condReason imv1.RuntimeConditionReason, message string, next stateFn) (stateFn, *ctrl.Result, error) {
+	if !instance.IsStateWithConditionAndStatusSet(imv1.RuntimeStateTerminating, condType, condReason, "True") {
+		instance.UpdateStateDeletion(condType, condReason, "True", message)
+		return updateStatusAndRequeue()
+	}
+	return switchState(next)
+}
+
 func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Waiting for shoot creation state")
 

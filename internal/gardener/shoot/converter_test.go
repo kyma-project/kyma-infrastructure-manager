@@ -40,7 +40,9 @@ func TestConverter(t *testing.T) {
 func fixConverterConfig() ConverterConfig {
 	return ConverterConfig{
 		Kubernetes: KubernetesConfig{
-			DefaultVersion: "1.29", //nolint:godox TODO: set on deployment level
+			DefaultVersion:                      "1.29",
+			EnableKubernetesVersionAutoUpdate:   true,
+			EnableMachineImageVersionAutoUpdate: false,
 		},
 		DNS: DNSConfig{
 			SecretName:   "dns-secret",
@@ -134,7 +136,9 @@ func Test_ConverterConfig_Load_Err(t *testing.T) {
 
 var testReader io.Reader = strings.NewReader(`{
   "kubernetes": {
-    "defaultVersion": "0.1.2.3"
+    "defaultVersion": "0.1.2.3",
+    "enableKubernetesVersionAutoUpdate": true,
+    "enableMachineImageVersionAutoUpdate": false
   },
   "dns": {
     "secretName": "test-secret-name",
@@ -165,7 +169,9 @@ func Test_ConverterConfig_Load_OK(t *testing.T) {
 
 	expected := ConverterConfig{
 		Kubernetes: KubernetesConfig{
-			DefaultVersion: "0.1.2.3",
+			DefaultVersion:                      "0.1.2.3",
+			EnableKubernetesVersionAutoUpdate:   true,
+			EnableMachineImageVersionAutoUpdate: false,
 		},
 		DNS: DNSConfig{
 			SecretName:   "test-secret-name",

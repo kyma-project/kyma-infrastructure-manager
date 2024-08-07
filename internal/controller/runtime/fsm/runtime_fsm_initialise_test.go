@@ -47,6 +47,9 @@ var _ = Describe("KIM sFnInitialise", func() {
 			Name:       "test-instance",
 			Namespace:  "default",
 			Finalizers: []string{"test-me-plz"},
+			Labels: map[string]string{
+				imv1.LabelControlledByProvisioner: "false",
+			},
 		},
 	}
 
@@ -73,6 +76,9 @@ var _ = Describe("KIM sFnInitialise", func() {
 	testRtWithDeletionTimestamp := imv1.Runtime{
 		ObjectMeta: metav1.ObjectMeta{
 			DeletionTimestamp: &now,
+			Labels: map[string]string{
+				imv1.LabelControlledByProvisioner: "false",
+			},
 		},
 	}
 
@@ -80,6 +86,9 @@ var _ = Describe("KIM sFnInitialise", func() {
 		ObjectMeta: metav1.ObjectMeta{
 			DeletionTimestamp: &now,
 			Finalizers:        []string{"test-me-plz"},
+			Labels: map[string]string{
+				imv1.LabelControlledByProvisioner: "false",
+			},
 		},
 	}
 
@@ -124,7 +133,7 @@ var _ = Describe("KIM sFnInitialise", func() {
 			&systemState{instance: testRtWithDeletionTimestampAndFinalizer, shoot: &testShoot},
 			testOpts{
 				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnDeleteShoot"),
+				MatchNextFnState: haveName("sFnDeleteKubeconfig"),
 			},
 		),
 		Entry(
@@ -149,7 +158,7 @@ var _ = Describe("KIM sFnInitialise", func() {
 			},
 		),
 		Entry(
-			"should return sFnCreateStatus and no error when exists Provisioning Condition and shoot is missing",
+			"should return sFnCreateShoot and no error when exists Provisioning Condition and shoot is missing",
 			testCtx,
 			must(newFakeFSM, withTestFinalizer),
 			&systemState{instance: testRtWithFinalizerAndProvisioningCondition},

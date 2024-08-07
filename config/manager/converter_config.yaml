@@ -6,7 +6,9 @@ data:
   converter_config_aws.json: |
     {
       "kubernetes": {
-        "defaultVersion": "1.29"
+        "defaultVersion": "1.29",
+        "enableKubernetesVersionAutoUpdate": true,
+        "enableMachineImageVersionAutoUpdate": false
       },
       "dns": {
         "secretName": "aws-route53-secret-dev",

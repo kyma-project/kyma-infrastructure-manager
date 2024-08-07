@@ -65,6 +65,7 @@ const (
 	ConditionTypeRuntimeProvisionedDryRun RuntimeConditionType = "ProvisionedDryRun"
 	ConditionTypeRuntimeKubeconfigReady   RuntimeConditionType = "KubeconfigReady"
 	ConditionTypeRuntimeConfigured        RuntimeConditionType = "Configured"
+	ConditionTypeRuntimeDeprovisioned     RuntimeConditionType = "Deprovisioned"
 )
 
 type RuntimeConditionReason string
@@ -83,14 +84,16 @@ const (
 	ConditionReasonConfigurationCompleted = RuntimeConditionReason("ConfigurationCompleted")
 	ConditionReasonConfigurationErr       = RuntimeConditionReason("ConfigurationError")
 
-	ConditionReasonDeletion           = RuntimeConditionReason("Deletion")
-	ConditionReasonDeletionErr        = RuntimeConditionReason("DeletionErr")
-	ConditionReasonConversionError    = RuntimeConditionReason("ConversionErr")
-	ConditionReasonCreationError      = RuntimeConditionReason("CreationErr")
-	ConditionReasonGardenerError      = RuntimeConditionReason("GardenerErr")
-	ConditionReasonKubernetesAPIErr   = RuntimeConditionReason("KubernetesErr")
-	ConditionReasonSerializationError = RuntimeConditionReason("SerializationErr")
-	ConditionReasonDeleted            = RuntimeConditionReason("Deleted")
+	ConditionReasonDeletion             = RuntimeConditionReason("Deletion")
+	ConditionReasonGardenerCRDeleted    = RuntimeConditionReason("GardenerClusterCRDeleted")
+	ConditionReasonGardenerShootDeleted = RuntimeConditionReason("GardenerShootDeleted")
+	ConditionReasonDeletionErr          = RuntimeConditionReason("DeletionErr")
+	ConditionReasonConversionError      = RuntimeConditionReason("ConversionErr")
+	ConditionReasonCreationError        = RuntimeConditionReason("CreationErr")
+	ConditionReasonGardenerError        = RuntimeConditionReason("GardenerErr")
+	ConditionReasonKubernetesAPIErr     = RuntimeConditionReason("KubernetesErr")
+	ConditionReasonSerializationError   = RuntimeConditionReason("SerializationErr")
+	ConditionReasonDeleted              = RuntimeConditionReason("Deleted")
 )
 
 //+kubebuilder:object:root=true
@@ -217,7 +220,6 @@ func (k *Runtime) UpdateStateDeletion(c RuntimeConditionType, r RuntimeCondition
 		k.Status.State = RuntimeStateFailed
 	}
 
-	k.Status.State = RuntimeStateTerminating
 	condition := metav1.Condition{
 		Type:               string(c),
 		Status:             metav1.ConditionStatus(status),

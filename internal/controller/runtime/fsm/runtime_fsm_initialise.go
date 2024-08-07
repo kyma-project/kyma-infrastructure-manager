@@ -16,6 +16,7 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 	instanceIsNotBeingDeleted := s.instance.GetDeletionTimestamp().IsZero()
 	instanceHasFinalizer := controllerutil.ContainsFinalizer(&s.instance, m.Finalizer)
 	provisioningCondition := meta.FindStatusCondition(s.instance.Status.Conditions, string(imv1.ConditionTypeRuntimeProvisioned))
+	dryRunMode := s.instance.IsControlledByProvisioner()
 
 	if instanceIsNotBeingDeleted && !instanceHasFinalizer {
 		return addFinalizerAndRequeue(ctx, m, s)
@@ -34,35 +35,24 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 
 	if instanceIsNotBeingDeleted && s.shoot == nil {
 		m.log.Info("Gardener shoot does not exist, creating new one")
-		if s.instance.IsControlledByProvisioner() {
-			return switchState(sFnCreateShootDryRun)
+		if !dryRunMode {
+			return switchState(sFnCreateShoot)
 		}
-		return switchState(sFnCreateShoot)
+		return switchState(sFnCreateShootDryRun)
 	}
 
-	if instanceIsNotBeingDeleted && !s.instance.IsControlledByProvisioner() {
+	if instanceIsNotBeingDeleted && !dryRunMode {
 		m.log.Info("Gardener shoot exists, processing")
 		return switchState(sFnSelectShootProcessing)
 	}
 
-	// resource cleanup is done;
-	// instance is being deleted and shoot was already deleted
-	if !instanceIsNotBeingDeleted && instanceHasFinalizer && s.shoot == nil {
-		return removeFinalizerAndStop(ctx, m, s)
-	}
-
-	// resource cleanup did not start;
-	// instance is being deleted and shoot is not being deleted
-	if !instanceIsNotBeingDeleted && instanceHasFinalizer && s.shoot.DeletionTimestamp.IsZero() {
-		m.log.Info("Delete instance resources")
-		return switchState(sFnDeleteShoot)
-	}
-
-	// resource cleanup in progress;
-	// instance is being deleted and shoot is being deleted
+	// instance is being deleted
 	if !instanceIsNotBeingDeleted && instanceHasFinalizer {
-		m.log.Info("Waiting on instance resources being deleted")
-		return requeueAfter(gardenerRequeueDuration)
+		if s.shoot != nil && !dryRunMode {
+			m.log.Info("Delete instance resources")
+			return switchState(sFnDeleteKubeconfig)
+		}
+		return removeFinalizerAndStop(ctx, m, s) // resource cleanup completed
 	}
 
 	m.log.Info("noting to reconcile, stopping sfm")

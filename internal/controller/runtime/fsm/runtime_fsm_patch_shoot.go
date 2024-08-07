@@ -7,6 +7,7 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/gardener/shoot"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/internal/gardener/shoot"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -24,12 +25,12 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	err = m.ShootClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
 		FieldManager: "kim",
-		Force:        ptrTo(true),
+		Force:        ptr.To(true),
 	})
 
 	if err != nil {
 		m.log.Error(err, "Failed to patch shoot object, exiting with no retry")
-		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonGardenerError, "Shoot patch error")
+		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, "Shoot patch error")
 	}
 
 	if updatedShoot.Generation == s.shoot.Generation {
@@ -45,13 +46,8 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		imv1.ConditionTypeRuntimeProvisioned,
 		imv1.ConditionReasonProcessing,
 		"Unknown",
-		"Shoot is pending",
+		"Shoot is pending for update",
 	)
-
-	shouldDumpShootSpec := m.PVCPath != ""
-	if shouldDumpShootSpec {
-		return switchState(sFnDumpShootSpec)
-	}
 
 	return updateStatusAndRequeueAfter(gardenerRequeueDuration)
 }
@@ -62,13 +58,13 @@ func convertShoot(instance *imv1.Runtime, cfg shoot.ConverterConfig) (gardener.S
 	}
 
 	converter := gardener_shoot.NewConverter(cfg)
-	shoot, err := converter.ToShoot(*instance)
+	newShoot, err := converter.ToShoot(*instance)
 
 	if err == nil {
-		setObjectFields(&shoot)
+		setObjectFields(&newShoot)
 	}
 
-	return shoot, err
+	return newShoot, err
 }
 
 // workaround
@@ -83,8 +79,4 @@ func updateStatePendingWithErrorAndStop(instance *imv1.Runtime,
 	c imv1.RuntimeConditionType, r imv1.RuntimeConditionReason, msg string) (stateFn, *ctrl.Result, error) {
 	instance.UpdateStatePending(c, r, "False", msg)
 	return updateStatusAndStop()
-}
-
-func ptrTo[T any](v T) *T {
-	return &v
 }

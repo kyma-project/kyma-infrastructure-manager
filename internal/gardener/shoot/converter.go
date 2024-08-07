@@ -33,7 +33,9 @@ type DNSConfig struct {
 }
 
 type KubernetesConfig struct {
-	DefaultVersion string `json:"defaultVersion" validate:"required"`
+	DefaultVersion                      string `json:"defaultVersion" validate:"required"`
+	EnableKubernetesVersionAutoUpdate   bool   `json:"enableKubernetesVersionAutoUpdate"`
+	EnableMachineImageVersionAutoUpdate bool   `json:"enableMachineImageVersionVersionAutoUpdate"`
 }
 
 type AuditLogConfig struct {
@@ -79,8 +81,10 @@ func NewConverter(config ConverterConfig) Converter {
 		extender.ExtendWithOIDC,
 		extender.ExtendWithCloudProfile,
 		extender.ExtendWithNetworkFilter,
+		extender.ExtendWithCertConfig,
 		extender.ExtendWithExposureClassName,
 		extender.ExtendWithTolerations,
+		extender.NewMaintenanceExtender(config.Kubernetes.EnableKubernetesVersionAutoUpdate, config.Kubernetes.EnableMachineImageVersionAutoUpdate),
 	}
 
 	return Converter{

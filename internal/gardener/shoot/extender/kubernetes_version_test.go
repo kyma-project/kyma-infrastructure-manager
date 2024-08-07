@@ -6,6 +6,7 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 )
 
 func TestKubernetesVersionExtender(t *testing.T) {
@@ -30,7 +31,7 @@ func TestKubernetesVersionExtender(t *testing.T) {
 			Spec: imv1.RuntimeSpec{
 				Shoot: imv1.RuntimeShoot{
 					Kubernetes: imv1.Kubernetes{
-						Version: ToPtr("1.88"),
+						Version: ptr.To("1.88"),
 					},
 				},
 			},

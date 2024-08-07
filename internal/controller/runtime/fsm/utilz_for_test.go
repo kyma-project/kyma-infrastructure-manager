@@ -2,6 +2,7 @@ package fsm
 
 import (
 	"fmt"
+	"github.com/kyma-project/infrastructure-manager/internal/gardener/shoot"
 
 	. "github.com/onsi/gomega" //nolint:revive
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,6 +32,13 @@ var (
 	withStorageWriter = func(testWriterGetter writerGetter) fakeFSMOpt {
 		return func(fsm *fsm) error {
 			fsm.writerProvider = testWriterGetter
+			return nil
+		}
+	}
+
+	withConverterConfig = func(config shoot.ConverterConfig) fakeFSMOpt {
+		return func(fsm *fsm) error {
+			fsm.ConverterConfig = config
 			return nil
 		}
 	}

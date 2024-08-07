@@ -1,0 +1,55 @@
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+  name: shoot-comparator-pvc
+  namespace: kcp-system
+spec:
+  volumeSnapshotClassName: kim-shoot-dump
+  source:
+    persistentVolumeClaimName: shoot-comparator-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: shoot-comparator-pvc-read-only
+  namespace: kcp-system
+spec:
+  storageClassName: standard-rwo
+  dataSource:
+    apiGroup: snapshot.storage.k8s.io
+    kind: VolumeSnapshot
+    name: shoot-comparator-pvc
+  accessModes:
+    - ReadOnlyMany
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: fetch-test-comparison-results
+  name: fetch-test-comparison-results
+  namespace: kcp-system
+spec:
+  volumes:
+  - name: shoot-comparison-results
+    persistentVolumeClaim:
+      claimName: shoot-comparator-pvc-read-only
+      readOnly: true
+  containers:
+  - args:
+    - /bin/sh
+    - -c
+    - while true; do date; sleep 3; done
+    image: europe-docker.pkg.dev/kyma-project/prod/external/busybox:1.34.1-v1
+    name: get-pvc
+    volumeMounts:
+    - name: shoot-comparison-results
+      mountPath: /results
+      readOnly: true
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
