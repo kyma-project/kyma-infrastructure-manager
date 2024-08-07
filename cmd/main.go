@@ -167,9 +167,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	if auditLogPolicyConfigMap != "" {
-		// add here setting and checking audit-log-tenant-policy-path
+	if auditLogPolicyConfigMap != "" && auditLogTenantConfigPath != "" {
 		converterConfig.AuditLog.PolicyConfigMapName = auditLogPolicyConfigMap
+		converterConfig.AuditLog.TenantConfigPath = auditLogTenantConfigPath
 	}
 
 	validate := validator.New(validator.WithRequiredStructEnabled())

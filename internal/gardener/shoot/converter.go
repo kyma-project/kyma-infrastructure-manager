@@ -38,6 +38,7 @@ type KubernetesConfig struct {
 
 type AuditLogConfig struct {
 	PolicyConfigMapName string
+	TenantConfigPath    string
 }
 
 type ReaderGetter = func() (io.Reader, error)
@@ -72,7 +73,7 @@ func NewConverter(config ConverterConfig) Converter {
 		extender.NewKubernetesVersionExtender(config.Kubernetes.DefaultVersion),
 		extender.NewProviderExtender(config.Provider.AWS.EnableIMDSv2, config.MachineImage.DefaultVersion),
 		extender.NewDNSExtender(config.DNS.SecretName, config.DNS.DomainPrefix, config.DNS.ProviderType),
-		extender.NewAuditLogExtender(config.AuditLog.PolicyConfigMapName),
+		extender.NewAuditLogExtender(config.AuditLog.PolicyConfigMapName, config.AuditLog.TenantConfigPath),
 		extender.ExtendWithAnnotations,
 		extender.ExtendWithLabels,
 		extender.ExtendWithOIDC,
