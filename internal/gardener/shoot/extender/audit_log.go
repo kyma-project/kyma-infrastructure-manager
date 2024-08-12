@@ -3,12 +3,13 @@ package extender
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	v12 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"os"
 )
 
 const (
@@ -45,15 +46,15 @@ func NewAuditLogExtender(policyConfigMapName, tenantConfigPath string) func(runt
 			configureAuditPolicy(shoot, policyConfigMapName)
 			annotated, err := configureAuditLogs(providerType, tenantConfigPath, shoot)
 			if err != nil {
-				//logger.Warnf("Cannot enable audit logs: %s", err.Error())
+				// logger.Warnf("Cannot enable audit logs: %s", err.Error())
 				return err
 			}
 			if !annotated {
-				//logger.Debug("Audit Log Tenant did not change, skipping update of cluster")
+				// logger.Debug("Audit Log Tenant did not change, skipping update of cluster")
 				return nil
 			}
 
-			//logger.Debug("Modifying Audit Log config")
+			// logger.Debug("Modifying Audit Log config")
 		}
 
 		// reque dopoki nie wlaczymy audit logow na shoocie?
@@ -166,7 +167,7 @@ func configureSecret(shoot *gardener.Shoot, config AuditLogConfig) (changed bool
 			sec.ResourceRef.APIVersion == "v1" &&
 			sec.ResourceRef.Kind == "Secret" &&
 			sec.ResourceRef.Name == config.SecretName {
-			return false
+			return
 		}
 	} else {
 		shoot.Spec.Resources = append(shoot.Spec.Resources, gardener.NamedResourceReference{})
