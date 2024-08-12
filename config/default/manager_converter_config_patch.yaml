@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infrastructure-manager
+  namespace: system
+spec:
+  template:
+    spec:
+      volumes:
+        - name: converter-config
+          configMap:
+            name: infrastructure-manager-converter-config
+            items:
+              - key: converter_config.json
+                path: converter_config.json
+      containers:
+        - name: manager
+          volumeMounts:
+            - name: converter-config
+              mountPath: /converter-config

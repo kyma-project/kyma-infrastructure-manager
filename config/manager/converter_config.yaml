@@ -3,7 +3,7 @@ kind: ConfigMap
 metadata:
   name: converter-config
 data:
-  converter_config_aws.json: |
+  converter_config.json: |
     {
       "kubernetes": {
         "defaultVersion": "1.29",
@@ -20,5 +20,9 @@ data:
       },
       "gardener": {
         "projectName": "kyma-dev"
+      },
+      "machineImage": {
+        "defaultVersion": "1312.3.0"
       }
     }
+      

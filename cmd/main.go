@@ -88,7 +88,7 @@ func main() {
 	flag.DurationVar(&expirationTime, "kubeconfig-expiration-time", defaultExpirationTime, "Dynamic kubeconfig expiration time")
 	flag.DurationVar(&gardenerRequestTimeout, "gardener-request-timeout", defaultGardenerRequestTimeout, "Timeout duration for requests to Gardener")
 	flag.BoolVar(&enableRuntimeReconciler, "runtime-reconciler-enabled", defaultRuntimeReconcilerEnabled, "Feature flag for all runtime reconciler functionalities")
-	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "converter_config.json", "A file path to the gardener shoot converter configuration.")
+	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "A file path to the gardener shoot converter configuration.")
 	flag.BoolVar(&shootSpecDumpEnabled, "shoot-spec-dump-enabled", false, "Feature flag to allow persisting specs of created shoots")
 	flag.StringVar(&auditLogPolicyConfigMap, "audit-log-policy-config-map", "", "A name of the Config Map with audit log policy configuration")
 	flag.StringVar(&auditLogTenantConfigPath, "audit-log-tenant-config-path", "", "A file path to the audit log tenant configuration")
