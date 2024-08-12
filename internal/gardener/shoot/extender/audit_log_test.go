@@ -2,14 +2,15 @@ package extender
 
 import (
 	"encoding/json"
+	"path/filepath"
+	"testing"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v12 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"path/filepath"
-	"testing"
 )
 
 func TestAuditLogExtender(t *testing.T) {
