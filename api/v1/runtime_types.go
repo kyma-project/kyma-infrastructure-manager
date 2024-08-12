@@ -91,7 +91,7 @@ const (
 	ConditionReasonDeletion             = RuntimeConditionReason("Deletion")
 	ConditionReasonGardenerCRDeleted    = RuntimeConditionReason("GardenerClusterCRDeleted")
 	ConditionReasonGardenerShootDeleted = RuntimeConditionReason("GardenerShootDeleted")
-	ConditionReasonShootDeletionTimeout = RuntimeConditionReason("ShootShootDeletionTimeout")
+	ConditionReasonShootDeletionTimeout = RuntimeConditionReason("ShootDeletionTimeout")
 	ConditionReasonDeletionErr          = RuntimeConditionReason("DeletionErr")
 	ConditionReasonConversionError      = RuntimeConditionReason("ConversionErr")
 	ConditionReasonCreationError        = RuntimeConditionReason("CreationErr")
@@ -332,12 +332,20 @@ func (k *Runtime) HasTimeoutElapsed(timeLimit time.Duration) bool {
 	return false
 }
 
-func (k *Runtime) HasRuntimeOperationTimedOut() bool {
+// check if someone has removed time annotation after failed patch operation
+func (k *Runtime) CanRecoverFromPatchTimeout() bool {
 	if k.Status.State != RuntimeStateFailed {
 		return false
 	}
 
-	return k.IsConditionSet(ConditionTypeRuntimeProvisioned, ConditionReasonShootCreationTimeout) ||
-		k.IsConditionSet(ConditionTypeRuntimeDeprovisioned, ConditionReasonShootDeletionTimeout) ||
-		k.IsConditionSet(ConditionTypeRuntimeProvisioned, ConditionReasonShootProcessingTimeout)
+	if k.IsConditionSet(ConditionTypeRuntimeProvisioned, ConditionReasonShootProcessingTimeout) {
+		if k.Annotations == nil {
+			return true
+		}
+
+		if _, found := k.Annotations[AnnotationRuntimeOperationStarted]; !found {
+			return true
+		}
+	}
+	return false
 }

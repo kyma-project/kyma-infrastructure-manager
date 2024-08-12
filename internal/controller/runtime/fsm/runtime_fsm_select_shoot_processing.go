@@ -27,8 +27,10 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 		return updateStatusAndRequeueAfter(gardenerRequeueDuration)
 	}
 
-	if s.instance.HasRuntimeOperationTimedOut() {
+	if s.instance.CanRecoverFromPatchTimeout() {
 		// recovering from previous operation timeout after manual intervention
+		// we can recover only from patch operation timeout
+		// creation and deletion of runtime are not recoverable
 		m.log.Info("Patching Gardener shoot after previously operation timeout")
 		return switchState(sFnPatchExistingShoot)
 	}
@@ -39,12 +41,14 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 		return switchState(sFnPatchExistingShoot)
 	}
 
-	if lastOperation.Type == gardener.LastOperationTypeCreate {
-		return switchState(sFnWaitForShootCreation)
-	}
+	if s.instance.Status.State == imv1.RuntimeStatePending {
+		if lastOperation.Type == gardener.LastOperationTypeCreate {
+			return switchState(sFnWaitForShootCreation)
+		}
 
-	if lastOperation.Type == gardener.LastOperationTypeReconcile {
-		return switchState(sFnWaitForShootReconcile)
+		if lastOperation.Type == gardener.LastOperationTypeReconcile {
+			return switchState(sFnWaitForShootReconcile)
+		}
 	}
 
 	m.log.Info("Unknown shoot operation type, exiting with no retry")
