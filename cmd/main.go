@@ -97,7 +97,7 @@ func main() {
 	flag.BoolVar(&shootSpecDumpEnabled, "shoot-spec-dump-enabled", false, "Feature flag to allow persisting specs of created shoots")
 	flag.DurationVar(&provisionTimeout, "provisioning-timeout", defaultProvisioingTimeout, "Runtime provisioning timeout")
 	flag.DurationVar(&deprovisionTimeout, "deprovisioning-timeout", defaultDeprovisioningTimeout, "Runtime deprovisioning timeout")
-	flag.DurationVar(&upgradeTimeout, "kubeconfig-expiration-time", defaultUpgradeTimeout, "Runtime upgrade timeout")
+	flag.DurationVar(&upgradeTimeout, "upgrade-timeout", defaultUpgradeTimeout, "Runtime upgrade timeout")
 
 	opts := zap.Options{
 		Development: true,

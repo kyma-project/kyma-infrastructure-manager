@@ -331,21 +331,3 @@ func (k *Runtime) HasTimeoutElapsed(timeLimit time.Duration) bool {
 
 	return false
 }
-
-// check if someone has removed time annotation after failed patch operation
-func (k *Runtime) CanRecoverFromPatchTimeout() bool {
-	if k.Status.State != RuntimeStateFailed {
-		return false
-	}
-
-	if k.IsConditionSet(ConditionTypeRuntimeProvisioned, ConditionReasonShootProcessingTimeout) {
-		if k.Annotations == nil {
-			return true
-		}
-
-		if _, found := k.Annotations[AnnotationRuntimeOperationStarted]; !found {
-			return true
-		}
-	}
-	return false
-}
