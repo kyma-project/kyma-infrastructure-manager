@@ -46,7 +46,7 @@ func NewAuditLogExtender(policyConfigMapName, tenantConfigPath string) func(runt
 			annotated, err := configureAuditLogs(providerType, tenantConfigPath, shoot)
 			if err != nil {
 				//logger.Warnf("Cannot enable audit logs: %s", err.Error())
-				return nil
+				return err
 			}
 			if !annotated {
 				//logger.Debug("Audit Log Tenant did not change, skipping update of cluster")
