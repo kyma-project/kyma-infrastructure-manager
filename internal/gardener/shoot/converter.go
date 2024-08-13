@@ -78,6 +78,7 @@ func NewConverter(config ConverterConfig) Converter {
 		extender.ExtendWithExposureClassName,
 		extender.ExtendWithTolerations,
 		extender.NewMaintenanceExtender(config.Kubernetes.EnableKubernetesVersionAutoUpdate, config.Kubernetes.EnableMachineImageVersionAutoUpdate),
+		extender.ExtendWithStaticKubeconfig,
 	}
 
 	return Converter{

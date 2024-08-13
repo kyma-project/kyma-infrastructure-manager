@@ -49,8 +49,8 @@ func getShoot(i interface{}) (shoot v1beta1.Shoot, err error) {
 
 type matcher struct {
 	types.GomegaMatcher
-	path     string
-	expected interface{}
+	path   string
+	actual interface{}
 }
 
 func (m *Matcher) Match(actual interface{}) (success bool, err error) {
@@ -71,147 +71,147 @@ func (m *Matcher) Match(actual interface{}) (success bool, err error) {
 		// It is simpler to skip it than to make fix in the Provisioner.
 		//{
 		//	GomegaMatcher: gomega.BeComparableTo(eShoot.TypeMeta),
-		//	expected:      aShoot.TypeMeta,
+		//	actual:      aShoot.TypeMeta,
 		//},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Name),
-			expected:      aShoot.Name,
+			actual:        aShoot.Name,
 			path:          "metadata/name",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Namespace),
-			expected:      aShoot.Namespace,
+			actual:        aShoot.Namespace,
 			path:          "metadata/namespace",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Labels),
-			expected:      aShoot.Labels,
+			actual:        aShoot.Labels,
 			path:          "metadata/labels",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.Addons),
-			expected:      aShoot.Spec.Addons,
+			actual:        aShoot.Spec.Addons,
 			path:          "spec/Addons",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.CloudProfileName),
-			expected:      aShoot.Spec.CloudProfileName,
+			actual:        aShoot.Spec.CloudProfileName,
 			path:          "spec/CloudProfileName",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.DNS),
-			expected:      aShoot.Spec.DNS,
+			actual:        aShoot.Spec.DNS,
 			path:          "spec/DNS",
 		},
 		{
 			GomegaMatcher: NewExtensionMatcher(eShoot.Spec.Extensions),
-			expected:      aShoot.Spec.Extensions,
+			actual:        aShoot.Spec.Extensions,
 			path:          "spec/Extensions",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.Hibernation),
-			expected:      aShoot.Spec.Hibernation,
+			actual:        aShoot.Spec.Hibernation,
 			path:          "spec/Hibernation",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.Kubernetes),
-			expected:      aShoot.Spec.Kubernetes,
+			actual:        aShoot.Spec.Kubernetes,
 			path:          "spec/Kubernetes",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.Networking),
-			expected:      aShoot.Spec.Networking,
+			actual:        aShoot.Spec.Networking,
 			path:          "spec/Networking",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.Maintenance),
-			expected:      aShoot.Spec.Maintenance,
+			actual:        aShoot.Spec.Maintenance,
 			path:          "spec/Maintenance",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.Monitoring),
-			expected:      aShoot.Spec.Monitoring,
+			actual:        aShoot.Spec.Monitoring,
 			path:          "spec/Monitoring",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.Provider),
-			expected:      aShoot.Spec.Provider,
+			actual:        aShoot.Spec.Provider,
 			path:          "spec/Provider",
 		},
 
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.Purpose),
-			expected:      aShoot.Spec.Purpose,
+			actual:        aShoot.Spec.Purpose,
 			path:          "spec/Purpose",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.Region),
-			expected:      aShoot.Spec.Region,
+			actual:        aShoot.Spec.Region,
 			path:          "spec/Region",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.SecretBindingName),
-			expected:      aShoot.Spec.SecretBindingName,
+			actual:        aShoot.Spec.SecretBindingName,
 			path:          "spec/SecretBindingName",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.SeedName),
-			expected:      aShoot.Spec.SeedName,
+			actual:        aShoot.Spec.SeedName,
 			path:          "spec/SeedName",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.SeedSelector),
-			expected:      aShoot.Spec.SeedSelector,
+			actual:        aShoot.Spec.SeedSelector,
 			path:          "spec/SeedSelector",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.Resources),
-			expected:      aShoot.Spec.Resources,
+			actual:        aShoot.Spec.Resources,
 			path:          "spec/Resources",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.Tolerations),
-			expected:      aShoot.Spec.Tolerations,
+			actual:        aShoot.Spec.Tolerations,
 			path:          "spec/Tolerations",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.ExposureClassName),
-			expected:      aShoot.Spec.ExposureClassName,
+			actual:        aShoot.Spec.ExposureClassName,
 			path:          "spec/ExposureClassName",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.SystemComponents),
-			expected:      aShoot.Spec.SystemComponents,
+			actual:        aShoot.Spec.SystemComponents,
 			path:          "spec/SystemComponents",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.ControlPlane),
-			expected:      aShoot.Spec.ControlPlane,
+			actual:        aShoot.Spec.ControlPlane,
 			path:          "spec/ControlPlane",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.SchedulerName),
-			expected:      aShoot.Spec.SchedulerName,
+			actual:        aShoot.Spec.SchedulerName,
 			path:          "spec/SchedulerName",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.CloudProfile),
-			expected:      aShoot.Spec.CloudProfile,
+			actual:        aShoot.Spec.CloudProfile,
 			path:          "spec/CloudProfile",
 		},
 		{
 			GomegaMatcher: gomega.BeComparableTo(eShoot.Spec.CredentialsBindingName),
-			expected:      aShoot.Spec.CredentialsBindingName,
+			actual:        aShoot.Spec.CredentialsBindingName,
 			path:          "spec/CredentialsBindingName",
 		},
 	} {
-		ok, err := matcher.Match(matcher.expected)
+		ok, err := matcher.Match(matcher.actual)
 		if err != nil {
 			return false, err
 		}
 
 		if !ok {
-			msg := matcher.FailureMessage(matcher.expected)
+			msg := matcher.FailureMessage(matcher.actual)
 			if matcher.path != "" {
 				msg = fmt.Sprintf("%s: %s", matcher.path, msg)
 			}
@@ -223,7 +223,7 @@ func (m *Matcher) Match(actual interface{}) (success bool, err error) {
 }
 
 func (m *Matcher) NegatedFailureMessage(_ interface{}) string {
-	return "expected should not equal actual"
+	return "actual should not equal actual"
 }
 
 func (m *Matcher) FailureMessage(_ interface{}) string {
