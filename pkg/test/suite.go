@@ -12,22 +12,31 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
-func NewTestSuite(m *testing.M, name string) *TestSuite {
+func NewTestSuite(m *testing.M, name string, kcFile string) *TestSuite {
 	clusterName := envconf.RandomName(name, 25)
 	namespace := envconf.RandomName("kcp-system", 10)
-	cfg, _ := envconf.NewFromFlags()
+
+	var cfg *envconf.Config
+	if kcFile == "" {
+		cfg, _ = envconf.NewFromFlags()
+	} else {
+		cfg = envconf.NewWithKubeConfig(kcFile)
+	}
+
 	e2eTest := &TestSuite{
 		testEnv: env.NewWithConfig(cfg),
 		m:       m,
 	}
-	e2eTest.testEnv.Setup(
-		envfuncs.CreateCluster(kind.NewProvider(), clusterName),
-		envfuncs.CreateNamespace(namespace),
-	)
-	e2eTest.testEnv.Finish(
-		envfuncs.DeleteNamespace(namespace),
-		envfuncs.DestroyCluster(clusterName),
-	)
+	if kcFile == "" { //create adhoc cluster
+		e2eTest.testEnv.Setup(
+			envfuncs.CreateCluster(kind.NewProvider(), clusterName),
+			envfuncs.CreateNamespace(namespace),
+		)
+		e2eTest.testEnv.Finish(
+			envfuncs.DeleteNamespace(namespace),
+			envfuncs.DestroyCluster(clusterName),
+		)
+	}
 	return e2eTest
 }
 
