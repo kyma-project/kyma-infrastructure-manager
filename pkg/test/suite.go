@@ -41,15 +41,19 @@ func NewTestSuite(m *testing.M, name string, kcFile string) *TestSuite {
 }
 
 type TestSuite struct {
-	testEnv env.Environment
-	m       *testing.M
+	testEnv          env.Environment
+	m                *testing.M
+	clusterName      string
+	clusterNamespace string
 }
 
 func (ts *TestSuite) NewTestCase(t *testing.T, name string) *TestCase {
 	tc := &TestCase{
-		feature: features.New(name),
-		testEnv: ts.testEnv,
-		t:       t,
+		feature:          features.New(name),
+		testEnv:          ts.testEnv,
+		t:                t,
+		clusterName:      ts.clusterName,
+		clusterNamespace: ts.clusterNamespace,
 	}
 	return tc
 }

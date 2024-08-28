@@ -15,6 +15,7 @@ func TestMain(m *testing.M) {
 
 func TestKim(t *testing.T) {
 	tc := ts.NewTestCase(t, "my fance test case1")
+	tc.Given(tc.DeployKIM)
 	tc.Assert("Deploy KIM successfully", func(t *testing.T, k8sClient klient.Client) {
 		t.Log("Hello - I'm now running1")
 	})
