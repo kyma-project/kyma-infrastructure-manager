@@ -20,7 +20,7 @@ import (
 
 const (
 	KCPNamespace     = "kcp-system"
-	imageName        = "controller:e2e"
+	imageName        = "controller:e2e" //:latest cannot be used, see https://kind.sigs.k8s.io/docs/user/quick-start/#loading-an-image-into-your-cluster
 	kimPodTimeoutSec = 15
 )
 
