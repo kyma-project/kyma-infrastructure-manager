@@ -21,28 +21,28 @@ func NewEnvConf(kubeConfigFile string) *envconf.Config {
 	return cfg
 }
 
-func NewTestSuite(m *testing.M, cfg *envconf.Config, given ...Given) *TestSuite {
-	e2eTest := &TestSuite{
+func NewSuite(m *testing.M, cfg *envconf.Config, given ...Given) *Suite {
+	e2eTest := &Suite{
 		testEnv: env.NewWithConfig(cfg),
 		m:       m,
 	}
 
 	//call Given functions to retreive TestSuiteRequirements
 	clusterName := envconf.RandomName("kime2e", 16)
-	testSuiteConds := []*TestSuiteRequirement{}
+	testSuiteReqs := []*Requirement{}
 	for _, givenFct := range given {
-		testSuiteConds = append(testSuiteConds, givenFct(clusterName))
+		testSuiteReqs = append(testSuiteReqs, givenFct(clusterName))
 	}
 
 	//sort the TestSuiteRequirements by their execution order
-	sort.Slice(testSuiteConds, func(i, j int) bool {
-		return testSuiteConds[i].order < testSuiteConds[j].order
+	sort.Slice(testSuiteReqs, func(i, j int) bool {
+		return testSuiteReqs[i].order < testSuiteReqs[j].order
 	})
 
 	//add the TestSuiteRequirements to setup and finish hook of the test suite
 	setupFcts := []env.Func{}
 	finishFcts := []env.Func{}
-	for _, testSuiteCond := range testSuiteConds {
+	for _, testSuiteCond := range testSuiteReqs {
 		if testSuiteCond.setup != nil {
 			setupFcts = append(setupFcts, testSuiteCond.setup)
 		}
@@ -56,15 +56,15 @@ func NewTestSuite(m *testing.M, cfg *envconf.Config, given ...Given) *TestSuite 
 	return e2eTest
 }
 
-type TestSuite struct {
+type Suite struct {
 	testEnv          env.Environment
 	m                *testing.M
 	clusterName      string
 	clusterNamespace string
 }
 
-func (ts *TestSuite) NewTestCase(t *testing.T, name string) *TestCase {
-	tc := &TestCase{
+func (ts *Suite) NewScenario(t *testing.T, name string) *Scenario {
+	tc := &Scenario{
 		feature:          features.New(name),
 		testEnv:          ts.testEnv,
 		t:                t,
@@ -74,6 +74,6 @@ func (ts *TestSuite) NewTestCase(t *testing.T, name string) *TestCase {
 	return tc
 }
 
-func (ts *TestSuite) Run() {
+func (ts *Suite) Run() {
 	os.Exit(ts.testEnv.Run(ts.m))
 }

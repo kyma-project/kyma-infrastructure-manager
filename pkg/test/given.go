@@ -24,16 +24,16 @@ const (
 	kimPodTimeoutSec = 15
 )
 
-type Given func(clusterName string) *TestSuiteRequirement
+type Given func(clusterName string) *Requirement
 
-type TestSuiteRequirement struct {
+type Requirement struct {
 	setup  func(ctx context.Context, c *envconf.Config) (context.Context, error)
 	finish func(ctx context.Context, c *envconf.Config) (context.Context, error)
 	order  int
 }
 
-func WithExportOfClusterLogs(clusterName string) *TestSuiteRequirement {
-	return &TestSuiteRequirement{
+func WithExportOfClusterLogs(clusterName string) *Requirement {
+	return &Requirement{
 		order: 0,
 		setup: nil,
 		finish: func(ctx context.Context, c *envconf.Config) (context.Context, error) {
@@ -47,16 +47,16 @@ func WithExportOfClusterLogs(clusterName string) *TestSuiteRequirement {
 	}
 }
 
-func WithKindCluster(clusterName string) *TestSuiteRequirement {
-	return &TestSuiteRequirement{
+func WithKindCluster(clusterName string) *Requirement {
+	return &Requirement{
 		order:  1,
 		setup:  envfuncs.CreateCluster(kind.NewProvider(), clusterName),
 		finish: envfuncs.DestroyCluster(clusterName),
 	}
 }
 
-func WithCRDsInstalled(_ string) *TestSuiteRequirement {
-	return &TestSuiteRequirement{
+func WithCRDsInstalled(_ string) *Requirement {
+	return &Requirement{
 		order: 2,
 		setup: func(ctx context.Context, c *envconf.Config) (context.Context, error) {
 			return ctx, callMake(c, exec.Command("make", "install"))
@@ -65,8 +65,8 @@ func WithCRDsInstalled(_ string) *TestSuiteRequirement {
 	}
 }
 
-func WithDockerBuild(clusterName string) *TestSuiteRequirement {
-	return &TestSuiteRequirement{
+func WithDockerBuild(clusterName string) *Requirement {
+	return &Requirement{
 		order: 3,
 		setup: func(ctx context.Context, c *envconf.Config) (context.Context, error) {
 			if err := callMake(c, exec.Command("make", "docker-build-notest", fmt.Sprintf("IMG=%s", imageName))); err != nil {
@@ -78,8 +78,8 @@ func WithDockerBuild(clusterName string) *TestSuiteRequirement {
 	}
 }
 
-func WithKIMDeployed(_ string) *TestSuiteRequirement {
-	return &TestSuiteRequirement{
+func WithKIMDeployed(_ string) *Requirement {
+	return &Requirement{
 		order: 4,
 		setup: func(ctx context.Context, c *envconf.Config) (context.Context, error) {
 			//create kcp-system namespace
@@ -183,7 +183,6 @@ func recursiveFileLookup(lookupPath string) (string, error) {
 			return "", os.ErrNotExist
 		}
 		return recursiveFileLookup(path.Dir(lookupPath))
-	} else {
-		return lookupPath, nil
 	}
+	return lookupPath, nil
 }

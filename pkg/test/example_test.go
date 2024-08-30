@@ -9,15 +9,15 @@ import (
 	"sigs.k8s.io/e2e-framework/klient"
 )
 
-var ts *TestSuite
+var ts *Suite
 
 func TestMain(m *testing.M) {
-	ts = NewTestSuite(m, NewEnvConf(""), WithCRDsInstalled, WithKindCluster, WithDockerBuild, WithKIMDeployed, WithExportOfClusterLogs)
+	ts = NewSuite(m, NewEnvConf(""), WithCRDsInstalled, WithKindCluster, WithDockerBuild, WithKIMDeployed, WithExportOfClusterLogs)
 	ts.Run()
 }
 
 func TestKCPSystem(t *testing.T) {
-	tc := ts.NewTestCase(t, "Get list of kcp-system pods and check for KIM")
+	tc := ts.NewScenario(t, "Get list of kcp-system pods and check for KIM")
 	tc.Assert("KIM Pod exists", func(t *testing.T, client klient.Client) {
 		var pods v1.PodList
 		err := client.Resources(KCPNamespace).List(context.TODO(), &pods)
@@ -29,7 +29,7 @@ func TestKCPSystem(t *testing.T) {
 }
 
 func TestKubeSytem(t *testing.T) {
-	tc := ts.NewTestCase(t, "Get list of kube-system pods")
+	tc := ts.NewScenario(t, "Get list of kube-system pods")
 	tc.Assert("Kube-system pods exist", func(t *testing.T, client klient.Client) {
 		var pods v1.PodList
 		err := client.Resources("kube-system").List(context.TODO(), &pods)
