@@ -17,7 +17,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestKCPSystem(t *testing.T) {
-	tc := ts.NewScenario(t, "Get list of kcp-system pods and check for KIM")
+	tc := ts.NewFeature(t, "Get list of kcp-system pods and check for KIM")
 	tc.Assert("KIM Pod exists", func(t *testing.T, client klient.Client) {
 		var pods v1.PodList
 		err := client.Resources(KCPNamespace).List(context.TODO(), &pods)
@@ -29,7 +29,7 @@ func TestKCPSystem(t *testing.T) {
 }
 
 func TestKubeSytem(t *testing.T) {
-	tc := ts.NewScenario(t, "Get list of kube-system pods")
+	tc := ts.NewFeature(t, "Get list of kube-system pods")
 	tc.Assert("Kube-system pods exist", func(t *testing.T, client klient.Client) {
 		var pods v1.PodList
 		err := client.Resources("kube-system").List(context.TODO(), &pods)

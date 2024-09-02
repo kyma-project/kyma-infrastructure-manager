@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
-type Scenario struct {
+type Feature struct {
 	feature          *features.FeatureBuilder
 	testEnv          env.Environment
 	clusterName      string
@@ -19,7 +19,7 @@ type Scenario struct {
 	t                *testing.T
 }
 
-func (tc *Scenario) Assert(desc string, assert func(t *testing.T, k8sClient klient.Client)) *Scenario {
+func (tc *Feature) Assert(desc string, assert func(t *testing.T, k8sClient klient.Client)) *Feature {
 	tc.feature.Assess(desc, func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 		assert(t, cfg.Client())
 		return ctx
@@ -27,6 +27,6 @@ func (tc *Scenario) Assert(desc string, assert func(t *testing.T, k8sClient klie
 	return tc
 }
 
-func (tc *Scenario) Run() {
+func (tc *Feature) Run() {
 	tc.testEnv.Test(tc.t, tc.feature.Feature())
 }

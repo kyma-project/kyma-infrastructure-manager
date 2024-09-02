@@ -63,8 +63,8 @@ type Suite struct {
 	clusterNamespace string
 }
 
-func (ts *Suite) NewScenario(t *testing.T, name string) *Scenario {
-	tc := &Scenario{
+func (ts *Suite) NewFeature(t *testing.T, name string) *Feature {
+	tc := &Feature{
 		feature:          features.New(name),
 		testEnv:          ts.testEnv,
 		t:                t,
