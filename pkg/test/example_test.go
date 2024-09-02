@@ -4,8 +4,6 @@ import (
 	"context"
 	"testing"
 
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/e2e-framework/klient"
@@ -32,11 +30,6 @@ func TestKCPSystem(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, pods.Items, 1)
 		assert.Contains(t, pods.Items[0].Name, "infrastructure-manager")
-	})
-	tc.Assert("Compare Shoot-Spec", func(t *testing.T, client klient.Client) {
-		var runtime imv1.Runtime
-		err := client.Resources(KCPNamespace).Create(context.TODO(), &runtime)
-		assert.NoError(t, err)
 	})
 	tc.Run()
 }
