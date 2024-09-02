@@ -13,18 +13,20 @@ import (
 var s *Suite
 
 func TestMain(m *testing.M) {
-	s = NewSuite(m, NewEnvConf("/Users/I539990/tmp/kind-kc.yaml"), WithCRDsInstalled, WithKindCluster, WithDockerBuild, WithKIMDeployed, WithExportOfClusterLogs)
+	s = NewSuite(m, NewEnvConf(""), WithCRDsInstalled, WithKindCluster, WithDockerBuild, WithKIMDeployed, WithExportOfClusterLogs)
 	s.Run()
 }
 
 func TestKCPSystem(t *testing.T) {
 	f := s.NewFeature(t, "Get list of kcp-system pods and check for KIM")
+
 	f.Assert("KCP-system namespace exists", func(client klient.Client) {
 		var ns v1.Namespace
 		err := client.Resources(KCPNamespace).Get(context.TODO(), "kcp-system", "", &ns)
 		assert.NoError(t, err)
 		assert.Equal(t, ns.Name, "kcp-system")
 	})
+
 	f.Assert("KIM Pod exists", func(client klient.Client) {
 		var pods v1.PodList
 		err := client.Resources(KCPNamespace).List(context.TODO(), &pods)
@@ -38,6 +40,11 @@ func TestKCPSystem(t *testing.T) {
 func TestRuntimeCR(t *testing.T) {
 	f := s.NewFeature(t, "Compare Runtime CR with Shoot")
 	f.WithRuntimeCRs(path.Join("assets", "runtime-example.yaml"))
+	f.Assert("Check for the correct Shoot", func(client klient.Client) {
+		var ns v1.Namespace
+		err := client.Resources(KCPNamespace).Get(context.TODO(), "kcp-system", "", &ns)
+		assert.NoError(t, err)
+	})
 	f.Run()
 }
 
