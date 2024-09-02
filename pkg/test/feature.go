@@ -2,15 +2,15 @@ package test
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/util/json"
+	"k8s.io/apimachinery/pkg/util/yaml"
 
-	"gopkg.in/yaml.v2"
 	"sigs.k8s.io/e2e-framework/klient"
 	"sigs.k8s.io/e2e-framework/pkg/env"
 	"sigs.k8s.io/e2e-framework/pkg/features"
@@ -32,18 +32,19 @@ func (f *Feature) WithRuntimeCRs(runtimeCRFiles ...string) *Feature {
 			rawRuntimeCR, err := os.ReadFile(runtimeCRFile)
 			require.NoError(t, err)
 
-			var runtime imv1.Runtime
+			runtime := &imv1.Runtime{}
+			yaml.Unmarshal(rawRuntimeCR, runtime)
 			switch filepath.Ext(runtimeCRFile) {
 			case ".json":
-				require.NoError(t, json.Unmarshal(rawRuntimeCR, &runtime))
+				require.NoError(t, json.Unmarshal(rawRuntimeCR, runtime))
 			case ".yaml", ".yml":
-				require.NoError(t, yaml.Unmarshal(rawRuntimeCR, &runtime))
+				require.NoError(t, yaml.Unmarshal(rawRuntimeCR, runtime))
 			default:
 				t.Logf("Cannot read Runtime CR file '%s' because only file extesnion .json or .yaml is supported", runtimeCRFile)
 				t.Fail()
 			}
 
-			err = cfg.Client().Resources(KCPNamespace).Create(context.TODO(), &runtime)
+			err = cfg.Client().Resources(KCPNamespace).Create(context.TODO(), runtime)
 			require.NoError(t, err)
 		}
 		return ctx
