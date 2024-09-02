@@ -63,17 +63,17 @@ type Suite struct {
 	clusterNamespace string
 }
 
-func (ts *Suite) NewFeature(t *testing.T, name string) *Feature {
-	tc := &Feature{
+func (s *Suite) NewFeature(t *testing.T, name string) *Feature {
+	f := &Feature{
 		feature:          features.New(name),
-		testEnv:          ts.testEnv,
+		testEnv:          s.testEnv,
 		t:                t,
-		clusterName:      ts.clusterName,
-		clusterNamespace: ts.clusterNamespace,
+		clusterName:      s.clusterName,
+		clusterNamespace: s.clusterNamespace,
 	}
-	return tc
+	return f
 }
 
-func (ts *Suite) Run() {
-	os.Exit(ts.testEnv.Run(ts.m))
+func (s *Suite) Run() {
+	os.Exit(s.testEnv.Run(s.m))
 }

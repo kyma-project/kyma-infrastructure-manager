@@ -9,6 +9,8 @@ import (
 	"path"
 	"time"
 
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -59,7 +61,10 @@ func WithCRDsInstalled(_ string) *Requirement {
 	return &Requirement{
 		order: 2,
 		setup: func(ctx context.Context, c *envconf.Config) (context.Context, error) {
-			return ctx, callMake(c, exec.Command("make", "install"))
+			if err := callMake(c, exec.Command("make", "install")); err != nil { //install CRD in cluster
+				return ctx, err
+			}
+			return ctx, imv1.AddToScheme(c.Client().Resources().GetScheme()) //add CRD scheme to K8s client
 		},
 		finish: nil,
 	}

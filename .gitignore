@@ -28,3 +28,9 @@ Dockerfile.cross
 *~
 
 vendor
+
+# KIND log dumps
+logs_*
+
+# Debug files of IDEs
+__debug*

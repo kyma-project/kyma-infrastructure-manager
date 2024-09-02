@@ -1,0 +1,80 @@
+apiVersion: infrastructuremanager.kyma-project.io/v1
+kind: Runtime
+metadata:
+  labels:
+    kyma-project.io/broker-plan-id: 5cb3d976-b85c-42ea-a636-79cadda109a9
+    kyma-project.io/broker-plan-name: preview
+    kyma-project.io/controlled-by-provisioner: "false"
+    kyma-project.io/global-account-id: e449f875-b5b2-4485-b7c0-98725c0571bf
+    kyma-project.io/instance-id: jp-010
+    kyma-project.io/region: eu-west-2
+    kyma-project.io/runtime-id: 27e7d1a2-ae05-45ba-9164-mdmdmdmkim04
+    kyma-project.io/shoot-name: unittest-kim01
+    kyma-project.io/subaccount-id: 123456-865d-42fd-8d6f-3e3e2dcce3c8
+    operator.kyma-project.io/kyma-name: 27e7d1a2-ae05-45ba-9164-mdmdmdmkim04
+  name: runtime-example
+  namespace: default
+spec:
+  security:
+    administrators:
+    - admin@myorg.com
+    networking:
+      filter:
+        egress:
+          enabled: false
+        ingress:
+          enabled: true
+  shoot:
+    controlPlane:
+      highAvailability:
+        failureTolerance:
+          type: zone
+    enforceSeedLocation: true
+    kubernetes:
+      kubeAPIServer:
+        additionalOidcConfig:
+        - clientID: 9bd05ed7-a930-44e6-8c79-e6defeb7dec9
+          groupsClaim: groups
+          issuerURL: https://kymatest.accounts400.ondemand.com
+          signingAlgs:
+          - RS256
+          usernameClaim: sub
+          usernamePrefix: '-'
+        oidcConfig:
+          clientID: 9bd05ed7-a930-44e6-8c79-e6defeb7dec9
+          groupsClaim: groups
+          issuerURL: https://kymatest.accounts400.ondemand.com
+          signingAlgs:
+          - RS256
+          usernameClaim: sub
+          usernamePrefix: '-'
+      version: 1.28.7
+    name: unittest-kim01
+    networking:
+      nodes: 10.250.0.0/16
+      pods: 100.64.0.0/12
+      services: 100.104.0.0/13
+    platformRegion: cd-eu11
+    provider:
+      type: aws
+      workers:
+      - machine:
+          image:
+            name: gardenlinux
+            version: 1312.3.0
+          type: m6i.large
+        maxSurge: 3
+        maxUnavailable: 0
+        maximum: 20
+        minimum: 3
+        name: cpu-worker-0
+        volume:
+          size: 50Gi
+          type: gp2
+        zones:
+        - eu-central-1a
+        - eu-central-1b
+        - eu-central-1c
+    purpose: production
+    region: eu-central-1
+    secretBindingName: hyperscaler_secret
