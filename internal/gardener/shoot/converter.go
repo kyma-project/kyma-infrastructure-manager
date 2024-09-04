@@ -39,6 +39,7 @@ type KubernetesConfig struct {
 }
 
 type AuditLogConfig struct {
+	Mandatory           bool   `json:"mandatory"`
 	PolicyConfigMapName string `json:"policyConfigMapName"`
 	TenantConfigPath    string `json:"tenantConfigPath"`
 }

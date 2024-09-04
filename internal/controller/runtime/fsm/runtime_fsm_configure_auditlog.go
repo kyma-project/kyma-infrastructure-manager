@@ -10,7 +10,7 @@ import (
 func sFnConfigureAuditLog(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Configure Audit Log state")
 
-	wasAuditLogEnabled, err := m.AuditLogging.Enable(ctx, s.shoot)
+	wasAuditLogEnabled, err := m.AuditLogging.Enable(ctx, s.shoot, m.AuditLog.Mandatory)
 
 	if wasAuditLogEnabled {
 		m.log.Info("Audit Log configured for shoot: " + s.shoot.Name)
