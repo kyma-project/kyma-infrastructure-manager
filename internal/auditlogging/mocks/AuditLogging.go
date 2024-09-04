@@ -14,9 +14,9 @@ type AuditLogging struct {
 	mock.Mock
 }
 
-// Enable provides a mock function with given fields: ctx, shoot
-func (_m *AuditLogging) Enable(ctx context.Context, shoot *v1beta1.Shoot) (bool, error) {
-	ret := _m.Called(ctx, shoot)
+// Enable provides a mock function with given fields: ctx, shoot, mandatory
+func (_m *AuditLogging) Enable(ctx context.Context, shoot *v1beta1.Shoot, mandatory bool) (bool, error) {
+	ret := _m.Called(ctx, shoot, mandatory)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Enable")
@@ -24,17 +24,17 @@ func (_m *AuditLogging) Enable(ctx context.Context, shoot *v1beta1.Shoot) (bool,
 
 	var r0 bool
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.Shoot) (bool, error)); ok {
-		return rf(ctx, shoot)
+	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.Shoot, bool) (bool, error)); ok {
+		return rf(ctx, shoot, mandatory)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.Shoot) bool); ok {
-		r0 = rf(ctx, shoot)
+	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.Shoot, bool) bool); ok {
+		r0 = rf(ctx, shoot, mandatory)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.Shoot) error); ok {
-		r1 = rf(ctx, shoot)
+	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.Shoot, bool) error); ok {
+		r1 = rf(ctx, shoot, mandatory)
 	} else {
 		r1 = ret.Error(1)
 	}

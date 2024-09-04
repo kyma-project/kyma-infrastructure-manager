@@ -38,7 +38,7 @@ func sFnConfigureAuditLog(ctx context.Context, m *fsm, s *systemState) (stateFn,
 	s.instance.UpdateStateReady(
 		imv1.ConditionTypeAuditLogConfigured,
 		imv1.ConditionReasonAuditLogConfigured,
-		"Audit Log configured successfully",
+		"Audit Log state completed",
 	)
 
 	return updateStatusAndStop()

@@ -33,10 +33,12 @@ func TestAuditLogState(t *testing.T) {
 			},
 		}
 
-		auditLog.On("Enable", ctx, shoot).Return(true, nil).Once()
+		fsm := &fsm{AuditLogging: auditLog}
+		fsm.AuditLog.Mandatory = true
+
+		auditLog.On("Enable", ctx, shoot, true).Return(true, nil).Once()
 
 		// when
-		fsm := &fsm{AuditLogging: auditLog}
 		stateFn, _, _ := sFnConfigureAuditLog(ctx, fsm, systemState)
 
 		// set the time to its zero value for comparison purposes
@@ -64,14 +66,16 @@ func TestAuditLogState(t *testing.T) {
 				Type:    string(v1.ConditionTypeAuditLogConfigured),
 				Status:  "True",
 				Reason:  string(v1.ConditionReasonAuditLogConfigured),
-				Message: "Audit Log configured successfully",
+				Message: "Audit Log state completed",
 			},
 		}
 
-		auditLog.On("Enable", ctx, shoot).Return(false, nil).Once()
+		fsm := &fsm{AuditLogging: auditLog}
+		fsm.AuditLog.Mandatory = true
+
+		auditLog.On("Enable", ctx, shoot, true).Return(false, nil).Once()
 
 		// when
-		fsm := &fsm{AuditLogging: auditLog}
 		stateFn, _, _ := sFnConfigureAuditLog(ctx, fsm, systemState)
 
 		// set the time to its zero value for comparison purposes
@@ -103,10 +107,12 @@ func TestAuditLogState(t *testing.T) {
 			},
 		}
 
-		auditLog.On("Enable", ctx, shoot).Return(false, errors.New("some error during configuration")).Once()
+		fsm := &fsm{AuditLogging: auditLog}
+		fsm.AuditLog.Mandatory = true
+
+		auditLog.On("Enable", ctx, shoot, true).Return(false, errors.New("some error during configuration")).Once()
 
 		// when
-		fsm := &fsm{AuditLogging: auditLog}
 		stateFn, _, _ := sFnConfigureAuditLog(ctx, fsm, systemState)
 
 		// set the time to its zero value for comparison purposes

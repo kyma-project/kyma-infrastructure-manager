@@ -140,10 +140,10 @@ func ApplyAuditLogConfig(shoot *gardener.Shoot, auditConfigFromFile map[string]m
 	}
 
 	tenant, ok := providerConfig[auditID]
-	if !ok {
-		if mandatory {
-			return false, fmt.Errorf("auditlog config for region %s, provider %s is empty", auditID, providerType)
-		}
+	if !ok && mandatory {
+		return false, fmt.Errorf("auditlog config for region %s, provider %s is empty", auditID, providerType)
+	} else if !ok {
+		rollbackAuditPolicy(shoot)
 		return false, nil
 	}
 
@@ -285,6 +285,12 @@ func newAuditPolicyConfig(policyConfigMapName string) *gardener.AuditConfig {
 		AuditPolicy: &gardener.AuditPolicy{
 			ConfigMapRef: &v12.ObjectReference{Name: policyConfigMapName},
 		},
+	}
+}
+
+func rollbackAuditPolicy(shoot *gardener.Shoot) {
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil {
+		shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig = nil
 	}
 }
 
