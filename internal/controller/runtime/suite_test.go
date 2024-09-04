@@ -18,6 +18,10 @@ package runtime
 
 import (
 	"context"
+	"encoding/json"
+	"github.com/kyma-project/infrastructure-manager/internal/auditlogging"
+	v1 "k8s.io/api/autoscaling/v1"
+	v12 "k8s.io/api/core/v1"
 	"path/filepath"
 	"testing"
 	"time"
@@ -140,14 +144,14 @@ var _ = AfterSuite(func() {
 func setupGardenerTestClientForProvisioning() {
 	baseShoot := getBaseShootForTestingSequence()
 	shoots := fixShootsSequenceForProvisioning(&baseShoot)
-	seeds := fixSeedsSequence()
+	seeds := fixSeedsSequenceForProvisioning()
 	setupGardenerClientWithSequence(shoots, seeds)
 }
 
 func setupGardenerTestClientForUpdate() {
 	baseShoot := getBaseShootForTestingSequence()
 	shoots := fixShootsSequenceForUpdate(&baseShoot)
-	seeds := fixSeedsSequence()
+	seeds := fixSeedsSequenceForUpdate()
 	setupGardenerClientWithSequence(shoots, seeds)
 }
 
@@ -205,13 +209,23 @@ func fixShootsSequenceForProvisioning(shoot *gardener_api.Shoot) []*gardener_api
 
 	readyShoot.Status.LastOperation.State = gardener_api.LastOperationStateSucceeded
 
+	processingShootAfterAuditLogs := readyShoot.DeepCopy()
+	addAuditLogConfigToShoot(processingShootAfterAuditLogs)
+	processingShootAfterAuditLogs.Status.LastOperation.Type = gardener_api.LastOperationTypeReconcile
+	processingShootAfterAuditLogs.Status.LastOperation.State = gardener_api.LastOperationStateProcessing
+
+	readyShootAfterAuditLogs := processingShootAfterAuditLogs.DeepCopy()
+	readyShootAfterAuditLogs.Status.LastOperation.State = gardener_api.LastOperationStateSucceeded
+
 	// processedShoot := processingShoot.DeepCopy() // will add specific data later
 
-	return []*gardener_api.Shoot{missingShoot, missingShoot, missingShoot, initialisedShoot, dnsShoot, pendingShoot, processingShoot, readyShoot, readyShoot, readyShoot, readyShoot, readyShoot}
+	return []*gardener_api.Shoot{missingShoot, missingShoot, missingShoot, initialisedShoot, dnsShoot, pendingShoot, processingShoot, readyShoot, readyShoot, readyShoot, readyShoot, readyShoot, processingShootAfterAuditLogs, readyShootAfterAuditLogs, readyShootAfterAuditLogs}
 }
 
 func fixShootsSequenceForUpdate(shoot *gardener_api.Shoot) []*gardener_api.Shoot {
 	pendingShoot := shoot.DeepCopy()
+
+	addAuditLogConfigToShoot(pendingShoot)
 
 	pendingShoot.Spec.DNS = &gardener_api.DNS{
 		Domain: ptr.To("test.domain"),
@@ -236,7 +250,7 @@ func fixShootsSequenceForUpdate(shoot *gardener_api.Shoot) []*gardener_api.Shoot
 
 	// processedShoot := processingShoot.DeepCopy() // will add specific data later
 
-	return []*gardener_api.Shoot{pendingShoot, processingShoot, readyShoot, readyShoot, readyShoot}
+	return []*gardener_api.Shoot{pendingShoot, processingShoot, readyShoot, readyShoot}
 }
 
 func fixShootsSequenceForDelete(shoot *gardener_api.Shoot) []*gardener_api.Shoot {
@@ -270,7 +284,22 @@ func fixShootsSequenceForDelete(shoot *gardener_api.Shoot) []*gardener_api.Shoot
 	return []*gardener_api.Shoot{currentShoot, currentShoot, currentShoot, currentShoot, pendingDeleteShoot, nil}
 }
 
-func fixSeedsSequence() []*gardener_api.Seed {
+func fixSeedsSequenceForProvisioning() []*gardener_api.Seed {
+	seed := &gardener_api.Seed{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-seed",
+		},
+		Spec: gardener_api.SeedSpec{
+			Provider: gardener_api.SeedProvider{
+				Type: "aws",
+			},
+		},
+	}
+
+	return []*gardener_api.Seed{seed, seed}
+}
+
+func fixSeedsSequenceForUpdate() []*gardener_api.Seed {
 	seed := &gardener_api.Seed{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-seed",
@@ -324,4 +353,47 @@ func fixConverterConfigForTests() gardener_shoot.ConverterConfig {
 			TenantConfigPath:    filepath.Join("testdata", "auditConfig.json"),
 		},
 	}
+}
+
+func addAuditLogConfigToShoot(shoot *gardener_api.Shoot) {
+	shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig = &gardener_api.AuditConfig{
+		AuditPolicy: &gardener_api.AuditPolicy{
+			ConfigMapRef: &v12.ObjectReference{Name: "policy-config-map"},
+		},
+	}
+
+	shoot.Spec.Resources = append(shoot.Spec.Resources, gardener_api.NamedResourceReference{
+		Name: "auditlog-credentials",
+		ResourceRef: v1.CrossVersionObjectReference{
+			Kind:       "Secret",
+			Name:       "auditlog-secret",
+			APIVersion: "v1",
+		},
+	})
+
+	const (
+		extensionKind    = "AuditlogConfig"
+		extensionVersion = "service.auditlog.extensions.gardener.cloud/v1alpha1"
+		extensionType    = "standard"
+	)
+
+	shoot.Spec.Extensions = append(shoot.Spec.Extensions, gardener_api.Extension{
+		Type: "shoot-auditlog-service",
+	})
+
+	ext := &shoot.Spec.Extensions[len(shoot.Spec.Extensions)-1]
+
+	cfg := auditlogging.AuditlogExtensionConfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionKind,
+			APIVersion: extensionVersion,
+		},
+		Type:                extensionType,
+		TenantID:            "79c64792-9c1e-4c1b-9941-ef7560dd3eae",
+		ServiceURL:          "https://auditlog.example.com:3001",
+		SecretReferenceName: "auditlog-credentials",
+	}
+
+	ext.ProviderConfig = &runtime.RawExtension{}
+	ext.ProviderConfig.Raw, _ = json.Marshal(cfg)
 }

@@ -14,7 +14,42 @@ import (
 )
 
 func TestAuditLogState(t *testing.T) {
-	t.Run("Should set status on Runtime CR when Audit Log was successfully configured", func(t *testing.T) {
+	t.Run("Should set status on Runtime CR when Audit Log configuration was changed and Shoot enters into reconciliation", func(t *testing.T) {
+		// given
+		ctx := context.Background()
+		auditLog := &mocks.AuditLogging{}
+		shoot := shootForTest()
+		instance := runtimeForTest()
+		systemState := &systemState{
+			instance: instance,
+			shoot:    shoot,
+		}
+		expectedRuntimeConditions := []metav1.Condition{
+			{
+				Type:    string(v1.ConditionTypeAuditLogConfigured),
+				Status:  "Unknown",
+				Reason:  string(v1.ConditionReasonAuditLogConfigured),
+				Message: "Waiting for Gardener shoot to be Ready state after configuration of the Audit Logs",
+			},
+		}
+
+		auditLog.On("Enable", ctx, shoot).Return(true, nil).Once()
+
+		// when
+		fsm := &fsm{AuditLogging: auditLog}
+		stateFn, _, _ := sFnConfigureAuditLog(ctx, fsm, systemState)
+
+		// set the time to its zero value for comparison purposes
+		systemState.instance.Status.Conditions[0].LastTransitionTime = metav1.Time{}
+
+		// then
+		auditLog.AssertExpectations(t)
+		require.Contains(t, stateFn.name(), "sFnUpdateStatus")
+		assert.Equal(t, v1.RuntimeStatePending, string(systemState.instance.Status.State))
+		assert.Equal(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)
+	})
+
+	t.Run("Should set status on Runtime CR when Shoot is in Succeeded state after configuring Audit Log", func(t *testing.T) {
 		// given
 		ctx := context.Background()
 		auditLog := &mocks.AuditLogging{}
@@ -29,11 +64,11 @@ func TestAuditLogState(t *testing.T) {
 				Type:    string(v1.ConditionTypeAuditLogConfigured),
 				Status:  "True",
 				Reason:  string(v1.ConditionReasonAuditLogConfigured),
-				Message: "Audit Log configured",
+				Message: "Audit Log configured successfully",
 			},
 		}
 
-		auditLog.On("Enable", ctx, shoot).Return(true, nil).Once()
+		auditLog.On("Enable", ctx, shoot).Return(false, nil).Once()
 
 		// when
 		fsm := &fsm{AuditLogging: auditLog}

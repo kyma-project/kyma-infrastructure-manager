@@ -125,7 +125,7 @@ func (al *AuditLog) Enable(ctx context.Context, shoot *gardener.Shoot) (bool, er
 		}
 	}
 
-	return true, nil
+	return annotated, nil
 }
 
 func ApplyAuditLogConfig(shoot *gardener.Shoot, auditConfigFromFile map[string]map[string]AuditLogData, providerType string) (bool, error) {

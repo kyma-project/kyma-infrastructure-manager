@@ -47,9 +47,9 @@ func sFnWaitForShootReconcile(_ context.Context, m *fsm, s *systemState) (stateF
 		return ensureStatusConditionIsSetAndContinue(
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,
-			imv1.ConditionReasonConfigurationCompleted,
+			imv1.ConditionReasonAuditLogConfigured,
 			"Runtime processing completed successfully",
-			sFnApplyClusterRoleBindings)
+			sFnConfigureAuditLog)
 	}
 
 	m.log.Info("Update did not processed, exiting with no retry")
