@@ -17,6 +17,7 @@ func sFnCreateKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 
 	runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
 
+	// get section
 	var cluster imv1.GardenerCluster
 	err := m.Get(ctx, types.NamespacedName{
 		Namespace: s.instance.Namespace,
@@ -26,7 +27,12 @@ func sFnCreateKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 	if err != nil {
 		if !k8serrors.IsNotFound(err) {
 			m.log.Error(err, "GardenerCluster CR read error", "name", runtimeID)
-			s.instance.UpdateStatePending(imv1.ConditionTypeRuntimeKubeconfigReady, imv1.ConditionReasonKubernetesAPIErr, "False", err.Error())
+			s.instance.UpdateStatePending(
+				imv1.ConditionTypeRuntimeKubeconfigReady,
+				imv1.ConditionReasonKubernetesAPIErr,
+				"False",
+				err.Error(),
+			)
 			return updateStatusAndStop()
 		}
 
@@ -34,7 +40,12 @@ func sFnCreateKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 		err = m.Create(ctx, makeGardenerClusterForRuntime(s.instance, s.shoot))
 		if err != nil {
 			m.log.Error(err, "GardenerCluster CR create error", "name", runtimeID)
-			s.instance.UpdateStatePending(imv1.ConditionTypeRuntimeKubeconfigReady, imv1.ConditionReasonKubernetesAPIErr, "False", err.Error())
+			s.instance.UpdateStatePending(
+				imv1.ConditionTypeRuntimeKubeconfigReady,
+				imv1.ConditionReasonKubernetesAPIErr,
+				"False",
+				err.Error(),
+			)
 			return updateStatusAndStop()
 		}
 
@@ -43,6 +54,7 @@ func sFnCreateKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 		return updateStatusAndRequeueAfter(controlPlaneRequeueDuration)
 	}
 
+	// wait section
 	if cluster.Status.State != imv1.ReadyState {
 		m.log.Info("GardenerCluster CR is not ready yet, requeue", "Name", runtimeID, "State", cluster.Status.State)
 		return requeueAfter(controlPlaneRequeueDuration)
@@ -54,7 +66,7 @@ func sFnCreateKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 		imv1.ConditionTypeRuntimeKubeconfigReady,
 		imv1.ConditionReasonGardenerCRReady,
 		"Gardener Cluster CR is ready.",
-		sFnProcessShoot)
+		sFnApplyClusterRoleBindings)
 }
 
 func makeGardenerClusterForRuntime(runtime imv1.Runtime, shoot *gardener.Shoot) *imv1.GardenerCluster {

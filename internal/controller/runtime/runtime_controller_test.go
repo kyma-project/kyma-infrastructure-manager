@@ -24,15 +24,16 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 var _ = Describe("Runtime Controller", func() {
+
 	Context("When reconciling a resource", func() {
 		const ResourceName = "test-resource"
-
 		ctx := context.Background()
 
 		typeNamespacedName := types.NamespacedName{
@@ -40,17 +41,9 @@ var _ = Describe("Runtime Controller", func() {
 			Namespace: "default",
 		}
 
-		AfterEach(func() {
-			resource := &imv1.Runtime{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
-
-		})
-
 		It("Should successfully create new Shoot from provided Runtime and set Ready status on CR", func() {
-
-			By("Setup the fake gardener client for Provisioning")
 			setupGardenerTestClientForProvisioning()
+			Expect(setupSeedObjectOnCluster(gardenerTestClient)).To(Succeed())
 
 			By("Create Runtime CR")
 			runtimeStub := CreateRuntimeStub(ResourceName)
@@ -101,6 +94,7 @@ var _ = Describe("Runtime Controller", func() {
 					return false
 				}
 
+				// the second controller normally should do that
 				if gardenCluster.Status.State != imv1.ReadyState {
 					gardenCluster.Status.State = imv1.ReadyState
 					k8sClient.Status().Update(ctx, &gardenCluster)
@@ -112,7 +106,7 @@ var _ = Describe("Runtime Controller", func() {
 					return false
 				}
 
-				if !runtime.IsConditionSet(imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonConfigurationCompleted) {
+				if !runtime.IsConditionSet(imv1.ConditionTypeAuditLogConfigured, imv1.ConditionReasonAuditLogConfigured) {
 					return false
 				}
 
@@ -163,7 +157,7 @@ var _ = Describe("Runtime Controller", func() {
 					return false
 				}
 
-				if !runtime.IsConditionSet(imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonConfigurationCompleted) {
+				if !runtime.IsConditionSet(imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonAuditLogConfigured) {
 					return false
 				}
 
@@ -173,9 +167,61 @@ var _ = Describe("Runtime Controller", func() {
 			Expect(customTracker.IsSequenceFullyUsed()).To(BeTrue())
 
 			// next test will be for runtime deletion
-			//
-			// By("Delete Runtime CR")
-			// Expect(k8sClient.Delete(ctx, &runtime)).To(Succeed())
+
+			By("Process deleting of Runtime CR and delete GardenerCluster CR and Shoot")
+			setupGardenerTestClientForDelete()
+
+			Expect(k8sClient.Delete(ctx, &runtime)).To(Succeed())
+
+			// should delete GardenerCluster CR and go into RuntimeStateTerminating state with condition GardenerClusterCRDeleted
+			Eventually(func() bool {
+				runtime := imv1.Runtime{}
+				if err := k8sClient.Get(ctx, typeNamespacedName, &runtime); err != nil {
+					return false
+				}
+
+				// check if GardenerCluster CR is deleted
+				gardenCluster := imv1.GardenerCluster{}
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: runtime.Labels[imv1.LabelKymaRuntimeID], Namespace: runtime.Namespace}, &gardenCluster)
+				if err == nil || !k8serrors.IsNotFound(err) {
+					return false
+				}
+
+				// check runtime state
+				if runtime.Status.State != imv1.RuntimeStateTerminating {
+					return false
+				}
+
+				if !runtime.IsConditionSet(imv1.ConditionTypeRuntimeDeprovisioned, imv1.ConditionReasonGardenerCRDeleted) {
+					return false
+				}
+
+				return true
+			}, time.Second*300, time.Second*3).Should(BeTrue())
+
+			// should delete Shoot and go into RuntimeStateTerminating state with condition GardenerClusterCRDeleted
+			Eventually(func() bool {
+				runtime := imv1.Runtime{}
+				if err := k8sClient.Get(ctx, typeNamespacedName, &runtime); err != nil {
+					return false
+				}
+
+				if !runtime.IsConditionSet(imv1.ConditionTypeRuntimeDeprovisioned, imv1.ConditionReasonGardenerShootDeleted) {
+					return false
+				}
+				return true
+			}, time.Second*300, time.Second*3).Should(BeTrue())
+
+			// Make sure the instance is finally deleted
+			Eventually(func() bool {
+				runtime := imv1.Runtime{}
+				if err := k8sClient.Get(ctx, typeNamespacedName, &runtime); err == nil {
+					return false
+				}
+				return true
+			}, time.Second*300, time.Second*3).Should(BeTrue())
+
+			Expect(customTracker.IsSequenceFullyUsed()).To(BeTrue())
 		})
 	})
 })
@@ -210,9 +256,13 @@ func CreateRuntimeStub(resourceName string) *imv1.Runtime {
 						},
 					},
 				},
+				Region: "eu-central-1",
 			},
 			Security: imv1.Security{
-				Administrators: []string{},
+				Administrators: []string{
+					"test-admin1@sap.com",
+					"test-admin2@sap.com",
+				},
 			},
 		},
 	}

@@ -19,11 +19,19 @@ func ensureStatusConditionIsSetAndContinue(instance *imv1.Runtime, condType imv1
 	return switchState(next)
 }
 
+func ensureTerminatingStatusConditionAndContinue(instance *imv1.Runtime, condType imv1.RuntimeConditionType, condReason imv1.RuntimeConditionReason, message string, next stateFn) (stateFn, *ctrl.Result, error) {
+	if !instance.IsStateWithConditionAndStatusSet(imv1.RuntimeStateTerminating, condType, condReason, "True") {
+		instance.UpdateStateDeletion(condType, condReason, "True", message)
+		return updateStatusAndRequeue()
+	}
+	return switchState(next)
+}
+
 func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Waiting for shoot creation state")
 
 	switch s.shoot.Status.LastOperation.State {
-	case gardener.LastOperationStateProcessing, gardener.LastOperationStatePending, gardener.LastOperationStateAborted:
+	case gardener.LastOperationStateProcessing, gardener.LastOperationStatePending, gardener.LastOperationStateAborted, gardener.LastOperationStateError:
 		m.log.Info(fmt.Sprintf("Shoot %s is in %s state, scheduling for retry", s.shoot.Name, s.shoot.Status.LastOperation.State))
 
 		s.instance.UpdateStatePending(
@@ -57,7 +65,12 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 
 	case gardener.LastOperationStateSucceeded:
 		m.log.Info(fmt.Sprintf("Shoot %s successfully created", s.shoot.Name))
-		return ensureStatusConditionIsSetAndContinue(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonShootCreationCompleted, "Shoot creation completed", sFnCreateKubeconfig)
+		return ensureStatusConditionIsSetAndContinue(
+			&s.instance,
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonShootCreationCompleted,
+			"Shoot creation completed",
+			sFnCreateKubeconfig)
 
 	default:
 		m.log.Info("Unknown shoot operation state, exiting with no retry")

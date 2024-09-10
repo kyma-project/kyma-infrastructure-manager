@@ -1,22 +1,23 @@
-apiVersion: infrastructuremanager.kyma-project.io/v1alpha1
+apiVersion: infrastructuremanager.kyma-project.io/v1
 kind: Runtime
 metadata:
   labels:
+    kyma-project.io/controlled-by-provisioner: "false"
     kyma-project.io/instance-id: instance-id
     kyma-project.io/runtime-id: runtime-id
     kyma-project.io/broker-plan-id: plan-id
     kyma-project.io/broker-plan-name: plan-name
     kyma-project.io/global-account-id: global-account-id
     kyma-project.io/subaccount-id: subAccount-id
-    kyma-project.io/shoot-name: shoot-name
+    kyma-project.io/shoot-name: aws-minimal
     kyma-project.io/region: region
     operator.kyma-project.io/kyma-name: kymaName
-  name: runtime-id
+  name: aws-minimal
   namespace: kcp-system
 spec:
   shoot:
     # spec.shoot.name is required
-    name: shoot-name
+    name: aws-minimal
     # spec.shoot.purpose is required
     purpose: production
     # spec.shoot.region is required
@@ -41,8 +42,12 @@ spec:
       # spec.shoot.provider.workers is required
       workers:
         - machine:
-          # spec.shoot.workers.machine.type is required
-          type: m6i.large
+            # spec.shoot.workers.machine.type is required
+            type: m6i.large
+            image:
+              name: gardenlinux
+              version: 1443.9.0
+          name: "worker-0"
           # spec.shoot.workers.zones is required
           zones:
             - eu-central-1a
@@ -58,8 +63,14 @@ spec:
           # spec.shoot.workers.maxUnavailable is required in the first release.
           # It can be optional in the future, as it is always set to 0
           maxUnavailable: 0
+          # spec.shoot.workers.volume is required for the first release
+          # Probably can be moved into KIM, as it is hardcoded in KEB, and not dependent on plan
+          volume:
+            type: gp2
+            size: 50Gi
     # spec.shoot.Networking is required
     networking:
+      type: calico
       pods: 100.64.0.0/12
       nodes: 10.250.0.0/16
       services: 100.104.0.0/13
@@ -71,7 +82,7 @@ spec:
   security:
     networking:
       filter:
-        # spec.security.networking is required
+        # spec.security.networking.filter.egress.enabled is required
         egress:
           enabled: false
     # spec.security.administrators is required

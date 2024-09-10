@@ -1,19 +1,19 @@
 package fsm
 
-/*
 import (
 	"context"
+	"fmt"
 	"time"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
-	"github.com/onsi/gomega/types"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	util "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -34,52 +34,32 @@ var _ = Describe("KIM sFnCreateKubeconfig", func() {
 		}
 	}
 
-	testRtWithLables := imv1.Runtime{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-instance",
-			Namespace: "default",
-			Labels: map[string]string{
-				imv1.LabelKymaRuntimeID:          "059dbc39-fd2b-4186-b0e5-8a1bc8ede5b8",
-				imv1.LabelKymaInstanceID:         "test-instance",
-				imv1.LabelKymaBrokerPlanID:       "broker-plan-id",
-				imv1.LabelKymaGlobalAccountID:    "461f6292-8085-41c8-af0c-e185f39b5e18",
-				imv1.LabelKymaGlobalSubaccountID: "c5ad84ae-3d1b-4592-bee1-f022661f7b30",
-				imv1.LabelKymaRegion:             "region",
-				imv1.LabelKymaBrokerPlanName:     "aws",
-				imv1.LabelKymaName:               "caadafae-1234-1234-1234-123456789abc",
-			},
-		},
-	}
+	inputRtWithLabels := makeInputRuntimeWithLabels()
+	inputRtWithLabelsAndCondition := makeInputRuntimeWithLabels()
 
-	testRtWithFinalizerNoProvisioningCondition := imv1.Runtime{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-instance",
-			Namespace:  "default",
-			Finalizers: []string{"test-me-plz"},
-		},
-	}
-
-	testRtWithFinalizerAndProvisioningCondition := imv1.Runtime{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-instance",
-			Namespace:  "default",
-			Finalizers: []string{"test-me-plz"},
-		},
-	}
-
-	provisioningCondition := metav1.Condition{
-		Type:               string(imv1.ConditionTypeRuntimeProvisioned),
-		Status:             metav1.ConditionUnknown,
+	readyCondition := metav1.Condition{
+		Type:               string(imv1.ConditionTypeRuntimeKubeconfigReady),
+		Status:             metav1.ConditionTrue,
 		LastTransitionTime: now,
-		Reason:             "Test reason",
+		Reason:             string(imv1.ConditionReasonGardenerCRReady),
 		Message:            "Test message",
 	}
-	meta.SetStatusCondition(&testRtWithFinalizerAndProvisioningCondition.Status.Conditions, provisioningCondition)
+
+	meta.SetStatusCondition(&inputRtWithLabelsAndCondition.Status.Conditions, readyCondition)
+
+	// input
+	testGardenerCRStatePending := makeGardenerClusterCRStatePending()
+	testGardenerCRStateReady := makeGardenerClusterCRStateReady()
 
 	testShoot := gardener.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-instance",
 			Namespace: "default",
+		},
+		Spec: gardener.ShootSpec{
+			DNS: &gardener.DNS{
+				Domain: ptr.To("test-domain"),
+			},
 		},
 	}
 
@@ -91,76 +71,132 @@ var _ = Describe("KIM sFnCreateKubeconfig", func() {
 		"transition graph validation",
 		testFunction,
 		Entry(
-			"should return nothing when CR is being deleted without finalizer and shoot is missing",
+			// and set Runtime state to Pending with condition type ConditionTypeRuntimeKubeconfigReady and reason ConditionReasonGardenerCRCreated
+			"should create GardenCluster CR when it does not existed before",
 			testCtx,
-			must(newFakeFSM, withTestFinalizer),
-			&systemState{instance: testRtWithDeletionTimestamp},
+			must(newFakeFSM, withTestFinalizer, withTestSchemeAndObjects()),
+			&systemState{instance: *inputRtWithLabels, shoot: &testShoot},
 			testOpts{
 				MatchExpectedErr: BeNil(),
-				MatchNextFnState: BeNil(),
+				MatchNextFnState: haveName("sFnUpdateStatus"),
+				//StateMatch:       []types.GomegaMatcher{}, put here matcher for created GardenerCR object
 			},
 		),
 		Entry(
-			"should return sFnUpdateStatus when CR is being deleted with finalizer and shoot is missing - Remove finalizer",
+			"should remain in waiting state when GardenCluster CR exists and is not ready yet",
 			testCtx,
-			must(newFakeFSM, withTestFinalizer, withTestSchemeAndObjects(&testRtWithLables)),
-			&systemState{instance: testRtWithDeletionTimestampAndFinalizer},
+			must(newFakeFSM, withTestFinalizer, withTestSchemeAndObjects(testGardenerCRStatePending)),
+			&systemState{instance: *inputRtWithLabels, shoot: &testShoot},
 			testOpts{
 				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnProcessShoot"),
+				MatchNextFnState: BeNil(), // corresponds to requeueAfter(controlPlaneRequeueDuration)
 			},
 		),
 		Entry(
-			"should return sFnDeleteShoot and no error when CR is being deleted with finalizer and shoot exists",
+			"should return sFnProcessShoot when GardenCluster CR exists and is in ready state",
 			testCtx,
-			must(newFakeFSM, withTestFinalizer),
-			&systemState{instance: testRtWithDeletionTimestampAndFinalizer, shoot: &testShoot},
+			must(newFakeFSM, withTestFinalizer, withTestSchemeAndObjects(testGardenerCRStateReady)),
+			&systemState{instance: *inputRtWithLabelsAndCondition, shoot: &testShoot},
 			testOpts{
 				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnDeleteShoot"),
+				MatchNextFnState: haveName("sFnApplyClusterRoleBindings"),
 			},
 		),
 		Entry(
-			"should return sFnUpdateStatus and no error when CR has been created without finalizer - Add finalizer",
+			"should return sFnUpdateStatus when GardenCluster CR exists and is in ready state and condition is not set",
 			testCtx,
-			must(newFakeFSM, withTestFinalizer, withTestSchemeAndObjects(&testRt)),
-			&systemState{instance: testRt},
-			testOpts{
-				MatchExpectedErr: BeNil(),
-				MatchNextFnState: BeNil(),
-				StateMatch:       []types.GomegaMatcher{haveFinalizer("test-me-plz")},
-			},
-		),
-		Entry(
-			"should return sFnUpdateStatus and no error when there is no Provisioning Condition - Add condition",
-			testCtx,
-			must(newFakeFSM, withTestFinalizer),
-			&systemState{instance: testRtWithFinalizerNoProvisioningCondition},
+			must(newFakeFSM, withTestFinalizer, withTestSchemeAndObjects(testGardenerCRStateReady)),
+			&systemState{instance: *inputRtWithLabels, shoot: &testShoot},
 			testOpts{
 				MatchExpectedErr: BeNil(),
 				MatchNextFnState: haveName("sFnUpdateStatus"),
 			},
 		),
-		Entry(
-			"should return sFnCreateStatus and no error when exists Provisioning Condition and shoot is missing",
-			testCtx,
-			must(newFakeFSM, withTestFinalizer),
-			&systemState{instance: testRtWithFinalizerAndProvisioningCondition},
-			testOpts{
-				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnCreateShoot"),
-			},
-		),
-		Entry(
-			"should return sFnSelectShootProcessing and no error when exists Provisioning Condition and shoot exists",
-			testCtx,
-			must(newFakeFSM, withTestFinalizer),
-			&systemState{instance: testRtWithFinalizerAndProvisioningCondition, shoot: &testShoot},
-			testOpts{
-				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnSelectShootProcessing"),
-			},
-		),
 	)
 })
-*/
+
+func makeGardenerClusterCR() *imv1.GardenerCluster {
+	return &imv1.GardenerCluster{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "GardenerCluster",
+			APIVersion: imv1.GroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "059dbc39-fd2b-4186-b0e5-8a1bc8ede5b8",
+			Namespace: "default",
+			Annotations: map[string]string{
+				"skr-domain": "test-domain",
+			},
+			Labels: map[string]string{
+				imv1.LabelKymaInstanceID:      "test-instance-id",
+				imv1.LabelKymaRuntimeID:       "test-runtime-id",
+				imv1.LabelKymaBrokerPlanID:    "test-broker-plan-id",
+				imv1.LabelKymaBrokerPlanName:  "test-broker-plan-name",
+				imv1.LabelKymaGlobalAccountID: "test-global-account-id",
+				imv1.LabelKymaSubaccountID:    "test-subaccount-id",
+				imv1.LabelKymaName:            "test-kyma-name",
+
+				// values from Runtime CR fields
+				imv1.LabelKymaPlatformRegion: "test-platform-region",
+				imv1.LabelKymaRegion:         "test-region",
+				imv1.LabelKymaShootName:      "test-instance",
+
+				// hardcoded values
+				imv1.LabelKymaManagedBy: "infrastructure-manager",
+				imv1.LabelKymaInternal:  "true",
+			},
+		},
+		Spec: imv1.GardenerClusterSpec{
+			Shoot: imv1.Shoot{
+				Name: "test-instance",
+			},
+			Kubeconfig: imv1.Kubeconfig{
+				Secret: imv1.Secret{
+					Name:      fmt.Sprintf("kubeconfig-%s", "test-runtime-id"),
+					Namespace: "default",
+					Key:       "config",
+				},
+			},
+		},
+	}
+}
+
+func makeGardenerClusterCRStatePending() *imv1.GardenerCluster {
+	gardenCluster := makeGardenerClusterCR()
+
+	gardenCluster.Status = imv1.GardenerClusterStatus{
+		State: imv1.State("Pending"),
+	}
+	return gardenCluster
+}
+
+func makeGardenerClusterCRStateReady() *imv1.GardenerCluster {
+	gardenCluster := makeGardenerClusterCR()
+
+	gardenCluster.Status = imv1.GardenerClusterStatus{
+		State: imv1.State("Ready"),
+	}
+	return gardenCluster
+}
+
+func makeInputRuntimeWithLabels() *imv1.Runtime {
+	return &imv1.Runtime{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-instance",
+			Namespace: "default",
+			Labels: map[string]string{
+				imv1.LabelKymaRuntimeID:       "059dbc39-fd2b-4186-b0e5-8a1bc8ede5b8",
+				imv1.LabelKymaInstanceID:      "test-instance",
+				imv1.LabelKymaBrokerPlanID:    "broker-plan-id",
+				imv1.LabelKymaGlobalAccountID: "461f6292-8085-41c8-af0c-e185f39b5e18",
+				imv1.LabelKymaSubaccountID:    "c5ad84ae-3d1b-4592-bee1-f022661f7b30",
+				imv1.LabelKymaRegion:          "region",
+				imv1.LabelKymaBrokerPlanName:  "aws",
+				imv1.LabelKymaName:            "caadafae-1234-1234-1234-123456789abc",
+			},
+		},
+		Status: imv1.RuntimeStatus{
+			State: imv1.RuntimeStatePending,
+		},
+	}
+}

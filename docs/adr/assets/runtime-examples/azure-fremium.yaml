@@ -1,26 +1,27 @@
-apiVersion: infrastructuremanager.kyma-project.io/v1alpha1
+apiVersion: infrastructuremanager.kyma-project.io/v1
 kind: Runtime
 metadata:
   labels:
+    kyma-project.io/controlled-by-provisioner: "false"
     kyma-project.io/instance-id: instance-id
     kyma-project.io/runtime-id: runtime-id
     kyma-project.io/broker-plan-id: plan-id
     kyma-project.io/broker-plan-name: plan-name
     kyma-project.io/global-account-id: global-account-id
     kyma-project.io/subaccount-id: subAccount-id
-    kyma-project.io/shoot-name: shoot-name
+    kyma-project.io/shoot-name: azure-fremium
     kyma-project.io/region: region
     operator.kyma-project.io/kyma-name: kymaName
-  name: runtime-id
+  name: azure-fremium
   namespace: kcp-system
 spec:
   shoot:
     # spec.shoot.name is set required
-    name: shoot-name
+    name: azure-fremium
     # spec.shoot.purpose is required
     purpose: evaluation
     # spec.shoot.region is required
-    region: eu-central-1
+    region: polandcentral
     # spec.shoot.platformRegion is required
     platformRegion: "cf-us10"
     # spec.shoot.secretBindingName is required
@@ -41,11 +42,22 @@ spec:
       # spec.shoot.provider.workers is required
       workers:
         - machine:
-          # spec.shoot.workers.machine.type is required
-          type: mx5.large
+            # spec.shoot.workers.machine.type is required
+            type: Standard_D2s_v5
+              # spec.shoot.workers.machine.image is optional, when not provider default will be used
+              # Will be modified by the SRE
+            image:
+              name: gardenlinux
+              version: 1443.9.0
+          name: "worker-0"
+          # spec.shoot.workers.volume is required for the first release
+          # Probably can be moved into KIM, as it is hardcoded in KEB, and not dependent on plan
+          volume:
+            type: Standard_LRS
+            size: 50Gi
           # spec.shoot.worker.zones is required
           zones:
-            - 1
+            - "1"
           # spec.shoot.workers.minimum is required
           minimum: 1
           # spec.shoot.workers.maximum is required
@@ -58,6 +70,7 @@ spec:
           maxUnavailable: 0
     # spec.shoot.Networking is required
     networking:
+      type: calico
       pods: 10.96.0.0/13
       nodes: 10.250.0.0/22
       services: 10.104.0.0/13

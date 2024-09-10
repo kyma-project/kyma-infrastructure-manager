@@ -38,13 +38,18 @@ func sFnWaitForShootReconcile(_ context.Context, m *fsm, s *systemState) (stateF
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonProcessingErr,
 			"False",
-			string(reason))
-
+			string(reason),
+		)
 		return updateStatusAndStop()
 
 	case gardener.LastOperationStateSucceeded:
 		m.log.Info(fmt.Sprintf("Shoot %s successfully updated, moving to processing", s.shoot.Name))
-		return ensureStatusConditionIsSetAndContinue(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessing, "Shoot update is completed", sFnProcessShoot)
+		return ensureStatusConditionIsSetAndContinue(
+			&s.instance,
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonAuditLogConfigured,
+			"Runtime processing completed successfully",
+			sFnConfigureAuditLog)
 	}
 
 	m.log.Info("Update did not processed, exiting with no retry")

@@ -65,6 +65,8 @@ const (
 	ConditionTypeRuntimeProvisionedDryRun RuntimeConditionType = "ProvisionedDryRun"
 	ConditionTypeRuntimeKubeconfigReady   RuntimeConditionType = "KubeconfigReady"
 	ConditionTypeRuntimeConfigured        RuntimeConditionType = "Configured"
+	ConditionTypeAuditLogConfigured       RuntimeConditionType = "AuditlogConfigured"
+	ConditionTypeRuntimeDeprovisioned     RuntimeConditionType = "Deprovisioned"
 )
 
 type RuntimeConditionReason string
@@ -83,14 +85,21 @@ const (
 	ConditionReasonConfigurationCompleted = RuntimeConditionReason("ConfigurationCompleted")
 	ConditionReasonConfigurationErr       = RuntimeConditionReason("ConfigurationError")
 
-	ConditionReasonDeletion           = RuntimeConditionReason("Deletion")
-	ConditionReasonDeletionErr        = RuntimeConditionReason("DeletionErr")
-	ConditionReasonConversionError    = RuntimeConditionReason("ConversionErr")
-	ConditionReasonCreationError      = RuntimeConditionReason("CreationErr")
-	ConditionReasonGardenerError      = RuntimeConditionReason("GardenerErr")
-	ConditionReasonKubernetesAPIErr   = RuntimeConditionReason("KubernetesErr")
-	ConditionReasonSerializationError = RuntimeConditionReason("SerializationErr")
-	ConditionReasonDeleted            = RuntimeConditionReason("Deleted")
+	ConditionReasonDeletion             = RuntimeConditionReason("Deletion")
+	ConditionReasonGardenerCRDeleted    = RuntimeConditionReason("GardenerClusterCRDeleted")
+	ConditionReasonGardenerShootDeleted = RuntimeConditionReason("GardenerShootDeleted")
+	ConditionReasonDeletionErr          = RuntimeConditionReason("DeletionErr")
+	ConditionReasonConversionError      = RuntimeConditionReason("ConversionErr")
+	ConditionReasonCreationError        = RuntimeConditionReason("CreationErr")
+	ConditionReasonGardenerError        = RuntimeConditionReason("GardenerErr")
+	ConditionReasonKubernetesAPIErr     = RuntimeConditionReason("KubernetesErr")
+	ConditionReasonSerializationError   = RuntimeConditionReason("SerializationErr")
+	ConditionReasonDeleted              = RuntimeConditionReason("Deleted")
+
+	ConditionReasonAdministratorsConfigured     = RuntimeConditionReason("AdministratorsConfigured")
+	ConditionReasonAuditLogConfigured           = RuntimeConditionReason("AuditLogConfigured")
+	ConditionReasonAuditLogError                = RuntimeConditionReason("AuditLogErr")
+	ConditionReasonAuditLogMissingRegionMapping = RuntimeConditionReason("AuditLogMissingRegionMappingErr")
 )
 
 //+kubebuilder:object:root=true
@@ -136,17 +145,17 @@ type RuntimeStatus struct {
 }
 
 type RuntimeShoot struct {
-	Name                string                `json:"name"`
-	Purpose             gardener.ShootPurpose `json:"purpose"`
-	PlatformRegion      string                `json:"platformRegion"`
-	Region              string                `json:"region"`
-	LicenceType         *string               `json:"licenceType,omitempty"`
-	SecretBindingName   string                `json:"secretBindingName"`
-	EnforceSeedLocation *bool                 `json:"enforceSeedLocation,omitempty"`
-	Kubernetes          Kubernetes            `json:"kubernetes,omitempty"`
-	Provider            Provider              `json:"provider"`
-	Networking          Networking            `json:"networking"`
-	ControlPlane        gardener.ControlPlane `json:"controlPlane"`
+	Name                string                 `json:"name"`
+	Purpose             gardener.ShootPurpose  `json:"purpose"`
+	PlatformRegion      string                 `json:"platformRegion"`
+	Region              string                 `json:"region"`
+	LicenceType         *string                `json:"licenceType,omitempty"`
+	SecretBindingName   string                 `json:"secretBindingName"`
+	EnforceSeedLocation *bool                  `json:"enforceSeedLocation,omitempty"`
+	Kubernetes          Kubernetes             `json:"kubernetes,omitempty"`
+	Provider            Provider               `json:"provider"`
+	Networking          Networking             `json:"networking"`
+	ControlPlane        *gardener.ControlPlane `json:"controlPlane,omitempty"`
 }
 
 type Kubernetes struct {
@@ -217,7 +226,6 @@ func (k *Runtime) UpdateStateDeletion(c RuntimeConditionType, r RuntimeCondition
 		k.Status.State = RuntimeStateFailed
 	}
 
-	k.Status.State = RuntimeStateTerminating
 	condition := metav1.Condition{
 		Type:               string(c),
 		Status:             metav1.ConditionStatus(status),

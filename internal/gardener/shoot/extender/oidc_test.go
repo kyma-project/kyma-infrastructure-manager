@@ -43,6 +43,9 @@ func TestOidcExtender(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
+
 		assert.Equal(t, runtimeShoot.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig, *shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig)
+		assert.Equal(t, false, *shoot.Spec.Extensions[0].Disabled)
+		assert.Equal(t, "shoot-oidc-service", shoot.Spec.Extensions[0].Type)
 	})
 }

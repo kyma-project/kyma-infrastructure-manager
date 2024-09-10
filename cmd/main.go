@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -27,6 +28,7 @@ import (
 	gardener_apis "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	"github.com/go-playground/validator/v10"
 	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/internal/auditlogging"
 	kubeconfig_controller "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
 	runtime_controller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
@@ -35,6 +37,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/internal/gardener/kubeconfig"
 	"github.com/kyma-project/infrastructure-manager/internal/gardener/shoot"
 	"github.com/pkg/errors"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -54,6 +57,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(infrastructuremanagerv1.AddToScheme(scheme))
+	utilruntime.Must(rbacv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -74,6 +78,7 @@ func main() {
 	var enableRuntimeReconciler bool
 	var converterConfigFilepath string
 	var shootSpecDumpEnabled bool
+	var auditLogMandatory bool
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -86,8 +91,9 @@ func main() {
 	flag.DurationVar(&expirationTime, "kubeconfig-expiration-time", defaultExpirationTime, "Dynamic kubeconfig expiration time")
 	flag.DurationVar(&gardenerRequestTimeout, "gardener-request-timeout", defaultGardenerRequestTimeout, "Timeout duration for requests to Gardener")
 	flag.BoolVar(&enableRuntimeReconciler, "runtime-reconciler-enabled", defaultRuntimeReconcilerEnabled, "Feature flag for all runtime reconciler functionalities")
-	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "converter_config.json", "A file path to the gardener shoot converter configuration.")
+	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "A file path to the gardener shoot converter configuration.")
 	flag.BoolVar(&shootSpecDumpEnabled, "shoot-spec-dump-enabled", false, "Feature flag to allow persisting specs of created shoots")
+	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration")
 
 	opts := zap.Options{
 		Development: true,
@@ -169,10 +175,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	err = validateAuditLogConfiguration(converterConfig.AuditLog.TenantConfigPath)
+	if err != nil {
+		setupLog.Error(err, "invalid Audit Log configuration")
+		os.Exit(1)
+	}
+
 	cfg := fsm.RCCfg{
-		Finalizer:       infrastructuremanagerv1.Finalizer,
-		ShootNamesapace: gardenerNamespace,
-		ConverterConfig: converterConfig,
+		Finalizer:         infrastructuremanagerv1.Finalizer,
+		ShootNamesapace:   gardenerNamespace,
+		ConverterConfig:   converterConfig,
+		AuditLogMandatory: auditLogMandatory,
 	}
 	if shootSpecDumpEnabled {
 		cfg.PVCPath = "/testdata/kim"
@@ -234,6 +247,50 @@ func initGardenerClients(kubeconfigPath string, namespace string) (client.Client
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to register Gardener schema")
 	}
-
 	return gardenerClient, shootClient, dynamicKubeconfigAPI, nil
+}
+
+func validateAuditLogConfiguration(tenantConfigPath string) error {
+	getReaderCloser := func() (io.ReadCloser, error) {
+		return os.Open(tenantConfigPath)
+	}
+
+	f, err := getReaderCloser()
+
+	defer func(f io.ReadCloser) {
+		_ = f.Close()
+	}(f)
+
+	if err != nil {
+		setupLog.Error(err, "unable to open Audit Log configuration file")
+		return err
+	}
+
+	var auditLogConfig map[string]map[string]auditlogging.AuditLogData
+
+	if err = json.NewDecoder(f).Decode(&auditLogConfig); err != nil {
+		setupLog.Error(err, "unable to decode Audit Log configuration")
+		return err
+	}
+
+	if err = validateAuditLogDataMap(auditLogConfig); err != nil {
+		setupLog.Error(err, "invalid audit log configuration")
+		return err
+	}
+
+	return err
+}
+
+func validateAuditLogDataMap(data map[string]map[string]auditlogging.AuditLogData) error {
+	validate := validator.New(validator.WithRequiredStructEnabled())
+
+	for _, nestedMap := range data {
+		for _, auditLogData := range nestedMap {
+			if err := validate.Struct(auditLogData); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

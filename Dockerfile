@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.22.5 as builder
+FROM golang:1.23.0-alpine3.20 as builder
 ARG TARGETOS
 ARG TARGETARCH
 
@@ -28,7 +28,6 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o ma
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /project_workspace/manager .
-COPY  converter_config.json .
 USER 65532:65532
 
 ENTRYPOINT ["/manager"]

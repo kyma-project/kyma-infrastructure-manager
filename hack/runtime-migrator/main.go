@@ -166,7 +166,6 @@ func saveRuntime(ctx context.Context, cfg migrator.Config, runtime v1.Runtime, g
 func createRuntime(ctx context.Context, shoot v1beta1.Shoot, cfg migrator.Config, provider kubeconfig.Provider) (v1.Runtime, error) {
 	var subjects = getAdministratorsList(ctx, provider, shoot.Name)
 	var oidcConfig = getOidcConfig(shoot)
-	var hAFailureToleranceType = getFailureToleranceType(shoot)
 	var licenceType = shoot.Annotations["kcp.provisioner.kyma-project.io/licence-type"]
 	labels, err := getAllRuntimeLabels(ctx, shoot, cfg.Client)
 	if err != nil {
@@ -210,17 +209,12 @@ func createRuntime(ctx context.Context, shoot v1beta1.Shoot, cfg migrator.Config
 					Workers: shoot.Spec.Provider.Workers,
 				},
 				Networking: v1.Networking{
+					Type:     shoot.Spec.Networking.Type,
 					Pods:     *shoot.Spec.Networking.Pods,
 					Nodes:    *shoot.Spec.Networking.Nodes,
 					Services: *shoot.Spec.Networking.Services,
 				},
-				ControlPlane: v1beta1.ControlPlane{
-					HighAvailability: &v1beta1.HighAvailability{
-						FailureTolerance: v1beta1.FailureTolerance{
-							Type: hAFailureToleranceType,
-						},
-					},
-				},
+				ControlPlane: getControlPlane(shoot),
 			},
 			Security: v1.Security{
 				Administrators: subjects,
@@ -280,23 +274,29 @@ func getShootList(ctx context.Context, cfg migrator.Config, gardenerNamespace st
 	return list
 }
 
-func getFailureToleranceType(shoot v1beta1.Shoot) v1beta1.FailureToleranceType {
+func getControlPlane(shoot v1beta1.Shoot) *v1beta1.ControlPlane {
 	if shoot.Spec.ControlPlane != nil {
 		if shoot.Spec.ControlPlane.HighAvailability != nil {
-			return shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type
+			return &v1beta1.ControlPlane{HighAvailability: &v1beta1.HighAvailability{
+				FailureTolerance: v1beta1.FailureTolerance{
+					Type: shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type,
+				},
+			},
+			}
 		}
 	}
-	return ""
+
+	return nil
 }
 
 func getAdministratorsList(ctx context.Context, provider kubeconfig.Provider, shootName string) []string {
-	var kubeconfig, err = provider.Fetch(ctx, shootName)
-	if kubeconfig == "" {
+	var clusterKubeconfig, err = provider.Fetch(ctx, shootName)
+	if clusterKubeconfig == "" {
 		log.Printf("Failed to get dynamic kubeconfig for shoot %s, %s\n", shootName, err.Error())
 		return []string{}
 	}
 
-	restClientConfig, err := clientcmd.RESTConfigFromKubeConfig([]byte(kubeconfig))
+	restClientConfig, err := clientcmd.RESTConfigFromKubeConfig([]byte(clusterKubeconfig))
 	if err != nil {
 		log.Printf("Failed to create REST client from kubeconfig - %s\n", err)
 		return []string{}
@@ -311,7 +311,8 @@ func getAdministratorsList(ctx context.Context, provider kubeconfig.Provider, sh
 		LabelSelector: "reconciler.kyma-project.io/managed-by=reconciler,app=kyma",
 	})
 
-	var subjects = []string{}
+	subjects := make([]string, 0)
+
 	for _, clusterRoleBinding := range clusterRoleBindings.Items {
 		for _, subject := range clusterRoleBinding.Subjects {
 			subjects = append(subjects, subject.Name)
@@ -395,8 +396,14 @@ func getAllRuntimeLabels(ctx context.Context, shoot v1beta1.Shoot, getClient mig
 		return map[string]string{}, errors.Wrap(clientErr, fmt.Sprintf("Failed to get GardenerClient for shoot %s - %s\n", shoot.Name, clientErr))
 	}
 	gardenerCluster := v1.GardenerCluster{}
-	shootKey := types.NamespacedName{Name: shoot.Name, Namespace: "kcp-system"}
-	getGardenerCRerr := k8sClient.Get(ctx, shootKey, &gardenerCluster)
+
+	kymaID, found := shoot.Annotations["kcp.provisioner.kyma-project.io/runtime-id"]
+	if !found {
+		return nil, errors.New("Runtime ID not found in shoot annotations")
+	}
+
+	gardenerCRKey := types.NamespacedName{Name: kymaID, Namespace: "kcp-system"}
+	getGardenerCRerr := k8sClient.Get(ctx, gardenerCRKey, &gardenerCluster)
 	if getGardenerCRerr != nil {
 		var errMsg = fmt.Sprintf("Failed to retrieve GardenerCluster CR for shoot %s\n", shoot.Name)
 		return map[string]string{}, errors.Wrap(getGardenerCRerr, errMsg)
@@ -410,7 +417,8 @@ func getAllRuntimeLabels(ctx context.Context, shoot v1beta1.Shoot, getClient mig
 	enrichedRuntimeLabels["kyma-project.io/region"] = gardenerCluster.Labels["kyma-project.io/region"]
 	enrichedRuntimeLabels["kyma-project.io/shoot-name"] = gardenerCluster.Labels["kyma-project.io/shoot-name"]
 	enrichedRuntimeLabels["operator.kyma-project.io/kyma-name"] = gardenerCluster.Labels["operator.kyma-project.io/kyma-name"]
-
+	// The runtime CR should be controlled by the KIM
+	enrichedRuntimeLabels["kyma-project.io/controlled-by-provisioner"] = "false"
 	// add custom label for the migrator
 	enrichedRuntimeLabels[migratorLabel] = "true"
 

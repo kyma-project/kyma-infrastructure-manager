@@ -1,22 +1,23 @@
-apiVersion: infrastructuremanager.kyma-project.io/v1alpha1
+apiVersion: infrastructuremanager.kyma-project.io/v1
 kind: Runtime
 metadata:
   labels:
+    kyma-project.io/controlled-by-provisioner: "false"
     kyma-project.io/instance-id: instance-id
     kyma-project.io/runtime-id: runtime-id
     kyma-project.io/broker-plan-id: plan-id
     kyma-project.io/broker-plan-name: plan-name
     kyma-project.io/global-account-id: global-account-id
     kyma-project.io/subaccount-id: subAccount-id
-    kyma-project.io/shoot-name: shoot-name
+    kyma-project.io/shoot-name: ops-full
     kyma-project.io/region: region
     operator.kyma-project.io/kyma-name: kymaName
-  name: runtime-id
+  name: ops-full
   namespace: kcp-system
 spec:
   shoot:
     # spec.shoot.name is required
-    name: shoot-name
+    name: ops-full
     # spec.shoot.purpose is required
     purpose: production
     # spec.shoot.region is required
@@ -61,7 +62,7 @@ spec:
             # Will be modified by the SRE
             image:
               name: gardenlinux
-              version: 1312.3.0
+              version: 1443.9.0
           # Note: KEB doesn't specify the volume, Gardener defaults used
           # spec.shoot.workers.zones is optional
           zones:
@@ -82,6 +83,7 @@ spec:
           maxUnavailable: 0
     # spec.shoot.Networking is required
     networking:
+      type: calico
       pods: 10.96.0.0/13
       nodes: 10.250.0.0/22
       services: 10.104.0.0/13

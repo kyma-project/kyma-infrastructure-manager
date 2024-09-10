@@ -16,7 +16,7 @@ func sFnTakeSnapshot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctr
 
 	var shoot gardener_api.Shoot
 	err := m.ShootClient.Get(ctx, types.NamespacedName{
-		Name:      s.instance.Name,
+		Name:      s.instance.Spec.Shoot.Name,
 		Namespace: m.ShootNamesapace,
 	}, &shoot)
 

@@ -1,32 +1,33 @@
-apiVersion: infrastructuremanager.kyma-project.io/v1alpha1
+apiVersion: infrastructuremanager.kyma-project.io/v1
 kind: Runtime
 metadata:
   labels:
+    kyma-project.io/controlled-by-provisioner: "false"
     kyma-project.io/instance-id: instance-id
     kyma-project.io/runtime-id: runtime-id
     kyma-project.io/broker-plan-id: plan-id
     kyma-project.io/broker-plan-name: plan-name
     kyma-project.io/global-account-id: global-account-id
     kyma-project.io/subaccount-id: subAccount-id
-    kyma-project.io/shoot-name: shoot-name
+    kyma-project.io/shoot-name: gcp-full
     kyma-project.io/region: region
     operator.kyma-project.io/kyma-name: kymaName
-  name: runtime-id
+  name: gcp-full
   namespace: kcp-system
 spec:
   shoot:
     # spec.shoot.name is required
-    name: shoot-name
+    name: gcp-full
     # spec.shoot.purpose is required
     purpose: production
     # spec.shoot.region is required
-    region: europe-west3
+    region: us-central1
     # spec.shoot.platformRegion is required
     platformRegion: "cf-eu11"
     # spec.shoot.secretBindingName is required
     secretBindingName: "hyperscaler secret"
     # spec.shoot.enforceSeedLocation is optional ; it allows to make sure the seed cluster will be located in the same region as the runtime
-    enforceSeedLocation: "true"
+    enforceSeedLocation: true
     kubernetes:
       # spec.shoot.kubernetes.version is optional, when not provided default will be used
       version: "1.28.7"
@@ -61,7 +62,7 @@ spec:
             # Will be modified by the SRE
             image:
               name: gardenlinux
-              version: 1312.3.0
+              version: 1443.9.0
           # spec.shoot.workers.volume is required for the first release
           # Probably can be moved into KIM, as it is hardcoded in KEB, and not dependent on plan
           volume:
@@ -69,9 +70,9 @@ spec:
             size: 50Gi
           # spec.shoot.workers.zones is required
           zones:
-            - europe-west3a
-            - europe-west3b
-            - europe-west3c
+            - us-central1-a
+            - us-central1-b
+            - us-central1-c
           # spec.shoot.workers.name is optional, if not provided default will be used
           name: cpu-worker-0
           # spec.shoot.workers.minimum is required
@@ -86,6 +87,7 @@ spec:
           maxUnavailable: 0
     # spec.shoot.Networking is required
     networking:
+      type: calico
       pods: 10.96.0.0/13
       nodes: 10.250.0.0/22
       services: 10.104.0.0/13

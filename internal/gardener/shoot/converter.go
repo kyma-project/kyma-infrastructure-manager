@@ -38,6 +38,11 @@ type KubernetesConfig struct {
 	EnableMachineImageVersionAutoUpdate bool   `json:"enableMachineImageVersionVersionAutoUpdate"`
 }
 
+type AuditLogConfig struct {
+	PolicyConfigMapName string `json:"policyConfigMapName" validate:"required"`
+	TenantConfigPath    string `json:"tenantConfigPath" validate:"required"`
+}
+
 type ReaderGetter = func() (io.Reader, error)
 
 type ConverterConfig struct {
@@ -46,6 +51,7 @@ type ConverterConfig struct {
 	Provider     ProviderConfig     `json:"provider"`
 	MachineImage MachineImageConfig `json:"machineImage" validate:"required"`
 	Gardener     GardenerConfig     `json:"gardener" validate:"required"`
+	AuditLog     AuditLogConfig     `json:"auditLogging" validate:"required"`
 }
 
 func (c *ConverterConfig) Load(f ReaderGetter) error {
@@ -108,7 +114,7 @@ func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
 				Pods:     &runtime.Spec.Shoot.Networking.Pods,
 				Services: &runtime.Spec.Shoot.Networking.Services,
 			},
-			ControlPlane: &runtime.Spec.Shoot.ControlPlane,
+			ControlPlane: runtime.Spec.Shoot.ControlPlane,
 		},
 	}
 

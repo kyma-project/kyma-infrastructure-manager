@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: fetch-test-shoot-specs
+  name: fetch-test-shoot-specs
+  namespace: kcp-system
+spec:
+  volumes:
+  - name: provisioner-ps
+    persistentVolumeClaim:
+      claimName: test-prov-shoot-read-only
+      readOnly: true
+  - name: provisioner-pk
+    persistentVolumeClaim:
+      claimName: test-kim-shoot-read-only
+      readOnly: true
+  containers:
+  - args:
+    - /bin/sh
+    - -c
+    - while true; do date; sleep 3; done
+    image: europe-docker.pkg.dev/kyma-project/prod/external/busybox:1.34.1-v1
+    name: get-pvc
+    volumeMounts:
+    - name: provisioner-ps
+      mountPath: /testdata/provisioner
+      readOnly: true
+    - name: provisioner-pk
+      mountPath: /testdata/kim
+      readOnly: true
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always

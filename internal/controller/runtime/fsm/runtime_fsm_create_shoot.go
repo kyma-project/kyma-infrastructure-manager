@@ -2,6 +2,7 @@ package fsm
 
 import (
 	"context"
+	"fmt"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -13,7 +14,11 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	newShoot, err := convertShoot(&s.instance, m.ConverterConfig)
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object")
-		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonConversionError, "Runtime conversion error")
+		return updateStatePendingWithErrorAndStop(
+			&s.instance,
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonConversionError,
+			"Runtime conversion error")
 	}
 
 	err = m.ShootClient.Create(ctx, &newShoot)
@@ -25,11 +30,16 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonGardenerError,
 			"False",
-			"Gardener API create error",
+			fmt.Sprintf("Gardener API create error: %v", err),
 		)
 		return updateStatusAndRequeueAfter(gardenerRequeueDuration)
 	}
-	m.log.Info("Gardener shoot for runtime initialised successfully", "Name", newShoot.Name, "Namespace", newShoot.Namespace)
+
+	m.log.Info(
+		"Gardener shoot for runtime initialised successfully",
+		"Name", newShoot.Name,
+		"Namespace", newShoot.Namespace,
+	)
 
 	s.instance.UpdateStatePending(
 		imv1.ConditionTypeRuntimeProvisioned,

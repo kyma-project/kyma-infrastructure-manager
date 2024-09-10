@@ -997,7 +997,6 @@ spec:
                   secretBindingName:
                     type: string
                 required:
-                - controlPlane
                 - name
                 - networking
                 - platformRegion

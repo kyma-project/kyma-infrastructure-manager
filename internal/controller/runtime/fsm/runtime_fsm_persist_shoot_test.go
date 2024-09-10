@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
+	"github.com/kyma-project/infrastructure-manager/internal/gardener/shoot"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
 	"sigs.k8s.io/yaml"
@@ -24,15 +25,25 @@ var _ = Describe("KIM sFnPersist", func() {
 	testCtx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	shootWrite, err := yaml.Marshal(&testing.ShootNoDNS)
-	runtimeWrite, err := yaml.Marshal(&testing.RuntimeOnlyName)
+	expectedRuntime := testing.RuntimeOnlyName.DeepCopy()
+	expectedRuntime.Spec.Shoot.Provider.Type = "aws"
+
+	expectedShoot, err := convertShoot(expectedRuntime, shoot.ConverterConfig{})
+	Expect(err).To(BeNil())
+
+	shootWrite, err := yaml.Marshal(&expectedShoot)
+	Expect(err).To(BeNil())
+
+	runtimeWrite, err := yaml.Marshal(expectedRuntime)
+	Expect(err).To(BeNil())
+
 	expectedData := append(shootWrite, runtimeWrite...)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	It("should persist shoot data", func() {
-		next, _, err := sFnDumpShootSpec(testCtx, must(newFakeFSM, withStorageWriter(testWriterGetter)), &systemState{shoot: &testing.ShootNoDNS, instance: testing.RuntimeOnlyName})
+		next, _, err := sFnDumpShootSpec(testCtx, must(newFakeFSM, withStorageWriter(testWriterGetter), withConverterConfig(shoot.ConverterConfig{})), &systemState{shoot: &testing.ShootNoDNS, instance: *expectedRuntime})
 		Expect(err).To(BeNil())
 		Expect(next).To(haveName("sFnUpdateStatus"))
-		Expect(expectedData).To(Equal(b.Bytes()))
+		Expect(b.Bytes()).To(Equal(expectedData))
 	})
 })

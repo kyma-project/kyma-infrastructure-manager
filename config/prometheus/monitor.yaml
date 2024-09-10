@@ -18,9 +18,6 @@ spec:
     - path: /metrics
       port: metrics
       scheme: http
-      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
-      tlsConfig:
-        insecureSkipVerify: true
   selector:
     matchLabels:
       app.kubernetes.io/name: metrics

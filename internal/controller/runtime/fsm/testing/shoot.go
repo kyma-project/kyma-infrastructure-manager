@@ -18,6 +18,20 @@ var (
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-instance",
 			Namespace: "default",
+			Labels: map[string]string{
+				"kyma-project.io/instance-id":         "instance-id",
+				"kyma-project.io/runtime-id":          "runtime-id",
+				"kyma-project.io/shoot-name":          "shoot-name",
+				"kyma-project.io/region":              "region",
+				"operator.kyma-project.io/kyma-name":  "kyma-name",
+				"kyma-project.io/broker-plan-id":      "broker-plan-id",
+				"kyma-project.io/broker-plan-name":    "broker-plan-name",
+				"kyma-project.io/global-account-id":   "global-account-id",
+				"kyma-project.io/subaccount-id":       "subaccount-id",
+				"operator.kyma-project.io/managed-by": "managed-by",
+				"operator.kyma-project.io/internal":   "false",
+				"kyma-project.io/platform-region":     "platform-region",
+			},
 		},
 		Spec: v1.RuntimeSpec{
 			Shoot: v1.RuntimeShoot{Name: "test-shoot"},
