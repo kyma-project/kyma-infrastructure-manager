@@ -67,6 +67,7 @@ type GardenerConfig struct {
 }
 
 type MachineImageConfig struct {
+	DefaultName    string `json:"defaultName" validate:"required"`
 	DefaultVersion string `json:"defaultVersion" validate:"required"`
 }
 
@@ -75,7 +76,7 @@ func NewConverter(config ConverterConfig) Converter {
 		extender.ExtendWithAnnotations,
 		extender.ExtendWithLabels,
 		extender.NewKubernetesVersionExtender(config.Kubernetes.DefaultVersion),
-		extender.NewProviderExtender(config.Provider.AWS.EnableIMDSv2, config.MachineImage.DefaultVersion),
+		extender.NewProviderExtender(config.Provider.AWS.EnableIMDSv2, config.MachineImage.DefaultName, config.MachineImage.DefaultVersion),
 		extender.NewDNSExtender(config.DNS.SecretName, config.DNS.DomainPrefix, config.DNS.ProviderType),
 		extender.ExtendWithOIDC,
 		extender.ExtendWithCloudProfile,

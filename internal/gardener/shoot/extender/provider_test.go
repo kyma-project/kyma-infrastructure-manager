@@ -18,6 +18,8 @@ func TestProviderExtender(t *testing.T) {
 		EnableIMDSv2                bool
 		DefaultMachineImageVersion  string
 		ExpectedMachineImageVersion string
+		DefaultMachineImageName     string
+		ExpectedMachineImageName    string
 		ExpectedZonesCount          int
 	}{
 		"Create provider specific config for AWS without worker config": {
@@ -65,13 +67,13 @@ func TestProviderExtender(t *testing.T) {
 			shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtender(testCase.EnableIMDSv2, testCase.DefaultMachineImageVersion)
+			extender := NewProviderExtender(testCase.EnableIMDSv2, testCase.DefaultMachineImageName, testCase.DefaultMachineImageVersion)
 			err := extender(testCase.Runtime, &shoot)
 
 			// then
 			require.NoError(t, err)
 
-			assertProvider(t, testCase.Runtime.Spec.Shoot, shoot, testCase.EnableIMDSv2, testCase.ExpectedMachineImageVersion)
+			assertProvider(t, testCase.Runtime.Spec.Shoot, shoot, testCase.EnableIMDSv2, testCase.ExpectedMachineImageName, testCase.ExpectedMachineImageVersion)
 			assertProviderSpecificConfig(t, shoot, testCase.ExpectedZonesCount)
 		})
 	}
@@ -90,7 +92,7 @@ func TestProviderExtender(t *testing.T) {
 		}
 
 		// when
-		extender := NewProviderExtender(false, "")
+		extender := NewProviderExtender(false, "", "")
 		err := extender(runtime, &shoot)
 
 		// then
@@ -175,7 +177,7 @@ func fixAWSProviderWithMultipleWorkers() imv1.Provider {
 	}
 }
 
-func assertProvider(t *testing.T, runtimeShoot imv1.RuntimeShoot, shoot gardener.Shoot, expectWorkerConfig bool, expectedMachineImageVersion string) {
+func assertProvider(t *testing.T, runtimeShoot imv1.RuntimeShoot, shoot gardener.Shoot, expectWorkerConfig bool, expectedMachineImageName, expectedMachineImageVersion string) {
 	assert.Equal(t, runtimeShoot.Provider.Type, shoot.Spec.Provider.Type)
 	assert.Equal(t, runtimeShoot.Provider.Workers, shoot.Spec.Provider.Workers)
 	assert.Equal(t, false, shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled)
@@ -192,6 +194,7 @@ func assertProvider(t *testing.T, runtimeShoot imv1.RuntimeShoot, shoot gardener
 			assert.Empty(t, worker.ProviderConfig)
 		}
 		assert.Equal(t, expectedMachineImageVersion, *worker.Machine.Image.Version)
+		assert.Equal(t, expectedMachineImageName, worker.Machine.Image.Name)
 	}
 }
 
