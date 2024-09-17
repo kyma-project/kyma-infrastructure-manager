@@ -13,10 +13,23 @@ const (
 func ExtendWithOIDC(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	oidcConfig := runtime.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig
 
-	setOIDCExtension(shoot)
+	if CanEnableExtension(runtime) {
+		setOIDCExtension(shoot)
+	}
 	setKubeAPIServerOIDCConfig(shoot, oidcConfig)
 
 	return nil
+}
+
+func CanEnableExtension(runtime imv1.Runtime) bool {
+	canEnable := true
+	createdByMigrator := runtime.Labels["operator.kyma-project.io/created-by-migrator"]
+
+	if createdByMigrator == "true" {
+		canEnable = false
+	}
+
+	return canEnable
 }
 
 func setOIDCExtension(shoot *gardener.Shoot) {
