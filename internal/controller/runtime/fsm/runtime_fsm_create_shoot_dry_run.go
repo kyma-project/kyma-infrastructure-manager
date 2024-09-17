@@ -26,7 +26,7 @@ func sFnCreateShootDryRun(_ context.Context, m *fsm, s *systemState) (stateFn, *
 		"Runtime processing completed successfully [dry-run]")
 
 	// stop machine if persistence not enabled
-	if m.PVCPath == "" {
+	if m.PVCPath != "" {
 		return switchState(sFnDumpShootSpec)
 	}
 
