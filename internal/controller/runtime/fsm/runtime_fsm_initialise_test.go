@@ -64,6 +64,28 @@ var _ = Describe("KIM sFnInitialise", func() {
 		},
 	}
 
+	testDryRunRtWithFinalizerAndProvisioningCondition := imv1.Runtime{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "test-instance",
+			Namespace:  "default",
+			Finalizers: []string{"test-me-plz"},
+			Labels: map[string]string{
+				imv1.LabelControlledByProvisioner: "true",
+			},
+		},
+	}
+
+	testDryRunRtWithFinalizerAndProvisioningReadyCondition := imv1.Runtime{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "test-instance",
+			Namespace:  "default",
+			Finalizers: []string{"test-me-plz"},
+			Labels: map[string]string{
+				imv1.LabelControlledByProvisioner: "true",
+			},
+		},
+	}
+
 	provisioningCondition := metav1.Condition{
 		Type:               string(imv1.ConditionTypeRuntimeProvisioned),
 		Status:             metav1.ConditionUnknown,
@@ -72,6 +94,24 @@ var _ = Describe("KIM sFnInitialise", func() {
 		Message:            "Test message",
 	}
 	meta.SetStatusCondition(&testRtWithFinalizerAndProvisioningCondition.Status.Conditions, provisioningCondition)
+
+	provisioningDryRunCondition := metav1.Condition{
+		Type:               string(imv1.ConditionTypeRuntimeProvisionedDryRun),
+		Status:             metav1.ConditionUnknown,
+		LastTransitionTime: now,
+		Reason:             "Test reason",
+		Message:            "Test message",
+	}
+	meta.SetStatusCondition(&testDryRunRtWithFinalizerAndProvisioningCondition.Status.Conditions, provisioningDryRunCondition)
+
+	provisioningDryRunConditionReady := metav1.Condition{
+		Type:               string(imv1.ConditionTypeRuntimeProvisionedDryRun),
+		Status:             metav1.ConditionTrue,
+		LastTransitionTime: now,
+		Reason:             "Test reason",
+		Message:            "Test message",
+	}
+	meta.SetStatusCondition(&testDryRunRtWithFinalizerAndProvisioningReadyCondition.Status.Conditions, provisioningDryRunConditionReady)
 
 	testRtWithDeletionTimestamp := imv1.Runtime{
 		ObjectMeta: metav1.ObjectMeta{
@@ -165,6 +205,36 @@ var _ = Describe("KIM sFnInitialise", func() {
 			testOpts{
 				MatchExpectedErr: BeNil(),
 				MatchNextFnState: haveName("sFnCreateShoot"),
+			},
+		),
+		Entry(
+			"should return sFnCreateShoot and no error when exists Provisioning Condition and shoot is missing",
+			testCtx,
+			must(newFakeFSM, withTestFinalizer),
+			&systemState{instance: testRtWithFinalizerAndProvisioningCondition},
+			testOpts{
+				MatchExpectedErr: BeNil(),
+				MatchNextFnState: haveName("sFnCreateShoot"),
+			},
+		),
+		Entry(
+			"should return sFnCreateShootDryRun and no error when exists Provisioning Condition and shoot is missing",
+			testCtx,
+			must(newFakeFSM, withTestFinalizer),
+			&systemState{instance: testDryRunRtWithFinalizerAndProvisioningCondition},
+			testOpts{
+				MatchExpectedErr: BeNil(),
+				MatchNextFnState: haveName("sFnCreateShootDryRun"),
+			},
+		),
+		Entry(
+			"should stop when sFnCreateShootDryRun was already executed",
+			testCtx,
+			must(newFakeFSM, withTestFinalizer),
+			&systemState{instance: testDryRunRtWithFinalizerAndProvisioningReadyCondition},
+			testOpts{
+				MatchExpectedErr: BeNil(),
+				MatchNextFnState: BeNil(),
 			},
 		),
 		Entry(

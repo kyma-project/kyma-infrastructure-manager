@@ -44,8 +44,10 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 
 	shootNeedsToBeCreated := func() bool {
 		if dryRunMode {
-			return instanceIsNotBeingDeleted && s.shoot == nil && dryRunProvisioningCondition.Status != "True"
+			return instanceIsNotBeingDeleted && dryRunProvisioningCondition != nil &&
+				dryRunProvisioningCondition.Status != "True"
 		}
+
 		return instanceIsNotBeingDeleted && s.shoot == nil
 	}
 
