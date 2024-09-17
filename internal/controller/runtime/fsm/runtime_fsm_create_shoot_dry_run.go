@@ -2,8 +2,6 @@ package fsm
 
 import (
 	"context"
-	"fmt"
-
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -16,7 +14,7 @@ func sFnCreateShootDryRun(_ context.Context, m *fsm, s *systemState) (stateFn, *
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object [dry-run]")
 		return updateStatePendingWithErrorAndStop(
 			&s.instance,
-			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionTypeRuntimeProvisionedDryRun,
 			imv1.ConditionReasonConversionError,
 			"Runtime conversion error")
 	}
@@ -29,12 +27,8 @@ func sFnCreateShootDryRun(_ context.Context, m *fsm, s *systemState) (stateFn, *
 
 	// stop machine if persistence not enabled
 	if m.PVCPath == "" {
-		return updateStatusAndStop()
+		return switchState(sFnDumpShootSpec)
 	}
 
-	path := fmt.Sprintf("%s/%s-%s.yaml", m.PVCPath, s.shoot.Namespace, s.shoot.Name)
-	if err := persist(path, s.shoot, m.writerProvider); err != nil {
-		return updateStatusAndStopWithError(err)
-	}
 	return updateStatusAndStop()
 }
