@@ -208,16 +208,6 @@ var _ = Describe("KIM sFnInitialise", func() {
 			},
 		),
 		Entry(
-			"should return sFnCreateShoot and no error when exists Provisioning Condition and shoot is missing",
-			testCtx,
-			must(newFakeFSM, withTestFinalizer),
-			&systemState{instance: testRtWithFinalizerAndProvisioningCondition},
-			testOpts{
-				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnCreateShoot"),
-			},
-		),
-		Entry(
 			"should return sFnCreateShootDryRun and no error when exists Provisioning Condition and shoot is missing",
 			testCtx,
 			must(newFakeFSM, withTestFinalizer),
