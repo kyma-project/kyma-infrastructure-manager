@@ -3,54 +3,49 @@ package cleaner
 import (
 	"context"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/rest"
+	"log/slog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 )
 
-func Execute() error {
+type RuntimeCleaner struct {
+	k8sClient client.Client
+	log       *slog.Logger
+}
 
-	k8sClient, err := createKubernetesClient()
+func NewRuntimeCleaner(k8sClient client.Client, log *slog.Logger) *RuntimeCleaner {
+	return &RuntimeCleaner{k8sClient: k8sClient, log: log}
+}
 
+func (r RuntimeCleaner) Execute() error {
+
+	err := r.removeOldRuntimes()
 	if err != nil {
+		r.log.Error("Error during removing old runtimes ", err)
 		return err
 	}
-
-	err = removeOldRuntimes(k8sClient)
-
 	return nil
 }
 
-func createKubernetesClient() (client.Client, error) {
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, err
-	}
-	scheme := runtime.NewScheme()
-	err = imv1.AddToScheme(scheme)
-	if err != nil {
-		return nil, err
-	}
-
-	return client.New(config, client.Options{Scheme: scheme})
-}
-
-func removeOldRuntimes(client client.Client) error {
+func (r RuntimeCleaner) removeOldRuntimes() error {
 	runtimes := &imv1.RuntimeList{}
-	if err := client.List(context.Background(), runtimes); err != nil {
+	if err := r.k8sClient.List(context.Background(), runtimes); err != nil {
 		return err
 	}
 
 	for _, runtimeObj := range runtimes.Items {
-		if runtimeObj.CreationTimestamp.Add(24*time.Hour).Before(time.Now()) && isControlledByKIM(runtimeObj) {
-			err := client.Delete(context.Background(), &runtimeObj)
+		if isTimeForCleanup(runtimeObj) && isControlledByKIM(runtimeObj) {
+			err := r.k8sClient.Delete(context.Background(), &runtimeObj)
 			if err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+func isTimeForCleanup(runtimeObj imv1.Runtime) bool {
+	return runtimeObj.CreationTimestamp.Add(24 * time.Hour).Before(time.Now())
 }
 
 func isControlledByKIM(runtimeObj imv1.Runtime) bool {
