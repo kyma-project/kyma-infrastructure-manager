@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const deleteAfter = 24 * time.Hour
+
 type RuntimeCleaner struct {
 	k8sClient client.Client
 	log       *slog.Logger
@@ -45,7 +47,7 @@ func (r RuntimeCleaner) removeOldRuntimes() error {
 }
 
 func isTimeForCleanup(runtimeObj imv1.Runtime) bool {
-	return runtimeObj.CreationTimestamp.Add(24 * time.Hour).Before(time.Now())
+	return runtimeObj.CreationTimestamp.Add(deleteAfter).Before(time.Now())
 }
 
 func isControlledByKIM(runtimeObj imv1.Runtime) bool {
