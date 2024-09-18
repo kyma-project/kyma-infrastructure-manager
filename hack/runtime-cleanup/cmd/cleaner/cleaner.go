@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const deleteAfter = 24 * time.Hour
+const deleteAfter = 1 * time.Second
 
 type RuntimeCleaner struct {
 	k8sClient client.Client
@@ -41,7 +41,7 @@ func (r RuntimeCleaner) removeOldRuntimes() error {
 			if err != nil {
 				return err
 			}
-			r.log.Info("Runtime ", runtimeObj.Name, " was marked to be removed by KIM reconciler")
+			r.log.With("runtime", runtimeObj.Name).Info("Runtime was marked to be removed by KIM reconciler")
 		}
 	}
 	return nil

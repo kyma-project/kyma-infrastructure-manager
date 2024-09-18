@@ -5,6 +5,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-cleanup/cmd/cleaner"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 	"log/slog"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,5 +42,5 @@ func createKubernetesClient() (client.Client, error) {
 		return nil, err
 	}
 
-	return client.New(config, client.Options{Scheme: scheme})
+	return client.New(config, client.Options{Scheme: scheme, DryRun: ptr.To(true)})
 }
