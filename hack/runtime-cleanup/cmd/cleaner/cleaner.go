@@ -36,11 +36,12 @@ func (r RuntimeCleaner) removeOldRuntimes() error {
 	}
 
 	for _, runtimeObj := range runtimes.Items {
-		if isTimeForCleanup(runtimeObj) && isControlledByKIM(runtimeObj) {
+		if isTimeForCleanup(runtimeObj) && isControlledByKIM(runtimeObj) && runtimeObj.DeletionTimestamp == nil {
 			err := r.k8sClient.Delete(context.Background(), &runtimeObj)
 			if err != nil {
 				return err
 			}
+			r.log.Info("Runtime ", runtimeObj.Name, " was marked to be removed by KIM reconciler")
 		}
 	}
 	return nil
