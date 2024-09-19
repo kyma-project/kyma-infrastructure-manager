@@ -1,9 +1,10 @@
 package files
 
 import (
+	"os"
+
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/tools/shoot-comparator/pkg/shoot"
-	"os"
 	"sigs.k8s.io/yaml"
 )
 

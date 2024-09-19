@@ -2,6 +2,7 @@ package comparator
 
 import (
 	"fmt"
+
 	"github.com/kyma-project/infrastructure-manager/tools/shoot-comparator/internal/files"
 	"github.com/spf13/cobra"
 )

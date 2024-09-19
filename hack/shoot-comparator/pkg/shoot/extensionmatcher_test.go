@@ -2,6 +2,7 @@ package shoot
 
 import (
 	"fmt"
+
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive

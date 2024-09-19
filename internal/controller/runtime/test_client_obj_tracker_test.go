@@ -1,11 +1,12 @@
 package runtime
 
 import (
+	"testing"
+
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"testing"
 )
 
 func TestCustomTracker_Get(t *testing.T) {
