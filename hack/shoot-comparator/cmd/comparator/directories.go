@@ -2,10 +2,11 @@ package comparator
 
 import (
 	"fmt"
-	"github.com/kyma-project/infrastructure-manager/tools/shoot-comparator/internal/directories"
-	"github.com/spf13/cobra"
 	"log/slog"
 	"time"
+
+	"github.com/kyma-project/infrastructure-manager/tools/shoot-comparator/internal/directories"
+	"github.com/spf13/cobra"
 )
 
 func init() {

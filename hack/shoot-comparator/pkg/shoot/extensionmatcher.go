@@ -2,12 +2,13 @@ package shoot
 
 import (
 	"fmt"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"reflect"
 	"sort"
 	"strings"
+
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 )
 
 type ExtensionMatcher struct {

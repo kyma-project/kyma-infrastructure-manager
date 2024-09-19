@@ -151,6 +151,7 @@ var testReader io.Reader = strings.NewReader(`{
     }
   },
   "machineImage": {
+  	"defaultName": "test-image-name",
     "defaultVersion": "0.1.2.3.4"
   },
   "gardener": {
@@ -188,6 +189,7 @@ func Test_ConverterConfig_Load_OK(t *testing.T) {
 			},
 		},
 		MachineImage: MachineImageConfig{
+			DefaultName:    "test-image-name",
 			DefaultVersion: "0.1.2.3.4",
 		},
 		Gardener: GardenerConfig{

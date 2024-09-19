@@ -1,16 +1,16 @@
 package directories
 
 import (
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"gopkg.in/yaml.v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"path"
 	"testing"
 	"time"
 
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const onlyLeftFilename = "onlyLeftFile.yaml"

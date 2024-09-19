@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func NewProviderExtender(enableIMDSv2 bool, defaultMachineImageVersion string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtender(enableIMDSv2 bool, defaultMachineImageName, defaultMachineImageVersion string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
 		provider.Type = runtime.Spec.Shoot.Provider.Type
@@ -26,7 +26,7 @@ func NewProviderExtender(enableIMDSv2 bool, defaultMachineImageVersion string) f
 			return err
 		}
 
-		setDefaultMachineImageVersion(provider, defaultMachineImageVersion)
+		setDefaultMachineImage(provider, defaultMachineImageName, defaultMachineImageVersion)
 		err = setWorkerConfig(provider, provider.Type, enableIMDSv2)
 		setWorkerSettings(provider)
 
@@ -122,12 +122,13 @@ func setWorkerSettings(provider *gardener.Provider) {
 	}
 }
 
-func setDefaultMachineImageVersion(provider *gardener.Provider, defaultMachineImageVersion string) {
+func setDefaultMachineImage(provider *gardener.Provider, defaultMachineImageName, defaultMachineImageVersion string) {
 	for i := 0; i < len(provider.Workers); i++ {
 		worker := &provider.Workers[i]
 
 		if worker.Machine.Image == nil {
 			worker.Machine.Image = &gardener.ShootMachineImage{
+				Name:    defaultMachineImageName,
 				Version: &defaultMachineImageVersion,
 			}
 
@@ -136,6 +137,10 @@ func setDefaultMachineImageVersion(provider *gardener.Provider, defaultMachineIm
 		machineImageVersion := worker.Machine.Image.Version
 		if machineImageVersion == nil || *machineImageVersion == "" {
 			machineImageVersion = &defaultMachineImageVersion
+		}
+
+		if worker.Machine.Image.Name == "" {
+			worker.Machine.Image.Name = defaultMachineImageName
 		}
 
 		worker.Machine.Image.Version = machineImageVersion

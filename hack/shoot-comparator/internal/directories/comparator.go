@@ -1,11 +1,12 @@
 package directories
 
 import (
-	"github.com/kyma-project/infrastructure-manager/tools/shoot-comparator/internal/files"
 	"os"
 	"path"
 	"slices"
 	"time"
+
+	"github.com/kyma-project/infrastructure-manager/tools/shoot-comparator/internal/files"
 )
 
 type Result struct {
