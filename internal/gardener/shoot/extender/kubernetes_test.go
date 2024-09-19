@@ -16,12 +16,26 @@ func TestKubernetesVersionExtender(t *testing.T) {
 		runtime := imv1.Runtime{}
 
 		// when
-		kubernetesVersionExtender := NewKubernetesVersionExtender("1.99")
+		kubernetesVersionExtender := NewKubernetesExtender("1.99")
 		err := kubernetesVersionExtender(runtime, &shoot)
 
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, "1.99", shoot.Spec.Kubernetes.Version)
+	})
+
+	t.Run("Disable static token kubeconfig", func(t *testing.T) {
+		// given
+		shoot := fixEmptyGardenerShoot("test", "kcp-system")
+		runtime := imv1.Runtime{}
+
+		// when
+		kubernetesVersionExtender := NewKubernetesExtender("1.99")
+		err := kubernetesVersionExtender(runtime, &shoot)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, false, *shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig)
 	})
 
 	t.Run("Use version provided in the Runtime CR", func(t *testing.T) {
@@ -38,7 +52,7 @@ func TestKubernetesVersionExtender(t *testing.T) {
 		}
 
 		// when
-		kubernetesVersionExtender := NewKubernetesVersionExtender("1.99")
+		kubernetesVersionExtender := NewKubernetesExtender("1.99")
 		err := kubernetesVersionExtender(runtime, &shoot)
 
 		// then
