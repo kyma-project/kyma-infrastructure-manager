@@ -23,7 +23,7 @@ func (r RuntimeCleaner) Execute() error {
 
 	err := r.removeOldRuntimes()
 	if err != nil {
-		r.log.Error("Error during removing old runtimes ", err)
+		r.log.With("error", err).Error("Error during removing old runtimes ")
 		return err
 	}
 	return nil
