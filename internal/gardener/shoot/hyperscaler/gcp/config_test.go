@@ -54,5 +54,6 @@ func TestInfrastructureConfig(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, "10.250.0.0/22", infrastructureConfig.Networks.Workers)
+		assert.Equal(t, "10.250.0.0/22", infrastructureConfig.Networks.Worker)
 	})
 }
