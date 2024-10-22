@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"log"
 	"os"
 	"slices"
@@ -18,7 +19,6 @@ import (
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/comparator"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/pkg/errors"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -103,8 +103,8 @@ func main() {
 			continue
 		}
 
-		saveShootToFile("/tmp/"+shoot.Name+"/original_shoot.yaml", shoot)
-		saveShootToFile("/tmp/"+shoot.Name+"/converted_shoot.yaml", shootFromConverter)
+		saveShootToFile("/tmp/"+shoot.Name+"/original_shoot.yaml", &shoot)
+		saveShootToFile("/tmp/"+shoot.Name+"/converted_shoot.yaml", &shootFromConverter)
 
 		// save comparison report with differences
 		resultsDir, err := comparator.SaveComparisonReport(result, cfg.OutputPath, shoot.Name)
@@ -115,28 +115,29 @@ func main() {
 			log.Printf("Results stored in %q", resultsDir)
 		}
 
-		if !result.Equal {
-			log.Print("Generated Shoot and Shoot from converter are not equal, stopping migration of shoot: ", shoot.Name)
-			continue
-		}
-
-		err = saveRuntime(migratorContext, cfg, runtime, kcpClient)
+		runtimeAsYaml, err := getYamlSpec(runtime)
 		if err != nil {
-			log.Printf("Failed to apply runtime CR, %s\n", err)
+			log.Printf("Failed to convert spec to yaml, %s", err)
+		}
+		writeSpecToFile(cfg.OutputPath, shoot, runtimeAsYaml)
 
-			status := migrator.StatusError
-			if k8serrors.IsAlreadyExists(err) {
-				status = migrator.StatusAlreadyExists
+		if result.Equal {
+			err = saveRuntime(migratorContext, cfg, runtime, kcpClient)
+			if err != nil {
+				log.Printf("Failed to apply runtime CR, %s\n", err)
+
+				status := migrator.StatusError
+				if k8serrors.IsAlreadyExists(err) {
+					status = migrator.StatusAlreadyExists
+				}
+				results = appendResult(results, shoot, status, err)
 			}
-			results = appendResult(results, shoot, status, err)
 			continue
+		} else {
+			if !cfg.IsDryRun {
+				log.Printf("Runtime %s was not applied as it may cause unwanted shoot update. Please review the runtime contents, and perform the migration manually", runtime.Name)
+			}
 		}
-
-		shootAsYaml, err := getYamlSpec(runtime)
-		if err != nil {
-			log.Printf("Failed to converte spec to yaml, %s", err)
-		}
-		writeSpecToFile(cfg.OutputPath, shoot, shootAsYaml)
 
 		results = append(results, migrator.MigrationResult{
 			RuntimeID:    shoot.Annotations[runtimeIDAnnotation],
