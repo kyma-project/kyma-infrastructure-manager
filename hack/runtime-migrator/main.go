@@ -245,7 +245,7 @@ func createRuntime(ctx context.Context, shoot v1beta1.Shoot, cfg migrator.Config
 				},
 				Provider: v1.Provider{
 					Type:    shoot.Spec.Provider.Type,
-					Workers: adjustWorkersConfig(shoot.Spec.Provider.Workers),
+					Workers: shoot.Spec.Provider.Workers,
 				},
 				Networking: v1.Networking{
 					Type:     shoot.Spec.Networking.Type,
@@ -280,19 +280,6 @@ func createRuntime(ctx context.Context, shoot v1beta1.Shoot, cfg migrator.Config
 	}
 
 	return runtime, nil
-}
-
-// The goal of this function is to make the migrator output equal to the shoot created by the converter
-// As a result we can automatically verify the correctness of the migrator output
-func adjustWorkersConfig(workers []v1beta1.Worker) []v1beta1.Worker {
-	// We need to set the following fields to nil, as they are not set by the KIM converter
-	for i := 0; i < len(workers); i++ {
-		workers[i].Machine.Architecture = nil
-		workers[i].SystemComponents = nil
-		workers[i].CRI = nil
-	}
-
-	return workers
 }
 
 func getOidcConfig(shoot v1beta1.Shoot) v1beta1.OIDCConfig {
