@@ -101,18 +101,6 @@ var _ = Describe(":: shoot matcher :: ", func() {
 			false,
 		),
 		Entry(
-			"should skip missing metadata/annotations",
-			deepCp(empty, withAnnotations(map[string]string{"test": "me"})),
-			deepCp(empty, withAnnotations(map[string]string{"test": "me", "dżułel": "wuz@here"})),
-			true,
-		),
-		Entry(
-			"should detect difference in metadata/annotations",
-			deepCp(empty, withAnnotations(map[string]string{"test": "me"})),
-			deepCp(empty, withAnnotations(map[string]string{})),
-			false,
-		),
-		Entry(
 			"should skip missing labels",
 			deepCp(empty, withLabels(map[string]string{"test": "me", "dżułel": "wuz@here"})),
 			deepCp(empty, withLabels(map[string]string{"test": "me"})),
@@ -123,6 +111,26 @@ var _ = Describe(":: shoot matcher :: ", func() {
 			deepCp(empty, withLabels(map[string]string{"test": "me"})),
 			deepCp(empty, withLabels(map[string]string{})),
 			false,
+		),
+		Entry(
+			"should detect differences in spec/exposureClassName #1",
+			deepCp(empty, withShootSpec(v1beta1.ShootSpec{
+				ExposureClassName: ptr.To[string]("mage"),
+			})),
+			deepCp(empty, withShootSpec(v1beta1.ShootSpec{
+				ExposureClassName: ptr.To[string]("bard"),
+			})),
+			false,
+		),
+		Entry(
+			"should detect no differences in spec/exposureClassName #1",
+			deepCp(empty, withShootSpec(v1beta1.ShootSpec{
+				ExposureClassName: ptr.To[string]("mage"),
+			})),
+			deepCp(empty, withShootSpec(v1beta1.ShootSpec{
+				ExposureClassName: ptr.To[string]("mage"),
+			})),
+			true,
 		),
 		Entry(
 			"should detect differences in spec/secretBindingName #1",

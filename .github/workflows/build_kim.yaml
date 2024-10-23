@@ -39,6 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
+      latest: ${{ steps.latest.outputs.latest || '' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -48,6 +49,9 @@ jobs:
       - id: tag
         if: github.event_name == 'push' && github.ref_type == 'tag'
         run: echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+      - id: latest
+        if: github.event.ref_name == github.event.repository.default_branch
+        run: echo "latest=latest" >> $GITHUB_OUTPUT
 
   trivy:
     permissions:
@@ -99,7 +103,9 @@ jobs:
       name: infrastructure-manager
       dockerfile: Dockerfile
       context: .
-      tags: ${{ needs.setup.outputs.tag }}
+      tags: |
+        ${{ needs.setup.outputs.tag }}
+        ${{ needs.setup.outputs.latest }}
 
   summary:
     runs-on: ubuntu-latest
