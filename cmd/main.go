@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -180,6 +181,15 @@ func main() {
 	if err != nil {
 		setupLog.Error(err, "invalid Audit Log configuration")
 		os.Exit(1)
+	}
+
+	// refresh runtime metrics
+	metrics.ResetRuntimeMetrics()
+	var RuntimeList infrastructuremanagerv1.RuntimeList
+	if err = mgr.GetClient().List(context.TODO(), &RuntimeList); err != nil {
+		for _, rt := range RuntimeList.Items {
+			metrics.SetRuntimeStates(rt)
+		}
 	}
 
 	cfg := fsm.RCCfg{
