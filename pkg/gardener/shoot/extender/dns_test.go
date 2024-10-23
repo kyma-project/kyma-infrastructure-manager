@@ -51,6 +51,11 @@ func assertExtensionConfig(t *testing.T, rawExtension *runtime.RawExtension) {
 	assert.Equal(t, "DNSConfig", extension.Kind)
 	assert.Equal(t, "service.dns.extensions.gardener.cloud/v1alpha1", extension.APIVersion)
 	assert.Equal(t, true, extension.DNSProviderReplication.Enabled)
+	assert.Equal(t, true, *extension.SyncProvidersFromShootSpecDNS)
+	assert.Equal(t, 1, len(extension.Providers))
+	assert.Equal(t, "myshoot.dev.mydomain.com", extension.Providers[0].Domains.Include[0])
+	assert.Equal(t, "my-secret", *extension.Providers[0].SecretName)
+	assert.Equal(t, "aws-route53", *extension.Providers[0].Type)
 }
 
 func fixEmptyGardenerShoot(name, namespace string) gardener.Shoot {

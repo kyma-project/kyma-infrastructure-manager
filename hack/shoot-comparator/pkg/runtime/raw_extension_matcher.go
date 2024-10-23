@@ -29,15 +29,21 @@ func (m *RawExtensionMatcher) Match(actual interface{}) (bool, error) {
 		return false, err
 	}
 
-	rasXtToMatch, err := utilz.Get[runtime.RawExtension](m.toMatch)
+	rawXtToMatch, err := utilz.Get[runtime.RawExtension](m.toMatch)
 	if err != nil {
 		return false, err
 	}
 
-	sort.Sort(sortBytes(rawXtActual.Raw))
-	sort.Sort(sortBytes(rasXtToMatch.Raw))
+	rawActual := make([]byte, len(rawXtActual.Raw))
+	copy(rawActual, rawXtActual.Raw)
 
-	return gomega.BeComparableTo(rawXtActual.Raw).Match(rasXtToMatch.Raw)
+	rawToMatch := make([]byte, len(rawXtToMatch.Raw))
+	copy(rawToMatch, rawXtToMatch.Raw)
+
+	sort.Sort(sortBytes(rawActual))
+	sort.Sort(sortBytes(rawToMatch))
+
+	return gomega.BeComparableTo(rawActual).Match(rawToMatch)
 }
 
 func (m *RawExtensionMatcher) NegatedFailureMessage(_ interface{}) string {

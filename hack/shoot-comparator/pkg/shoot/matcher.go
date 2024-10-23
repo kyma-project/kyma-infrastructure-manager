@@ -137,11 +137,6 @@ func (m *Matcher) Match(actual interface{}) (success bool, err error) {
 			path:          "spec/controlPlane",
 		},
 		{
-			GomegaMatcher: gomega.BeComparableTo(shootToMatch.Spec.CloudProfile),
-			actual:        shootActual.Spec.CloudProfile,
-			path:          "spec/cloudProfile",
-		},
-		{
 			GomegaMatcher: NewProviderMatcher(shootToMatch.Spec.Provider, "spec/provider"),
 			actual:        shootActual.Spec.Provider,
 			path:          "spec/provider",
