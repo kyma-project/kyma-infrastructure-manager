@@ -94,7 +94,7 @@ jobs:
 
       - name: Print trivy table
         if: success() || failure()
-        run: cat ${{ env.trivy-table }}
+        run: test -f ${{ env.trivy-table }} && cat ${{ env.trivy-table }} || echo ':: no data ::'
 
   build-image:
     needs: setup
