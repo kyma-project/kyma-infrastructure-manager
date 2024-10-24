@@ -37,6 +37,11 @@ func (_m *Metrics) IncRuntimeFSMStopCounter() {
 	_m.Called()
 }
 
+// ResetRuntimeMetrics provides a mock function with given fields:
+func (_m *Metrics) ResetRuntimeMetrics() {
+	_m.Called()
+}
+
 // SetGardenerClusterStates provides a mock function with given fields: cluster
 func (_m *Metrics) SetGardenerClusterStates(cluster v1.GardenerCluster) {
 	_m.Called(cluster)
