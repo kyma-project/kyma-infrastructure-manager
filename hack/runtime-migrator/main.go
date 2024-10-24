@@ -103,9 +103,6 @@ func main() {
 			continue
 		}
 
-		saveShootToFile("/tmp/"+shoot.Name+"/original_shoot.yaml", &shoot)
-		saveShootToFile("/tmp/"+shoot.Name+"/converted_shoot.yaml", &shootFromConverter)
-
 		// save comparison report with differences
 		resultsDir, err := comparator.SaveComparisonReport(result, cfg.OutputPath, shoot.Name)
 		if err != nil {
@@ -114,6 +111,9 @@ func main() {
 		} else {
 			log.Printf("Results stored in %q", resultsDir)
 		}
+
+		saveShootToFile("/tmp/"+shoot.Name+"/original_shoot.yaml", &shoot)
+		saveShootToFile("/tmp/"+shoot.Name+"/converted_shoot.yaml", &shootFromConverter)
 
 		runtimeAsYaml, err := getYamlSpec(runtime)
 		if err != nil {
