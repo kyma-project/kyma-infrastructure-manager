@@ -4,8 +4,8 @@ go 1.23.1
 
 require (
 	github.com/gardener/gardener v1.105.0
-	github.com/kyma-project/infrastructure-manager v0.0.0-20241021123306-9a0ba9af8333
-	github.com/kyma-project/infrastructure-manager/hack/shoot-comparator v0.0.0-20241021120305-7ad2c69735bc
+	github.com/kyma-project/infrastructure-manager v0.0.0-20241023155010-55a6abeb1690
+	github.com/kyma-project/infrastructure-manager/hack/shoot-comparator v0.0.0-20241023155010-55a6abeb1690
 	github.com/pkg/errors v0.9.1
 	k8s.io/api v0.31.1
 	k8s.io/apimachinery v0.31.1
