@@ -151,11 +151,6 @@ func (m *Matcher) Match(actual interface{}) (success bool, err error) {
 			actual:        shootActual.Labels,
 			path:          "metadata/labels",
 		},
-		{
-			GomegaMatcher: gomega.SatisfyAll(mapMatchers(shootActual.Annotations)...),
-			actual:        shootToMatch.Annotations,
-			path:          "metadata/annotations",
-		},
 	}
 
 	for _, matcher := range matchers {

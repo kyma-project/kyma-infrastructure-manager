@@ -101,18 +101,6 @@ var _ = Describe(":: shoot matcher :: ", func() {
 			false,
 		),
 		Entry(
-			"should skip missing metadata/annotations",
-			deepCp(empty, withAnnotations(map[string]string{"test": "me"})),
-			deepCp(empty, withAnnotations(map[string]string{"test": "me", "dżułel": "wuz@here"})),
-			true,
-		),
-		Entry(
-			"should detect difference in metadata/annotations",
-			deepCp(empty, withAnnotations(map[string]string{"test": "me"})),
-			deepCp(empty, withAnnotations(map[string]string{})),
-			false,
-		),
-		Entry(
 			"should skip missing labels",
 			deepCp(empty, withLabels(map[string]string{"test": "me", "dżułel": "wuz@here"})),
 			deepCp(empty, withLabels(map[string]string{"test": "me"})),
