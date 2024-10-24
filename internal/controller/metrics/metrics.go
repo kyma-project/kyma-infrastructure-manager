@@ -34,6 +34,7 @@ const (
 type Metrics interface {
 	SetRuntimeStates(runtime v1.Runtime)
 	CleanUpRuntimeGauge(runtimeID string)
+	ResetRuntimeMetrics()
 	IncRuntimeFSMStopCounter()
 	SetGardenerClusterStates(cluster v1.GardenerCluster)
 	CleanUpGardenerClusterGauge(runtimeID string)
@@ -98,6 +99,10 @@ func (m metricsImpl) CleanUpRuntimeGauge(runtimeID string) {
 	m.runtimeStateGauge.DeletePartialMatch(prometheus.Labels{
 		runtimeIDKeyName: runtimeID,
 	})
+}
+
+func (m metricsImpl) ResetRuntimeMetrics() {
+	m.runtimeStateGauge.Reset()
 }
 
 func (m metricsImpl) IncRuntimeFSMStopCounter() {
