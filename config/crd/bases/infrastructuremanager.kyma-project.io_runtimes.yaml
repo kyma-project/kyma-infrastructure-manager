@@ -131,9 +131,13 @@ spec:
                                     set will be used.
                                   type: string
                                 clientAuthentication:
-                                  description: ClientAuthentication can optionally
-                                    contain client configuration used for kubeconfig
-                                    generation.
+                                  description: |-
+                                    ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
+
+
+                                    Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31.
+                                    It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
+                                    TODO(AleksandarSavchev): Drop this field after support for Kubernetes 1.30 is dropped.
                                   properties:
                                     extraConfig:
                                       additionalProperties:
@@ -149,7 +153,7 @@ spec:
                                   type: object
                                 clientID:
                                   description: The client ID for the OpenID Connect
-                                    client, must be set if oidc-issuer-url is set.
+                                    client, must be set.
                                   type: string
                                 groupsClaim:
                                   description: If provided, the name of a custom OpenID
@@ -166,8 +170,8 @@ spec:
                                   type: string
                                 issuerURL:
                                   description: The URL of the OpenID issuer, only
-                                    HTTPS scheme will be accepted. If set, it will
-                                    be used to verify the OIDC JSON Web Token (JWT).
+                                    HTTPS scheme will be accepted. Used to verify
+                                    the OIDC JSON Web Token (JWT).
                                   type: string
                                 requiredClaims:
                                   additionalProperties:
@@ -213,8 +217,13 @@ spec:
                                   be used.
                                 type: string
                               clientAuthentication:
-                                description: ClientAuthentication can optionally contain
-                                  client configuration used for kubeconfig generation.
+                                description: |-
+                                  ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
+
+
+                                  Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31.
+                                  It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
+                                  TODO(AleksandarSavchev): Drop this field after support for Kubernetes 1.30 is dropped.
                                 properties:
                                   extraConfig:
                                     additionalProperties:
@@ -230,7 +239,7 @@ spec:
                                 type: object
                               clientID:
                                 description: The client ID for the OpenID Connect
-                                  client, must be set if oidc-issuer-url is set.
+                                  client, must be set.
                                 type: string
                               groupsClaim:
                                 description: If provided, the name of a custom OpenID
@@ -246,8 +255,8 @@ spec:
                                 type: string
                               issuerURL:
                                 description: The URL of the OpenID issuer, only HTTPS
-                                  scheme will be accepted. If set, it will be used
-                                  to verify the OIDC JSON Web Token (JWT).
+                                  scheme will be accepted. Used to verify the OIDC
+                                  JSON Web Token (JWT).
                                 type: string
                               requiredClaims:
                                 additionalProperties:
@@ -745,9 +754,11 @@ spec:
                                       description: |-
                                         SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
                                         When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
-                                        Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be removed soon.
+
+
+                                        Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31.
                                         Please merge existing resource reservations into the kubeReserved field.
-                                        TODO(MichaelEischer): Drop this field after v1.113 has been released.
+                                        TODO(MichaelEischer): Drop this field after support for Kubernetes 1.30 is dropped.
                                       properties:
                                         cpu:
                                           anyOf:

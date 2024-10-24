@@ -73,6 +73,11 @@ func (m *Matcher) Match(actual interface{}) (success bool, err error) {
 			path:          "spec/extensions",
 		},
 		{
+			GomegaMatcher: gomega.BeComparableTo(shootToMatch.Spec.CloudProfileName),
+			actual:        shootActual.Spec.CloudProfileName,
+			path:          "spec/cloudProfileName",
+		},
+		{
 			GomegaMatcher: gstruct.MatchFields(gstruct.IgnoreMissing, gstruct.Fields{
 				"ClusterAutoscaler":           gstruct.Ignore(),
 				"KubeAPIServer":               newKubeAPIServerMatcher(shootToMatch.Spec.Kubernetes),
@@ -137,11 +142,6 @@ func (m *Matcher) Match(actual interface{}) (success bool, err error) {
 			path:          "spec/controlPlane",
 		},
 		{
-			GomegaMatcher: gomega.BeComparableTo(shootToMatch.Spec.CloudProfile),
-			actual:        shootActual.Spec.CloudProfile,
-			path:          "spec/cloudProfile",
-		},
-		{
 			GomegaMatcher: NewProviderMatcher(shootToMatch.Spec.Provider, "spec/provider"),
 			actual:        shootActual.Spec.Provider,
 			path:          "spec/provider",
@@ -150,11 +150,6 @@ func (m *Matcher) Match(actual interface{}) (success bool, err error) {
 			GomegaMatcher: gomega.SatisfyAll(mapMatchers(shootToMatch.Labels)...),
 			actual:        shootActual.Labels,
 			path:          "metadata/labels",
-		},
-		{
-			GomegaMatcher: gomega.SatisfyAll(mapMatchers(shootActual.Annotations)...),
-			actual:        shootToMatch.Annotations,
-			path:          "metadata/annotations",
 		},
 	}
 
