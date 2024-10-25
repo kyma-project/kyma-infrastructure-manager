@@ -7,11 +7,9 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	migrator "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal"
-	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/runtime"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/pkg/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log"
 	"log/slog"
 	"os"
@@ -55,63 +53,17 @@ func main() {
 	}
 
 	gardenerShootClient, err := setupGardenerShootClient(cfg.GardenerKubeconfigPath, gardenerNamespace)
-	runtimeMigrator := runtime.NewMigrator(converterConfig, kubeconfigProvider, kcpClient)
 
 	slog.Info("Migrating runtimes")
-	stats, err := migrateRuntimes(runtimeMigrator, gardenerShootClient, getRuntimeIDsFromStdin(cfg))
+	migrator := NewMigration(cfg, converterConfig, kubeconfigProvider, kcpClient, gardenerShootClient)
+
+	results, err := migrator.Do(getRuntimeIDsFromStdin(cfg))
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to migrate runtimes - %v", err))
 		os.Exit(1)
 	}
 
-	slog.Info(fmt.Sprintf("Migration completed. Successfully migrated runtimes: %d, Failed migrations: %d", stats.Success, stats.Failure))
-}
-
-type stats struct {
-	Success int
-	Failure int
-}
-
-func migrateRuntimes(runtimeMigrator runtime.Migrator, shootClient gardener_types.ShootInterface, runtimeIDs []string) (stats, error) {
-
-	successfulMigrations := 0
-	failedMigrations := 0
-
-	shootList, err := shootClient.List(context.Background(), v1.ListOptions{})
-	if err != nil {
-		return stats{}, err
-	}
-
-	findShoot := func(runtimeID string) *v1beta1.Shoot {
-		for _, shoot := range shootList.Items {
-			if shoot.Annotations[runtimeIDAnnotation] == runtimeID {
-				return &shoot
-			}
-		}
-		return nil
-	}
-
-	for _, runtimeID := range runtimeIDs {
-		slog.Info(fmt.Sprintf("Migrating runtime with ID: %s", runtimeID))
-		shoot := findShoot(runtimeID)
-		if shoot == nil {
-			slog.Error(fmt.Sprintf("Failed to find shoot for runtime with ID: %s", runtimeID))
-			failedMigrations++
-			continue
-		}
-
-		_, err := runtimeMigrator.Do(*shoot)
-		if err != nil {
-			slog.Error(fmt.Sprintf("Failed to migrate runtime with ID: %s - %v", runtimeID, err))
-			failedMigrations++
-			continue
-		}
-	}
-
-	return stats{
-		Success: successfulMigrations,
-		Failure: failedMigrations,
-	}, nil
+	slog.Info(fmt.Sprintf("Migration completed. Successfully migrated runtimes: %d, Failed migrations: %d, Differences detected: %d", results.Succeeded, results.Failed, results.DifferenceDetected))
 }
 
 func setupKubernetesKubeconfigProvider(kubeconfigPath string, namespace string, expirationTime time.Duration) (kubeconfig.Provider, error) {
