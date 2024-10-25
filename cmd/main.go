@@ -21,7 +21,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/go-logr/logr"
 	"io"
+	"k8s.io/client-go/rest"
 	"os"
 	"time"
 
@@ -106,7 +108,9 @@ func main() {
 	logger := zap.New(zap.UseFlagOptions(&opts))
 	ctrl.SetLogger(logger)
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	restConfig := ctrl.GetConfigOrDie()
+
+	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
 		Metrics: metricsserver.Options{
 			BindAddress: metricsAddr,
 		},
@@ -220,14 +224,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger.Info("Refreshing runtime CR metrics")
-	metrics.ResetRuntimeMetrics()
-	var RuntimeList infrastructuremanagerv1.RuntimeList
-	if err = mgr.GetClient().List(context.TODO(), &RuntimeList); err == nil {
-		for _, rt := range RuntimeList.Items {
-			metrics.SetRuntimeStates(rt)
-		}
-	}
+	refreshRuntimeMetrics(restConfig, logger, metrics)
 
 	setupLog.Info("Starting Manager", "kubeconfigExpirationTime", expirationTime, "kubeconfigRotationPeriod", rotationPeriod)
 
@@ -312,4 +309,30 @@ func validateAuditLogDataMap(data map[string]map[string]auditlogging.AuditLogDat
 	}
 
 	return nil
+}
+
+func refreshRuntimeMetrics(restConfig *rest.Config, logger logr.Logger, metrics metrics.Metrics) {
+	k8sClient, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		setupLog.Error(err, "Unable to set up client for refreshing runtime CR metrics")
+		os.Exit(1)
+	}
+
+	err = infrastructuremanagerv1.AddToScheme(k8sClient.Scheme())
+	if err != nil {
+		setupLog.Error(err, "unable to set up client")
+		os.Exit(1)
+	}
+
+	logger.Info("Refreshing runtime CR metrics")
+	metrics.ResetRuntimeMetrics()
+	rl := infrastructuremanagerv1.RuntimeList{}
+	if err = k8sClient.List(context.Background(), &rl, &client.ListOptions{Namespace: "kcp-system"}); err != nil {
+		setupLog.Error(err, "error while listing unable to list runtimes")
+		os.Exit(1)
+	}
+
+	for _, rt := range rl.Items {
+		metrics.SetRuntimeStates(rt)
+	}
 }
