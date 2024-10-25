@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/comparator"
-	gardener_shoot "github.com/kyma-project/infrastructure-manager/internal/gardener/shoot"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
+	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"log"
 	"os"
 	"slices"
@@ -15,8 +16,7 @@ import (
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	migrator "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal"
-	"github.com/kyma-project/infrastructure-manager/internal/gardener"
-	"github.com/kyma-project/infrastructure-manager/internal/gardener/kubeconfig"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -244,8 +244,9 @@ func createRuntime(ctx context.Context, shoot v1beta1.Shoot, cfg migrator.Config
 					},
 				},
 				Provider: v1.Provider{
-					Type:    shoot.Spec.Provider.Type,
-					Workers: adjustWorkersConfig(shoot.Spec.Provider.Workers),
+					Type:               shoot.Spec.Provider.Type,
+					Workers:            adjustWorkersConfig(shoot.Spec.Provider.Workers),
+					ControlPlaneConfig: shoot.Spec.Provider.ControlPlaneConfig,
 				},
 				Networking: v1.Networking{
 					Type:     shoot.Spec.Networking.Type,
