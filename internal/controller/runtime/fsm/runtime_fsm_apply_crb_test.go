@@ -25,7 +25,7 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 	withMockedMetrics := func() fakeFSMOpt {
 		m := &mocks.Metrics{}
 		m.On("SetRuntimeStates", mock.Anything).Return()
-		m.On("CleanUpRuntimeGauge", mock.Anything).Return()
+		m.On("CleanUpRuntimeGauge", mock.Anything, mock.Anything).Return()
 		m.On("IncRuntimeFSMStopCounter").Return()
 		return withMetrics(m)
 	}

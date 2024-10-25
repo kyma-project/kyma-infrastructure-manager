@@ -69,6 +69,7 @@ const defaultExpirationTime = 24 * time.Hour
 const defaultGardenerRequestTimeout = 60 * time.Second
 const defaultControlPlaneRequeueDuration = 10 * time.Second
 const defaultGardenerRequeueDuration = 15 * time.Second
+const RuntimeMetricRefreshPeriod = 30 * time.Second
 
 func main() {
 	var metricsAddr string
@@ -183,15 +184,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// refresh runtime metrics
-	metrics.ResetRuntimeMetrics()
-	var runtimeList infrastructuremanagerv1.RuntimeList
-	if err = mgr.GetClient().List(context.TODO(), &runtimeList); err != nil {
-		for _, rt := range runtimeList.Items {
-			metrics.SetRuntimeStates(rt)
-		}
-	}
-
 	cfg := fsm.RCCfg{
 		GardenerRequeueDuration:     defaultGardenerRequeueDuration,
 		ControlPlaneRequeueDuration: defaultControlPlaneRequeueDuration,
@@ -229,11 +221,30 @@ func main() {
 		os.Exit(1)
 	}
 
+	refreshRuntimeMetrics := func() {
+		logger.Info("Refreshing runtime CR metrics")
+		metrics.ResetRuntimeMetrics()
+		var RuntimeList infrastructuremanagerv1.RuntimeList
+		if err = mgr.GetClient().List(context.TODO(), &RuntimeList); err == nil {
+			for _, rt := range RuntimeList.Items {
+				metrics.SetRuntimeStates(rt)
+			}
+		}
+	}
+
+	quitChannel := startRuntimeMetricsRefresher(refreshRuntimeMetrics)
+	defer func() {
+		logger.Info("Stopping metric refresh process goroutine")
+		if quitChannel != nil {
+			quitChannel <- true
+		}
+	}()
+
 	setupLog.Info("Starting Manager", "kubeconfigExpirationTime", expirationTime, "kubeconfigRotationPeriod", rotationPeriod)
 
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
+		os.Exit(1) //nolint:gocritic
 	}
 }
 
@@ -312,4 +323,21 @@ func validateAuditLogDataMap(data map[string]map[string]auditlogging.AuditLogDat
 	}
 
 	return nil
+}
+
+func startRuntimeMetricsRefresher(refreshFunc func()) chan bool {
+	quitChannel := make(chan bool)
+	go func() {
+		for {
+			time.Sleep(RuntimeMetricRefreshPeriod)
+			select {
+			case <-quitChannel:
+				// println("Received signal to stop metric refresh process")
+				return
+			default:
+				refreshFunc()
+			}
+		}
+	}()
+	return quitChannel
 }
