@@ -100,6 +100,6 @@ func removeFinalizerAndStop(ctx context.Context, m *fsm, s *systemState) (stateF
 	}
 
 	// remove from metrics
-	m.Metrics.CleanUpRuntimeGauge(runtimeID)
+	m.Metrics.CleanUpRuntimeGauge(runtimeID, s.instance.Name)
 	return stop()
 }
