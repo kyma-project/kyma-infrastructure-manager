@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 const onlyLeftFilename = "onlyLeftFile.yaml"
@@ -168,7 +169,7 @@ func getTestShootWithSpec() v1beta1.Shoot {
 			Name: "test-shoot",
 		},
 		Spec: v1beta1.ShootSpec{
-			CloudProfileName: "test-cloud-profile",
+			CloudProfileName: ptr.To[string]("test-cloud-profile"),
 		},
 	}
 }
