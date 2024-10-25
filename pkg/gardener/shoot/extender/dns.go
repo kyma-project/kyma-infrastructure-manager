@@ -10,6 +10,8 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+const dnsSecretPrefix = "shoot-dns-service-"
+
 // The types were copied from the following file: https://github.com/gardener/gardener-extension-shoot-dns-service/blob/master/pkg/apis/service/types.go
 type DNSExtensionProviderConfig struct {
 	// APIVersion is gardener extension api version
@@ -55,6 +57,8 @@ type DNSProviderReplication struct {
 }
 
 func newDNSExtensionConfig(domain, secretName, dnsProviderType string) *DNSExtensionProviderConfig {
+	prefixedSecretName := fmt.Sprintf("%s%s", dnsSecretPrefix, secretName)
+
 	return &DNSExtensionProviderConfig{
 		APIVersion:                    "service.dns.extensions.gardener.cloud/v1alpha1",
 		Kind:                          "DNSConfig",
@@ -65,8 +69,8 @@ func newDNSExtensionConfig(domain, secretName, dnsProviderType string) *DNSExten
 				Domains: &DNSIncludeExclude{
 					Include: []string{domain},
 				},
-				SecretName: ptr.To(secretName),
-				Type:       ptr.To(dnsProviderType),
+				SecretName: &prefixedSecretName,
+				Type:       &dnsProviderType,
 			},
 		},
 	}
