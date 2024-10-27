@@ -7,6 +7,7 @@ import (
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	runtimev1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	migrator "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal"
+	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/migration"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/runtime"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
@@ -18,7 +19,7 @@ import (
 func NewMigration(migratorConfig migrator.Config, converterConfig config.ConverterConfig, kubeconfigProvider kubeconfig.Provider, kcpClient client.Client, shootClient gardener_types.ShootInterface) Migration {
 
 	return Migration{
-		runtimeMigrator: runtime.NewMigrator(converterConfig, kubeconfigProvider, kcpClient),
+		runtimeMigrator: runtime.NewMigrator(migratorConfig, converterConfig, kubeconfigProvider, kcpClient),
 		runtimeVerifier: runtime.NewVerifier(converterConfig, migratorConfig.OutputPath),
 		migrationConfig: migratorConfig,
 		kcpClient:       kcpClient,
@@ -35,18 +36,18 @@ type Migration struct {
 	shootClient     gardener_types.ShootInterface
 }
 
-func (m Migration) Do(runtimeIDs []string) (MigrationResults, error) {
+func (m Migration) Do(runtimeIDs []string) (migration.MigrationResults, error) {
 
 	shootList, err := m.shootClient.List(context.Background(), v1.ListOptions{})
 	if err != nil {
-		return MigrationResults{}, err
+		return migration.MigrationResults{}, err
 	}
 
-	results := NewMigratorResults(m.migrationConfig.OutputPath)
+	results := migration.NewMigratorResults(m.migrationConfig.OutputPath)
 
-	outputWriter, err := NewOutputWriter(m.migrationConfig.OutputPath)
+	outputWriter, err := migration.NewOutputWriter(m.migrationConfig.OutputPath)
 	if err != nil {
-		return MigrationResults{}, err
+		return migration.MigrationResults{}, err
 	}
 
 	for _, runtimeID := range runtimeIDs {
@@ -60,7 +61,7 @@ func (m Migration) Do(runtimeIDs []string) (MigrationResults, error) {
 			continue
 		}
 
-		runtime, err := m.runtimeMigrator.Do(*shoot)
+		runtime, err := m.runtimeMigrator.Do(context.Background(), *shoot)
 		if err != nil {
 			msg := "Failed to migrate runtime"
 			results.ErrorOccurred(runtimeID, shoot.Name, msg)

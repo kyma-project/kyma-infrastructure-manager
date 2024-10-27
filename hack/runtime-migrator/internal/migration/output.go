@@ -1,4 +1,4 @@
-package main
+package migration
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/runtime"
 	"os"
 	"path"
+	"sigs.k8s.io/yaml"
 )
 
 type OutputWriter struct {
@@ -45,7 +46,24 @@ func (ow OutputWriter) SaveMigrationResults(results MigrationResults) error {
 }
 
 func (ow OutputWriter) SaveRuntimeCR(runtime v1.Runtime) error {
-	return nil
+	runtimeAsYaml, err := getYamlSpec(runtime)
+	if err != nil {
+		return err
+	}
+
+	return writeSpecToFile(ow.outputDir, runtime.Name, runtimeAsYaml)
+}
+
+func getYamlSpec(shoot v1.Runtime) ([]byte, error) {
+	shootAsYaml, err := yaml.Marshal(shoot)
+	return shootAsYaml, err
+}
+
+func writeSpecToFile(outputPath, runtimeID string, shootAsYaml []byte) error {
+	var fileName = fmt.Sprintf(runtimeCrFullPath, outputPath, runtimeID)
+
+	const writePermissions = 0644
+	return os.WriteFile(fileName, shootAsYaml, writePermissions)
 }
 
 func (ow OutputWriter) SaveComparisonResult(comparisonResult runtime.ShootComparisonResult) error {

@@ -18,12 +18,8 @@ import (
 )
 
 const (
-	migratorLabel                      = "operator.kyma-project.io/created-by-migrator"
-	expirationTime                     = 60 * time.Minute
-	ShootNetworkingFilterExtensionType = "shoot-networking-filter"
-	runtimeCrFullPath                  = "%sshoot-%s.yaml"
-	runtimeIDAnnotation                = "kcp.provisioner.kyma-project.io/runtime-id"
-	contextTimeout                     = 5 * time.Minute
+	expirationTime      = 60 * time.Minute
+	runtimeIDAnnotation = "kcp.provisioner.kyma-project.io/runtime-id"
 )
 
 func main() {
