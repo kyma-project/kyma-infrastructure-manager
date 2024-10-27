@@ -82,7 +82,7 @@ func writeSpecToFile(outputPath, runtimeID string, shootAsYaml []byte) error {
 
 func (ow OutputWriter) SaveComparisonResult(comparisonResult runtime.ShootComparisonResult) error {
 	comparisonResultsForRuntimeDir := path.Join(ow.ComparisonResultsDir, comparisonResult.RuntimeID)
-	err := os.MkdirAll(comparisonResultsForRuntimeDir, 0644)
+	err := os.MkdirAll(comparisonResultsForRuntimeDir, os.ModePerm)
 	if err != nil {
 		return err
 	}

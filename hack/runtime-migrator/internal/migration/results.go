@@ -60,7 +60,7 @@ func (mr *Results) OperationSucceeded(runtimeID string, shootName string) {
 }
 
 func (mr *Results) getRuntimeCRPath(runtimeID string) string {
-	return fmt.Sprintf("%s/runtimes/%s", mr.OutputDirectory, runtimeID)
+	return fmt.Sprintf("%s/runtimes/%s.yaml", mr.OutputDirectory, runtimeID)
 }
 
 func (mr *Results) getComparisonResultPath(runtimeID string) string {
