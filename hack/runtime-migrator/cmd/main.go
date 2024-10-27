@@ -18,6 +18,7 @@ import (
 )
 
 const (
+	contextTimeout      = 5 * time.Minute
 	expirationTime      = 60 * time.Minute
 	runtimeIDAnnotation = "kcp.provisioner.kyma-project.io/runtime-id"
 )

@@ -5,7 +5,7 @@ import (
 	migrator "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal"
 )
 
-const runtimeCrFullPath = "%sshoot-%s.yaml"
+const runtimeCrFullPath = "%sshoot-dd%s.yaml"
 
 type MigrationResults struct {
 	Results            []migrator.MigrationResult

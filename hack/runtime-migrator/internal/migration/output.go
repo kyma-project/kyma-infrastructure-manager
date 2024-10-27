@@ -7,28 +7,32 @@ import (
 	"os"
 	"path"
 	"sigs.k8s.io/yaml"
+	"time"
 )
 
 type OutputWriter struct {
 	outputDir            string
+	runtimeDir           string
 	comparisonResultsDir string
 }
 
 func NewOutputWriter(outputDir string) (OutputWriter, error) {
 
-	err := os.MkdirAll(outputDir, os.ModePerm)
+	newResultsDir := path.Join(outputDir, fmt.Sprintf("migration-%s", time.Now().Format(time.RFC3339)))
+
+	err := os.MkdirAll(newResultsDir, os.ModePerm)
 	if err != nil {
 		return OutputWriter{}, fmt.Errorf("failed to create results directory: %v", err)
 	}
 
-	runtimesDir := path.Join(outputDir, "runtimes")
+	runtimesDir := path.Join(newResultsDir, "runtimes")
 
 	err = os.MkdirAll(runtimesDir, os.ModePerm)
 	if err != nil {
 		return OutputWriter{}, fmt.Errorf("failed to create runtimes directory: %v", err)
 	}
 
-	comparisonResultsDir := path.Join(outputDir, "comparison-results")
+	comparisonResultsDir := path.Join(newResultsDir, "comparison-results")
 
 	err = os.MkdirAll(comparisonResultsDir, os.ModePerm)
 	if err != nil {
@@ -37,6 +41,7 @@ func NewOutputWriter(outputDir string) (OutputWriter, error) {
 
 	return OutputWriter{
 		outputDir:            outputDir,
+		runtimeDir:           runtimesDir,
 		comparisonResultsDir: comparisonResultsDir,
 	}, nil
 }
@@ -51,7 +56,7 @@ func (ow OutputWriter) SaveRuntimeCR(runtime v1.Runtime) error {
 		return err
 	}
 
-	return writeSpecToFile(ow.outputDir, runtime.Name, runtimeAsYaml)
+	return writeSpecToFile(ow.runtimeDir, runtime.Name, runtimeAsYaml)
 }
 
 func getYamlSpec(shoot v1.Runtime) ([]byte, error) {
@@ -60,7 +65,7 @@ func getYamlSpec(shoot v1.Runtime) ([]byte, error) {
 }
 
 func writeSpecToFile(outputPath, runtimeID string, shootAsYaml []byte) error {
-	var fileName = fmt.Sprintf(runtimeCrFullPath, outputPath, runtimeID)
+	var fileName = fmt.Sprintf("%s/%s", outputPath, runtimeID)
 
 	const writePermissions = 0644
 	return os.WriteFile(fileName, shootAsYaml, writePermissions)

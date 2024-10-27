@@ -38,17 +38,17 @@ type Migration struct {
 
 func (m Migration) Do(runtimeIDs []string) (migration.MigrationResults, error) {
 
+	outputWriter, err := migration.NewOutputWriter(m.migrationConfig.OutputPath)
+	if err != nil {
+		return migration.MigrationResults{}, err
+	}
+
 	shootList, err := m.shootClient.List(context.Background(), v1.ListOptions{})
 	if err != nil {
 		return migration.MigrationResults{}, err
 	}
 
 	results := migration.NewMigratorResults(m.migrationConfig.OutputPath)
-
-	outputWriter, err := migration.NewOutputWriter(m.migrationConfig.OutputPath)
-	if err != nil {
-		return migration.MigrationResults{}, err
-	}
 
 	for _, runtimeID := range runtimeIDs {
 		slog.Info(fmt.Sprintf("Migrating runtime with ID: %s", runtimeID))
