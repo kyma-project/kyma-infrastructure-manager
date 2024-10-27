@@ -48,7 +48,7 @@ func (m Migration) Do(runtimeIDs []string) (migration.MigrationResults, error) {
 		return migration.MigrationResults{}, err
 	}
 
-	results := migration.NewMigratorResults(m.migrationConfig.OutputPath)
+	results := migration.NewMigratorResults(outputWriter.RuntimeDir)
 
 	for _, runtimeID := range runtimeIDs {
 		slog.Info(fmt.Sprintf("Migrating runtime with ID: %s", runtimeID))
@@ -88,6 +88,8 @@ func (m Migration) Do(runtimeIDs []string) (migration.MigrationResults, error) {
 
 		err = outputWriter.SaveComparisonResult(shootComparisonResult)
 		if err != nil {
+			msg := "Failed to store comparison results"
+			results.ErrorOccurred(runtimeID, shoot.Name, msg)
 			slog.Error(fmt.Sprintf("Failed to save comparison result: %v", err), "runtimeID", runtimeID)
 
 			continue
@@ -96,17 +98,24 @@ func (m Migration) Do(runtimeIDs []string) (migration.MigrationResults, error) {
 		if shootComparisonResult.Diff != nil && !m.migrationConfig.IsDryRun {
 			err = m.applyRuntimeCR(runtime)
 			if err != nil {
-				slog.Error(fmt.Sprintf("Failed to create runtime with ID: %s - %v", runtime.Name, err))
+				msg := "Failed to apply Runtime CR"
+				results.ErrorOccurred(runtimeID, shoot.Name, msg)
+				slog.Error(fmt.Sprintf("Failed to apply runtime with ID: %s - %v", runtime.Name, err))
 			}
 
 			continue
 		}
+
+		results.OperationSucceeded(runtimeID, shoot.Name)
 	}
 
-	err = outputWriter.SaveMigrationResults(results)
+	resultsFile, err := outputWriter.SaveMigrationResults(results)
 	if err != nil {
 		return results, err
 	}
+
+	slog.Info(fmt.Sprintf("Migration completed. Successfully migrated runtimes: %d, Failed migrations: %d, Differences detected: %d", results.Succeeded, results.Failed, results.DifferenceDetected))
+	slog.Info(fmt.Sprintf("Migration results saved in: %s", resultsFile))
 
 	return results, nil
 }

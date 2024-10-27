@@ -1,6 +1,7 @@
 package migration
 
 import (
+	"encoding/json"
 	"fmt"
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/runtime"
@@ -11,9 +12,9 @@ import (
 )
 
 type OutputWriter struct {
-	outputDir            string
-	runtimeDir           string
-	comparisonResultsDir string
+	NewResultsDir        string
+	RuntimeDir           string
+	ComparisonResultsDir string
 }
 
 func NewOutputWriter(outputDir string) (OutputWriter, error) {
@@ -40,14 +41,22 @@ func NewOutputWriter(outputDir string) (OutputWriter, error) {
 	}
 
 	return OutputWriter{
-		outputDir:            outputDir,
-		runtimeDir:           runtimesDir,
-		comparisonResultsDir: comparisonResultsDir,
+		NewResultsDir:        newResultsDir,
+		RuntimeDir:           runtimesDir,
+		ComparisonResultsDir: comparisonResultsDir,
 	}, nil
 }
 
-func (ow OutputWriter) SaveMigrationResults(results MigrationResults) error {
-	return nil
+func (ow OutputWriter) SaveMigrationResults(results MigrationResults) (string, error) {
+	resultFile, err := json.Marshal(results.Results)
+	if err != nil {
+		return "", err
+	}
+
+	fileName := fmt.Sprintf("%s/migration-results.json", ow.NewResultsDir)
+	const writePermissions = 0644
+
+	return fileName, os.WriteFile(fileName, resultFile, writePermissions)
 }
 
 func (ow OutputWriter) SaveRuntimeCR(runtime v1.Runtime) error {
@@ -56,7 +65,7 @@ func (ow OutputWriter) SaveRuntimeCR(runtime v1.Runtime) error {
 		return err
 	}
 
-	return writeSpecToFile(ow.runtimeDir, runtime.Name, runtimeAsYaml)
+	return writeSpecToFile(ow.RuntimeDir, runtime.Name, runtimeAsYaml)
 }
 
 func getYamlSpec(shoot v1.Runtime) ([]byte, error) {
@@ -65,7 +74,7 @@ func getYamlSpec(shoot v1.Runtime) ([]byte, error) {
 }
 
 func writeSpecToFile(outputPath, runtimeID string, shootAsYaml []byte) error {
-	var fileName = fmt.Sprintf("%s/%s", outputPath, runtimeID)
+	var fileName = fmt.Sprintf("%s/%s.yaml", outputPath, runtimeID)
 
 	const writePermissions = 0644
 	return os.WriteFile(fileName, shootAsYaml, writePermissions)
