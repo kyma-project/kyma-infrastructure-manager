@@ -2,11 +2,27 @@ package migration
 
 import (
 	"fmt"
-	migrator "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal"
 )
 
+type StatusType string
+
+const (
+	StatusSuccess                         StatusType = "Success"
+	StatusError                           StatusType = "nError"
+	StatusRuntimeCRCanCauseUnwantedUpdate StatusType = "RuntimeCRCanCauseUnwantedUpdate"
+)
+
+type RuntimeResult struct {
+	RuntimeID                string     `json:"runtimeId"`
+	ShootName                string     `json:"shootName"`
+	Status                   StatusType `json:"status"`
+	ErrorMessage             string     `json:"errorMessage,omitempty"`
+	RuntimeCRFilePath        string     `json:"runtimeCRFilePath,omitempty"`
+	ComparisonResultsDirPath string     `json:"comparisonResultDirPath,omitempty"`
+}
+
 type Results struct {
-	Results            []migrator.MigrationResult
+	Results            []RuntimeResult
 	Succeeded          int
 	Failed             int
 	DifferenceDetected int
@@ -15,16 +31,16 @@ type Results struct {
 
 func NewMigratorResults(outputDirectory string) Results {
 	return Results{
-		Results:         make([]migrator.MigrationResult, 0),
+		Results:         make([]RuntimeResult, 0),
 		OutputDirectory: outputDirectory,
 	}
 }
 
 func (mr *Results) ErrorOccurred(runtimeID, shootName string, errorMsg string) {
-	result := migrator.MigrationResult{
+	result := RuntimeResult{
 		RuntimeID:         runtimeID,
 		ShootName:         shootName,
-		Status:            migrator.StatusError,
+		Status:            StatusError,
 		ErrorMessage:      errorMsg,
 		RuntimeCRFilePath: mr.getRuntimeCRPath(shootName),
 	}
@@ -34,10 +50,10 @@ func (mr *Results) ErrorOccurred(runtimeID, shootName string, errorMsg string) {
 }
 
 func (mr *Results) ValidationFailed(runtimeID, shootName string) {
-	result := migrator.MigrationResult{
+	result := RuntimeResult{
 		RuntimeID:                runtimeID,
 		ShootName:                shootName,
-		Status:                   migrator.StatusRuntimeCRCanCauseUnwantedUpdate,
+		Status:                   StatusRuntimeCRCanCauseUnwantedUpdate,
 		ErrorMessage:             "Runtime may cause unwanted update in Gardener. Please verify the runtime CR.",
 		RuntimeCRFilePath:        mr.getRuntimeCRPath(runtimeID),
 		ComparisonResultsDirPath: mr.getComparisonResultPath(runtimeID),
@@ -48,10 +64,10 @@ func (mr *Results) ValidationFailed(runtimeID, shootName string) {
 }
 
 func (mr *Results) OperationSucceeded(runtimeID string, shootName string) {
-	result := migrator.MigrationResult{
+	result := RuntimeResult{
 		RuntimeID:         runtimeID,
 		ShootName:         shootName,
-		Status:            migrator.StatusSuccess,
+		Status:            StatusSuccess,
 		RuntimeCRFilePath: mr.getRuntimeCRPath(runtimeID),
 	}
 

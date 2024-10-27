@@ -4,8 +4,7 @@ type StatusType string
 
 const (
 	StatusSuccess                         StatusType = "Success"
-	StatusError                           StatusType = "GenerationError"
-	StatusCRApplyError                    StatusType = "CRApplyError"
+	StatusError                           StatusType = "nError"
 	StatusAlreadyExists                   StatusType = "AlreadyExists"
 	StatusRuntimeIDNotFound               StatusType = "RuntimeIDNotFound"
 	StatusFailedToCreateRuntimeCR         StatusType = "FailedToCreateRuntimeCR"
