@@ -5,16 +5,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/kyma-project/infrastructure-manager/hack/shoot-comparator/pkg/runtime"
-
-	svc_v1beta1 "github.com/gardener/gardener-extension-shoot-dns-service/pkg/apis/service/v1alpha1"
-
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/hack/shoot-comparator/pkg/errors"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 )
 
@@ -385,70 +380,9 @@ func extensions(es []v1beta1.Extension) gstruct.Elements {
 		ID := idExtension(e)
 		out[ID] = gstruct.MatchAllFields(gstruct.Fields{
 			"Type":           gomega.BeComparableTo(e.Type),
-			"ProviderConfig": providerConfig(e.Type, e.ProviderConfig),
+			"ProviderConfig": newDNSConfigMatcher(e.Type, e.ProviderConfig),
 			"Disabled":       gomega.BeComparableTo(e.Disabled),
 		})
 	}
 	return out
-}
-
-func idDNSProvider(v interface{}) string {
-	p, ok := v.(svc_v1beta1.DNSConfig)
-	if !ok {
-		panic("invalid type")
-	}
-
-	return fmt.Sprintf("%s|%s", p.APIVersion, p.Kind)
-}
-
-func dnsProviders(ps []svc_v1beta1.DNSProvider) gstruct.Elements {
-	out := map[string]types.GomegaMatcher{}
-	for _, p := range ps {
-		ID := idDNSProvider(p)
-		secretNameMatcher := gomega.BeNil()
-		if p.SecretName != nil {
-			secretNameMatcher = gomega.HaveSuffix(*p.SecretName)
-		}
-		out[ID] = gstruct.MatchAllFields(gstruct.Fields{
-			"Domains": gstruct.PointTo(gstruct.MatchFields(
-				gstruct.IgnoreMissing,
-				gstruct.Fields{
-					"Include": gomega.BeComparableTo(p.Domains.Include),
-					"Exclude": gstruct.Ignore(),
-				})),
-			"SecretName": secretNameMatcher,
-			"Type":       gomega.BeComparableTo(p.Type),
-			"Zones": gstruct.PointTo(gstruct.MatchFields(
-				gstruct.IgnoreMissing,
-				gstruct.Fields{
-					"Include": gomega.BeComparableTo(p.Zones.Include),
-					"Exclude": gstruct.Ignore(),
-				})),
-		})
-	}
-	return out
-}
-
-func providerConfig(t string, r *runtime.RawExtension) types.GomegaMatcher {
-	if r == nil {
-		return gomega.BeNil()
-	}
-
-	result := gomega.BeComparableTo(r)
-	// assign specialized configuration matcher if required
-	if t == "shoot-dns-service" {
-		var cfg svc_v1beta1.DNSConfig
-		if err := yaml.Unmarshal(r.Raw, &cfg); err != nil {
-			return gstruct.Reject()
-		}
-
-		result = gstruct.MatchFields(
-			gstruct.IgnoreMissing,
-			gstruct.Fields{
-				"SyncProvidersFromShootSpecDNS": gomega.BeComparableTo(cfg.SyncProvidersFromShootSpecDNS),
-				"DNSProviderReplication":        gomega.BeComparableTo(cfg.DNSProviderReplication),
-				"Providers":                     gstruct.MatchAllElements(idDNSProvider, dnsProviders(cfg.Providers)),
-			})
-	}
-	return result
 }
