@@ -47,7 +47,7 @@ func NewOutputWriter(outputDir string) (OutputWriter, error) {
 	}, nil
 }
 
-func (ow OutputWriter) SaveMigrationResults(results MigrationResults) (string, error) {
+func (ow OutputWriter) SaveMigrationResults(results Results) (string, error) {
 	resultFile, err := json.Marshal(results.Results)
 	if err != nil {
 		return "", err
@@ -81,6 +81,62 @@ func writeSpecToFile(outputPath, runtimeID string, shootAsYaml []byte) error {
 }
 
 func (ow OutputWriter) SaveComparisonResult(comparisonResult runtime.ShootComparisonResult) error {
+	comparisonResultsForRuntimeDir := path.Join(ow.ComparisonResultsDir, comparisonResult.RuntimeID)
+	err := os.MkdirAll(comparisonResultsForRuntimeDir, 0644)
+	if err != nil {
+		return err
+	}
+
+	if comparisonResult.Diff != nil {
+		err = writeResultsToDiffFiles(comparisonResult.OriginalShoot.Name, comparisonResult.Diff, comparisonResultsForRuntimeDir)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = saveShootToFile(path.Join(comparisonResultsForRuntimeDir, "original-shoot.yaml"), comparisonResult.OriginalShoot)
+	if err != nil {
+		return err
+	}
+
+	return saveShootToFile(path.Join(comparisonResultsForRuntimeDir, "converted-shoot.yaml"), comparisonResult.ConvertedShoot)
+}
+
+func saveShootToFile(filePath string, shoot interface{}) error {
+	shootAsYaml, err := yaml.Marshal(shoot)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(filePath, shootAsYaml, 0644)
+	if err != nil {
+		return err
+	}
 
 	return nil
+}
+
+func writeResultsToDiffFiles(shootName string, difference *runtime.Difference, resultsDir string) error {
+	writeAndCloseFunc := func(filePath string, text string) error {
+		file, err := os.Create(filePath)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if file != nil {
+				err := file.Close()
+				if err != nil {
+					fmt.Printf("failed to close file: %v", err)
+				}
+			}
+		}()
+
+		_, err = file.Write([]byte(text))
+
+		return err
+	}
+
+	diffFile := path.Join(resultsDir, fmt.Sprintf("%s.diff", shootName))
+
+	return writeAndCloseFunc(diffFile, string(*difference))
 }

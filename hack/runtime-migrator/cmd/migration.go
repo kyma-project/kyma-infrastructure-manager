@@ -36,19 +36,19 @@ type Migration struct {
 	shootClient     gardener_types.ShootInterface
 }
 
-func (m Migration) Do(runtimeIDs []string) (migration.MigrationResults, error) {
+func (m Migration) Do(runtimeIDs []string) error {
 
 	outputWriter, err := migration.NewOutputWriter(m.migrationConfig.OutputPath)
 	if err != nil {
-		return migration.MigrationResults{}, err
+		return err
 	}
 
 	shootList, err := m.shootClient.List(context.Background(), v1.ListOptions{})
 	if err != nil {
-		return migration.MigrationResults{}, err
+		return err
 	}
 
-	results := migration.NewMigratorResults(outputWriter.RuntimeDir)
+	results := migration.NewMigratorResults(outputWriter.NewResultsDir)
 
 	for _, runtimeID := range runtimeIDs {
 		slog.Info(fmt.Sprintf("Migrating runtime with ID: %s", runtimeID))
@@ -80,22 +80,13 @@ func (m Migration) Do(runtimeIDs []string) (migration.MigrationResults, error) {
 		shootComparisonResult, err := m.runtimeVerifier.Do(runtime, *shoot)
 		if err != nil {
 			msg := "Failed to verify runtime"
-			results.ValidationFailed(runtimeID, shoot.Name)
+			results.ErrorOccurred(runtimeID, shoot.Name, msg)
 			slog.Error(msg, "runtimeID", runtimeID)
 
 			continue
 		}
 
-		err = outputWriter.SaveComparisonResult(shootComparisonResult)
-		if err != nil {
-			msg := "Failed to store comparison results"
-			results.ErrorOccurred(runtimeID, shoot.Name, msg)
-			slog.Error(fmt.Sprintf("Failed to save comparison result: %v", err), "runtimeID", runtimeID)
-
-			continue
-		}
-
-		if shootComparisonResult.Diff != nil && !m.migrationConfig.IsDryRun {
+		if shootComparisonResult.IsEqual() && !m.migrationConfig.IsDryRun {
 			err = m.applyRuntimeCR(runtime)
 			if err != nil {
 				msg := "Failed to apply Runtime CR"
@@ -106,18 +97,31 @@ func (m Migration) Do(runtimeIDs []string) (migration.MigrationResults, error) {
 			continue
 		}
 
-		results.OperationSucceeded(runtimeID, shoot.Name)
+		if shootComparisonResult.IsEqual() {
+			results.OperationSucceeded(runtimeID, shoot.Name)
+		} else {
+			err = outputWriter.SaveComparisonResult(shootComparisonResult)
+			if err != nil {
+				msg := "Failed to store comparison results"
+				results.ErrorOccurred(runtimeID, shoot.Name, msg)
+				slog.Error(fmt.Sprintf("Failed to save comparison result: %v", err), "runtimeID", runtimeID)
+
+				continue
+			}
+
+			results.ValidationFailed(runtimeID, shoot.Name)
+		}
 	}
 
 	resultsFile, err := outputWriter.SaveMigrationResults(results)
 	if err != nil {
-		return results, err
+		return err
 	}
 
 	slog.Info(fmt.Sprintf("Migration completed. Successfully migrated runtimes: %d, Failed migrations: %d, Differences detected: %d", results.Succeeded, results.Failed, results.DifferenceDetected))
 	slog.Info(fmt.Sprintf("Migration results saved in: %s", resultsFile))
 
-	return results, nil
+	return nil
 }
 
 func findShoot(runtimeID string, shootList *v1beta1.ShootList) *v1beta1.Shoot {

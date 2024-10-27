@@ -140,10 +140,10 @@ func main() {
 		}
 
 		results = append(results, migrator.MigrationResult{
-			RuntimeID:    shoot.Annotations[runtimeIDAnnotation],
-			ShootName:    shoot.Name,
-			Status:       migrator.StatusSuccess,
-			PathToCRYaml: fmt.Sprintf(runtimeCrFullPath, cfg.OutputPath, shoot.Name),
+			RuntimeID:         shoot.Annotations[runtimeIDAnnotation],
+			ShootName:         shoot.Name,
+			Status:            migrator.StatusSuccess,
+			RuntimeCRFilePath: fmt.Sprintf(runtimeCrFullPath, cfg.OutputPath, shoot.Name),
 		})
 	}
 	encoder := json.NewEncoder(os.Stdout)

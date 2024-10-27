@@ -54,13 +54,11 @@ func main() {
 	slog.Info("Migrating runtimes")
 	migrator := NewMigration(cfg, converterConfig, kubeconfigProvider, kcpClient, gardenerShootClient)
 
-	results, err := migrator.Do(getRuntimeIDsFromStdin(cfg))
+	err = migrator.Do(getRuntimeIDsFromStdin(cfg))
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to migrate runtimes - %v", err))
 		os.Exit(1)
 	}
-
-	slog.Info(fmt.Sprintf("Migration completed. Successfully migrated runtimes: %d, Failed migrations: %d, Differences detected: %d", results.Succeeded, results.Failed, results.DifferenceDetected))
 }
 
 func setupKubernetesKubeconfigProvider(kubeconfigPath string, namespace string, expirationTime time.Duration) (kubeconfig.Provider, error) {

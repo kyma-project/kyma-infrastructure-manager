@@ -5,9 +5,7 @@ import (
 	migrator "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal"
 )
 
-const runtimeCrFullPath = "%sshoot-dd%s.yaml"
-
-type MigrationResults struct {
+type Results struct {
 	Results            []migrator.MigrationResult
 	Succeeded          int
 	Failed             int
@@ -15,51 +13,56 @@ type MigrationResults struct {
 	OutputDirectory    string
 }
 
-func NewMigratorResults(outputDirectory string) MigrationResults {
-	return MigrationResults{
+func NewMigratorResults(outputDirectory string) Results {
+	return Results{
 		Results:         make([]migrator.MigrationResult, 0),
 		OutputDirectory: outputDirectory,
 	}
 }
 
-func (mr MigrationResults) ErrorOccurred(runtimeID, shootName string, errorMsg string) {
+func (mr *Results) ErrorOccurred(runtimeID, shootName string, errorMsg string) {
 	result := migrator.MigrationResult{
-		RuntimeID:    runtimeID,
-		ShootName:    shootName,
-		Status:       migrator.StatusError,
-		ErrorMessage: errorMsg,
-		PathToCRYaml: mr.getYamlPath(shootName),
+		RuntimeID:         runtimeID,
+		ShootName:         shootName,
+		Status:            migrator.StatusError,
+		ErrorMessage:      errorMsg,
+		RuntimeCRFilePath: mr.getRuntimeCRPath(shootName),
 	}
 
 	mr.Failed++
 	mr.Results = append(mr.Results, result)
 }
 
-func (mr MigrationResults) ValidationFailed(runtimeID, shootName string) {
+func (mr *Results) ValidationFailed(runtimeID, shootName string) {
 	result := migrator.MigrationResult{
-		RuntimeID:    runtimeID,
-		ShootName:    shootName,
-		Status:       migrator.StatusRuntimeCRCanCauseUnwantedUpdate,
-		ErrorMessage: "Runtime may cause unwanted update in Gardener. Please verify the runtime CR.",
-		PathToCRYaml: mr.getYamlPath(runtimeID),
+		RuntimeID:                runtimeID,
+		ShootName:                shootName,
+		Status:                   migrator.StatusRuntimeCRCanCauseUnwantedUpdate,
+		ErrorMessage:             "Runtime may cause unwanted update in Gardener. Please verify the runtime CR.",
+		RuntimeCRFilePath:        mr.getRuntimeCRPath(runtimeID),
+		ComparisonResultsDirPath: mr.getComparisonResultPath(runtimeID),
 	}
 
 	mr.DifferenceDetected++
 	mr.Results = append(mr.Results, result)
 }
 
-func (mr MigrationResults) OperationSucceeded(runtimeID string, shootName string) {
+func (mr *Results) OperationSucceeded(runtimeID string, shootName string) {
 	result := migrator.MigrationResult{
-		RuntimeID:    runtimeID,
-		ShootName:    shootName,
-		Status:       migrator.StatusSuccess,
-		PathToCRYaml: mr.getYamlPath(runtimeID),
+		RuntimeID:         runtimeID,
+		ShootName:         shootName,
+		Status:            migrator.StatusSuccess,
+		RuntimeCRFilePath: mr.getRuntimeCRPath(runtimeID),
 	}
 
 	mr.Succeeded++
 	mr.Results = append(mr.Results, result)
 }
 
-func (mr MigrationResults) getYamlPath(runtimeID string) string {
-	return fmt.Sprintf(runtimeCrFullPath, mr.OutputDirectory, runtimeID)
+func (mr *Results) getRuntimeCRPath(runtimeID string) string {
+	return fmt.Sprintf("%s/runtimes/%s", mr.OutputDirectory, runtimeID)
+}
+
+func (mr *Results) getComparisonResultPath(runtimeID string) string {
+	return fmt.Sprintf("%s/comparison-results/%s", mr.OutputDirectory, runtimeID)
 }

@@ -21,6 +21,7 @@ func NewVerifier(converterConfig config.ConverterConfig, outputPath string) Veri
 }
 
 type ShootComparisonResult struct {
+	RuntimeID      string
 	OriginalShoot  v1beta1.Shoot
 	ConvertedShoot v1beta1.Shoot
 	Diff           *Difference
@@ -41,6 +42,7 @@ func (v Verifier) Do(runtimeToVerify v1.Runtime, shootToMatch v1beta1.Shoot) (Sh
 	}
 
 	return ShootComparisonResult{
+		RuntimeID:      runtimeToVerify.Name,
 		OriginalShoot:  shootToMatch,
 		ConvertedShoot: shootFromConverter,
 		Diff:           diff,
@@ -60,4 +62,8 @@ func compare(originalShoot, convertedShoot v1beta1.Shoot) (*Difference, error) {
 	}
 
 	return nil, nil
+}
+
+func (cr ShootComparisonResult) IsEqual() bool {
+	return cr.Diff == nil
 }
