@@ -12,6 +12,7 @@ import (
 
 const (
 	runtimeIDKeyName               = "runtimeId"
+	runtimeNameKeyName             = "runtimeName"
 	shootNameIDKeyName             = "shootName"
 	rotationDuration               = "rotationDuration"
 	expirationDuration             = "expirationDuration"
@@ -33,7 +34,7 @@ const (
 //go:generate mockery --name=Metrics
 type Metrics interface {
 	SetRuntimeStates(runtime v1.Runtime)
-	CleanUpRuntimeGauge(runtimeID string)
+	CleanUpRuntimeGauge(runtimeID, runtimeName string)
 	ResetRuntimeMetrics()
 	IncRuntimeFSMStopCounter()
 	SetGardenerClusterStates(cluster v1.GardenerCluster)
@@ -68,7 +69,7 @@ func NewMetrics() Metrics {
 				Subsystem: componentName,
 				Name:      RuntimeStateMetricName,
 				Help:      "Exposes current Status.state for Runtime CRs",
-			}, []string{runtimeIDKeyName, shootNameIDKeyName, provider, state, message}),
+			}, []string{runtimeIDKeyName, runtimeNameKeyName, shootNameIDKeyName, provider, state, message}),
 		runtimeFSMUnexpectedStopsCnt: prometheus.NewCounter(
 			prometheus.CounterOpts{
 				Name: RuntimeFSMStopMetricName,
@@ -90,14 +91,15 @@ func (m metricsImpl) SetRuntimeStates(runtime v1.Runtime) {
 			reason = runtime.Status.Conditions[size-1].Message
 		}
 
-		m.CleanUpRuntimeGauge(runtimeID)
-		m.runtimeStateGauge.WithLabelValues(runtimeID, runtime.Spec.Shoot.Name, runtime.Spec.Shoot.Provider.Type, string(runtime.Status.State), reason).Set(1)
+		m.CleanUpRuntimeGauge(runtimeID, runtime.Name)
+		m.runtimeStateGauge.WithLabelValues(runtimeID, runtime.Name, runtime.Spec.Shoot.Name, runtime.Spec.Shoot.Provider.Type, string(runtime.Status.State), reason).Set(1)
 	}
 }
 
-func (m metricsImpl) CleanUpRuntimeGauge(runtimeID string) {
+func (m metricsImpl) CleanUpRuntimeGauge(runtimeID, runtimeName string) {
 	m.runtimeStateGauge.DeletePartialMatch(prometheus.Labels{
-		runtimeIDKeyName: runtimeID,
+		runtimeIDKeyName:   runtimeID,
+		runtimeNameKeyName: runtimeName,
 	})
 }
 

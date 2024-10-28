@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_apis "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	gardener_oidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
+	"github.com/go-logr/logr"
 	validator "github.com/go-playground/validator/v10"
 	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/auditlogging"
@@ -44,6 +45,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -106,7 +108,9 @@ func main() {
 	logger := zap.New(zap.UseFlagOptions(&opts))
 	ctrl.SetLogger(logger)
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	restConfig := ctrl.GetConfigOrDie()
+
+	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
 		Metrics: metricsserver.Options{
 			BindAddress: metricsAddr,
 		},
@@ -183,15 +187,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// refresh runtime metrics
-	metrics.ResetRuntimeMetrics()
-	var runtimeList infrastructuremanagerv1.RuntimeList
-	if err = mgr.GetClient().List(context.TODO(), &runtimeList); err != nil {
-		for _, rt := range runtimeList.Items {
-			metrics.SetRuntimeStates(rt)
-		}
-	}
-
 	cfg := fsm.RCCfg{
 		GardenerRequeueDuration:     defaultGardenerRequeueDuration,
 		ControlPlaneRequeueDuration: defaultControlPlaneRequeueDuration,
@@ -228,6 +223,8 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
+
+	refreshRuntimeMetrics(restConfig, logger, metrics)
 
 	setupLog.Info("Starting Manager", "kubeconfigExpirationTime", expirationTime, "kubeconfigRotationPeriod", rotationPeriod)
 
@@ -312,4 +309,30 @@ func validateAuditLogDataMap(data map[string]map[string]auditlogging.AuditLogDat
 	}
 
 	return nil
+}
+
+func refreshRuntimeMetrics(restConfig *rest.Config, logger logr.Logger, metrics metrics.Metrics) {
+	k8sClient, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		setupLog.Error(err, "Unable to set up client for refreshing runtime CR metrics")
+		os.Exit(1)
+	}
+
+	err = infrastructuremanagerv1.AddToScheme(k8sClient.Scheme())
+	if err != nil {
+		setupLog.Error(err, "unable to set up client")
+		os.Exit(1)
+	}
+
+	logger.Info("Refreshing runtime CR metrics")
+	metrics.ResetRuntimeMetrics()
+	rl := infrastructuremanagerv1.RuntimeList{}
+	if err = k8sClient.List(context.Background(), &rl, &client.ListOptions{Namespace: "kcp-system"}); err != nil {
+		setupLog.Error(err, "error while listing unable to list runtimes")
+		os.Exit(1)
+	}
+
+	for _, rt := range rl.Items {
+		metrics.SetRuntimeStates(rt)
+	}
 }
