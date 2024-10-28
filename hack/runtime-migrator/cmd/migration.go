@@ -16,104 +16,115 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func NewMigration(migratorConfig migrator.Config, converterConfig config.ConverterConfig, kubeconfigProvider kubeconfig.Provider, kcpClient client.Client, shootClient gardener_types.ShootInterface) Migration {
+func NewMigration(migratorConfig migrator.Config, converterConfig config.ConverterConfig, kubeconfigProvider kubeconfig.Provider, kcpClient client.Client, shootClient gardener_types.ShootInterface) (Migration, error) {
+
+	outputWriter, err := migration.NewOutputWriter(migratorConfig.OutputPath)
+	if err != nil {
+		return Migration{}, err
+	}
 
 	return Migration{
 		runtimeMigrator: runtime.NewMigrator(migratorConfig, converterConfig, kubeconfigProvider, kcpClient),
 		runtimeVerifier: runtime.NewVerifier(converterConfig, migratorConfig.OutputPath),
-		migrationConfig: migratorConfig,
 		kcpClient:       kcpClient,
 		shootClient:     shootClient,
-	}
-
+		outputWriter:    outputWriter,
+		isDryRun:        migratorConfig.IsDryRun,
+	}, nil
 }
 
 type Migration struct {
 	runtimeMigrator runtime.Migrator
 	runtimeVerifier runtime.Verifier
-	migrationConfig migrator.Config
 	kcpClient       client.Client
 	shootClient     gardener_types.ShootInterface
+	outputWriter    migration.OutputWriter
+	isDryRun        bool
 }
 
 func (m Migration) Do(runtimeIDs []string) error {
 
-	outputWriter, err := migration.NewOutputWriter(m.migrationConfig.OutputPath)
+	migratorContext, cancel := context.WithTimeout(context.Background(), contextTimeout)
+	defer cancel()
+
+	shootList, err := m.shootClient.List(migratorContext, v1.ListOptions{})
 	if err != nil {
 		return err
 	}
 
-	shootList, err := m.shootClient.List(context.Background(), v1.ListOptions{})
-	if err != nil {
-		return err
+	results := migration.NewMigratorResults(m.outputWriter.NewResultsDir)
+
+	reportError := func(runtimeID, shootName string, msg string, err error) {
+		errorMsg := fmt.Sprintf("%s: %v", msg, err)
+		results.ErrorOccurred(runtimeID, shootName, errorMsg)
+		slog.Error(errorMsg, "runtimeID", runtimeID)
 	}
 
-	results := migration.NewMigratorResults(outputWriter.NewResultsDir)
+	reportValidationError := func(runtimeID, shootName string, msg string) {
+		results.ValidationFailed(runtimeID, shootName)
+		slog.Warn(msg, "runtimeID", runtimeID)
+	}
+
+	reportSuccess := func(runtimeID, shootName string, msg string) {
+		results.OperationSucceeded(runtimeID, shootName)
+		slog.Info(msg, "runtimeID", runtimeID)
+	}
 
 	for _, runtimeID := range runtimeIDs {
 		slog.Info(fmt.Sprintf("Migrating runtime with ID: %s", runtimeID))
+
 		shoot := findShoot(runtimeID, shootList)
 		if shoot == nil {
-			msg := "Failed to find shoot"
-			results.ErrorOccurred(runtimeID, "", msg)
-			slog.Error(msg, "runtimeID", runtimeID)
+			reportError(runtimeID, "", "Failed to find shoot", nil)
 
 			continue
 		}
 
-		runtime, err := m.runtimeMigrator.Do(context.Background(), *shoot)
+		runtime, err := m.runtimeMigrator.Do(migratorContext, *shoot)
 		if err != nil {
-			msg := "Failed to migrate runtime"
-			results.ErrorOccurred(runtimeID, shoot.Name, msg)
-			slog.Error(msg, "runtimeID", runtimeID)
+			reportError(runtimeID, shoot.Name, "Failed to migrate runtime", err)
 
 			continue
 		}
 
-		err = outputWriter.SaveRuntimeCR(runtime)
+		err = m.outputWriter.SaveRuntimeCR(runtime)
 		if err != nil {
-			slog.Error(fmt.Sprintf("Failed to save runtime CR: %v", err), "runtimeID", runtimeID)
+			reportError(runtimeID, shoot.Name, "Failed to save runtime CR", err)
 
 			continue
 		}
 
 		shootComparisonResult, err := m.runtimeVerifier.Do(runtime, *shoot)
 		if err != nil {
-			msg := "Failed to verify runtime"
-			results.ErrorOccurred(runtimeID, shoot.Name, msg)
-			slog.Error(msg, "runtimeID", runtimeID)
+			reportError(runtimeID, shoot.Name, "Failed to verify runtime", err)
 
 			continue
 		}
 
-		if shootComparisonResult.IsEqual() && !m.migrationConfig.IsDryRun {
+		if !shootComparisonResult.IsEqual() {
+			err = m.outputWriter.SaveComparisonResult(shootComparisonResult)
+			if err != nil {
+				reportError(runtimeID, shoot.Name, "Failed to save comparison result", err)
+			} else {
+				reportValidationError(runtimeID, shoot.Name, "Runtime CR can cause unwanted update in Gardener. Please verify the runtime CR.")
+			}
+
+			continue
+		}
+
+		if !m.isDryRun {
 			err = m.applyRuntimeCR(runtime)
 			if err != nil {
-				msg := "Failed to apply Runtime CR"
-				results.ErrorOccurred(runtimeID, shoot.Name, msg)
-				slog.Error(fmt.Sprintf("Failed to apply runtime with ID: %s - %v", runtime.Name, err))
+				reportError(runtimeID, shoot.Name, "Failed to apply Runtime CR", err)
 			}
 
 			continue
 		}
 
-		if shootComparisonResult.IsEqual() {
-			results.OperationSucceeded(runtimeID, shoot.Name)
-		} else {
-			err = outputWriter.SaveComparisonResult(shootComparisonResult)
-			if err != nil {
-				msg := "Failed to store comparison results"
-				results.ErrorOccurred(runtimeID, shoot.Name, msg)
-				slog.Error(fmt.Sprintf("Failed to save comparison result: %v", err), "runtimeID", runtimeID)
-
-				continue
-			}
-
-			results.ValidationFailed(runtimeID, shoot.Name)
-		}
+		reportSuccess(runtimeID, shoot.Name, "Runtime processed successfully")
 	}
 
-	resultsFile, err := outputWriter.SaveMigrationResults(results)
+	resultsFile, err := m.outputWriter.SaveMigrationResults(results)
 	if err != nil {
 		return err
 	}

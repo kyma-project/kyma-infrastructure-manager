@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -26,12 +25,10 @@ const (
 func main() {
 	slog.Info("Starting runtime-migrator")
 	cfg := migrator.NewConfig()
-	_, cancel := context.WithTimeout(context.Background(), contextTimeout)
-	defer cancel()
 
 	converterConfig, err := migrator.LoadConverterConfig(cfg)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Unable to load converter config - %v", err))
+		slog.Error(fmt.Sprintf("Unable to load converter config: %v", err))
 		os.Exit(1)
 	}
 
@@ -39,24 +36,28 @@ func main() {
 
 	kubeconfigProvider, err := setupKubernetesKubeconfigProvider(cfg.GardenerKubeconfigPath, gardenerNamespace, expirationTime)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to create kubeconfig provider - %v", err))
+		slog.Error(fmt.Sprintf("Failed to create kubeconfig provider: %v", err))
 		os.Exit(1)
 	}
 
 	kcpClient, err := migrator.CreateKcpClient(&cfg)
 	if err != nil {
-		slog.Error("failed to create kcp client - ", kcpClient)
+		slog.Error("Failed to create kcp client: %v ", err)
 		os.Exit(1)
 	}
 
 	gardenerShootClient, err := setupGardenerShootClient(cfg.GardenerKubeconfigPath, gardenerNamespace)
 
 	slog.Info("Migrating runtimes")
-	migrator := NewMigration(cfg, converterConfig, kubeconfigProvider, kcpClient, gardenerShootClient)
+	migrator, err := NewMigration(cfg, converterConfig, kubeconfigProvider, kcpClient, gardenerShootClient)
+	if err != nil {
+		slog.Error("Failed to create migrator: %v", err)
+		os.Exit(1)
+	}
 
 	err = migrator.Do(getRuntimeIDsFromStdin(cfg))
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to migrate runtimes - %v", err))
+		slog.Error(fmt.Sprintf("Failed to migrate runtimes: %v", err))
 		os.Exit(1)
 	}
 }
