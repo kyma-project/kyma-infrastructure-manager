@@ -145,6 +145,6 @@ func findShoot(runtimeID string, shootList *v1beta1.ShootList) *v1beta1.Shoot {
 }
 
 func (m Migration) applyRuntimeCR(runtime runtimev1.Runtime) error {
-	// TODO: This method covers create scenario onyl, we should implement update as well
+	// TODO: This method covers create scenario only, we should implement update as well
 	return m.kcpClient.Create(context.Background(), &runtime)
 }

@@ -7,9 +7,9 @@ import (
 type StatusType string
 
 const (
-	StatusSuccess                         StatusType = "Success"
-	StatusError                           StatusType = "nError"
-	StatusRuntimeCRCanCauseUnwantedUpdate StatusType = "RuntimeCRCanCauseUnwantedUpdate"
+	StatusSuccess         StatusType = "Success"
+	StatusError           StatusType = "Error"
+	StatusValidationError StatusType = "ValidationError"
 )
 
 type RuntimeResult struct {
@@ -53,7 +53,7 @@ func (mr *Results) ValidationFailed(runtimeID, shootName string) {
 	result := RuntimeResult{
 		RuntimeID:                runtimeID,
 		ShootName:                shootName,
-		Status:                   StatusRuntimeCRCanCauseUnwantedUpdate,
+		Status:                   StatusValidationError,
 		ErrorMessage:             "Runtime may cause unwanted update in Gardener. Please verify the runtime CR.",
 		RuntimeCRFilePath:        mr.getRuntimeCRPath(runtimeID),
 		ComparisonResultsDirPath: mr.getComparisonResultPath(runtimeID),
@@ -76,9 +76,9 @@ func (mr *Results) OperationSucceeded(runtimeID string, shootName string) {
 }
 
 func (mr *Results) getRuntimeCRPath(runtimeID string) string {
-	return fmt.Sprintf("%s/runtimes/%s.yaml", mr.OutputDirectory, runtimeID)
+	return fmt.Sprintf("%s/%s/%s.yaml", mr.OutputDirectory, runtimesFolderName, runtimeID)
 }
 
 func (mr *Results) getComparisonResultPath(runtimeID string) string {
-	return fmt.Sprintf("%s/comparison-results/%s", mr.OutputDirectory, runtimeID)
+	return fmt.Sprintf("%s/%s/%s", mr.OutputDirectory, comparisonFolderName, runtimeID)
 }

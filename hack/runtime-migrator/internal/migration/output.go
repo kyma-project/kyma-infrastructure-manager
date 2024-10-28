@@ -17,6 +17,11 @@ type OutputWriter struct {
 	ComparisonResultsDir string
 }
 
+const (
+	runtimesFolderName   = "runtimes"
+	comparisonFolderName = "comparison-results"
+)
+
 func NewOutputWriter(outputDir string) (OutputWriter, error) {
 
 	newResultsDir := path.Join(outputDir, fmt.Sprintf("migration-%s", time.Now().Format(time.RFC3339)))
@@ -26,14 +31,14 @@ func NewOutputWriter(outputDir string) (OutputWriter, error) {
 		return OutputWriter{}, fmt.Errorf("failed to create results directory: %v", err)
 	}
 
-	runtimesDir := path.Join(newResultsDir, "runtimes")
+	runtimesDir := path.Join(newResultsDir, runtimesFolderName)
 
 	err = os.MkdirAll(runtimesDir, os.ModePerm)
 	if err != nil {
 		return OutputWriter{}, fmt.Errorf("failed to create runtimes directory: %v", err)
 	}
 
-	comparisonResultsDir := path.Join(newResultsDir, "comparison-results")
+	comparisonResultsDir := path.Join(newResultsDir, comparisonFolderName)
 
 	err = os.MkdirAll(comparisonResultsDir, os.ModePerm)
 	if err != nil {
@@ -54,30 +59,11 @@ func (ow OutputWriter) SaveMigrationResults(results Results) (string, error) {
 	}
 
 	fileName := fmt.Sprintf("%s/migration-results.json", ow.NewResultsDir)
-	const writePermissions = 0644
-
-	return fileName, os.WriteFile(fileName, resultFile, writePermissions)
+	return fileName, writeFile(fileName, resultFile)
 }
 
 func (ow OutputWriter) SaveRuntimeCR(runtime v1.Runtime) error {
-	runtimeAsYaml, err := getYamlSpec(runtime)
-	if err != nil {
-		return err
-	}
-
-	return writeSpecToFile(ow.RuntimeDir, runtime.Name, runtimeAsYaml)
-}
-
-func getYamlSpec(shoot v1.Runtime) ([]byte, error) {
-	shootAsYaml, err := yaml.Marshal(shoot)
-	return shootAsYaml, err
-}
-
-func writeSpecToFile(outputPath, runtimeID string, shootAsYaml []byte) error {
-	var fileName = fmt.Sprintf("%s/%s.yaml", outputPath, runtimeID)
-
-	const writePermissions = 0644
-	return os.WriteFile(fileName, shootAsYaml, writePermissions)
+	return saveYaml(runtime, fmt.Sprintf("%s/%s.yaml", ow.RuntimeDir, runtime.Name))
 }
 
 func (ow OutputWriter) SaveComparisonResult(comparisonResult runtime.ShootComparisonResult) error {
@@ -88,35 +74,21 @@ func (ow OutputWriter) SaveComparisonResult(comparisonResult runtime.ShootCompar
 	}
 
 	if comparisonResult.Diff != nil {
-		err = writeResultsToDiffFiles(comparisonResult.OriginalShoot.Name, comparisonResult.Diff, comparisonResultsForRuntimeDir)
+		err = writeResultsToDiffFile(comparisonResult.OriginalShoot.Name, comparisonResult.Diff, comparisonResultsForRuntimeDir)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = saveShootToFile(path.Join(comparisonResultsForRuntimeDir, "original-shoot.yaml"), comparisonResult.OriginalShoot)
+	err = saveYaml(comparisonResult.OriginalShoot, path.Join(comparisonResultsForRuntimeDir, "original-shoot.yaml"))
 	if err != nil {
 		return err
 	}
 
-	return saveShootToFile(path.Join(comparisonResultsForRuntimeDir, "converted-shoot.yaml"), comparisonResult.ConvertedShoot)
+	return saveYaml(comparisonResult.ConvertedShoot, path.Join(comparisonResultsForRuntimeDir, "converted-shoot.yaml"))
 }
 
-func saveShootToFile(filePath string, shoot interface{}) error {
-	shootAsYaml, err := yaml.Marshal(shoot)
-	if err != nil {
-		return err
-	}
-
-	err = os.WriteFile(filePath, shootAsYaml, 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func writeResultsToDiffFiles(shootName string, difference *runtime.Difference, resultsDir string) error {
+func writeResultsToDiffFile(shootName string, difference *runtime.Difference, resultsDir string) error {
 	writeAndCloseFunc := func(filePath string, text string) error {
 		file, err := os.Create(filePath)
 		if err != nil {
@@ -139,4 +111,18 @@ func writeResultsToDiffFiles(shootName string, difference *runtime.Difference, r
 	diffFile := path.Join(resultsDir, fmt.Sprintf("%s.diff", shootName))
 
 	return writeAndCloseFunc(diffFile, string(*difference))
+}
+
+func saveYaml[T any](object T, path string) error {
+	yamlBytes, err := yaml.Marshal(object)
+	if err != nil {
+		return err
+	}
+
+	return writeFile(path, yamlBytes)
+}
+
+func writeFile(filePath string, content []byte) error {
+	const writePermissions = 0644
+	return os.WriteFile(filePath, content, writePermissions)
 }
