@@ -245,8 +245,9 @@ func createRuntime(ctx context.Context, shoot v1beta1.Shoot, cfg migrator.Config
 					},
 				},
 				Provider: v1.Provider{
-					Type:    shoot.Spec.Provider.Type,
-					Workers: shoot.Spec.Provider.Workers,
+					Type:               shoot.Spec.Provider.Type,
+					Workers:            shoot.Spec.Provider.Workers,
+					ControlPlaneConfig: shoot.Spec.Provider.ControlPlaneConfig,
 				},
 				Networking: v1.Networking{
 					Type:     shoot.Spec.Networking.Type,
