@@ -314,6 +314,9 @@ spec:
                       controlPlaneConfig:
                         type: object
                         x-kubernetes-preserve-unknown-fields: true
+                      infrastructureConfig:
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
                       type:
                         enum:
                         - aws
