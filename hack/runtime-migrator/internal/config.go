@@ -3,14 +3,15 @@ package internal
 import (
 	"flag"
 	"fmt"
+	"io"
+	"log"
+	"os"
+
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
-	"io"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/clientcmd"
-	"log"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

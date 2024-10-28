@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/comparator"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"log"
 	"os"
 	"slices"
@@ -16,9 +16,9 @@ import (
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	migrator "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal"
+	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/comparator"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/pkg/errors"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -103,9 +103,6 @@ func main() {
 			continue
 		}
 
-		saveShootToFile("/tmp/"+shoot.Name+"/original_shoot.yaml", shoot)
-		saveShootToFile("/tmp/"+shoot.Name+"/converted_shoot.yaml", shootFromConverter)
-
 		// save comparison report with differences
 		resultsDir, err := comparator.SaveComparisonReport(result, cfg.OutputPath, shoot.Name)
 		if err != nil {
@@ -115,28 +112,32 @@ func main() {
 			log.Printf("Results stored in %q", resultsDir)
 		}
 
-		if !result.Equal {
-			log.Print("Generated Shoot and Shoot from converter are not equal, stopping migration of shoot: ", shoot.Name)
-			continue
-		}
+		saveShootToFile("/tmp/"+shoot.Name+"/original_shoot.yaml", &shoot)
+		saveShootToFile("/tmp/"+shoot.Name+"/converted_shoot.yaml", &shootFromConverter)
 
-		err = saveRuntime(migratorContext, cfg, runtime, kcpClient)
+		runtimeAsYaml, err := getYamlSpec(runtime)
 		if err != nil {
-			log.Printf("Failed to apply runtime CR, %s\n", err)
+			log.Printf("Failed to convert spec to yaml, %s", err)
+		}
+		writeSpecToFile(cfg.OutputPath, shoot, runtimeAsYaml)
 
-			status := migrator.StatusError
-			if k8serrors.IsAlreadyExists(err) {
-				status = migrator.StatusAlreadyExists
+		if result.Equal {
+			err = saveRuntime(migratorContext, cfg, runtime, kcpClient)
+			if err != nil {
+				log.Printf("Failed to apply runtime CR, %s\n", err)
+
+				status := migrator.StatusError
+				if k8serrors.IsAlreadyExists(err) {
+					status = migrator.StatusAlreadyExists
+				}
+				results = appendResult(results, shoot, status, err)
 			}
-			results = appendResult(results, shoot, status, err)
 			continue
+		} else {
+			if !cfg.IsDryRun {
+				log.Printf("Runtime %s was not applied as it may cause unwanted shoot update. Please review the runtime contents, and perform the migration manually", runtime.Name)
+			}
 		}
-
-		shootAsYaml, err := getYamlSpec(runtime)
-		if err != nil {
-			log.Printf("Failed to converte spec to yaml, %s", err)
-		}
-		writeSpecToFile(cfg.OutputPath, shoot, shootAsYaml)
 
 		results = append(results, migrator.MigrationResult{
 			RuntimeID:    shoot.Annotations[runtimeIDAnnotation],
@@ -245,7 +246,7 @@ func createRuntime(ctx context.Context, shoot v1beta1.Shoot, cfg migrator.Config
 				},
 				Provider: v1.Provider{
 					Type:               shoot.Spec.Provider.Type,
-					Workers:            adjustWorkersConfig(shoot.Spec.Provider.Workers),
+					Workers:            shoot.Spec.Provider.Workers,
 					ControlPlaneConfig: shoot.Spec.Provider.ControlPlaneConfig,
 				},
 				Networking: v1.Networking{
@@ -281,19 +282,6 @@ func createRuntime(ctx context.Context, shoot v1beta1.Shoot, cfg migrator.Config
 	}
 
 	return runtime, nil
-}
-
-// The goal of this function is to make the migrator output equal to the shoot created by the converter
-// As a result we can automatically verify the correctness of the migrator output
-func adjustWorkersConfig(workers []v1beta1.Worker) []v1beta1.Worker {
-	// We need to set the following fields to nil, as they are not set by the KIM converter
-	for i := 0; i < len(workers); i++ {
-		workers[i].Machine.Architecture = nil
-		workers[i].SystemComponents = nil
-		workers[i].CRI = nil
-	}
-
-	return workers
 }
 
 func getOidcConfig(shoot v1beta1.Shoot) v1beta1.OIDCConfig {

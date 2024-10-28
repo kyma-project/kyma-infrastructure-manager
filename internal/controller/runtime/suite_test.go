@@ -119,7 +119,7 @@ var _ = BeforeSuite(func() {
 	mm := &mocks.Metrics{}
 	mm.On("SetRuntimeStates", mock.Anything).Return()
 	mm.On("IncRuntimeFSMStopCounter").Return()
-	mm.On("CleanUpRuntimeGauge", mock.Anything).Return()
+	mm.On("CleanUpRuntimeGauge", mock.Anything, mock.Anything).Return()
 
 	fsmCfg := fsm.RCCfg{
 		Finalizer:                   infrastructuremanagerv1.Finalizer,
