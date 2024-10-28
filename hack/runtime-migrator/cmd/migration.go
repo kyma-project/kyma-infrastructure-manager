@@ -6,7 +6,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	runtimev1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	migrator "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal"
+	config2 "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/config"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/migration"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/runtime"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func NewMigration(migratorConfig migrator.Config, converterConfig config.ConverterConfig, kubeconfigProvider kubeconfig.Provider, kcpClient client.Client, shootClient gardener_types.ShootInterface) (Migration, error) {
+func NewMigration(migratorConfig config2.Config, converterConfig config.ConverterConfig, kubeconfigProvider kubeconfig.Provider, kcpClient client.Client, shootClient gardener_types.ShootInterface) (Migration, error) {
 
 	outputWriter, err := migration.NewOutputWriter(migratorConfig.OutputPath)
 	if err != nil {

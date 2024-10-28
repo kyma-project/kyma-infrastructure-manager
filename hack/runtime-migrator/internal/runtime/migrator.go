@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	migrator "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal"
+	migrator "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/pkg/errors"
@@ -84,8 +84,9 @@ func (m Migrator) Do(ctx context.Context, shoot v1beta1.Shoot) (v1.Runtime, erro
 					},
 				},
 				Provider: v1.Provider{
-					Type:    shoot.Spec.Provider.Type,
-					Workers: shoot.Spec.Provider.Workers,
+					Type:               shoot.Spec.Provider.Type,
+					Workers:            shoot.Spec.Provider.Workers,
+					ControlPlaneConfig: shoot.Spec.Provider.ControlPlaneConfig,
 				},
 				Networking: v1.Networking{
 					Type:     shoot.Spec.Networking.Type,

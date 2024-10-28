@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
-	migrator "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal"
+	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/pkg/errors"
@@ -24,9 +24,9 @@ const (
 
 func main() {
 	slog.Info("Starting runtime-migrator")
-	cfg := migrator.NewConfig()
+	cfg := config.NewConfig()
 
-	converterConfig, err := migrator.LoadConverterConfig(cfg)
+	converterConfig, err := config.LoadConverterConfig(cfg)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Unable to load converter config: %v", err))
 		os.Exit(1)
@@ -40,7 +40,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	kcpClient, err := migrator.CreateKcpClient(&cfg)
+	kcpClient, err := config.CreateKcpClient(&cfg)
 	if err != nil {
 		slog.Error("Failed to create kcp client: %v ", err)
 		os.Exit(1)
@@ -92,9 +92,9 @@ func setupKubernetesKubeconfigProvider(kubeconfigPath string, namespace string, 
 		int64(expirationTime.Seconds())), nil
 }
 
-func getRuntimeIDsFromStdin(cfg migrator.Config) []string {
+func getRuntimeIDsFromStdin(cfg config.Config) []string {
 	var runtimeIDs []string
-	if cfg.InputType == migrator.InputTypeJSON {
+	if cfg.InputType == config.InputTypeJSON {
 		decoder := json.NewDecoder(os.Stdin)
 		slog.Info("Reading runtimeIds from stdin")
 		if err := decoder.Decode(&runtimeIDs); err != nil {
