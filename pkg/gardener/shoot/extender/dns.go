@@ -3,6 +3,7 @@ package extender
 import (
 	"encoding/json"
 	"fmt"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	autoscaling "k8s.io/api/autoscaling/v1"
@@ -107,7 +108,6 @@ func NewDNSExtender(secretName, domainPrefix, dnsProviderType string) func(runti
 
 		shoot.Spec.Extensions = append(shoot.Spec.Extensions, dnsExtension)
 
-		//TODO: cover in tests
 		secretReference := gardener.NamedResourceReference{
 			Name: secretName,
 			ResourceRef: autoscaling.CrossVersionObjectReference{

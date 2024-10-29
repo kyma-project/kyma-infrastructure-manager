@@ -55,10 +55,6 @@ func alignWithExistingShoot(provider *gardener.Provider, currentShootState *gard
 			provider.Workers[i].Zones = worker.Zones
 		}
 	}
-
-	//TODO: can we change Nodes? If needed, re-use/refactor
-	// `return getConfigForProvider(runtimeShoot, aws.GetInfrastructureConfig, aws.GetControlPlaneConfig)`
-	//provider.InfrastructureConfig = currentShootState.Spec.Provider.InfrastructureConfig
 }
 
 type InfrastructureProviderFunc func(workersCidr string, zones []string) ([]byte, error)
@@ -114,7 +110,6 @@ func getAWSWorkerConfig() (*runtime.RawExtension, error) {
 }
 
 func getZones(runtime imv1.RuntimeShoot, currentShootState *gardener.Shoot) []string {
-
 	var workers []gardener.Worker
 	// new cluster
 	if currentShootState == nil {
