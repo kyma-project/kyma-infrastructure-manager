@@ -324,7 +324,7 @@ func refreshRuntimeMetrics(restConfig *rest.Config, logger logr.Logger, metrics 
 		os.Exit(1)
 	}
 
-	logger.Info("Refreshing runtime CR metrics")
+	logger.Info("Refreshing <change> runtime CR metrics")
 	metrics.ResetRuntimeMetrics()
 	rl := infrastructuremanagerv1.RuntimeList{}
 	if err = k8sClient.List(context.Background(), &rl, &client.ListOptions{Namespace: "kcp-system"}); err != nil {
