@@ -22,7 +22,7 @@ func NewProviderExtender(enableIMDSv2 bool, defaultMachineImageName, defaultMach
 
 		var err error
 		var controlPlaneConf *runtime.RawExtension
-		provider.InfrastructureConfig, controlPlaneConf, err = getConfig(rt.Spec.Shoot)
+		provider.InfrastructureConfig, controlPlaneConf, err = getConfig(rt.Spec.Shoot, currentShootState)
 
 		if err != nil {
 			return err
