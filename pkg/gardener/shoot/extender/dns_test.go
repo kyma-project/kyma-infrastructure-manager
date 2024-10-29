@@ -39,6 +39,8 @@ func TestDNSExtender(t *testing.T) {
 		assert.Equal(t, secretName, *shoot.Spec.DNS.Providers[0].SecretName)
 		assert.Equal(t, true, *shoot.Spec.DNS.Providers[0].Primary)
 		assert.NotEmpty(t, shoot.Spec.Extensions[0].ProviderConfig)
+		assert.Equal(t, secretName, shoot.Spec.Resources[0].Name)
+		assert.Equal(t, secretName, shoot.Spec.Resources[0].ResourceRef.Name)
 		assertExtensionConfig(t, shoot.Spec.Extensions[0].ProviderConfig)
 	})
 }
