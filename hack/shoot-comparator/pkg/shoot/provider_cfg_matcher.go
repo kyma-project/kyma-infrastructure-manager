@@ -10,29 +10,29 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-type dnsConfigMatcher struct {
+type providerCfgMatcher struct {
 	toMatch        interface{} // *runtime.RawExtension
 	pcType         string
 	failed         string
 	negativeFailed string
 }
 
-func newDNSConfigMatcher(pcType string, v interface{}) types.GomegaMatcher {
-	return &dnsConfigMatcher{
+func newProviderCfgMatcher(pcType string, v interface{}) types.GomegaMatcher {
+	return &providerCfgMatcher{
 		toMatch: v,
 		pcType:  pcType,
 	}
 }
 
-func (m *dnsConfigMatcher) NegatedFailureMessage(_ interface{}) string {
+func (m *providerCfgMatcher) NegatedFailureMessage(_ interface{}) string {
 	return m.failed
 }
 
-func (m *dnsConfigMatcher) FailureMessage(_ interface{}) string {
+func (m *providerCfgMatcher) FailureMessage(_ interface{}) string {
 	return m.negativeFailed
 }
 
-func (m *dnsConfigMatcher) Match(actual interface{}) (success bool, err error) {
+func (m *providerCfgMatcher) Match(actual interface{}) (success bool, err error) {
 	if actual == nil && m.toMatch == nil {
 		return true, nil
 	}
