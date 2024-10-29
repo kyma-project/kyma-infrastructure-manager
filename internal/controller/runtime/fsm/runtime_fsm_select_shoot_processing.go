@@ -41,15 +41,16 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 		return switchState(sFnPatchExistingShoot)
 	}
 
-	if lastOperation.Type == gardener.LastOperationTypeCreate {
+	if lastOperation.Type == gardener.LastOperationTypeCreate && s.instance.Status.State == imv1.RuntimeStatePending {
 		return switchState(sFnWaitForShootCreation)
 	}
 
-	if lastOperation.Type == gardener.LastOperationTypeReconcile {
+	if lastOperation.Type == gardener.LastOperationTypeReconcile && s.instance.Status.State == imv1.RuntimeStatePending {
 		return switchState(sFnWaitForShootReconcile)
 	}
 
-	m.log.Info("Unknown shoot operation type, exiting with no retry")
+	msg := fmt.Sprintf("Unknown shoot operation type for shoot %s, exiting with no retry:", s.shoot.Name)
+	m.log.Info(msg)
 	return stopWithMetrics()
 }
 
