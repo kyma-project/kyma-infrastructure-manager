@@ -13,6 +13,8 @@ import (
 	"log/slog"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"time"
 )
 
@@ -25,6 +27,12 @@ const (
 func main() {
 	slog.Info("Starting runtime-migrator")
 	cfg := config.NewConfig()
+
+	opts := zap.Options{
+		Development: true,
+	}
+	logger := zap.New(zap.UseFlagOptions(&opts))
+	logf.SetLogger(logger)
 
 	converterConfig, err := config.LoadConverterConfig(cfg)
 	if err != nil {
@@ -47,6 +55,10 @@ func main() {
 	}
 
 	gardenerShootClient, err := setupGardenerShootClient(cfg.GardenerKubeconfigPath, gardenerNamespace)
+	if err != nil {
+		slog.Error("Failed to setup Gardener shoot client: %v", err)
+		os.Exit(1)
+	}
 
 	slog.Info("Migrating runtimes")
 	migrator, err := NewMigration(cfg, converterConfig, kubeconfigProvider, kcpClient, gardenerShootClient)
