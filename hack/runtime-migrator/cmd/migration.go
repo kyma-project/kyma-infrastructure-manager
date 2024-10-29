@@ -55,7 +55,14 @@ func (m Migration) Do(runtimeIDs []string) error {
 	results := migration.NewMigratorResults(m.outputWriter.NewResultsDir)
 
 	reportError := func(runtimeID, shootName string, msg string, err error) {
-		errorMsg := fmt.Sprintf("%s: %v", msg, err)
+		var errorMsg string
+
+		if err != nil {
+			errorMsg = fmt.Sprintf("%s: %v", msg, err)
+		} else {
+			errorMsg = fmt.Sprintf(msg)
+		}
+
 		results.ErrorOccurred(runtimeID, shootName, errorMsg)
 		slog.Error(errorMsg, "runtimeID", runtimeID)
 	}
