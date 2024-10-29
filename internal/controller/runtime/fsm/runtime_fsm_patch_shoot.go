@@ -16,7 +16,7 @@ import (
 func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Patch shoot state")
 
-	updatedShoot, err := convertShoot(&s.instance, m.Config.ConverterConfig)
+	updatedShoot, err := convertShoot(&s.instance, m.Config.ConverterConfig, s.shoot)
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object, exiting with no retry")
 		m.Metrics.IncRuntimeFSMStopCounter()
@@ -58,13 +58,13 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
 }
 
-func convertShoot(instance *imv1.Runtime, cfg config.ConverterConfig) (gardener.Shoot, error) {
+func convertShoot(instance *imv1.Runtime, cfg config.ConverterConfig, shootFromState *gardener.Shoot) (gardener.Shoot, error) {
 	if err := instance.ValidateRequiredLabels(); err != nil {
 		return gardener.Shoot{}, err
 	}
 
-	converter := gardener_shoot.NewConverter(cfg)
-	newShoot, err := converter.ToShoot(*instance)
+	converter := gardener_shoot.NewConverter(cfg, shootFromState)
+	newShoot, err := converter.ToShoot(*instance, shootFromState)
 
 	if err == nil {
 		setObjectFields(&newShoot)

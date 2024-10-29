@@ -17,12 +17,12 @@ type Converter struct {
 	config    config.ConverterConfig
 }
 
-func NewConverter(config config.ConverterConfig) Converter {
+func NewConverter(config config.ConverterConfig, shootFromState *gardener.Shoot) Converter {
 	extenders := []Extend{
 		extender2.ExtendWithAnnotations,
 		extender2.ExtendWithLabels,
 		extender2.NewKubernetesExtender(config.Kubernetes.DefaultVersion),
-		extender2.NewProviderExtender(config.Provider.AWS.EnableIMDSv2, config.MachineImage.DefaultName, config.MachineImage.DefaultVersion),
+		extender2.NewProviderExtender(config.Provider.AWS.EnableIMDSv2, config.MachineImage.DefaultName, config.MachineImage.DefaultVersion, shootFromState),
 		extender2.NewDNSExtender(config.DNS.SecretName, config.DNS.DomainPrefix, config.DNS.ProviderType),
 		extender2.NewOidcExtender(config.Kubernetes.DefaultOperatorOidc),
 		extender2.ExtendWithCloudProfile,
@@ -39,7 +39,7 @@ func NewConverter(config config.ConverterConfig) Converter {
 	}
 }
 
-func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
+func (c Converter) ToShoot(runtime imv1.Runtime, shootFromState *gardener.Shoot) (gardener.Shoot, error) {
 	// The original implementation in the Provisioner: https://github.com/kyma-project/control-plane/blob/3dd257826747384479986d5d79eb20f847741aa6/components/provisioner/internal/model/gardener_config.go#L127
 
 	// If you need to enhance the converter please adhere to the following convention:
@@ -70,6 +70,8 @@ func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
 			return gardener.Shoot{}, err
 		}
 	}
+
+	//TODO: check how it behaves for a new cluster
 
 	return shoot, nil
 }

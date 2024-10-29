@@ -14,14 +14,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func NewProviderExtender(enableIMDSv2 bool, defaultMachineImageName, defaultMachineImageVersion string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtender(enableIMDSv2 bool, defaultMachineImageName, defaultMachineImageVersion string, currentShootState *gardener.Shoot) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
 		provider.Type = runtime.Spec.Shoot.Provider.Type
 		provider.Workers = runtime.Spec.Shoot.Provider.Workers
 
 		var err error
-		provider.InfrastructureConfig, provider.ControlPlaneConfig, err = getConfig(runtime.Spec.Shoot)
+		provider.InfrastructureConfig, provider.ControlPlaneConfig, err = getConfig(runtime.Spec.Shoot, currentShootState)
 		if err != nil {
 			return err
 		}
@@ -29,17 +29,36 @@ func NewProviderExtender(enableIMDSv2 bool, defaultMachineImageName, defaultMach
 		setDefaultMachineImage(provider, defaultMachineImageName, defaultMachineImageVersion)
 		err = setWorkerConfig(provider, provider.Type, enableIMDSv2)
 		setWorkerSettings(provider)
+		alignWithExistingShoot(provider, currentShootState)
 
 		return err
 	}
 }
 
+// alignWithExistingShoot replaces the `Runtime CR` for
+// - `Provider.workers.zones`,
+// - `Provider.InfrastructureConfig`
+// as we can't predict what will be the order of zones stored by Gardener.
+// Without this patch, gardener's admission webhook might reject the request if the zones order does not match.
+func alignWithExistingShoot(provider *gardener.Provider, currentShootState *gardener.Shoot) {
+	if currentShootState != nil {
+		provider.Workers = currentShootState.Spec.Provider.Workers
+		for i, worker := range currentShootState.Spec.Provider.Workers {
+			provider.Workers[i].Zones = worker.Zones
+		}
+	}
+
+	//TODO: can we change Nodes? If needed, re-use/refactor
+	// `return getConfigForProvider(runtimeShoot, aws.GetInfrastructureConfig, aws.GetControlPlaneConfig)`
+	//provider.InfrastructureConfig = currentShootState.Spec.Provider.InfrastructureConfig
+}
+
 type InfrastructureProviderFunc func(workersCidr string, zones []string) ([]byte, error)
 type ControlPlaneProviderFunc func(zones []string) ([]byte, error)
 
-func getConfig(runtimeShoot imv1.RuntimeShoot) (infrastructureConfig *runtime.RawExtension, controlPlaneConfig *runtime.RawExtension, err error) {
+func getConfig(runtimeShoot imv1.RuntimeShoot, currentShootState *gardener.Shoot) (infrastructureConfig *runtime.RawExtension, controlPlaneConfig *runtime.RawExtension, err error) {
 	getConfigForProvider := func(runtimeShoot imv1.RuntimeShoot, infrastructureConfigFunc InfrastructureProviderFunc, controlPlaneConfigFunc ControlPlaneProviderFunc) (*runtime.RawExtension, *runtime.RawExtension, error) {
-		zones := getZones(runtimeShoot.Provider.Workers)
+		zones := getZones(runtimeShoot, currentShootState)
 
 		infrastructureConfigBytes, err := infrastructureConfigFunc(runtimeShoot.Networking.Nodes, zones)
 		if err != nil {
@@ -86,7 +105,16 @@ func getAWSWorkerConfig() (*runtime.RawExtension, error) {
 	return &runtime.RawExtension{Raw: workerConfigBytes}, nil
 }
 
-func getZones(workers []gardener.Worker) []string {
+func getZones(runtime imv1.RuntimeShoot, currentShootState *gardener.Shoot) []string {
+
+	var workers []gardener.Worker
+	// new cluster
+	if currentShootState == nil {
+		workers = runtime.Provider.Workers
+	} else {
+		workers = currentShootState.Spec.Provider.Workers
+	}
+
 	var zones []string
 
 	for _, worker := range workers {

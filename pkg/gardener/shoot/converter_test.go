@@ -21,10 +21,10 @@ func TestConverter(t *testing.T) {
 		// given
 		runtime := fixRuntime()
 		converterConfig := fixConverterConfig()
-		converter := NewConverter(converterConfig)
+		converter := NewConverter(converterConfig, nil)
 
 		// when
-		shoot, err := converter.ToShoot(runtime)
+		shoot, err := converter.ToShoot(runtime, nil)
 
 		// then
 		require.NoError(t, err)
