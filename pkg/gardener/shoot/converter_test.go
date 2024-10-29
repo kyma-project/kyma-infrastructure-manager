@@ -17,7 +17,7 @@ import (
 )
 
 func TestConverter(t *testing.T) {
-	t.Run("Create shoot from Runtime", func(t *testing.T) {
+	t.Run("Create new shoot from Runtime", func(t *testing.T) {
 		// given
 		runtime := fixRuntime()
 		converterConfig := fixConverterConfig()
@@ -35,6 +35,33 @@ func TestConverter(t *testing.T) {
 		assert.Equal(t, runtime.Spec.Shoot.Networking.Nodes, *shoot.Spec.Networking.Nodes)
 		assert.Equal(t, runtime.Spec.Shoot.Networking.Pods, *shoot.Spec.Networking.Pods)
 		assert.Equal(t, runtime.Spec.Shoot.Networking.Services, *shoot.Spec.Networking.Services)
+	})
+
+	t.Run("Create shoot from Runtime for existing shoot", func(t *testing.T) {
+		// given
+		runtime := fixRuntime()
+		converterConfig := fixConverterConfig()
+		converter := NewConverter(converterConfig, fixShootWithReverseZones())
+
+		// when
+		shoot, err := converter.ToShoot(runtime)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, runtime.Spec.Shoot.Purpose, *shoot.Spec.Purpose)
+		assert.Equal(t, runtime.Spec.Shoot.Region, shoot.Spec.Region)
+		assert.Equal(t, runtime.Spec.Shoot.SecretBindingName, *shoot.Spec.SecretBindingName)
+		assert.Equal(t, runtime.Spec.Shoot.ControlPlane, shoot.Spec.ControlPlane)
+		assert.Equal(t, runtime.Spec.Shoot.Networking.Nodes, *shoot.Spec.Networking.Nodes)
+		assert.Equal(t, runtime.Spec.Shoot.Networking.Pods, *shoot.Spec.Networking.Pods)
+		assert.Equal(t, runtime.Spec.Shoot.Networking.Services, *shoot.Spec.Networking.Services)
+
+		expectedZonesAreInSameOrderAsInShoot := []string{
+			"eu-central-1c",
+			"eu-central-1b",
+			"eu-central-1a",
+		}
+		assert.Equal(t, expectedZonesAreInSameOrderAsInShoot, shoot.Spec.Provider.Workers[0].Zones)
 	})
 }
 
@@ -116,6 +143,25 @@ func fixRuntime() imv1.Runtime {
 					HighAvailability: &gardener.HighAvailability{
 						FailureTolerance: gardener.FailureTolerance{
 							Type: gardener.FailureToleranceTypeZone,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func fixShootWithReverseZones() *gardener.Shoot {
+	return &gardener.Shoot{
+		Spec: gardener.ShootSpec{
+			Provider: gardener.Provider{
+				Type: hyperscaler.TypeAWS,
+				Workers: []gardener.Worker{
+					{
+						Zones: []string{
+							"eu-central-1c",
+							"eu-central-1b",
+							"eu-central-1a",
 						},
 					},
 				},
