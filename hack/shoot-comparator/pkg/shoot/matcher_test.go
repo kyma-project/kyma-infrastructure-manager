@@ -961,6 +961,30 @@ var _ = Describe(":: shoot matcher :: ", func() {
 			true,
 		),
 		Entry(
+			"should find no differences in spec/extensions #3",
+			deepCp(empty, withShootSpec(v1beta1.ShootSpec{
+				Extensions: []v1beta1.Extension{
+					{
+						Type: "bug-detector",
+						ProviderConfig: &runtime.RawExtension{
+							Raw: []byte("b"),
+						},
+					},
+				},
+			})),
+			deepCp(empty, withShootSpec(v1beta1.ShootSpec{
+				Extensions: []v1beta1.Extension{
+					{
+						Type: "bug-detector",
+						ProviderConfig: &runtime.RawExtension{
+							Raw: []byte("b"),
+						},
+					},
+				},
+			})),
+			true,
+		),
+		Entry(
 			"should find differences in spec/extensions #1",
 			deepCp(empty, withShootSpec(v1beta1.ShootSpec{
 				Extensions: []v1beta1.Extension{
