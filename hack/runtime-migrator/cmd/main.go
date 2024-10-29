@@ -3,19 +3,20 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"log/slog"
+	"os"
+	"time"
+
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/pkg/errors"
-	"log"
-	"log/slog"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"time"
 )
 
 const (
@@ -50,26 +51,26 @@ func main() {
 
 	kcpClient, err := config.CreateKcpClient(&cfg)
 	if err != nil {
-		slog.Error("Failed to create kcp client: %v ", err)
+		slog.Error("Failed to create kcp client: %v ", slog.Any("error", err))
 		os.Exit(1)
 	}
 
 	gardenerShootClient, err := setupGardenerShootClient(cfg.GardenerKubeconfigPath, gardenerNamespace)
 	if err != nil {
-		slog.Error("Failed to setup Gardener shoot client: %v", err)
+		slog.Error("Failed to setup Gardener shoot client: %v", slog.Any("error", err))
 		os.Exit(1)
 	}
 
 	slog.Info("Migrating runtimes")
 	migrator, err := NewMigration(cfg, converterConfig, kubeconfigProvider, kcpClient, gardenerShootClient)
 	if err != nil {
-		slog.Error("Failed to create migrator: %v", err)
+		slog.Error("Failed to create migrator: %v", slog.Any("error", err))
 		os.Exit(1)
 	}
 
 	err = migrator.Do(getRuntimeIDsFromStdin(cfg))
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to migrate runtimes: %v", err))
+		slog.Error(fmt.Sprintf("Failed to migrate runtimes: %v", slog.Any("error", err)))
 		os.Exit(1)
 	}
 }
