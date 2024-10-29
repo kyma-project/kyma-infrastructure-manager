@@ -15,16 +15,24 @@ import (
 )
 
 func NewProviderExtender(enableIMDSv2 bool, defaultMachineImageName, defaultMachineImageVersion string, currentShootState *gardener.Shoot) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
-		provider.Type = runtime.Spec.Shoot.Provider.Type
-		provider.Workers = runtime.Spec.Shoot.Provider.Workers
+		provider.Type = rt.Spec.Shoot.Provider.Type
+		provider.Workers = rt.Spec.Shoot.Provider.Workers
 
 		var err error
-		provider.InfrastructureConfig, provider.ControlPlaneConfig, err = getConfig(runtime.Spec.Shoot, currentShootState)
+		var controlPlaneConf *runtime.RawExtension
+		provider.InfrastructureConfig, controlPlaneConf, err = getConfig(rt.Spec.Shoot)
+
 		if err != nil {
 			return err
 		}
+
+		if rt.Spec.Shoot.Provider.ControlPlaneConfig != nil {
+			controlPlaneConf = rt.Spec.Shoot.Provider.ControlPlaneConfig
+		}
+
+		provider.ControlPlaneConfig = controlPlaneConf
 
 		setDefaultMachineImage(provider, defaultMachineImageName, defaultMachineImageVersion)
 		err = setWorkerConfig(provider, provider.Type, enableIMDSv2)

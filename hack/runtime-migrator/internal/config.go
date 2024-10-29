@@ -3,12 +3,12 @@ package internal
 import (
 	"flag"
 	"fmt"
-	gardener_shoot "github.com/kyma-project/infrastructure-manager/internal/gardener/shoot"
 	"io"
 	"log"
 	"os"
 
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/clientcmd"
@@ -105,14 +105,14 @@ func CreateKcpClient(cfg *Config) (client.Client, error) {
 	return k8sClient, nil
 }
 
-func LoadConverterConfig(cfg Config) (gardener_shoot.ConverterConfig, error) {
+func LoadConverterConfig(cfg Config) (config.ConverterConfig, error) {
 	getReader := func() (io.Reader, error) {
 		return os.Open(cfg.ConverterConfigPath)
 	}
-	var converterConfig gardener_shoot.ConverterConfig
-	if err := converterConfig.Load(getReader); err != nil {
+	var kimConfig config.Config
+	if err := kimConfig.Load(getReader); err != nil {
 		log.Print(err, "unable to load converter configuration")
-		return gardener_shoot.ConverterConfig{}, err
+		return config.ConverterConfig{}, err
 	}
-	return converterConfig, nil
+	return kimConfig.ConverterConfig, nil
 }

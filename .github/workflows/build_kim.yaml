@@ -50,7 +50,7 @@ jobs:
         if: github.event_name == 'push' && github.ref_type == 'tag'
         run: echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
       - id: latest
-        if: github.event.ref_name == github.event.repository.default_branch
+        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && github.event_name == 'push'
         run: echo "latest=latest" >> $GITHUB_OUTPUT
 
   trivy:
@@ -93,7 +93,7 @@ jobs:
           path: ${{ env.trivy-table }}
 
       - name: Print trivy table
-        if: success() || failure() 
+        if: success() || failure()
         run: "test -f ${{ env.trivy-table }} && cat ${{ env.trivy-table }} || echo ':: no data ::'"
 
   build-image:

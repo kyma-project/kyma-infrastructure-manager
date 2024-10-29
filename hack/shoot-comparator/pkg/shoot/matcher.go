@@ -2,6 +2,7 @@ package shoot
 
 import (
 	"fmt"
+	"github.com/kyma-project/infrastructure-manager/hack/shoot-comparator/pkg/runtime"
 	"reflect"
 	"strings"
 
@@ -147,8 +148,9 @@ func (m *Matcher) Match(actual interface{}) (success bool, err error) {
 			path:          "spec/provider",
 		},
 		{
-			GomegaMatcher: gomega.SatisfyAll(mapMatchers(shootToMatch.Labels)...),
-			actual:        shootActual.Labels,
+			// We need to verify that labels from actual object are subset of labels from toMatch object
+			GomegaMatcher: gomega.SatisfyAll(mapMatchers(shootActual.Labels)...),
+			actual:        shootToMatch.Labels,
 			path:          "metadata/labels",
 		},
 	}
@@ -337,6 +339,7 @@ func newKubeAPIServerMatcher(k v1beta1.Kubernetes) types.GomegaMatcher {
 			"DefaultNotReadyTolerationSeconds":    gstruct.Ignore(),
 			"DefaultUnreachableTolerationSeconds": gstruct.Ignore(),
 			"EncryptionConfig":                    gstruct.Ignore(),
+			"StructuredAuthentication":            gstruct.Ignore(),
 		},
 	))
 }
@@ -378,7 +381,7 @@ func extensions(es []v1beta1.Extension) gstruct.Elements {
 		ID := idExtension(e)
 		out[ID] = gstruct.MatchAllFields(gstruct.Fields{
 			"Type":           gomega.BeComparableTo(e.Type),
-			"ProviderConfig": gomega.BeComparableTo(e.ProviderConfig),
+			"ProviderConfig": runtime.NewRawExtensionMatcher(e.ProviderConfig),
 			"Disabled":       gomega.BeComparableTo(e.Disabled),
 		})
 	}
