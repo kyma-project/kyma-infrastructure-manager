@@ -212,7 +212,7 @@ func getBaseShootForTestingSequence() gardener_api.Shoot {
 	runtimeStub := CreateRuntimeStub("test-resource")
 	infrastructureManagerConfig := fixConverterConfigForTests()
 	converter := gardener_shoot.NewConverter(infrastructureManagerConfig.ConverterConfig, nil)
-	convertedShoot, err := converter.ToShoot(*runtimeStub, nil)
+	convertedShoot, err := converter.ToShoot(*runtimeStub)
 	if err != nil {
 		panic(err)
 	}

@@ -64,7 +64,7 @@ func convertShoot(instance *imv1.Runtime, cfg config.ConverterConfig, shootFromS
 	}
 
 	converter := gardener_shoot.NewConverter(cfg, shootFromState)
-	newShoot, err := converter.ToShoot(*instance, shootFromState)
+	newShoot, err := converter.ToShoot(*instance)
 
 	if err == nil {
 		setObjectFields(&newShoot)
