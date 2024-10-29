@@ -23,6 +23,7 @@ require (
 	github.com/gardener/gardener-extension-provider-aws v1.57.1 // indirect
 	github.com/gardener/gardener-extension-provider-gcp v1.39.0 // indirect
 	github.com/gardener/gardener-extension-provider-openstack v1.42.1 // indirect
+	github.com/gardener/gardener-extension-shoot-dns-service v1.53.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
