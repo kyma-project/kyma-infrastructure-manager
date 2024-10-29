@@ -1,4 +1,4 @@
-package internal
+package config
 
 import (
 	"flag"
@@ -37,6 +37,7 @@ func printConfig(cfg Config) {
 	log.Println("output-path:", cfg.OutputPath)
 	log.Println("dry-run:", cfg.IsDryRun)
 	log.Println("input-type:", cfg.InputType)
+	log.Println("")
 }
 
 // newConfig - creates new application configuration base on passed flags
