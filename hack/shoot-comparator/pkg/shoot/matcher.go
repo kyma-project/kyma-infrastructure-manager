@@ -5,14 +5,11 @@ import (
 	"reflect"
 	"strings"
 
-	svc_v1beta1 "github.com/gardener/gardener-extension-shoot-dns-service/pkg/apis/service/v1alpha1"
-
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/hack/shoot-comparator/pkg/errors"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
-	api_runtime "k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 )
 
@@ -388,28 +385,4 @@ func extensions(es []v1beta1.Extension) gstruct.Elements {
 		})
 	}
 	return out
-}
-
-func providerConfig(t string, r *api_runtime.RawExtension) types.GomegaMatcher {
-	if r == nil {
-		return gomega.BeNil()
-	}
-
-	result := gomega.BeComparableTo(r)
-	// assign specialized configuration matcher if required
-	if t == "shoot-dns-service" {
-		var cfg svc_v1beta1.DNSConfig
-		if err := yaml.Unmarshal(r.Raw, &cfg); err != nil {
-			return gstruct.Reject()
-		}
-
-		result = gstruct.MatchFields(
-			gstruct.IgnoreMissing,
-			gstruct.Fields{
-				"SyncProvidersFromShootSpecDNS": gomega.BeComparableTo(cfg.SyncProvidersFromShootSpecDNS),
-				"DNSProviderReplication":        gomega.BeComparableTo(cfg.DNSProviderReplication),
-				"Providers":                     gstruct.MatchAllElements(idDNSProvider, dnsProviders(cfg.Providers)),
-			})
-	}
-	return result
 }
