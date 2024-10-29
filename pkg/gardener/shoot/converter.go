@@ -71,7 +71,5 @@ func (c Converter) ToShoot(runtime imv1.Runtime, shootFromState *gardener.Shoot)
 		}
 	}
 
-	//TODO: check how it behaves for a new cluster
-
 	return shoot, nil
 }
