@@ -64,12 +64,12 @@ func (m *dnsConfigMatcher) Match(actual interface{}) (success bool, err error) {
 	matcher := gstruct.MatchFields(
 		gstruct.IgnoreMissing,
 		gstruct.Fields{
-			"SyncProvidersFromShootSpecDNS": gomega.BeComparableTo(toMatchCfg.SyncProvidersFromShootSpecDNS),
-			"DNSProviderReplication":        gomega.BeComparableTo(toMatchCfg.DNSProviderReplication),
-			"Providers":                     gstruct.MatchAllElements(idDNSProvider, dnsProviders(toMatchCfg.Providers)),
+			"SyncProvidersFromShootSpecDNS": gomega.BeComparableTo(actualCfg.SyncProvidersFromShootSpecDNS),
+			"DNSProviderReplication":        gomega.BeComparableTo(actualCfg.DNSProviderReplication),
+			"Providers":                     gstruct.MatchAllElements(idDNSProvider, dnsProviders(actualCfg.Providers)),
 			"TypeMeta":                      gstruct.Ignore(),
 		})
-	match, err := matcher.Match(actualCfg)
+	match, err := matcher.Match(toMatchCfg)
 	if !match {
 		m.failed = matcher.FailureMessage(actualCfg)
 		m.negativeFailed = matcher.NegatedFailureMessage(actualCfg)

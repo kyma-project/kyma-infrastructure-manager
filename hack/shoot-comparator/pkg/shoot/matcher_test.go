@@ -29,12 +29,6 @@ func withLabels(labels map[string]string) deepCpOpts {
 	}
 }
 
-func withAnnotations(annotations map[string]string) deepCpOpts {
-	return func(s *v1beta1.Shoot) {
-		s.Annotations = annotations
-	}
-}
-
 func withShootSpec(spec v1beta1.ShootSpec) deepCpOpts {
 	return func(s *v1beta1.Shoot) {
 		s.Spec = spec
@@ -102,8 +96,8 @@ var _ = Describe(":: shoot matcher :: ", func() {
 		),
 		Entry(
 			"should skip missing labels",
-			deepCp(empty, withLabels(map[string]string{"test": "me", "dżułel": "wuz@here"})),
 			deepCp(empty, withLabels(map[string]string{"test": "me"})),
+			deepCp(empty, withLabels(map[string]string{"test": "me", "dżułel": "wuz@here"})),
 			true,
 		),
 		Entry(
@@ -115,7 +109,7 @@ var _ = Describe(":: shoot matcher :: ", func() {
 		Entry(
 			"should detect differences in spec/exposureClassName #1",
 			deepCp(empty, withShootSpec(v1beta1.ShootSpec{
-				ExposureClassName: ptr.To[string]("mage"),
+				ExposureClassName: ptr.To("mage"),
 			})),
 			deepCp(empty, withShootSpec(v1beta1.ShootSpec{
 				ExposureClassName: ptr.To[string]("bard"),
@@ -948,7 +942,7 @@ var _ = Describe(":: shoot matcher :: ", func() {
 						Type:     "shoot-dns-service",
 						Disabled: ptr.To[bool](true),
 						ProviderConfig: &runtime.RawExtension{
-							Raw: []byte("{\"apiVersion\":\"service.dns.extensions.gardener.cloud/v1alpha1\",\"kind\":\"DNSConfig\",\"dnsProviderReplication\":{\"enabled\":true},\"providers\":[{\"domains\":{\"include\":[\"a50de45.dev.kyma.ondemand.com\"]},\"secretName\":\"xxx-route53-secret-dev\",\"type\":\"aws-route53\"}],\"syncProvidersFromShootSpecDNS\":true}"),
+							Raw: []byte("{\"apiVersion\":\"service.dns.extensions.gardener.cloud/v1alpha1\",\"kind\":\"DNSConfig\",\"dnsProviderReplication\":{\"enabled\":true},\"providers\":[{\"domains\":{\"include\":[\"a50de45.dev.kyma.ondemand.com\"]},\"secretName\":\"route53-secret-dev\",\"type\":\"aws-route53\"}],\"syncProvidersFromShootSpecDNS\":true}"),
 						},
 					},
 				},
@@ -959,7 +953,7 @@ var _ = Describe(":: shoot matcher :: ", func() {
 						Type:     "shoot-dns-service",
 						Disabled: ptr.To[bool](true),
 						ProviderConfig: &runtime.RawExtension{
-							Raw: []byte("{\"apiVersion\":\"service.dns.extensions.gardener.cloud/v1alpha1\",\"kind\":\"DNSConfig\",\"dnsProviderReplication\":{\"enabled\":true},\"providers\":[{\"domains\":{\"include\":[\"a50de45.dev.kyma.ondemand.com\"]},\"secretName\":\"route53-secret-dev\",\"type\":\"aws-route53\"}],\"syncProvidersFromShootSpecDNS\":true}"),
+							Raw: []byte("{\"apiVersion\":\"service.dns.extensions.gardener.cloud/v1alpha1\",\"kind\":\"DNSConfig\",\"dnsProviderReplication\":{\"enabled\":true},\"providers\":[{\"domains\":{\"include\":[\"a50de45.dev.kyma.ondemand.com\"]},\"secretName\":\"xxx-route53-secret-dev\",\"type\":\"aws-route53\"}],\"syncProvidersFromShootSpecDNS\":true}"),
 						},
 					},
 				},
