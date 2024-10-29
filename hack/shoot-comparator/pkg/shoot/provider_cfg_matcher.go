@@ -2,11 +2,12 @@ package shoot
 
 import (
 	"github.com/gardener/gardener-extension-shoot-dns-service/pkg/apis/service/v1alpha1"
+	"github.com/kyma-project/infrastructure-manager/hack/shoot-comparator/pkg/runtime"
 	"github.com/kyma-project/infrastructure-manager/hack/shoot-comparator/pkg/utilz"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
-	"k8s.io/apimachinery/pkg/runtime"
+	api_runtime "k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 )
 
@@ -37,18 +38,18 @@ func (m *providerCfgMatcher) Match(actual interface{}) (success bool, err error)
 		return true, nil
 	}
 
-	actualProviderCfg, err := utilz.Get[*runtime.RawExtension](actual)
+	actualProviderCfg, err := utilz.Get[*api_runtime.RawExtension](actual)
 	if err != nil {
 		return false, err
 	}
 
-	toMatchProviderCfg, err := utilz.Get[*runtime.RawExtension](m.toMatch)
+	toMatchProviderCfg, err := utilz.Get[*api_runtime.RawExtension](m.toMatch)
 	if err != nil {
 		return false, err
 	}
 
 	if m.pcType != "shoot-dns-service" {
-		return gomega.BeComparableTo(m.toMatch).Match(actual)
+		return runtime.NewRawExtensionMatcher(m.toMatch).Match(actual)
 	}
 
 	var actualCfg v1alpha1.DNSConfig
