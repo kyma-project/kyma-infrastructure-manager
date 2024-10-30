@@ -51,8 +51,8 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 		}
 	}
 
-	if s.instance.Status.State == imv1.RuntimeStateReady {
-		m.Metrics.SetRuntimeStates(s.instance)
+	// to mitigate massive reconciliation during restart
+	if s.instance.Status.State == imv1.RuntimeStateReady || s.instance.Status.State == imv1.RuntimeStateFailed {
 		return stop()
 	}
 
