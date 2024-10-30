@@ -21,8 +21,8 @@ func NewProviderExtender(enableIMDSv2 bool, defaultMachineImageName, defaultMach
 		provider.Workers = rt.Spec.Shoot.Provider.Workers
 
 		var err error
-		var controlPlaneConf *runtime.RawExtension
-		provider.InfrastructureConfig, controlPlaneConf, err = getConfig(rt.Spec.Shoot)
+		var controlPlaneConf, infraConfig *runtime.RawExtension
+		infraConfig, controlPlaneConf, err = getConfig(rt.Spec.Shoot)
 		if err != nil {
 			return err
 		}
@@ -31,7 +31,12 @@ func NewProviderExtender(enableIMDSv2 bool, defaultMachineImageName, defaultMach
 			controlPlaneConf = rt.Spec.Shoot.Provider.ControlPlaneConfig
 		}
 
+		if rt.Spec.Shoot.Provider.InfrastructureConfig != nil {
+			infraConfig = rt.Spec.Shoot.Provider.InfrastructureConfig
+		}
+
 		provider.ControlPlaneConfig = controlPlaneConf
+		provider.InfrastructureConfig = infraConfig
 
 		setDefaultMachineImage(provider, defaultMachineImageName, defaultMachineImageVersion)
 		err = setWorkerConfig(provider, provider.Type, enableIMDSv2)
