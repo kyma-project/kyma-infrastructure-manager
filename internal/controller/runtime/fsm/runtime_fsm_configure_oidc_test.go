@@ -184,6 +184,7 @@ func TestOidcState(t *testing.T) {
 		assert.Equal(t, "kyma-oidc-0", openIdConnects.Items[0].Name)
 		assertOIDCCRD(t, "kyma-oidc-0", "runtime-cr-config0", openIdConnects.Items[0])
 		assertOIDCCRD(t, "kyma-oidc-1", "runtime-cr-config1", openIdConnects.Items[1])
+		assert.Equal(t, imv1.State("Pending"), systemState.instance.Status.State)
 		assertEqualConditions(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)
 	})
 
@@ -265,6 +266,7 @@ func TestOidcState(t *testing.T) {
 		assert.Len(t, openIdConnects.Items, 2)
 		assert.Equal(t, "kyma-oidc-0", openIdConnects.Items[0].Name)
 		assertEqualConditions(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)
+		assert.Equal(t, imv1.State("Pending"), systemState.instance.Status.State)
 	})
 }
 

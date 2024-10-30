@@ -20,9 +20,10 @@ func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ct
 
 	if !isOidcExtensionEnabled(*s.shoot) {
 		m.log.Info("OIDC extension is disabled")
-		s.instance.UpdateStateReady(
+		s.instance.UpdateStatePending(
 			imv1.ConditionTypeOidcConfigured,
 			imv1.ConditionReasonOidcConfigured,
+			"True",
 			"OIDC extension disabled",
 		)
 		return switchState(sFnApplyClusterRoleBindings)
@@ -37,9 +38,10 @@ func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ct
 		return updateStatusAndStopWithError(err)
 	}
 
-	s.instance.UpdateStateReady(
+	s.instance.UpdateStatePending(
 		imv1.ConditionTypeOidcConfigured,
 		imv1.ConditionReasonOidcConfigured,
+		"True",
 		"OIDC configuration completed",
 	)
 
