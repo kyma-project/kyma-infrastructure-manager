@@ -19,21 +19,21 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 	if s.shoot.Spec.DNS == nil || s.shoot.Spec.DNS.Domain == nil {
 		msg := fmt.Sprintf("DNS Domain is not set yet for shoot: %s, scheduling for retry", s.shoot.Name)
 		m.log.Info(msg)
-		return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+		return requeueAfter(m.RCCfg.GardenerRequeueDuration)
 	}
 
 	lastOperation := s.shoot.Status.LastOperation
 	if lastOperation == nil {
 		msg := fmt.Sprintf("Last operation is nil for shoot: %s, scheduling for retry", s.shoot.Name)
 		m.log.Info(msg)
-		return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+		return requeueAfter(m.RCCfg.GardenerRequeueDuration)
 	}
 
 	patchShoot, err := shouldPatchShoot(&s.instance, s.shoot)
 	if err != nil {
 		msg := fmt.Sprintf("Failed to get applied generation for shoot: %s, scheduling for retry", s.shoot.Name)
 		m.log.Error(err, msg)
-		return updateStatusAndStop()
+		return requeueAfter(m.RCCfg.GardenerRequeueDuration)
 	}
 
 	if patchShoot {
@@ -41,12 +41,19 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 		return switchState(sFnPatchExistingShoot)
 	}
 
-	if lastOperation.Type == gardener.LastOperationTypeCreate && s.instance.Status.State == imv1.RuntimeStatePending {
-		return switchState(sFnWaitForShootCreation)
+	if s.instance.Status.State == imv1.RuntimeStatePending || s.instance.Status.State == "" {
+		if lastOperation.Type == gardener.LastOperationTypeCreate {
+			return switchState(sFnWaitForShootCreation)
+		}
+
+		if lastOperation.Type == gardener.LastOperationTypeReconcile {
+			return switchState(sFnWaitForShootReconcile)
+		}
 	}
 
-	if lastOperation.Type == gardener.LastOperationTypeReconcile && s.instance.Status.State == imv1.RuntimeStatePending {
-		return switchState(sFnWaitForShootReconcile)
+	if s.instance.Status.State == imv1.RuntimeStateReady {
+		m.Metrics.SetRuntimeStates(s.instance)
+		return stop()
 	}
 
 	msg := fmt.Sprintf("Unknown shoot operation type for shoot %s, exiting with no retry:", s.shoot.Name)
