@@ -51,14 +51,10 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 		}
 	}
 
-	// to mitigate massive reconciliation during restart
-	if s.instance.Status.State == imv1.RuntimeStateReady || s.instance.Status.State == imv1.RuntimeStateFailed {
-		return stop()
-	}
-
-	msg := fmt.Sprintf("Unknown shoot operation type for shoot %s, exiting with no retry:", s.shoot.Name)
+	// All other runtimes in Ready and Failed state will be not processed to mitigate massive reconciliation during restart
+	msg := fmt.Sprintf("Stopping processing reconcile for runtime %s and shoot %s, exiting with no retry:", s.instance.Name, s.shoot.Name)
 	m.log.Info(msg)
-	return stopWithMetrics()
+	return stop()
 }
 
 func shouldPatchShoot(runtime *imv1.Runtime, shoot *gardener.Shoot) (bool, error) {
