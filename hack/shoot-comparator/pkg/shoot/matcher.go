@@ -2,7 +2,6 @@ package shoot
 
 import (
 	"fmt"
-	"github.com/kyma-project/infrastructure-manager/hack/shoot-comparator/pkg/runtime"
 	"reflect"
 	"strings"
 
@@ -261,7 +260,7 @@ func providers(ps []v1beta1.DNSProvider) gstruct.Elements {
 		out[ID] = gstruct.MatchFields(
 			gstruct.IgnoreMissing,
 			gstruct.Fields{
-				"Primary":    gomega.Equal(p.Primary),
+				"Primary":    gomega.BeComparableTo(p.Primary),
 				"SecretName": gomega.Equal(p.SecretName),
 				"Type":       gomega.Equal(p.Type),
 				"Domains":    domainsMatcher,
@@ -381,7 +380,7 @@ func extensions(es []v1beta1.Extension) gstruct.Elements {
 		ID := idExtension(e)
 		out[ID] = gstruct.MatchAllFields(gstruct.Fields{
 			"Type":           gomega.BeComparableTo(e.Type),
-			"ProviderConfig": runtime.NewRawExtensionMatcher(e.ProviderConfig),
+			"ProviderConfig": newProviderCfgMatcher(e.Type, e.ProviderConfig),
 			"Disabled":       gomega.BeComparableTo(e.Disabled),
 		})
 	}
