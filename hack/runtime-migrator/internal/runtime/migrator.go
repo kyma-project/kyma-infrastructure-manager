@@ -84,9 +84,10 @@ func (m Migrator) Do(ctx context.Context, shoot v1beta1.Shoot) (v1.Runtime, erro
 					},
 				},
 				Provider: v1.Provider{
-					Type:               shoot.Spec.Provider.Type,
-					Workers:            shoot.Spec.Provider.Workers,
-					ControlPlaneConfig: shoot.Spec.Provider.ControlPlaneConfig,
+					Type:                 shoot.Spec.Provider.Type,
+					Workers:              shoot.Spec.Provider.Workers,
+					ControlPlaneConfig:   shoot.Spec.Provider.ControlPlaneConfig,
+					InfrastructureConfig: shoot.Spec.Provider.InfrastructureConfig,
 				},
 				Networking: v1.Networking{
 					Type:     shoot.Spec.Networking.Type,

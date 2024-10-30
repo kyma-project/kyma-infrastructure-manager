@@ -174,9 +174,10 @@ type APIServer struct {
 
 type Provider struct {
 	//+kubebuilder:validation:Enum=aws;azure;gcp;openstack
-	Type               string                `json:"type"`
-	Workers            []gardener.Worker     `json:"workers"`
-	ControlPlaneConfig *runtime.RawExtension `json:"controlPlaneConfig,omitempty"`
+	Type                 string                `json:"type"`
+	Workers              []gardener.Worker     `json:"workers"`
+	ControlPlaneConfig   *runtime.RawExtension `json:"controlPlaneConfig,omitempty"`
+	InfrastructureConfig *runtime.RawExtension `json:"infrastructureConfig,omitempty"`
 }
 
 type Networking struct {
