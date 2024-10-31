@@ -9,7 +9,7 @@ import (
 )
 
 func Test_AuditlogExtender(t *testing.T) {
-	var empty imv1.Runtime
+	var zero imv1.Runtime
 	for _, tc := range []struct {
 		shoot               gardener.Shoot
 		data                AuditLogData
@@ -27,7 +27,7 @@ func Test_AuditlogExtender(t *testing.T) {
 		extendWithAuditlogs := NewAuditlogExtender(tc.policyConfigmapName, tc.data)
 
 		// when
-		err := extendWithAuditlogs(empty, &tc.shoot)
+		err := extendWithAuditlogs(zero, &tc.shoot)
 
 		// then
 		require.NoError(t, err)
