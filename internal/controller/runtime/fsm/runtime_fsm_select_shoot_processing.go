@@ -2,7 +2,6 @@ package fsm
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -17,22 +16,19 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 	m.log.Info("Select shoot processing state")
 
 	if s.shoot.Spec.DNS == nil || s.shoot.Spec.DNS.Domain == nil {
-		msg := fmt.Sprintf("DNS Domain is not set yet for shoot: %s, scheduling for retry", s.shoot.Name)
-		m.log.Info(msg)
+		m.log.Info("DNS Domain is not set yet for shoot, scheduling for retry", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
 		return requeueAfter(m.RCCfg.GardenerRequeueDuration)
 	}
 
 	lastOperation := s.shoot.Status.LastOperation
 	if lastOperation == nil {
-		msg := fmt.Sprintf("Last operation is nil for shoot: %s, scheduling for retry", s.shoot.Name)
-		m.log.Info(msg)
+		m.log.Info("Last operation is nil for shoot, scheduling for retry", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
 		return requeueAfter(m.RCCfg.GardenerRequeueDuration)
 	}
 
 	patchShoot, err := shouldPatchShoot(&s.instance, s.shoot)
 	if err != nil {
-		msg := fmt.Sprintf("Failed to get applied generation for shoot: %s, scheduling for retry", s.shoot.Name)
-		m.log.Error(err, msg)
+		m.log.Error(err, "Failed to get applied generation for shoot", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
 		return requeueAfter(m.RCCfg.GardenerRequeueDuration)
 	}
 
@@ -52,8 +48,7 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 	}
 
 	// All other runtimes in Ready and Failed state will be not processed to mitigate massive reconciliation during restart
-	msg := fmt.Sprintf("Stopping processing reconcile for runtime %s and shoot %s, exiting with no retry:", s.instance.Name, s.shoot.Name)
-	m.log.Info(msg)
+	m.log.Info("Stopping processing reconcile, exiting with no retry", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name, "function", "sFnSelectShootProcessing")
 	return stop()
 }
 
