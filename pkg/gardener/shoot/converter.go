@@ -63,10 +63,7 @@ func NewConverterPatch(cfg config.ConverterConfig) Converter {
 		cfg.MachineImage.DefaultVersion,
 	)
 
-	auditlogExtender := auditlogs.NewAuditlogExtender("", auditlogs.AuditLogData{})
-
-	baseExtenders = append(baseExtenders, providerExtender, auditlogExtender)
-
+	baseExtenders = append(baseExtenders, providerExtender)
 	return newConverter(cfg, baseExtenders...)
 }
 
