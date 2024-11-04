@@ -206,6 +206,7 @@ func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot, seeds []*gard
 			shoot.Generation++
 			return nil
 		}}).Build()
+	runtimeReconciler.ShootClient = gardenerTestClient
 }
 
 func getBaseShootForTestingSequence() gardener_api.Shoot {
