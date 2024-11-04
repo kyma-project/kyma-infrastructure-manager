@@ -87,7 +87,6 @@ type ControlPlaneProviderFunc func(zones []string) ([]byte, error)
 
 func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string) (infrastructureConfig *runtime.RawExtension, controlPlaneConfig *runtime.RawExtension, err error) {
 	getConfigForProvider := func(runtimeShoot imv1.RuntimeShoot, infrastructureConfigFunc InfrastructureProviderFunc, controlPlaneConfigFunc ControlPlaneProviderFunc) (*runtime.RawExtension, *runtime.RawExtension, error) {
-
 		infrastructureConfigBytes, err := infrastructureConfigFunc(runtimeShoot.Networking.Nodes, zones)
 		if err != nil {
 			return nil, nil, err
@@ -200,7 +199,7 @@ func setDefaultMachineImage(provider *gardener.Provider, defaultMachineImageName
 // We can't predict what will be the order of zones stored by Gardener.
 // Without this patch, gardener's admission webhook might reject the request if the zones order does not match.
 func alignWithExistingShoot(provider *gardener.Provider, zones []string) {
-	for i, _ := range provider.Workers {
+	for i := range provider.Workers {
 		provider.Workers[i].Zones = zones
 	}
 }
