@@ -31,6 +31,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
 	"github.com/pkg/errors"
@@ -125,7 +126,7 @@ var _ = BeforeSuite(func() {
 		Finalizer:                   infrastructuremanagerv1.Finalizer,
 		Config:                      convConfig,
 		Metrics:                     mm,
-		AuditLogging:                auditlogging.NewAuditLogging(convConfig.ConverterConfig.AuditLog.TenantConfigPath, convConfig.ConverterConfig.AuditLog.PolicyConfigMapName, gardenerTestClient),
+		AuditLogging:                map[string]map[string]auditlogs.AuditLogData{},
 		GardenerRequeueDuration:     3 * time.Second,
 		ControlPlaneRequeueDuration: 3 * time.Second,
 	}
@@ -205,7 +206,6 @@ func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot, seeds []*gard
 			shoot.Generation++
 			return nil
 		}}).Build()
-	runtimeReconciler.UpdateShootClient(gardenerTestClient)
 }
 
 func getBaseShootForTestingSequence() gardener_api.Shoot {

@@ -10,9 +10,9 @@ import (
 
 	"github.com/go-logr/logr"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/auditlogging"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,7 +33,7 @@ type RCCfg struct {
 	ShootNamesapace             string
 	AuditLogMandatory           bool
 	Metrics                     metrics.Metrics
-	AuditLogging                auditlogging.AuditLogging
+	AuditLogging                map[string]map[string]auditlogs.AuditLogData
 	config.Config
 }
 
