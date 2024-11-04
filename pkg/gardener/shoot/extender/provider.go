@@ -49,11 +49,11 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defaultMachineImag
 
 func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defaultMachineImageName, defaultMachineImageVersion string, zones []string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+		var err error
 		provider := &shoot.Spec.Provider
 		provider.Type = rt.Spec.Shoot.Provider.Type
 		provider.Workers = rt.Spec.Shoot.Provider.Workers
 
-		var err error
 		var controlPlaneConf, infraConfig *runtime.RawExtension
 
 		infraConfig, controlPlaneConf, err = getConfig(rt.Spec.Shoot, zones)
@@ -76,6 +76,8 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defaultMachineImageNam
 		err = setWorkerConfig(provider, provider.Type, enableIMDSv2)
 		setWorkerSettings(provider)
 
+		alignWithExistingShoot(provider, zones)
+
 		return err
 	}
 }
@@ -85,13 +87,6 @@ type ControlPlaneProviderFunc func(zones []string) ([]byte, error)
 
 func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string) (infrastructureConfig *runtime.RawExtension, controlPlaneConfig *runtime.RawExtension, err error) {
 	getConfigForProvider := func(runtimeShoot imv1.RuntimeShoot, infrastructureConfigFunc InfrastructureProviderFunc, controlPlaneConfigFunc ControlPlaneProviderFunc) (*runtime.RawExtension, *runtime.RawExtension, error) {
-
-		//zones := getZones(runtimeShoot.Provider.Workers)
-		//
-		//// fix for internal#6177 where gardener's admission webhook rejected shoots with zones that have different order
-		//if len(zonesFromShoot) > 0 {
-		//	zones = zonesFromShoot
-		//}
 
 		infrastructureConfigBytes, err := infrastructureConfigFunc(runtimeShoot.Networking.Nodes, zones)
 		if err != nil {
@@ -199,5 +194,13 @@ func setDefaultMachineImage(provider *gardener.Provider, defaultMachineImageName
 		}
 
 		worker.Machine.Image.Version = machineImageVersion
+	}
+}
+
+// We can't predict what will be the order of zones stored by Gardener.
+// Without this patch, gardener's admission webhook might reject the request if the zones order does not match.
+func alignWithExistingShoot(provider *gardener.Provider, zones []string) {
+	for i, _ := range provider.Workers {
+		provider.Workers[i].Zones = zones
 	}
 }
