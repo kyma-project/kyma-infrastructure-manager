@@ -41,31 +41,44 @@ func newConverter(config config.ConverterConfig, extenders ...Extend) Converter 
 	}
 }
 
-func NewConverterCreate(cfg config.ConverterConfig) Converter {
-	baseExtenders := baseExtenders(cfg)
-	// https://github.com/kyma-project/infrastructure-manager/pull/460
-	providerExtender := extender2.NewProviderExtenderForCreateOperation(
-		cfg.Provider.AWS.EnableIMDSv2,
-		cfg.MachineImage.DefaultName,
-		cfg.MachineImage.DefaultVersion,
-	)
-	baseExtenders = append(baseExtenders, providerExtender)
-
-	return newConverter(cfg, baseExtenders...)
+type CreateOpts struct {
+	config.ConverterConfig
 }
 
-func NewConverterPatch(cfg config.ConverterConfig, zonesFromShoot []string) Converter {
-	baseExtenders := baseExtenders(cfg)
-	// https://github.com/kyma-project/infrastructure-manager/pull/460
-	providerExtender := extender2.NewProviderExtenderPatchOperation(
-		cfg.Provider.AWS.EnableIMDSv2,
-		cfg.MachineImage.DefaultName,
-		cfg.MachineImage.DefaultVersion,
-		zonesFromShoot,
-	)
+type PatchOpts struct {
+	config.ConverterConfig
+	auditlogs.AuditLogData
+	Zones []string
+}
 
-	baseExtenders = append(baseExtenders, providerExtender)
-	return newConverter(cfg, baseExtenders...)
+func NewConverterCreate(opts CreateOpts) Converter {
+	baseExtenders := baseExtenders(opts.ConverterConfig)
+
+	baseExtenders = append(baseExtenders,
+		extender2.NewProviderExtenderForCreateOperation(
+			opts.Provider.AWS.EnableIMDSv2,
+			opts.MachineImage.DefaultName,
+			opts.MachineImage.DefaultVersion))
+
+	return newConverter(opts.ConverterConfig, baseExtenders...)
+}
+
+func NewConverterPatch(opts PatchOpts) Converter {
+	baseExtenders := baseExtenders(opts.ConverterConfig)
+
+	baseExtenders = append(baseExtenders,
+		extender2.NewProviderExtenderPatchOperation(
+			opts.Provider.AWS.EnableIMDSv2,
+			opts.MachineImage.DefaultName,
+			opts.MachineImage.DefaultVersion,
+			opts.Zones))
+
+	baseExtenders = append(baseExtenders,
+		auditlogs.NewAuditlogExtender(
+			opts.AuditLog.PolicyConfigMapName,
+			opts.AuditLogData))
+
+	return newConverter(opts.ConverterConfig, baseExtenders...)
 }
 
 func NewAuditlogConverter(policyConfigMapName string, data auditlogs.AuditLogData) Converter {
