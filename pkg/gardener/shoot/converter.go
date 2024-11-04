@@ -44,7 +44,7 @@ func newConverter(config config.ConverterConfig, extenders ...Extend) Converter 
 func NewConverterCreate(cfg config.ConverterConfig) Converter {
 	baseExtenders := baseExtenders(cfg)
 	// https://github.com/kyma-project/infrastructure-manager/pull/460
-	providerExtender := extender2.NewProviderExtender(
+	providerExtender := extender2.NewProviderExtenderForCreateOperation(
 		cfg.Provider.AWS.EnableIMDSv2,
 		cfg.MachineImage.DefaultName,
 		cfg.MachineImage.DefaultVersion,
@@ -54,13 +54,14 @@ func NewConverterCreate(cfg config.ConverterConfig) Converter {
 	return newConverter(cfg, baseExtenders...)
 }
 
-func NewConverterPatch(cfg config.ConverterConfig) Converter {
+func NewConverterPatch(cfg config.ConverterConfig, zonesFromShoot []string) Converter {
 	baseExtenders := baseExtenders(cfg)
 	// https://github.com/kyma-project/infrastructure-manager/pull/460
-	providerExtender := extender2.NewProviderExtender(
+	providerExtender := extender2.NewProviderExtenderPatchOperation(
 		cfg.Provider.AWS.EnableIMDSv2,
 		cfg.MachineImage.DefaultName,
 		cfg.MachineImage.DefaultVersion,
+		zonesFromShoot,
 	)
 
 	baseExtenders = append(baseExtenders, providerExtender)
