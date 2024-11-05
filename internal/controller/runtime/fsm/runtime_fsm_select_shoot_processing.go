@@ -2,7 +2,6 @@ package fsm
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -17,23 +16,23 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 	m.log.Info("Select shoot processing state")
 
 	if s.shoot.Spec.DNS == nil || s.shoot.Spec.DNS.Domain == nil {
-		msg := fmt.Sprintf("DNS Domain is not set yet for shoot: %s, scheduling for retry", s.shoot.Name)
-		m.log.Info(msg)
-		return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+		m.log.Info("DNS Domain is not set yet for shoot, scheduling for retry", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
+		m.Metrics.SetRuntimeStates(s.instance)
+		return requeueAfter(m.RCCfg.GardenerRequeueDuration)
 	}
 
 	lastOperation := s.shoot.Status.LastOperation
 	if lastOperation == nil {
-		msg := fmt.Sprintf("Last operation is nil for shoot: %s, scheduling for retry", s.shoot.Name)
-		m.log.Info(msg)
-		return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+		m.log.Info("Last operation is nil for shoot, scheduling for retry", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
+		m.Metrics.SetRuntimeStates(s.instance)
+		return requeueAfter(m.RCCfg.GardenerRequeueDuration)
 	}
 
 	patchShoot, err := shouldPatchShoot(&s.instance, s.shoot)
 	if err != nil {
-		msg := fmt.Sprintf("Failed to get applied generation for shoot: %s, scheduling for retry", s.shoot.Name)
-		m.log.Error(err, msg)
-		return updateStatusAndStop()
+		m.log.Error(err, "Failed to get applied generation for shoot", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
+		m.Metrics.SetRuntimeStates(s.instance)
+		return requeueAfter(m.RCCfg.GardenerRequeueDuration)
 	}
 
 	if patchShoot {
@@ -41,16 +40,19 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 		return switchState(sFnPatchExistingShoot)
 	}
 
-	if lastOperation.Type == gardener.LastOperationTypeCreate {
-		return switchState(sFnWaitForShootCreation)
+	if s.instance.Status.State == imv1.RuntimeStatePending || s.instance.Status.State == "" {
+		if lastOperation.Type == gardener.LastOperationTypeCreate {
+			return switchState(sFnWaitForShootCreation)
+		}
+
+		if lastOperation.Type == gardener.LastOperationTypeReconcile {
+			return switchState(sFnWaitForShootReconcile)
+		}
 	}
 
-	if lastOperation.Type == gardener.LastOperationTypeReconcile {
-		return switchState(sFnWaitForShootReconcile)
-	}
-
-	m.log.Info("Unknown shoot operation type, exiting with no retry")
-	return stopWithMetrics()
+	// All other runtimes in Ready and Failed state will be not processed to mitigate massive reconciliation during restart
+	m.log.Info("Stopping processing reconcile, exiting with no retry", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name, "function", "sFnSelectShootProcessing")
+	return stop()
 }
 
 func shouldPatchShoot(runtime *imv1.Runtime, shoot *gardener.Shoot) (bool, error) {

@@ -6,6 +6,7 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	autoscaling "k8s.io/api/autoscaling/v1"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 )
@@ -106,6 +107,16 @@ func NewDNSExtender(secretName, domainPrefix, dnsProviderType string) func(runti
 		}
 
 		shoot.Spec.Extensions = append(shoot.Spec.Extensions, dnsExtension)
+
+		secretReference := gardener.NamedResourceReference{
+			Name: secretName,
+			ResourceRef: autoscaling.CrossVersionObjectReference{
+				Kind:       "Secret",
+				Name:       secretName,
+				APIVersion: "v1",
+			},
+		}
+		shoot.Spec.Resources = append(shoot.Spec.Resources, secretReference)
 
 		return nil
 	}
