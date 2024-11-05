@@ -34,7 +34,9 @@ func oSetSecret(secretName string) operation {
 				APIVersion: "v1",
 			},
 		}
-		index := slices.IndexFunc(s.Spec.Resources, matchAuditlogSecretReference)
+		index := slices.IndexFunc(s.Spec.Resources, func(r gardener.NamedResourceReference) bool {
+			return r.Name == auditlogSecretReference
+		})
 
 		if index == -1 {
 			s.Spec.Resources = append(s.Spec.Resources, resource)
