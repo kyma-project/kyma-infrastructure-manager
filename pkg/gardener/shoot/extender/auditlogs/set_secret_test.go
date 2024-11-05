@@ -32,7 +32,9 @@ func Test_oSetSecret(t *testing.T) {
 }
 
 func requireNoErrorAssertContainsSecretResource(t *testing.T, expected string, actual []gardener.NamedResourceReference) {
-	index := slices.IndexFunc(actual, matchAuditlogSecretReference)
+	index := slices.IndexFunc(actual, func(r gardener.NamedResourceReference) bool {
+		return r.Name == auditlogSecretReference
+	})
 	require.NotEqual(t, -1, index, "'%s' NamedResourceReference not found", auditlogSecretReference)
 	assert.Equal(t, auditlogSecretReference, actual[index].Name)
 	assert.Equal(t, expected, actual[index].ResourceRef.Name)
