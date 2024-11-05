@@ -53,6 +53,6 @@ func sFnWaitForShootReconcile(_ context.Context, m *fsm, s *systemState) (stateF
 			sFnConfigureOidc)
 	}
 
-	m.log.Info("Update did not processed, exiting with no retry")
+	m.log.Info("sFnWaitForShootReconcile - unknown shoot operation state, stopping state machine", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
 	return stopWithMetrics()
 }
