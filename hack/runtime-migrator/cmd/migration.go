@@ -67,9 +67,15 @@ func (m Migration) Do(runtimeIDs []string) error {
 		slog.Error(errorMsg, "runtimeID", runtimeID)
 	}
 
-	reportValidationError := func(runtimeID, shootName string, msg string) {
-		results.ValidationFailed(runtimeID, shootName)
+	reportValidationError := func(runtimeID, shootName string, msg string, err error) {
+		errorMsg := fmt.Sprintf("%s: %v", msg, err)
+		results.ValidationErrorOccurred(runtimeID, shootName, errorMsg)
 		slog.Warn(msg, "runtimeID", runtimeID)
+	}
+
+	reportUnwantedUpdateDetected := func(runtimeID, shootName string, msg string) {
+		results.ValidationDetectedUnwantedUpdate(runtimeID, shootName)
+		slog.Info(msg, "runtimeID", runtimeID)
 	}
 
 	reportSuccess := func(runtimeID, shootName string, msg string) {
@@ -78,8 +84,6 @@ func (m Migration) Do(runtimeIDs []string) error {
 	}
 
 	for _, runtimeID := range runtimeIDs {
-		slog.Info(fmt.Sprintf("Migrating runtime with ID: %s", runtimeID))
-
 		shoot := findShoot(runtimeID, shootList)
 		if shoot == nil {
 			reportError(runtimeID, "", "Failed to find shoot", nil)
@@ -103,7 +107,7 @@ func (m Migration) Do(runtimeIDs []string) error {
 
 		shootComparisonResult, err := m.runtimeVerifier.Do(runtime, *shoot)
 		if err != nil {
-			reportError(runtimeID, shoot.Name, "Failed to verify runtime", err)
+			reportValidationError(runtimeID, shoot.Name, "Failed to verify runtime", err)
 
 			continue
 		}
@@ -113,7 +117,7 @@ func (m Migration) Do(runtimeIDs []string) error {
 			if err != nil {
 				reportError(runtimeID, shoot.Name, "Failed to save comparison result", err)
 			} else {
-				reportValidationError(runtimeID, shoot.Name, "Runtime CR can cause unwanted update in Gardener. Please verify the runtime CR.")
+				reportUnwantedUpdateDetected(runtimeID, shoot.Name, "Runtime CR can cause unwanted update in Gardener. Please verify the runtime CR.")
 			}
 
 			continue

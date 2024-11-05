@@ -7,9 +7,10 @@ import (
 type StatusType string
 
 const (
-	StatusSuccess         StatusType = "Success"
-	StatusError           StatusType = "Error"
-	StatusValidationError StatusType = "ValidationError"
+	StatusSuccess                          StatusType = "Success"
+	StatusError                            StatusType = "Error"
+	StatusValidationError                  StatusType = "ValidationError"
+	StatusValidationDetectedUnwantedUpdate StatusType = "ValidationDetectedUnwantedUpdate"
 )
 
 type RuntimeResult struct {
@@ -38,22 +39,34 @@ func NewMigratorResults(outputDirectory string) Results {
 
 func (mr *Results) ErrorOccurred(runtimeID, shootName string, errorMsg string) {
 	result := RuntimeResult{
-		RuntimeID:         runtimeID,
-		ShootName:         shootName,
-		Status:            StatusError,
-		ErrorMessage:      errorMsg,
-		RuntimeCRFilePath: mr.getRuntimeCRPath(shootName),
+		RuntimeID:    runtimeID,
+		ShootName:    shootName,
+		Status:       StatusError,
+		ErrorMessage: errorMsg,
 	}
 
 	mr.Failed++
 	mr.Results = append(mr.Results, result)
 }
 
-func (mr *Results) ValidationFailed(runtimeID, shootName string) {
+func (mr *Results) ValidationErrorOccurred(runtimeID, shootName string, errorMsg string) {
+	result := RuntimeResult{
+		RuntimeID:         runtimeID,
+		ShootName:         shootName,
+		Status:            StatusValidationError,
+		ErrorMessage:      errorMsg,
+		RuntimeCRFilePath: mr.getRuntimeCRPath(runtimeID),
+	}
+
+	mr.Failed++
+	mr.Results = append(mr.Results, result)
+}
+
+func (mr *Results) ValidationDetectedUnwantedUpdate(runtimeID, shootName string) {
 	result := RuntimeResult{
 		RuntimeID:                runtimeID,
 		ShootName:                shootName,
-		Status:                   StatusValidationError,
+		Status:                   StatusValidationDetectedUnwantedUpdate,
 		ErrorMessage:             "Runtime may cause unwanted update in Gardener. Please verify the runtime CR.",
 		RuntimeCRFilePath:        mr.getRuntimeCRPath(runtimeID),
 		ComparisonResultsDirPath: mr.getComparisonResultPath(runtimeID),
