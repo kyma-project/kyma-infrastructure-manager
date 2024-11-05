@@ -9,15 +9,9 @@ import (
 )
 
 func TestNetworkingFilterExtender(t *testing.T) {
-	t.Run("Create networking-filter extension", func(t *testing.T) {
+	t.Run("Enable networking-filter extension", func(t *testing.T) {
 		// given
-		runtimeShoot := imv1.Runtime{
-			Spec: imv1.RuntimeSpec{
-				Shoot: imv1.RuntimeShoot{
-					Name: "myshoot",
-				},
-			},
-		}
+		runtimeShoot := getRuntimeWithNetworkingFilter(true)
 		shoot := fixEmptyGardenerShoot("test", "dev")
 
 		// when
@@ -28,4 +22,37 @@ func TestNetworkingFilterExtender(t *testing.T) {
 		assert.Equal(t, false, *shoot.Spec.Extensions[0].Disabled)
 		assert.Equal(t, NetworkFilterType, shoot.Spec.Extensions[0].Type)
 	})
+
+	t.Run("Disable networking-filter extension", func(t *testing.T) {
+		// given
+		runtimeShoot := getRuntimeWithNetworkingFilter(false)
+		shoot := fixEmptyGardenerShoot("test", "dev")
+
+		// when
+		err := ExtendWithNetworkFilter(runtimeShoot, &shoot)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, true, *shoot.Spec.Extensions[0].Disabled)
+		assert.Equal(t, NetworkFilterType, shoot.Spec.Extensions[0].Type)
+	})
+}
+
+func getRuntimeWithNetworkingFilter(enabled bool) imv1.Runtime {
+	return imv1.Runtime{
+		Spec: imv1.RuntimeSpec{
+			Shoot: imv1.RuntimeShoot{
+				Name: "myshoot",
+			},
+			Security: imv1.Security{
+				Networking: imv1.NetworkingSecurity{
+					Filter: imv1.Filter{
+						Egress: imv1.Egress{
+							Enabled: enabled,
+						},
+					},
+				},
+			},
+		},
+	}
 }

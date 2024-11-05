@@ -5,7 +5,7 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/config"
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"

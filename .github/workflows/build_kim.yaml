@@ -39,6 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
+      latest: ${{ steps.latest.outputs.latest || '' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -48,6 +49,9 @@ jobs:
       - id: tag
         if: github.event_name == 'push' && github.ref_type == 'tag'
         run: echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+      - id: latest
+        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && github.event_name == 'push'
+        run: echo "latest=latest" >> $GITHUB_OUTPUT
 
   trivy:
     permissions:
@@ -90,7 +94,7 @@ jobs:
 
       - name: Print trivy table
         if: success() || failure()
-        run: cat ${{ env.trivy-table }}
+        run: "test -f ${{ env.trivy-table }} && cat ${{ env.trivy-table }} || echo ':: no data ::'"
 
   build-image:
     needs: setup
@@ -99,7 +103,9 @@ jobs:
       name: infrastructure-manager
       dockerfile: Dockerfile
       context: .
-      tags: ${{ needs.setup.outputs.tag }}
+      tags: |
+        ${{ needs.setup.outputs.tag }}
+        ${{ needs.setup.outputs.latest }}
 
   summary:
     runs-on: ubuntu-latest

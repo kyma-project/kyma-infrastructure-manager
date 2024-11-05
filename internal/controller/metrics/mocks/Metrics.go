@@ -27,13 +27,18 @@ func (_m *Metrics) CleanUpKubeconfigExpiration(runtimeID string) {
 	_m.Called(runtimeID)
 }
 
-// CleanUpRuntimeGauge provides a mock function with given fields: runtimeID
-func (_m *Metrics) CleanUpRuntimeGauge(runtimeID string) {
-	_m.Called(runtimeID)
+// CleanUpRuntimeGauge provides a mock function with given fields: runtimeID, runtimeName
+func (_m *Metrics) CleanUpRuntimeGauge(runtimeID string, runtimeName string) {
+	_m.Called(runtimeID, runtimeName)
 }
 
 // IncRuntimeFSMStopCounter provides a mock function with given fields:
 func (_m *Metrics) IncRuntimeFSMStopCounter() {
+	_m.Called()
+}
+
+// ResetRuntimeMetrics provides a mock function with given fields:
+func (_m *Metrics) ResetRuntimeMetrics() {
 	_m.Called()
 }
 

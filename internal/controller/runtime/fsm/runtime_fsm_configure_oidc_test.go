@@ -7,7 +7,7 @@ import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/config"
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -184,6 +184,7 @@ func TestOidcState(t *testing.T) {
 		assert.Equal(t, "kyma-oidc-0", openIdConnects.Items[0].Name)
 		assertOIDCCRD(t, "kyma-oidc-0", "runtime-cr-config0", openIdConnects.Items[0])
 		assertOIDCCRD(t, "kyma-oidc-1", "runtime-cr-config1", openIdConnects.Items[1])
+		assert.Equal(t, imv1.State("Pending"), systemState.instance.Status.State)
 		assertEqualConditions(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)
 	})
 
@@ -265,6 +266,7 @@ func TestOidcState(t *testing.T) {
 		assert.Len(t, openIdConnects.Items, 2)
 		assert.Equal(t, "kyma-oidc-0", openIdConnects.Items[0].Name)
 		assertEqualConditions(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)
+		assert.Equal(t, imv1.State("Pending"), systemState.instance.Status.State)
 	})
 }
 

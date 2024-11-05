@@ -73,6 +73,11 @@ func (m *Matcher) Match(actual interface{}) (success bool, err error) {
 			path:          "spec/extensions",
 		},
 		{
+			GomegaMatcher: gomega.BeComparableTo(shootToMatch.Spec.CloudProfileName),
+			actual:        shootActual.Spec.CloudProfileName,
+			path:          "spec/cloudProfileName",
+		},
+		{
 			GomegaMatcher: gstruct.MatchFields(gstruct.IgnoreMissing, gstruct.Fields{
 				"ClusterAutoscaler":           gstruct.Ignore(),
 				"KubeAPIServer":               newKubeAPIServerMatcher(shootToMatch.Spec.Kubernetes),
@@ -137,24 +142,15 @@ func (m *Matcher) Match(actual interface{}) (success bool, err error) {
 			path:          "spec/controlPlane",
 		},
 		{
-			GomegaMatcher: gomega.BeComparableTo(shootToMatch.Spec.CloudProfile),
-			actual:        shootActual.Spec.CloudProfile,
-			path:          "spec/cloudProfile",
-		},
-		{
 			GomegaMatcher: NewProviderMatcher(shootToMatch.Spec.Provider, "spec/provider"),
 			actual:        shootActual.Spec.Provider,
 			path:          "spec/provider",
 		},
 		{
-			GomegaMatcher: gomega.SatisfyAll(mapMatchers(shootToMatch.Labels)...),
-			actual:        shootActual.Labels,
+			// We need to verify that labels from actual object are subset of labels from toMatch object
+			GomegaMatcher: gomega.SatisfyAll(mapMatchers(shootActual.Labels)...),
+			actual:        shootToMatch.Labels,
 			path:          "metadata/labels",
-		},
-		{
-			GomegaMatcher: gomega.SatisfyAll(mapMatchers(shootActual.Annotations)...),
-			actual:        shootToMatch.Annotations,
-			path:          "metadata/annotations",
 		},
 	}
 
@@ -264,7 +260,7 @@ func providers(ps []v1beta1.DNSProvider) gstruct.Elements {
 		out[ID] = gstruct.MatchFields(
 			gstruct.IgnoreMissing,
 			gstruct.Fields{
-				"Primary":    gomega.Equal(p.Primary),
+				"Primary":    gomega.BeComparableTo(p.Primary),
 				"SecretName": gomega.Equal(p.SecretName),
 				"Type":       gomega.Equal(p.Type),
 				"Domains":    domainsMatcher,
@@ -342,6 +338,7 @@ func newKubeAPIServerMatcher(k v1beta1.Kubernetes) types.GomegaMatcher {
 			"DefaultNotReadyTolerationSeconds":    gstruct.Ignore(),
 			"DefaultUnreachableTolerationSeconds": gstruct.Ignore(),
 			"EncryptionConfig":                    gstruct.Ignore(),
+			"StructuredAuthentication":            gstruct.Ignore(),
 		},
 	))
 }
@@ -383,7 +380,7 @@ func extensions(es []v1beta1.Extension) gstruct.Elements {
 		ID := idExtension(e)
 		out[ID] = gstruct.MatchAllFields(gstruct.Fields{
 			"Type":           gomega.BeComparableTo(e.Type),
-			"ProviderConfig": gomega.BeComparableTo(e.ProviderConfig),
+			"ProviderConfig": newProviderCfgMatcher(e.Type, e.ProviderConfig),
 			"Disabled":       gomega.BeComparableTo(e.Disabled),
 		})
 	}

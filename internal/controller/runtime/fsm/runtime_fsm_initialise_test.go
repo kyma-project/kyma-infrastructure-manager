@@ -2,7 +2,6 @@ package fsm
 
 import (
 	"context"
-	"github.com/stretchr/testify/mock"
 	"time"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -11,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
 	"github.com/onsi/gomega/types"
+	"github.com/stretchr/testify/mock"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,7 +40,7 @@ var _ = Describe("KIM sFnInitialise", func() {
 	withMockedMetrics := func() fakeFSMOpt {
 		m := &mocks.Metrics{}
 		m.On("SetRuntimeStates", mock.Anything).Return()
-		m.On("CleanUpRuntimeGauge", mock.Anything).Return()
+		m.On("CleanUpRuntimeGauge", mock.Anything, mock.Anything).Return()
 		m.On("IncRuntimeFSMStopCounter").Return()
 		return withMetrics(m)
 	}

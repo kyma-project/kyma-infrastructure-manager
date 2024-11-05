@@ -75,7 +75,7 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 		return removeFinalizerAndStop(ctx, m, s) // resource cleanup completed
 	}
 
-	m.log.Info("noting to reconcile, stopping fsm")
+	m.log.Info("Unhandled reconcile operation, stopping state machine", "RuntimeCR", s.instance.Name)
 	return stopWithMetrics()
 }
 
@@ -100,6 +100,6 @@ func removeFinalizerAndStop(ctx context.Context, m *fsm, s *systemState) (stateF
 	}
 
 	// remove from metrics
-	m.Metrics.CleanUpRuntimeGauge(runtimeID)
+	m.Metrics.CleanUpRuntimeGauge(runtimeID, s.instance.Name)
 	return stop()
 }

@@ -19,10 +19,7 @@ package runtime
 import (
 	"context"
 	"encoding/json"
-	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"path/filepath"
-	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"testing"
 	"time"
 
@@ -30,12 +27,13 @@ import (
 	gardener_oidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/auditlogging"
-	"github.com/kyma-project/infrastructure-manager/internal/config"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
 	v1 "k8s.io/api/autoscaling/v1"
 	v12 "k8s.io/api/core/v1"
@@ -44,6 +42,7 @@ import (
 	//nolint:revive
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	clienttesting "k8s.io/client-go/testing"
@@ -51,6 +50,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -119,7 +119,7 @@ var _ = BeforeSuite(func() {
 	mm := &mocks.Metrics{}
 	mm.On("SetRuntimeStates", mock.Anything).Return()
 	mm.On("IncRuntimeFSMStopCounter").Return()
-	mm.On("CleanUpRuntimeGauge", mock.Anything).Return()
+	mm.On("CleanUpRuntimeGauge", mock.Anything, mock.Anything).Return()
 
 	fsmCfg := fsm.RCCfg{
 		Finalizer:                   infrastructuremanagerv1.Finalizer,

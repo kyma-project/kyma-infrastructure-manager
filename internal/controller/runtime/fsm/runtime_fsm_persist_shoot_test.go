@@ -3,16 +3,16 @@ package fsm
 import (
 	"bytes"
 	"context"
-	"github.com/stretchr/testify/mock"
 	"io"
 	"time"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/kyma-project/infrastructure-manager/internal/config"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
+	"github.com/stretchr/testify/mock"
 	"sigs.k8s.io/yaml"
 )
 
@@ -28,7 +28,7 @@ var _ = Describe("KIM sFnPersist", func() {
 	withMockedMetrics := func() fakeFSMOpt {
 		m := &mocks.Metrics{}
 		m.On("SetRuntimeStates", mock.Anything).Return()
-		m.On("CleanUpRuntimeGauge", mock.Anything).Return()
+		m.On("CleanUpRuntimeGauge", mock.Anything, mock.Anything).Return()
 		m.On("IncRuntimeFSMStopCounter").Return()
 		return withMetrics(m)
 	}
