@@ -21,7 +21,7 @@ func TestConverter(t *testing.T) {
 		// given
 		runtime := fixRuntime()
 		converterConfig := fixConverterConfig()
-		converter := NewConverter(converterConfig)
+		converter := NewConverterCreate(converterConfig)
 
 		// when
 		shoot, err := converter.ToShoot(runtime)
