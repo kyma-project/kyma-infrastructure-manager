@@ -5,9 +5,9 @@ The `runtime-migrator` application
 3. migrates the shoot specs to the new Runtime custom resource (Runtime CRs created with this migrator have the `operator.kyma-project.io/created-by-migrator=true` label)
 4. saves the new Runtime custom resources to files
 5. checks if the new Runtime custom resource will not cause update on the Gardener
-6. saves the results of the comparison between original shoot and the shoot KIM will produce based on new Runtime custom resource
-7. applies the new Runtime custom resources to the designated KCP cluster
-8. saves the results migration in the output json file
+6. saves the results of the comparison between the original shoot and the shoot KIM produces based on the new Runtime CR
+7. applies the new Runtime CRs to the designated KCP cluster
+8. saves the migration results in the output json file
 
 ## Build
 
@@ -32,7 +32,7 @@ cat input/runtimeIds.json | ./runtime-migrator \
 The above **execution example** will: 
 1. take the stdin input (json with runtimeIds array)
 1. proceed only with Runtime CRs creation for clusters listed in the input 
-1. save output files in `/tmp/` directory. The output directory will contain the following content:
+1. save output files in the `/tmp/` directory. The output directory contains the following:
     - `migration.json` - the output file with the migration results
     - `runtimes` - the directory with the Runtime CRs files
     - `comparison-results` - the directory with the files generated during the comparison process
@@ -58,7 +58,7 @@ The above **execution example** will:
 2024/10/28 13:39:01 INFO Migration results saved in: /tmp/migration-2024-10-28T13:38:49+01:00/migration-results.json
 ```
 
-The above example shows that the migration process detected potential problem with Runtime CR. In such a case the Runtime CR that may cause unwanted updates on Gardener will not be applied on the cluster and require manual intervention.
+The above example shows that the migration process detected a potential problem with Runtime CR. In such a case, Runtime CR that may cause unwanted updates on Gardener will not be applied to the cluster and will require manual intervention.
 The migration results are saved in the `/tmp/migration-2024-10-28T13:38:49+01:00/migration-results.json` file.
 
 The `migration-results.json` file contains the following content:
