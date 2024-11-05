@@ -26,7 +26,14 @@ func newNamedResourceReferenceSecret(secretName string) gardener.NamedResourceRe
 
 func oSetSecret(secretName string) operation {
 	return func(s *gardener.Shoot) error {
-		resource := newNamedResourceReferenceSecret(secretName)
+		resource := gardener.NamedResourceReference{
+			Name: auditlogSecretReference,
+			ResourceRef: v1.CrossVersionObjectReference{
+				Name:       secretName,
+				Kind:       "Secret",
+				APIVersion: "v1",
+			},
+		}
 		index := slices.IndexFunc(s.Spec.Resources, matchAuditlogSecretReference)
 
 		if index == -1 {
