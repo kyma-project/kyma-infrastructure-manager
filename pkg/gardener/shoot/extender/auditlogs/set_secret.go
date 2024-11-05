@@ -9,21 +9,6 @@ import (
 
 const auditlogSecretReference = "auditlog-credentials"
 
-func matchAuditlogSecretReference(r gardener.NamedResourceReference) bool {
-	return r.Name == auditlogSecretReference
-}
-
-func newNamedResourceReferenceSecret(secretName string) gardener.NamedResourceReference {
-	return gardener.NamedResourceReference{
-		Name: auditlogSecretReference,
-		ResourceRef: v1.CrossVersionObjectReference{
-			Name:       secretName,
-			Kind:       "Secret",
-			APIVersion: "v1",
-		},
-	}
-}
-
 func oSetSecret(secretName string) operation {
 	return func(s *gardener.Shoot) error {
 		resource := gardener.NamedResourceReference{
