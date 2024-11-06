@@ -39,6 +39,7 @@ import (
 	v12 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	//nolint:revive
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -211,7 +212,7 @@ func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot, seeds []*gard
 func getBaseShootForTestingSequence() gardener_api.Shoot {
 	runtimeStub := CreateRuntimeStub("test-resource")
 	infrastructureManagerConfig := fixConverterConfigForTests()
-	converter := gardener_shoot.NewConverter(infrastructureManagerConfig.ConverterConfig)
+	converter := gardener_shoot.NewConverterCreate(infrastructureManagerConfig.ConverterConfig)
 	convertedShoot, err := converter.ToShoot(*runtimeStub)
 	if err != nil {
 		panic(err)
