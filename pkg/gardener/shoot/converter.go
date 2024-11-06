@@ -84,6 +84,10 @@ func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
 	// - if any logic is needed to be implemented, either enhance existing, or create a new extender
 
 	shoot := gardener.Shoot{
+		TypeMeta: v1.TypeMeta{
+			Kind:       "Shoot",
+			APIVersion: "core.gardener.cloud/v1beta1",
+		},
 		ObjectMeta: v1.ObjectMeta{
 			Name:      runtime.Spec.Shoot.Name,
 			Namespace: fmt.Sprintf("garden-%s", c.config.Gardener.ProjectName),

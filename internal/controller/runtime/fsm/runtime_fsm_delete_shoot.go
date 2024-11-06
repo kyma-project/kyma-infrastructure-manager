@@ -22,7 +22,6 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	if !isGardenerCloudDelConfirmationSet(s.shoot.Annotations) {
 		m.log.Info("patching shoot with del-confirmation")
 		// workaround for Gardener client
-		setObjectFields(s.shoot)
 		s.shoot.Annotations = addGardenerCloudDelConfirmation(s.shoot.Annotations)
 
 		err := m.ShootClient.Patch(ctx, s.shoot, client.Apply, &client.PatchOptions{

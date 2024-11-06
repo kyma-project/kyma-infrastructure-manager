@@ -82,18 +82,10 @@ func convertPatch(instance *imv1.Runtime, cfg config.ConverterConfig, zonesFromS
 	converter := gardener_shoot.NewConverterPatch(cfg, zonesFromShoot)
 	newShoot, err := converter.ToShoot(*instance)
 	if err != nil {
-		setObjectFields(&newShoot)
 		return newShoot, err
 	}
 
 	return newShoot, nil
-}
-
-// workaround
-func setObjectFields(shoot *gardener.Shoot) {
-	shoot.Kind = "Shoot"
-	shoot.APIVersion = "core.gardener.cloud/v1beta1"
-	shoot.ManagedFields = nil
 }
 
 func updateStatePendingWithErrorAndStop(instance *imv1.Runtime,
