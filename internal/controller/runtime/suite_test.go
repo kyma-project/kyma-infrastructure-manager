@@ -26,7 +26,6 @@ import (
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_oidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/auditlogging"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
@@ -436,7 +435,7 @@ func addAuditLogConfigToShoot(shoot *gardener_api.Shoot) {
 
 	ext := &shoot.Spec.Extensions[len(shoot.Spec.Extensions)-1]
 
-	cfg := auditlogging.AuditlogExtensionConfig{
+	cfg := auditlogs.AuditlogExtensionConfig{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       extensionKind,
 			APIVersion: extensionVersion,
