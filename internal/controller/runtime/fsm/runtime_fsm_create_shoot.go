@@ -70,7 +70,6 @@ func convertCreate(instance *imv1.Runtime, cfg config.ConverterConfig) (gardener
 	converter := gardener_shoot.NewConverterCreate(cfg)
 	newShoot, err := converter.ToShoot(*instance)
 	if err != nil {
-		setObjectFields(&newShoot)
 		return newShoot, err
 	}
 

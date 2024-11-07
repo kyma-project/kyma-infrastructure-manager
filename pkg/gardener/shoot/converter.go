@@ -44,7 +44,7 @@ func newConverter(config config.ConverterConfig, extenders ...Extend) Converter 
 func NewConverterCreate(cfg config.ConverterConfig) Converter {
 	baseExtenders := baseExtenders(cfg)
 	// https://github.com/kyma-project/infrastructure-manager/pull/460
-	providerExtender := extender2.NewProviderExtender(
+	providerExtender := extender2.NewProviderExtenderForCreateOperation(
 		cfg.Provider.AWS.EnableIMDSv2,
 		cfg.MachineImage.DefaultName,
 		cfg.MachineImage.DefaultVersion,
@@ -54,13 +54,14 @@ func NewConverterCreate(cfg config.ConverterConfig) Converter {
 	return newConverter(cfg, baseExtenders...)
 }
 
-func NewConverterPatch(cfg config.ConverterConfig) Converter {
+func NewConverterPatch(cfg config.ConverterConfig, zonesFromShoot []string) Converter {
 	baseExtenders := baseExtenders(cfg)
 	// https://github.com/kyma-project/infrastructure-manager/pull/460
-	providerExtender := extender2.NewProviderExtender(
+	providerExtender := extender2.NewProviderExtenderPatchOperation(
 		cfg.Provider.AWS.EnableIMDSv2,
 		cfg.MachineImage.DefaultName,
 		cfg.MachineImage.DefaultVersion,
+		zonesFromShoot,
 	)
 
 	baseExtenders = append(baseExtenders, providerExtender)
@@ -83,6 +84,10 @@ func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
 	// - if any logic is needed to be implemented, either enhance existing, or create a new extender
 
 	shoot := gardener.Shoot{
+		TypeMeta: v1.TypeMeta{
+			Kind:       "Shoot",
+			APIVersion: "core.gardener.cloud/v1beta1",
+		},
 		ObjectMeta: v1.ObjectMeta{
 			Name:      runtime.Spec.Shoot.Name,
 			Namespace: fmt.Sprintf("garden-%s", c.config.Gardener.ProjectName),
