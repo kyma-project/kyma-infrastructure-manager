@@ -6,6 +6,7 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	imgardenerhandler "github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -25,10 +26,13 @@ func sFnWaitForShootReconcile(_ context.Context, m *fsm, s *systemState) (stateF
 		return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
 
 	case gardener.LastOperationStateFailed:
-		var reason ErrReason
+		lastErrors := s.shoot.Status.LastErrors
+		reason := imgardenerhandler.ToErrReason(lastErrors...)
 
-		if len(s.shoot.Status.LastErrors) > 0 {
-			reason = gardenerErrCodesToErrReason(s.shoot.Status.LastErrors...)
+		if imgardenerhandler.IsRetryable(lastErrors) {
+			m.log.Info(fmt.Sprintf("Retryable gardener errors during cluster provisioning for Shoot %s, reason: %s, scheduling for retry", s.shoot.Name, reason))
+			// TODO: should update status?
+			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
 		}
 
 		msg := fmt.Sprintf("error during cluster processing: reconcilation failed for shoot %s, reason: %s, exiting with no retry", s.shoot.Name, reason)

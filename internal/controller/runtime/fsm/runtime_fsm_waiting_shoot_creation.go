@@ -3,11 +3,9 @@ package fsm
 import (
 	"context"
 	"fmt"
-	"strings"
-
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardenerhelper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	imgardenerhandler "github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -43,14 +41,14 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 		return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
 
 	case gardener.LastOperationStateFailed:
-		if gardenerhelper.HasErrorCode(s.shoot.Status.LastErrors, gardener.ErrorInfraRateLimitsExceeded) {
-			m.log.Info(fmt.Sprintf("Error during cluster provisioning: Rate limits exceeded for Shoot %s, scheduling for retry", s.shoot.Name))
+		lastErrors := s.shoot.Status.LastErrors
+		reason := imgardenerhandler.ToErrReason(lastErrors...)
+
+		if imgardenerhandler.IsRetryable(lastErrors) {
+			m.log.Info(fmt.Sprintf("Retryable gardener errors during cluster provisioning for Shoot %s, reason: %s, scheduling for retry", s.shoot.Name, reason))
+			//TODO: should update status?
 			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
 		}
-
-		// also handle other retryable errors here
-		// ErrorRetryableConfigurationProblem
-		// ErrorRetryableInfraDependencies
 
 		msg := fmt.Sprintf("Provisioning failed for shoot: %s ! Last state: %s, Description: %s", s.shoot.Name, s.shoot.Status.LastOperation.State, s.shoot.Status.LastOperation.Description)
 		m.log.Info(msg)
@@ -77,21 +75,4 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 		m.log.Info("WaitForShootCreation - unknown shoot operation state, stopping state machine", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
 		return stopWithMetrics()
 	}
-}
-
-func gardenerErrCodesToErrReason(lastErrors ...gardener.LastError) ErrReason {
-	var codes []gardener.ErrorCode
-	var vals []string
-
-	for _, e := range lastErrors {
-		if len(e.Codes) > 0 {
-			codes = append(codes, e.Codes...)
-		}
-	}
-
-	for _, code := range codes {
-		vals = append(vals, string(code))
-	}
-
-	return ErrReason(strings.Join(vals, ", "))
 }
