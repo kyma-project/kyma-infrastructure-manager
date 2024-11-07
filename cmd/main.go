@@ -181,14 +181,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// load audit log tenant configuration
-	auditLogDataMap, err := loadAuditLogTenantConfiguration(config.ConverterConfig.AuditLog.TenantConfigPath)
-	if err != nil {
-		setupLog.Error(err, "unable to load audit log tenant configuration")
-		os.Exit(1)
-	}
-
-	err = validateAuditLogDataMap(auditLogDataMap)
+	auditLogDataMap, err := loadAuditLogDataMap(config.ConverterConfig.AuditLog.TenantConfigPath)
 	if err != nil {
 		setupLog.Error(err, "invalid audit log tenant configuration")
 		os.Exit(1)
@@ -275,32 +268,27 @@ func initGardenerClients(kubeconfigPath string, namespace string) (client.Client
 
 type auditlogDataMap = map[string]map[string]auditlogs.AuditLogData
 
-func loadAuditLogTenantConfiguration(p string) (auditlogDataMap, error) {
+func loadAuditLogDataMap(p string) (auditlogDataMap, error) {
 	file, err := os.Open(p)
 	if err != nil {
 		return nil, err
 	}
 
-	var result auditlogDataMap
-	if err := json.NewDecoder(file).Decode(&result); err != nil {
+	var data auditlogDataMap
+	if err := json.NewDecoder(file).Decode(&data); err != nil {
 		return nil, err
 	}
-
-	return result, nil
-}
-
-func validateAuditLogDataMap(data map[string]map[string]auditlogs.AuditLogData) error {
 	validate := validator.New(validator.WithRequiredStructEnabled())
 
 	for _, nestedMap := range data {
 		for _, auditLogData := range nestedMap {
 			if err := validate.Struct(auditLogData); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 
-	return nil
+	return data, nil
 }
 
 func refreshRuntimeMetrics(restConfig *rest.Config, logger logr.Logger, metrics metrics.Metrics) {
