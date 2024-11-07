@@ -1,14 +1,15 @@
 package gardener
 
 import (
+	"testing"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestGardenerErrorHandler(t *testing.T) {
 	t.Run("Should combine error descriptions", func(t *testing.T) {
-		//given
+		// given
 		lastErrors := []gardener.LastError{
 			{
 				Description: "First description",
@@ -18,10 +19,10 @@ func TestGardenerErrorHandler(t *testing.T) {
 			},
 		}
 
-		//when
+		// when
 		combinedDescritpion := CombineErrorDescriptions(lastErrors)
 
-		//then
+		// then
 		assert.Equal(t, "1) First description 2) Second description ", combinedDescritpion)
 	})
 

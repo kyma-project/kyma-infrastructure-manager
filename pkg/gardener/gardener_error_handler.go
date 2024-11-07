@@ -2,10 +2,11 @@ package gardener
 
 import (
 	"fmt"
-	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardenerhelper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"strconv"
 	"strings"
+
+	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardenerhelper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 type ErrReason string
