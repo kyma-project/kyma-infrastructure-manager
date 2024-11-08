@@ -2,8 +2,8 @@ package fsm
 
 import (
 	"context"
-	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
+	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
