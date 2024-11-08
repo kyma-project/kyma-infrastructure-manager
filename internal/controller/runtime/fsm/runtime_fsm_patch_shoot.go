@@ -18,7 +18,8 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	m.log.Info("Patch shoot state")
 
 	zonesFromShoot := getZones(s.shoot.Spec.Provider.Workers)
-	updatedShoot, err := convertPatch(&s.instance, m.Config.ConverterConfig, zonesFromShoot)
+	imgName, imgVersion := getImageNameAndVersion(s.shoot.Spec.Provider.Workers)
+	updatedShoot, err := convertPatch(&s.instance, m.Config.ConverterConfig, zonesFromShoot, s.shoot.Spec.Kubernetes.Version, imgName, imgVersion)
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object, exiting with no retry")
 		m.Metrics.IncRuntimeFSMStopCounter()
@@ -74,12 +75,28 @@ func getZones(workers []gardener.Worker) []string {
 	return zones
 }
 
-func convertPatch(instance *imv1.Runtime, cfg config.ConverterConfig, zonesFromShoot []string) (gardener.Shoot, error) {
+func getImageNameAndVersion(workers []gardener.Worker) (string, string) {
+	var imageName, imageVersion string
+
+	for _, worker := range workers {
+		if worker.Machine.Image != nil {
+			imageName = worker.Machine.Image.Name
+			if worker.Machine.Image.Version != nil {
+				imageVersion = *worker.Machine.Image.Version
+			}
+			break
+		}
+	}
+
+	return imageName, imageVersion
+}
+
+func convertPatch(instance *imv1.Runtime, cfg config.ConverterConfig, zonesFromShoot []string, k8sVersion, imageName, imageVersion string) (gardener.Shoot, error) {
 	if err := instance.ValidateRequiredLabels(); err != nil {
 		return gardener.Shoot{}, err
 	}
 
-	converter := gardener_shoot.NewConverterPatch(cfg, zonesFromShoot)
+	converter := gardener_shoot.NewConverterPatch(cfg, zonesFromShoot, k8sVersion, imageName, imageVersion)
 	newShoot, err := converter.ToShoot(*instance)
 	if err != nil {
 		return newShoot, err

@@ -2,6 +2,7 @@ package shoot
 
 import (
 	"fmt"
+	"github.com/Masterminds/semver/v3"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -56,19 +57,20 @@ func NewConverterCreate(cfg config.ConverterConfig) Converter {
 	return newConverter(cfg, baseExtenders...)
 }
 
-func NewConverterPatch(cfg config.ConverterConfig, zonesFromShoot []string) Converter {
+func NewConverterPatch(cfg config.ConverterConfig, zonesFromShoot []string, k8sVersionFromShoot, imageNameFromShoot, imageVersionFromShoot string) Converter {
 	baseExtenders := baseExtenders(cfg)
 
 	// https://github.com/kyma-project/infrastructure-manager/pull/460
 
-	usedK8SVersion := cfg.Kubernetes.DefaultVersion
-	usedImageVersion := cfg.MachineImage.DefaultVersion
+	k8SVersion, _ := selectKubernetesVersion(cfg.Kubernetes.DefaultVersion, k8sVersionFromShoot)
 
-	kubernetesExtender := extender2.NewKubernetesExtender(usedK8SVersion)
+	imageName, imageVersion := selectImageVersion(cfg.MachineImage.DefaultName, cfg.MachineImage.DefaultVersion, imageNameFromShoot, imageVersionFromShoot)
+
+	kubernetesExtender := extender2.NewKubernetesExtender(k8SVersion)
 	providerExtender := extender2.NewProviderExtenderPatchOperation(
 		cfg.Provider.AWS.EnableIMDSv2,
-		cfg.MachineImage.DefaultName,
-		usedImageVersion,
+		imageName,
+		imageVersion,
 		zonesFromShoot,
 	)
 
@@ -82,6 +84,50 @@ func NewAuditlogConverter(policyConfigMapName string, data auditlogs.AuditLogDat
 			auditlogs.NewAuditlogExtender(policyConfigMapName, data),
 		},
 	}
+}
+
+func selectKubernetesVersion(defaultVersion, currentVersion string) (string, error) {
+	if currentVersion == "" {
+		return defaultVersion, nil
+	}
+
+	result, err := compareVersions(defaultVersion, currentVersion)
+	if err != nil {
+		return "", err
+	}
+
+	if result < 0 {
+		// current version is greater than default version
+		return currentVersion, nil
+	}
+
+	return defaultVersion, nil
+}
+
+func compareVersions(version1, version2 string) (int, error) {
+	v1, err := semver.NewVersion(version1)
+	if err != nil {
+		return 0, err
+	}
+
+	v2, err := semver.NewVersion(version2)
+	if err != nil {
+		return 0, err
+	}
+
+	return v1.Compare(v2), nil
+}
+
+func selectImageVersion(defaultName, defaultVersion, currentName, currentVersion string) (string, string) {
+	if currentVersion == "" || currentName == "" {
+		return defaultName, defaultVersion
+	}
+
+	if defaultName != currentName {
+		return defaultName, defaultVersion
+	}
+
+	return defaultName, defaultVersion
 }
 
 func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
