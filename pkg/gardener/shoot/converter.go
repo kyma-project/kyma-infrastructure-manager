@@ -17,7 +17,6 @@ func baseExtenders(cfg config.ConverterConfig) []Extend {
 	return []Extend{
 		extender2.ExtendWithAnnotations,
 		extender2.ExtendWithLabels,
-		extender2.NewKubernetesExtender(cfg.Kubernetes.DefaultVersion),
 		extender2.NewDNSExtender(cfg.DNS.SecretName, cfg.DNS.DomainPrefix, cfg.DNS.ProviderType),
 		extender2.NewOidcExtender(cfg.Kubernetes.DefaultOperatorOidc),
 		extender2.ExtendWithCloudProfile,
@@ -49,22 +48,31 @@ func NewConverterCreate(cfg config.ConverterConfig) Converter {
 		cfg.MachineImage.DefaultName,
 		cfg.MachineImage.DefaultVersion,
 	)
-	baseExtenders = append(baseExtenders, providerExtender)
+
+	kubernetesExtender := extender2.NewKubernetesExtender(cfg.Kubernetes.DefaultVersion)
+
+	baseExtenders = append(baseExtenders, kubernetesExtender, providerExtender)
 
 	return newConverter(cfg, baseExtenders...)
 }
 
 func NewConverterPatch(cfg config.ConverterConfig, zonesFromShoot []string) Converter {
 	baseExtenders := baseExtenders(cfg)
+
 	// https://github.com/kyma-project/infrastructure-manager/pull/460
+
+	usedK8SVersion := cfg.Kubernetes.DefaultVersion
+	usedImageVersion := cfg.MachineImage.DefaultVersion
+
+	kubernetesExtender := extender2.NewKubernetesExtender(usedK8SVersion)
 	providerExtender := extender2.NewProviderExtenderPatchOperation(
 		cfg.Provider.AWS.EnableIMDSv2,
 		cfg.MachineImage.DefaultName,
-		cfg.MachineImage.DefaultVersion,
+		usedImageVersion,
 		zonesFromShoot,
 	)
 
-	baseExtenders = append(baseExtenders, providerExtender)
+	baseExtenders = append(baseExtenders, kubernetesExtender, providerExtender)
 	return newConverter(cfg, baseExtenders...)
 }
 
