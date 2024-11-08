@@ -30,7 +30,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		})
 
 		if err != nil {
-			m.log.Error(err, "unable to patch shoot:", s.shoot.Name)
+			m.log.Error(err, "unable to patch shoot:", "Name", s.shoot.Name)
 			return requeue()
 		}
 	}
