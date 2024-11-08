@@ -6,6 +6,8 @@ import (
 
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apimachinery "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clienttesting "k8s.io/client-go/testing"
@@ -36,7 +38,7 @@ func (t *CustomTracker) IsSequenceFullyUsed() bool {
 	return (t.shootCallCnt == len(t.shootSequence) && len(t.shootSequence) > 0) && t.seedCallCnt == len(t.seedSequence)
 }
 
-func (t *CustomTracker) Get(gvr schema.GroupVersionResource, ns, name string) (runtime.Object, error) {
+func (t *CustomTracker) Get(gvr schema.GroupVersionResource, ns, name string, opts ...apimachinery.GetOptions) (runtime.Object, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -46,7 +48,7 @@ func (t *CustomTracker) Get(gvr schema.GroupVersionResource, ns, name string) (r
 		return getNextObject(t.seedSequence, &t.seedCallCnt)
 	}
 
-	return t.ObjectTracker.Get(gvr, ns, name)
+	return t.ObjectTracker.Get(gvr, ns, name, opts...)
 }
 
 func getNextObject[T any](sequence []*T, counter *int) (*T, error) {
@@ -62,7 +64,7 @@ func getNextObject[T any](sequence []*T, counter *int) (*T, error) {
 	return nil, fmt.Errorf("no more objects in sequence")
 }
 
-func (t *CustomTracker) Update(gvr schema.GroupVersionResource, obj runtime.Object, ns string) error {
+func (t *CustomTracker) Update(gvr schema.GroupVersionResource, obj runtime.Object, ns string, opts ...apimachinery.UpdateOptions) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -79,10 +81,10 @@ func (t *CustomTracker) Update(gvr schema.GroupVersionResource, obj runtime.Obje
 		}
 		return k8serrors.NewNotFound(schema.GroupResource{}, shoot.Name)
 	}
-	return t.ObjectTracker.Update(gvr, obj, ns)
+	return t.ObjectTracker.Update(gvr, obj, ns, opts...)
 }
 
-func (t *CustomTracker) Delete(gvr schema.GroupVersionResource, ns, name string) error {
+func (t *CustomTracker) Delete(gvr schema.GroupVersionResource, ns, name string, opts ...apimachinery.DeleteOptions) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -95,5 +97,5 @@ func (t *CustomTracker) Delete(gvr schema.GroupVersionResource, ns, name string)
 		}
 		return k8serrors.NewNotFound(schema.GroupResource{}, "")
 	}
-	return t.ObjectTracker.Delete(gvr, ns, name)
+	return t.ObjectTracker.Delete(gvr, ns, name, opts...)
 }
