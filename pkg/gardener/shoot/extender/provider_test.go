@@ -67,7 +67,7 @@ func TestProviderExtender(t *testing.T) {
 			shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtender(testCase.EnableIMDSv2, testCase.DefaultMachineImageName, testCase.DefaultMachineImageVersion)
+			extender := NewProviderExtenderForCreateOperation(testCase.EnableIMDSv2, testCase.DefaultMachineImageName, testCase.DefaultMachineImageVersion)
 			err := extender(testCase.Runtime, &shoot)
 
 			// then
@@ -92,7 +92,7 @@ func TestProviderExtender(t *testing.T) {
 		}
 
 		// when
-		extender := NewProviderExtender(false, "", "")
+		extender := NewProviderExtenderForCreateOperation(false, "", "")
 		err := extender(runtime, &shoot)
 
 		// then

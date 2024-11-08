@@ -21,21 +21,56 @@ func TestConverter(t *testing.T) {
 		// given
 		runtime := fixRuntime()
 		converterConfig := fixConverterConfig()
-		converter := NewConverter(converterConfig)
+		converter := NewConverterCreate(converterConfig)
 
 		// when
 		shoot, err := converter.ToShoot(runtime)
 
 		// then
 		require.NoError(t, err)
-		assert.Equal(t, runtime.Spec.Shoot.Purpose, *shoot.Spec.Purpose)
-		assert.Equal(t, runtime.Spec.Shoot.Region, shoot.Spec.Region)
-		assert.Equal(t, runtime.Spec.Shoot.SecretBindingName, *shoot.Spec.SecretBindingName)
-		assert.Equal(t, runtime.Spec.Shoot.ControlPlane, shoot.Spec.ControlPlane)
-		assert.Equal(t, runtime.Spec.Shoot.Networking.Nodes, *shoot.Spec.Networking.Nodes)
-		assert.Equal(t, runtime.Spec.Shoot.Networking.Pods, *shoot.Spec.Networking.Pods)
-		assert.Equal(t, runtime.Spec.Shoot.Networking.Services, *shoot.Spec.Networking.Services)
+		assertShootFields(t, runtime, shoot)
 	})
+
+	t.Run("Create shoot from Runtime for existing shoot", func(t *testing.T) {
+		// given
+		runtime := fixRuntime()
+		converterConfig := fixConverterConfig()
+		converter := NewConverterPatch(converterConfig, fixReversedZones())
+
+		// when
+		shoot, err := converter.ToShoot(runtime)
+
+		// then
+		require.NoError(t, err)
+		assertShootFields(t, runtime, shoot)
+
+		expectedZonesAreInSameOrder := []string{
+			"eu-central-1c",
+			"eu-central-1b",
+			"eu-central-1a",
+		}
+		assert.Equal(t, expectedZonesAreInSameOrder, shoot.Spec.Provider.Workers[0].Zones)
+	})
+}
+
+func assertShootFields(t *testing.T, runtime imv1.Runtime, shoot gardener.Shoot) {
+	assert.Equal(t, runtime.Spec.Shoot.Purpose, *shoot.Spec.Purpose)
+	assert.Equal(t, runtime.Spec.Shoot.Region, shoot.Spec.Region)
+	assert.Equal(t, runtime.Spec.Shoot.SecretBindingName, *shoot.Spec.SecretBindingName)
+	assert.Equal(t, runtime.Spec.Shoot.ControlPlane, shoot.Spec.ControlPlane)
+	assert.Equal(t, runtime.Spec.Shoot.Networking.Nodes, *shoot.Spec.Networking.Nodes)
+	assert.Equal(t, runtime.Spec.Shoot.Networking.Pods, *shoot.Spec.Networking.Pods)
+	assert.Equal(t, runtime.Spec.Shoot.Networking.Services, *shoot.Spec.Networking.Services)
+	assert.Equal(t, "Shoot", shoot.TypeMeta.Kind)
+	assert.Equal(t, "core.gardener.cloud/v1beta1", shoot.TypeMeta.APIVersion)
+}
+
+func fixReversedZones() []string {
+	return []string{
+		"eu-central-1c",
+		"eu-central-1b",
+		"eu-central-1a",
+	}
 }
 
 func fixConverterConfig() config.ConverterConfig {

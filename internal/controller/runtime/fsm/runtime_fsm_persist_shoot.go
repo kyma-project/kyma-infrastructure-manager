@@ -42,7 +42,7 @@ func sFnDumpShootSpec(_ context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 
 	// To make comparison easier we don't store object obtained from the cluster as it contains additional fields that are not relevant for the comparison.
 	// We use object created by the converter instead (the Provisioner uses the same approach)
-	convertedShoot, err := convertShoot(&s.instance, m.Config.ConverterConfig)
+	convertedShoot, err := convertCreate(&s.instance, m.Config.ConverterConfig)
 	if err != nil {
 		return updateStatusAndStopWithError(err)
 	}

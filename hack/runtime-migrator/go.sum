@@ -20,6 +20,8 @@ github.com/gardener/gardener-extension-provider-gcp v1.39.0 h1:fLx5tiu6EUa1VJzkq
 github.com/gardener/gardener-extension-provider-gcp v1.39.0/go.mod h1:0+YVRmwO0Scvm7M3AZoxq2k30tHxRUgAbQZbmhUs920=
 github.com/gardener/gardener-extension-provider-openstack v1.42.1 h1:Umj1dOFn0bLsNQR3dZup3+20j5UtSSAOm3ms5LkaZt0=
 github.com/gardener/gardener-extension-provider-openstack v1.42.1/go.mod h1:77m0Wte0mF1HiQxi3ixLqCyHoJKRs9INCAI/9CKF7Xc=
+github.com/gardener/gardener-extension-shoot-dns-service v1.53.0 h1:WXSjw6y2bLCxScwu0LnH4+1Zf2VKNCwlbPKAjECCeBg=
+github.com/gardener/gardener-extension-shoot-dns-service v1.53.0/go.mod h1:HG9iWR/XszjmH0mmTHIKmX2Egwo8+giSCF8pjqlIPfM=
 github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
 github.com/go-logr/logr v1.4.2/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
 github.com/go-logr/zapr v1.3.0 h1:XGdV8XW8zdwFiwOA2Dryh1gj2KRQyOOoNmBy4EplIcQ=
@@ -98,6 +100,8 @@ github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
+go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
+go.uber.org/goleak v1.3.0/go.mod h1:CoHD4mav9JJNrW/WLlf7HGZPjdw8EucARQHekz1X6bE=
 go.uber.org/multierr v1.11.0 h1:blXXJkSxSSfBVBlC76pxqeO+LN3aDfLQo+309xJstO0=
 go.uber.org/multierr v1.11.0/go.mod h1:20+QtiLqy0Nd6FdQB9TLXag12DsQkrbs3htMFfDN80Y=
 go.uber.org/zap v1.27.0 h1:aJMhYGrd5QSmlpLMr2MftRKl7t8J8PTZPA732ud/XR8=

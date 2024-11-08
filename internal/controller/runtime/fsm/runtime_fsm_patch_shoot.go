@@ -2,6 +2,7 @@ package fsm
 
 import (
 	"context"
+	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -16,7 +17,8 @@ import (
 func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Patch shoot state")
 
-	updatedShoot, err := convertShoot(&s.instance, m.Config.ConverterConfig)
+	zonesFromShoot := getZones(s.shoot.Spec.Provider.Workers)
+	updatedShoot, err := convertPatch(&s.instance, m.Config.ConverterConfig, zonesFromShoot)
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object, exiting with no retry")
 		m.Metrics.IncRuntimeFSMStopCounter()
@@ -58,26 +60,32 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
 }
 
-func convertShoot(instance *imv1.Runtime, cfg config.ConverterConfig) (gardener.Shoot, error) {
+func getZones(workers []gardener.Worker) []string {
+	var zones []string
+
+	for _, worker := range workers {
+		for _, zone := range worker.Zones {
+			if !slices.Contains(zones, zone) {
+				zones = append(zones, zone)
+			}
+		}
+	}
+
+	return zones
+}
+
+func convertPatch(instance *imv1.Runtime, cfg config.ConverterConfig, zonesFromShoot []string) (gardener.Shoot, error) {
 	if err := instance.ValidateRequiredLabels(); err != nil {
 		return gardener.Shoot{}, err
 	}
 
-	converter := gardener_shoot.NewConverter(cfg)
+	converter := gardener_shoot.NewConverterPatch(cfg, zonesFromShoot)
 	newShoot, err := converter.ToShoot(*instance)
-
-	if err == nil {
-		setObjectFields(&newShoot)
+	if err != nil {
+		return newShoot, err
 	}
 
-	return newShoot, err
-}
-
-// workaround
-func setObjectFields(shoot *gardener.Shoot) {
-	shoot.Kind = "Shoot"
-	shoot.APIVersion = "core.gardener.cloud/v1beta1"
-	shoot.ManagedFields = nil
+	return newShoot, nil
 }
 
 func updateStatePendingWithErrorAndStop(instance *imv1.Runtime,

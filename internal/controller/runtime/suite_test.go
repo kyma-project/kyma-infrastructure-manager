@@ -211,7 +211,7 @@ func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot, seeds []*gard
 func getBaseShootForTestingSequence() gardener_api.Shoot {
 	runtimeStub := CreateRuntimeStub("test-resource")
 	infrastructureManagerConfig := fixConverterConfigForTests()
-	converter := gardener_shoot.NewConverter(infrastructureManagerConfig.ConverterConfig)
+	converter := gardener_shoot.NewConverterCreate(infrastructureManagerConfig.ConverterConfig)
 	convertedShoot, err := converter.ToShoot(*runtimeStub)
 	if err != nil {
 		panic(err)

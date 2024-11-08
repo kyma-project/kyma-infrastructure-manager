@@ -74,7 +74,7 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 			sFnCreateKubeconfig)
 
 	default:
-		m.log.Info("Unknown shoot operation state, exiting with no retry")
+		m.log.Info("WaitForShootCreation - unknown shoot operation state, stopping state machine", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
 		return stopWithMetrics()
 	}
 }
