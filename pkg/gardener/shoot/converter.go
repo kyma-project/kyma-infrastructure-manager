@@ -43,6 +43,7 @@ func newConverter(config config.ConverterConfig, extenders ...Extend) Converter 
 
 type CreateOpts struct {
 	config.ConverterConfig
+	auditlogs.AuditLogData
 }
 
 type PatchOpts struct {
@@ -59,6 +60,11 @@ func NewConverterCreate(opts CreateOpts) Converter {
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion))
+
+	baseExtenders = append(baseExtenders,
+		auditlogs.NewAuditlogExtender(
+			opts.AuditLog.PolicyConfigMapName,
+			opts.AuditLogData))
 
 	return newConverter(opts.ConverterConfig, baseExtenders...)
 }

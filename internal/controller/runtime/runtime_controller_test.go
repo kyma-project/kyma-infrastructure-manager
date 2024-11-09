@@ -44,7 +44,6 @@ var _ = Describe("Runtime Controller", func() {
 
 		It("Should successfully create new Shoot from provided Runtime and set Ready status on CR", func() {
 			setupGardenerTestClientForProvisioning()
-			Expect(setupSeedObjectOnCluster(gardenerTestClient)).To(Succeed())
 
 			By("Create Runtime CR")
 			runtimeStub := CreateRuntimeStub(ResourceName)

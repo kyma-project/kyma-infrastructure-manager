@@ -111,7 +111,7 @@ var _ = BeforeSuite(func() {
 
 	// tracker will be updated with different shoot sequence for each test case
 	tracker := clienttesting.NewObjectTracker(clientScheme, serializer.NewCodecFactory(clientScheme).UniversalDecoder())
-	customTracker = NewCustomTracker(tracker, []*gardener_api.Shoot{}, []*gardener_api.Seed{})
+	customTracker = NewCustomTracker(tracker, []*gardener_api.Shoot{})
 	gardenerTestClient = fake.NewClientBuilder().WithScheme(clientScheme).WithObjectTracker(customTracker).Build()
 
 	convConfig := fixConverterConfigForTests()
@@ -168,44 +168,29 @@ var _ = AfterSuite(func() {
 func setupGardenerTestClientForProvisioning() {
 	baseShoot := getBaseShootForTestingSequence()
 	shoots := fixShootsSequenceForProvisioning(&baseShoot)
-	seeds := fixSeedsSequenceForProvisioning()
-	setupGardenerClientWithSequence(shoots, seeds)
+	setupGardenerClientWithSequence(shoots)
 }
 
 func setupGardenerTestClientForUpdate() {
 	baseShoot := getBaseShootForTestingSequence()
 	shoots := fixShootsSequenceForUpdate(&baseShoot)
-	seeds := fixSeedsSequenceForUpdate()
-	setupGardenerClientWithSequence(shoots, seeds)
+	setupGardenerClientWithSequence(shoots)
 }
 
 func setupGardenerTestClientForDelete() {
 	baseShoot := getBaseShootForTestingSequence()
 	shoots := fixShootsSequenceForDelete(&baseShoot)
-	setupGardenerClientWithSequence(shoots, nil)
+	setupGardenerClientWithSequence(shoots)
 }
 
-func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot, seeds []*gardener_api.Seed) {
+func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot) {
 	clientScheme := runtime.NewScheme()
 	_ = gardener_api.AddToScheme(clientScheme)
 
 	tracker := clienttesting.NewObjectTracker(clientScheme, serializer.NewCodecFactory(clientScheme).UniversalDecoder())
-	customTracker = NewCustomTracker(tracker, shoots, seeds)
+	customTracker = NewCustomTracker(tracker, shoots)
 	gardenerTestClient = fake.NewClientBuilder().WithScheme(clientScheme).WithObjectTracker(customTracker).
 		WithInterceptorFuncs(interceptor.Funcs{
-			Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
-				shoot, ok := obj.(*gardener_api.Shoot)
-				// ommit non gardener.Shoot create calls
-				if !ok {
-					return client.Create(ctx, obj, opts...)
-				}
-				// simulate gardener behavior
-				if shoot.Spec.SeedName == nil || *shoot.Spec.SeedName == "" {
-					shoot.Spec.SeedName = ptr.To("test-seed")
-				}
-				// continue with gardener shoot creation
-				return client.Create(ctx, obj, opts...)
-			},
 			Patch: func(ctx context.Context, clnt client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
 				// Apply patches are supposed to upsert, but fake client fails if the object doesn't exist,
 				// Update the generation to simulate the object being updated using interceptor function.
@@ -238,7 +223,6 @@ func getBaseShootForTestingSequence() gardener_api.Shoot {
 func fixShootsSequenceForProvisioning(shoot *gardener_api.Shoot) []*gardener_api.Shoot {
 	var missingShoot *gardener_api.Shoot
 	initialisedShoot := shoot.DeepCopy()
-	initialisedShoot.Spec.SeedName = ptr.To("test-seed")
 
 	dnsShoot := initialisedShoot.DeepCopy()
 
@@ -269,7 +253,6 @@ func fixShootsSequenceForProvisioning(shoot *gardener_api.Shoot) []*gardener_api
 
 func fixShootsSequenceForUpdate(shoot *gardener_api.Shoot) []*gardener_api.Shoot {
 	existingShoot := shoot.DeepCopy()
-	existingShoot.Spec.SeedName = ptr.To("test-seed")
 
 	existingShoot.Status = gardener_api.ShootStatus{
 		LastOperation: &gardener_api.LastOperation{
@@ -310,8 +293,6 @@ func fixShootsSequenceForDelete(shoot *gardener_api.Shoot) []*gardener_api.Shoot
 		Domain: ptr.To("test.domain"),
 	}
 
-	currentShoot.Spec.SeedName = ptr.To("test-seed")
-
 	// To workaround limitation that apply patches are not supported in the fake client.
 	// We need to set the annotation manually.  https://github.com/kubernetes/kubernetes/issues/115598
 	currentShoot.Annotations = map[string]string{
@@ -332,51 +313,6 @@ func fixShootsSequenceForDelete(shoot *gardener_api.Shoot) []*gardener_api.Shoot
 	pendingDeleteShoot.Status.LastOperation.State = gardener_api.LastOperationStatePending
 
 	return []*gardener_api.Shoot{currentShoot, currentShoot, currentShoot, currentShoot, pendingDeleteShoot, nil}
-}
-
-func fixSeedsSequenceForProvisioning() []*gardener_api.Seed {
-	seed := &gardener_api.Seed{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-seed",
-		},
-		Spec: gardener_api.SeedSpec{
-			Provider: gardener_api.SeedProvider{
-				Type: "aws",
-			},
-		},
-	}
-
-	return []*gardener_api.Seed{seed}
-}
-
-func fixSeedsSequenceForUpdate() []*gardener_api.Seed {
-	seed := &gardener_api.Seed{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-seed",
-		},
-		Spec: gardener_api.SeedSpec{
-			Provider: gardener_api.SeedProvider{
-				Type: "aws",
-			},
-		},
-	}
-
-	return []*gardener_api.Seed{seed}
-}
-
-func setupSeedObjectOnCluster(client client.Client) error {
-	seed := &gardener_api.Seed{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-seed",
-		},
-		Spec: gardener_api.SeedSpec{
-			Provider: gardener_api.SeedProvider{
-				Type: "aws",
-			},
-		},
-	}
-
-	return client.Create(context.Background(), seed)
 }
 
 func fixConverterConfigForTests() config.Config {

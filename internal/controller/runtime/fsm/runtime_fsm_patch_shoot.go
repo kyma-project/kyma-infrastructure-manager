@@ -18,21 +18,20 @@ const fieldManagerName = "kim"
 func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Patch shoot state")
 
-	fetchAuditLogConfig := buildFetchAuditLogConfig(get(m.ShootClient.Get), m.AuditLogging)
-	data, err := fetchAuditLogConfig(ctx, s.shoot.Spec.SeedName, s.shoot.Spec.Region)
+	data, err := m.AuditLogging.GetAuditLogData(
+		s.instance.Spec.Shoot.Provider.Type,
+		s.instance.Spec.Shoot.Region)
 
 	if err != nil {
-		m.log.Error(err, "Failed to configure audit logs", "auditLogMandatory", m.AuditLogMandatory)
+		m.log.Error(err, msgFailedToConfigureAuditlogs)
 	}
 
-	if err != nil && m.AuditLogMandatory {
-		s.instance.UpdateStatePending(
+	if err != nil && m.RCCfg.AuditLogMandatory {
+		return updateStatePendingWithErrorAndStop(
+			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonAuditLogError,
-			"False",
-			err.Error(),
-		)
-		return updateStatusAndStop()
+			msgFailedToConfigureAuditlogs)
 	}
 
 	zonesFromShoot := getZones(s.shoot.Spec.Provider.Workers)

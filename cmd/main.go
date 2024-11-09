@@ -198,7 +198,7 @@ func main() {
 		AuditLogging:                auditLogDataMap,
 	}
 	if shootSpecDumpEnabled {
-		cfg.PVCPath = "/testdata/kim"
+		cfg.PVCPath = "/tmp/testdata/kim"
 	}
 
 	runtimeReconciler := runtime_controller.NewRuntimeReconciler(
