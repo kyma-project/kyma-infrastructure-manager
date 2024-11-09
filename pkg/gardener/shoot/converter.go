@@ -63,8 +63,7 @@ func NewConverterPatch(cfg config.ConverterConfig, zonesFromShoot []string, k8sV
 	// https://github.com/kyma-project/infrastructure-manager/pull/460
 
 	k8SVersion, _ := selectKubernetesVersion(cfg.Kubernetes.DefaultVersion, k8sVersionFromShoot)
-
-	imageName, imageVersion := selectImageVersion(cfg.MachineImage.DefaultName, cfg.MachineImage.DefaultVersion, imageNameFromShoot, imageVersionFromShoot)
+	imageName, imageVersion, _ := selectImageVersion(cfg.MachineImage.DefaultName, cfg.MachineImage.DefaultVersion, imageNameFromShoot, imageVersionFromShoot)
 
 	kubernetesExtender := extender2.NewKubernetesExtender(k8SVersion)
 	providerExtender := extender2.NewProviderExtenderPatchOperation(
@@ -104,6 +103,28 @@ func selectKubernetesVersion(defaultVersion, currentVersion string) (string, err
 	return defaultVersion, nil
 }
 
+func selectImageVersion(defaultName, defaultVersion, currentName, currentVersion string) (string, string, error) {
+	if currentVersion == "" || currentName == "" {
+		return defaultName, defaultVersion, nil
+	}
+
+	if defaultName != currentName {
+		return defaultName, defaultVersion, nil
+	}
+
+	result, err := compareVersions(defaultVersion, currentVersion)
+	if err != nil {
+		return "", "", err
+	}
+
+	if result < 0 {
+		// current version is greater than default version
+		return currentName, currentVersion, nil
+	}
+
+	return defaultName, defaultVersion, nil
+}
+
 func compareVersions(version1, version2 string) (int, error) {
 	v1, err := semver.NewVersion(version1)
 	if err != nil {
@@ -116,18 +137,6 @@ func compareVersions(version1, version2 string) (int, error) {
 	}
 
 	return v1.Compare(v2), nil
-}
-
-func selectImageVersion(defaultName, defaultVersion, currentName, currentVersion string) (string, string) {
-	if currentVersion == "" || currentName == "" {
-		return defaultName, defaultVersion
-	}
-
-	if defaultName != currentName {
-		return defaultName, defaultVersion
-	}
-
-	return defaultName, defaultVersion
 }
 
 func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
