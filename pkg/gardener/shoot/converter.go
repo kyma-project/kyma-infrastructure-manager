@@ -87,14 +87,6 @@ func NewConverterPatch(opts PatchOpts) Converter {
 	return newConverter(opts.ConverterConfig, baseExtenders...)
 }
 
-func NewAuditlogConverter(policyConfigMapName string, data auditlogs.AuditLogData) Converter {
-	return Converter{
-		extenders: []Extend{
-			auditlogs.NewAuditlogExtender(policyConfigMapName, data),
-		},
-	}
-}
-
 func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
 	// The original implementation in the Provisioner: https://github.com/kyma-project/control-plane/blob/3dd257826747384479986d5d79eb20f847741aa6/components/provisioner/internal/model/gardener_config.go#L127
 
