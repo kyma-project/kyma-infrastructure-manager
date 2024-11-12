@@ -20,6 +20,7 @@ func sFnCreateShootDryRun(_ context.Context, m *fsm, s *systemState) (stateFn, *
 	}
 
 	if err != nil && m.RCCfg.AuditLogMandatory {
+	m.Metrics.IncRuntimeFSMStopCounter()
 		return updateStatePendingWithErrorAndStop(
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,
