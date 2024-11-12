@@ -61,6 +61,11 @@ func NewConverterCreate(opts CreateOpts) Converter {
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion))
 
+	var zero auditlogs.AuditLogData
+	if opts.AuditLogData == zero {
+		return newConverter(opts.ConverterConfig, baseExtenders...)
+	}
+
 	baseExtenders = append(baseExtenders,
 		auditlogs.NewAuditlogExtender(
 			opts.AuditLog.PolicyConfigMapName,
@@ -78,6 +83,11 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
 			opts.Zones))
+
+	var zero auditlogs.AuditLogData
+	if opts.AuditLogData == zero {
+		return newConverter(opts.ConverterConfig, baseExtenders...)
+	}
 
 	baseExtenders = append(baseExtenders,
 		auditlogs.NewAuditlogExtender(
