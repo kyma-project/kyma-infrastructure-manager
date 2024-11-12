@@ -35,7 +35,7 @@ func TestConverter(t *testing.T) {
 		// given
 		runtime := fixRuntime()
 		converterConfig := fixConverterConfig()
-		converter := NewConverterPatch(converterConfig, fixReversedZones())
+		converter := NewConverterPatch(converterConfig, fixReversedZones(), "1.30", "gardenlinux", "1592.2.0")
 
 		// when
 		shoot, err := converter.ToShoot(runtime)
@@ -50,6 +50,10 @@ func TestConverter(t *testing.T) {
 			"eu-central-1a",
 		}
 		assert.Equal(t, expectedZonesAreInSameOrder, shoot.Spec.Provider.Workers[0].Zones)
+		assert.Equal(t, expectedZonesAreInSameOrder, shoot.Spec.Provider.Workers[0].Zones)
+		assert.Equal(t, "1.30", shoot.Spec.Kubernetes.Version)
+		assert.Equal(t, "gardenlinux", shoot.Spec.Provider.Workers[0].Machine.Image.Name)
+		assert.Equal(t, "1592.2.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
 	})
 }
 
@@ -89,6 +93,10 @@ func fixConverterConfig() config.ConverterConfig {
 			AWS: config.AWSConfig{
 				EnableIMDSv2: true,
 			},
+		},
+		MachineImage: config.MachineImageConfig{
+			DefaultName:    "gardenlinux",
+			DefaultVersion: "1592.1.0",
 		},
 	}
 }
