@@ -16,7 +16,7 @@ func TestKubernetesVersionExtender(t *testing.T) {
 		runtime := imv1.Runtime{}
 
 		// when
-		kubernetesVersionExtender := NewKubernetesExtender("1.99")
+		kubernetesVersionExtender := NewKubernetesExtender("1.99", "1.99")
 		err := kubernetesVersionExtender(runtime, &shoot)
 
 		// then
@@ -30,7 +30,7 @@ func TestKubernetesVersionExtender(t *testing.T) {
 		runtime := imv1.Runtime{}
 
 		// when
-		kubernetesVersionExtender := NewKubernetesExtender("1.99")
+		kubernetesVersionExtender := NewKubernetesExtender("1.99", "1.99")
 		err := kubernetesVersionExtender(runtime, &shoot)
 
 		// then
@@ -52,7 +52,7 @@ func TestKubernetesVersionExtender(t *testing.T) {
 		}
 
 		// when
-		kubernetesVersionExtender := NewKubernetesExtender("1.99")
+		kubernetesVersionExtender := NewKubernetesExtender("1.99", "1.88")
 		err := kubernetesVersionExtender(runtime, &shoot)
 
 		// then

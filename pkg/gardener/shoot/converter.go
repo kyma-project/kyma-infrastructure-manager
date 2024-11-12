@@ -2,7 +2,6 @@ package shoot
 
 import (
 	"fmt"
-	"github.com/Masterminds/semver/v3"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -49,15 +48,14 @@ type CreateOpts struct {
 type PatchOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
-	Zones []string
+	Zones             []string
+	ShootK8SVersion   string
+	ShootImageName    string
+	ShootImageVersion string
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {
 	baseExtenders := baseExtenders(opts.ConverterConfig)
-
-	//k8SVersion, _ := selectKubernetesVersion(cfg.Kubernetes.DefaultVersion, k8sVersionFromShoot)
-	//imageName, imageVersion, _ := selectImageVersion(cfg.MachineImage.DefaultName, cfg.MachineImage.DefaultVersion, imageNameFromShoot, imageVersionFromShoot)
-	//kubernetesExtender := extender2.NewKubernetesExtender(k8SVersion)
 
 	baseExtenders = append(baseExtenders,
 		extender2.NewProviderExtenderForCreateOperation(
@@ -65,8 +63,8 @@ func NewConverterCreate(opts CreateOpts) Converter {
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion))
 
-	//kubernetesExtender := extender2.NewKubernetesExtender(cfg.Kubernetes.DefaultVersion)
-	//baseExtenders = append(baseExtenders, kubernetesExtender, providerExtender)
+	baseExtenders = append(baseExtenders,
+		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.Kubernetes.DefaultVersion))
 
 	var zero auditlogs.AuditLogData
 	if opts.AuditLogData == zero {
@@ -84,12 +82,19 @@ func NewConverterCreate(opts CreateOpts) Converter {
 func NewConverterPatch(opts PatchOpts) Converter {
 	baseExtenders := baseExtenders(opts.ConverterConfig)
 
+	//k8SVersion, _ := selectKubernetesVersion(cfg.Kubernetes.DefaultVersion, k8sVersionFromShoot)
+	//imageName, imageVersion, _ := selectImageVersion(cfg.MachineImage.DefaultName, cfg.MachineImage.DefaultVersion, imageNameFromShoot, imageVersionFromShoot)
+	//kubernetesExtender := extender2.NewKubernetesExtender(k8SVersion)
+
 	baseExtenders = append(baseExtenders,
 		extender2.NewProviderExtenderPatchOperation(
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
 			opts.Zones))
+
+	baseExtenders = append(baseExtenders,
+		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
 
 	var zero auditlogs.AuditLogData
 	if opts.AuditLogData == zero {
@@ -104,59 +109,27 @@ func NewConverterPatch(opts PatchOpts) Converter {
 	return newConverter(opts.ConverterConfig, baseExtenders...)
 }
 
-func selectKubernetesVersion(defaultVersion, currentVersion string) (string, error) {
-	if currentVersion == "" {
-		return defaultVersion, nil
-	}
-
-	result, err := compareVersions(defaultVersion, currentVersion)
-	if err != nil {
-		return "", err
-	}
-
-	if result < 0 {
-		// current version is greater than default version
-		return currentVersion, nil
-	}
-
-	return defaultVersion, nil
-}
-
-func selectImageVersion(defaultName, defaultVersion, currentName, currentVersion string) (string, string, error) {
-	if currentVersion == "" || currentName == "" {
-		return defaultName, defaultVersion, nil
-	}
-
-	if defaultName != currentName {
-		return defaultName, defaultVersion, nil
-	}
-
-	result, err := compareVersions(defaultVersion, currentVersion)
-	if err != nil {
-		return "", "", err
-	}
-
-	if result < 0 {
-		// current version is greater than default version
-		return currentName, currentVersion, nil
-	}
-
-	return defaultName, defaultVersion, nil
-}
-
-func compareVersions(version1, version2 string) (int, error) {
-	v1, err := semver.NewVersion(version1)
-	if err != nil {
-		return 0, err
-	}
-
-	v2, err := semver.NewVersion(version2)
-	if err != nil {
-		return 0, err
-	}
-
-	return v1.Compare(v2), nil
-}
+//func selectImageVersion(defaultName, defaultVersion, currentName, currentVersion string) (string, string, error) {
+//	if currentVersion == "" || currentName == "" {
+//		return defaultName, defaultVersion, nil
+//	}
+//
+//	if defaultName != currentName {
+//		return defaultName, defaultVersion, nil
+//	}
+//
+//	result, err := compareVersions(defaultVersion, currentVersion)
+//	if err != nil {
+//		return "", "", err
+//	}
+//
+//	if result < 0 {
+//		// current version is greater than default version
+//		return currentName, currentVersion, nil
+//	}
+//
+//	return defaultName, defaultVersion, nil
+//}
 
 func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
 	// The original implementation in the Provisioner: https://github.com/kyma-project/control-plane/blob/3dd257826747384479986d5d79eb20f847741aa6/components/provisioner/internal/model/gardener_config.go#L127

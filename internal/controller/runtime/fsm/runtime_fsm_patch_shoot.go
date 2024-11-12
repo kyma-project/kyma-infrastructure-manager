@@ -35,13 +35,15 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			msgFailedToConfigureAuditlogs)
 	}
 
-	zonesFromShoot := getZones(s.shoot.Spec.Provider.Workers)
-	//imgName, imgVersion := getImageNameAndVersion(s.shoot.Spec.Provider.Workers)
+	imgName, imgVersion := getImageNameAndVersion(s.shoot.Spec.Provider.Workers)
 
 	updatedShoot, err := convertPatch(&s.instance, gardener_shoot.PatchOpts{
-		ConverterConfig: m.ConverterConfig,
-		AuditLogData:    data,
-		Zones:           zonesFromShoot,
+		ConverterConfig:   m.ConverterConfig,
+		AuditLogData:      data,
+		Zones:             getZones(s.shoot.Spec.Provider.Workers),
+		ShootK8SVersion:   s.shoot.Spec.Kubernetes.Version,
+		ShootImageName:    imgName,
+		ShootImageVersion: imgVersion,
 	})
 
 	if err != nil {
