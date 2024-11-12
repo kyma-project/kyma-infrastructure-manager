@@ -36,7 +36,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	}
 
 	zonesFromShoot := getZones(s.shoot.Spec.Provider.Workers)
-	imgName, imgVersion := getImageNameAndVersion(s.shoot.Spec.Provider.Workers)
+	//imgName, imgVersion := getImageNameAndVersion(s.shoot.Spec.Provider.Workers)
 
 	updatedShoot, err := convertPatch(&s.instance, gardener_shoot.PatchOpts{
 		ConverterConfig: m.ConverterConfig,
