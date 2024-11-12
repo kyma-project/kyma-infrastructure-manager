@@ -30,6 +30,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	}
 
 	if err != nil && m.RCCfg.AuditLogMandatory {
+	m.Metrics.IncRuntimeFSMStopCounter()
 		return updateStatePendingWithErrorAndStop(
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,
