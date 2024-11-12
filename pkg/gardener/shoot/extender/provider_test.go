@@ -13,14 +13,17 @@ import (
 )
 
 func TestProviderExtender(t *testing.T) {
-	for tname, testCase := range map[string]struct {
+	for tname, tc := range map[string]struct {
 		Runtime                     imv1.Runtime
 		EnableIMDSv2                bool
 		DefaultMachineImageVersion  string
+		CurrentMachineImageVersion  string
 		ExpectedMachineImageVersion string
 		DefaultMachineImageName     string
+		CurrentMachineImageName     string
 		ExpectedMachineImageName    string
 		ExpectedZonesCount          int
+		TestForPatch                bool
 	}{
 		"Create provider specific config for AWS without worker config": {
 			Runtime: imv1.Runtime{
@@ -34,6 +37,7 @@ func TestProviderExtender(t *testing.T) {
 			DefaultMachineImageVersion:  "1312.3.0",
 			ExpectedMachineImageVersion: "1312.2.0",
 			ExpectedZonesCount:          3,
+			TestForPatch:                false,
 		},
 		"Create provider specific config for AWS with worker config": {
 			Runtime: imv1.Runtime{
@@ -47,6 +51,7 @@ func TestProviderExtender(t *testing.T) {
 			DefaultMachineImageVersion:  "1312.3.0",
 			ExpectedMachineImageVersion: "1312.3.0",
 			ExpectedZonesCount:          3,
+			TestForPatch:                false,
 		},
 		"Create provider specific config for AWS with multiple workers": {
 			Runtime: imv1.Runtime{
@@ -60,6 +65,7 @@ func TestProviderExtender(t *testing.T) {
 			DefaultMachineImageVersion:  "1312.3.0",
 			ExpectedMachineImageVersion: "1312.3.0",
 			ExpectedZonesCount:          3,
+			TestForPatch:                false,
 		},
 	} {
 		t.Run(tname, func(t *testing.T) {
@@ -67,14 +73,21 @@ func TestProviderExtender(t *testing.T) {
 			shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderForCreateOperation(testCase.EnableIMDSv2, testCase.DefaultMachineImageName, testCase.DefaultMachineImageVersion)
-			err := extender(testCase.Runtime, &shoot)
+
+			var err error
+			if tc.TestForPatch {
+				extender := NewProviderExtenderPatchOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion, tc.CurrentMachineImageName, tc.CurrentMachineImageVersion, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"})
+				err = extender(tc.Runtime, &shoot)
+			} else {
+				extender := NewProviderExtenderForCreateOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
+				err = extender(tc.Runtime, &shoot)
+			}
 
 			// then
 			require.NoError(t, err)
 
-			assertProvider(t, testCase.Runtime.Spec.Shoot, shoot, testCase.EnableIMDSv2, testCase.ExpectedMachineImageName, testCase.ExpectedMachineImageVersion)
-			assertProviderSpecificConfig(t, shoot, testCase.ExpectedZonesCount)
+			assertProvider(t, tc.Runtime.Spec.Shoot, shoot, tc.EnableIMDSv2, tc.ExpectedMachineImageName, tc.ExpectedMachineImageVersion)
+			assertProviderSpecificConfig(t, shoot, tc.ExpectedZonesCount)
 		})
 	}
 

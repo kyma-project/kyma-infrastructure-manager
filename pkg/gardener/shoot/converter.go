@@ -61,20 +61,19 @@ func NewConverterCreate(opts CreateOpts) Converter {
 		extender2.NewProviderExtenderForCreateOperation(
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.MachineImage.DefaultName,
-			opts.MachineImage.DefaultVersion))
+			opts.MachineImage.DefaultVersion,
+		))
 
 	baseExtenders = append(baseExtenders,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.Kubernetes.DefaultVersion))
 
 	var zero auditlogs.AuditLogData
-	if opts.AuditLogData == zero {
-		return newConverter(opts.ConverterConfig, baseExtenders...)
+	if opts.AuditLogData != zero {
+		baseExtenders = append(baseExtenders,
+			auditlogs.NewAuditlogExtender(
+				opts.AuditLog.PolicyConfigMapName,
+				opts.AuditLogData))
 	}
-
-	baseExtenders = append(baseExtenders,
-		auditlogs.NewAuditlogExtender(
-			opts.AuditLog.PolicyConfigMapName,
-			opts.AuditLogData))
 
 	return newConverter(opts.ConverterConfig, baseExtenders...)
 }
@@ -82,53 +81,28 @@ func NewConverterCreate(opts CreateOpts) Converter {
 func NewConverterPatch(opts PatchOpts) Converter {
 	baseExtenders := baseExtenders(opts.ConverterConfig)
 
-	//imageName, imageVersion, _ := selectImageVersion(cfg.MachineImage.DefaultName, cfg.MachineImage.DefaultVersion, imageNameFromShoot, imageVersionFromShoot)
-	//kubernetesExtender := extender2.NewKubernetesExtender(k8SVersion)
-
 	baseExtenders = append(baseExtenders,
 		extender2.NewProviderExtenderPatchOperation(
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
+			opts.ShootImageName,
+			opts.ShootImageVersion,
 			opts.Zones))
 
 	baseExtenders = append(baseExtenders,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
 
 	var zero auditlogs.AuditLogData
-	if opts.AuditLogData == zero {
-		return newConverter(opts.ConverterConfig, baseExtenders...)
+	if opts.AuditLogData != zero {
+		baseExtenders = append(baseExtenders,
+			auditlogs.NewAuditlogExtender(
+				opts.AuditLog.PolicyConfigMapName,
+				opts.AuditLogData))
 	}
-
-	baseExtenders = append(baseExtenders,
-		auditlogs.NewAuditlogExtender(
-			opts.AuditLog.PolicyConfigMapName,
-			opts.AuditLogData))
 
 	return newConverter(opts.ConverterConfig, baseExtenders...)
 }
-
-//func selectImageVersion(defaultName, defaultVersion, currentName, currentVersion string) (string, string, error) {
-//	if currentVersion == "" || currentName == "" {
-//		return defaultName, defaultVersion, nil
-//	}
-//
-//	if defaultName != currentName {
-//		return defaultName, defaultVersion, nil
-//	}
-//
-//	result, err := compareVersions(defaultVersion, currentVersion)
-//	if err != nil {
-//		return "", "", err
-//	}
-//
-//	if result < 0 {
-//		// current version is greater than default version
-//		return currentName, currentVersion, nil
-//	}
-//
-//	return defaultName, defaultVersion, nil
-//}
 
 func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
 	// The original implementation in the Provisioner: https://github.com/kyma-project/control-plane/blob/3dd257826747384479986d5d79eb20f847741aa6/components/provisioner/internal/model/gardener_config.go#L127

@@ -39,7 +39,7 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defaultMachineImag
 		provider.ControlPlaneConfig = controlPlaneConf
 		provider.InfrastructureConfig = infraConfig
 
-		setDefaultMachineImage(provider, defaultMachineImageName, defaultMachineImageVersion)
+		setMachineImage(provider, defaultMachineImageName, defaultMachineImageVersion)
 		err = setWorkerConfig(provider, provider.Type, enableIMDSv2)
 		setWorkerSettings(provider)
 
@@ -47,7 +47,7 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defaultMachineImag
 	}
 }
 
-func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defaultMachineImageName, defaultMachineImageVersion string, zones []string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, defMachineImgVer, currMachineImgName, currMachineImgVer string, zones []string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		var err error
 		provider := &shoot.Spec.Provider
@@ -72,7 +72,13 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defaultMachineImageNam
 		provider.ControlPlaneConfig = controlPlaneConf
 		provider.InfrastructureConfig = infraConfig
 
-		setDefaultMachineImage(provider, defaultMachineImageName, defaultMachineImageVersion)
+		imgName, imgVersion, err := selectImageVersion(defMachineImgName, defMachineImgVer, currMachineImgName, currMachineImgVer)
+
+		if err != nil {
+			return err
+		}
+
+		setMachineImage(provider, imgName, imgVersion)
 		err = setWorkerConfig(provider, provider.Type, enableIMDSv2)
 		setWorkerSettings(provider)
 
@@ -171,7 +177,7 @@ func setWorkerSettings(provider *gardener.Provider) {
 	}
 }
 
-func setDefaultMachineImage(provider *gardener.Provider, defaultMachineImageName, defaultMachineImageVersion string) {
+func setMachineImage(provider *gardener.Provider, defaultMachineImageName, defaultMachineImageVersion string) {
 	for i := 0; i < len(provider.Workers); i++ {
 		worker := &provider.Workers[i]
 
@@ -202,4 +208,26 @@ func alignWithExistingShoot(provider *gardener.Provider, zones []string) {
 	for i := range provider.Workers {
 		provider.Workers[i].Zones = zones
 	}
+}
+
+func selectImageVersion(defaultName, defaultVersion, currentName, currentVersion string) (string, string, error) {
+	if currentVersion == "" || currentName == "" {
+		return defaultName, defaultVersion, nil
+	}
+
+	if defaultName != currentName {
+		return defaultName, defaultVersion, nil
+	}
+
+	result, err := compareVersions(defaultVersion, currentVersion)
+	if err != nil {
+		return "", "", err
+	}
+
+	if result < 0 {
+		// current version is greater than default version
+		return currentName, currentVersion, nil
+	}
+
+	return defaultName, defaultVersion, nil
 }
