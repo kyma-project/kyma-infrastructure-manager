@@ -41,48 +41,67 @@ func newConverter(config config.ConverterConfig, extenders ...Extend) Converter 
 	}
 }
 
-func NewConverterCreate(cfg config.ConverterConfig) Converter {
-	baseExtenders := baseExtenders(cfg)
-	// https://github.com/kyma-project/infrastructure-manager/pull/460
-	providerExtender := extender2.NewProviderExtenderForCreateOperation(
-		cfg.Provider.AWS.EnableIMDSv2,
-		cfg.MachineImage.DefaultName,
-		cfg.MachineImage.DefaultVersion,
-	)
-
-	kubernetesExtender := extender2.NewKubernetesExtender(cfg.Kubernetes.DefaultVersion)
-
-	baseExtenders = append(baseExtenders, kubernetesExtender, providerExtender)
-
-	return newConverter(cfg, baseExtenders...)
+type CreateOpts struct {
+	config.ConverterConfig
+	auditlogs.AuditLogData
 }
 
-func NewConverterPatch(cfg config.ConverterConfig, zonesFromShoot []string, k8sVersionFromShoot, imageNameFromShoot, imageVersionFromShoot string) Converter {
-	baseExtenders := baseExtenders(cfg)
-
-	// https://github.com/kyma-project/infrastructure-manager/pull/460
-
-	k8SVersion, _ := selectKubernetesVersion(cfg.Kubernetes.DefaultVersion, k8sVersionFromShoot)
-	imageName, imageVersion, _ := selectImageVersion(cfg.MachineImage.DefaultName, cfg.MachineImage.DefaultVersion, imageNameFromShoot, imageVersionFromShoot)
-
-	kubernetesExtender := extender2.NewKubernetesExtender(k8SVersion)
-	providerExtender := extender2.NewProviderExtenderPatchOperation(
-		cfg.Provider.AWS.EnableIMDSv2,
-		imageName,
-		imageVersion,
-		zonesFromShoot,
-	)
-
-	baseExtenders = append(baseExtenders, kubernetesExtender, providerExtender)
-	return newConverter(cfg, baseExtenders...)
+type PatchOpts struct {
+	config.ConverterConfig
+	auditlogs.AuditLogData
+	Zones []string
 }
 
-func NewAuditlogConverter(policyConfigMapName string, data auditlogs.AuditLogData) Converter {
-	return Converter{
-		extenders: []Extend{
-			auditlogs.NewAuditlogExtender(policyConfigMapName, data),
-		},
+func NewConverterCreate(opts CreateOpts) Converter {
+	baseExtenders := baseExtenders(opts.ConverterConfig)
+
+	//k8SVersion, _ := selectKubernetesVersion(cfg.Kubernetes.DefaultVersion, k8sVersionFromShoot)
+	//imageName, imageVersion, _ := selectImageVersion(cfg.MachineImage.DefaultName, cfg.MachineImage.DefaultVersion, imageNameFromShoot, imageVersionFromShoot)
+	//kubernetesExtender := extender2.NewKubernetesExtender(k8SVersion)
+
+	baseExtenders = append(baseExtenders,
+		extender2.NewProviderExtenderForCreateOperation(
+			opts.Provider.AWS.EnableIMDSv2,
+			opts.MachineImage.DefaultName,
+			opts.MachineImage.DefaultVersion))
+
+	//kubernetesExtender := extender2.NewKubernetesExtender(cfg.Kubernetes.DefaultVersion)
+	//baseExtenders = append(baseExtenders, kubernetesExtender, providerExtender)
+
+	var zero auditlogs.AuditLogData
+	if opts.AuditLogData == zero {
+		return newConverter(opts.ConverterConfig, baseExtenders...)
 	}
+
+	baseExtenders = append(baseExtenders,
+		auditlogs.NewAuditlogExtender(
+			opts.AuditLog.PolicyConfigMapName,
+			opts.AuditLogData))
+
+	return newConverter(opts.ConverterConfig, baseExtenders...)
+}
+
+func NewConverterPatch(opts PatchOpts) Converter {
+	baseExtenders := baseExtenders(opts.ConverterConfig)
+
+	baseExtenders = append(baseExtenders,
+		extender2.NewProviderExtenderPatchOperation(
+			opts.Provider.AWS.EnableIMDSv2,
+			opts.MachineImage.DefaultName,
+			opts.MachineImage.DefaultVersion,
+			opts.Zones))
+
+	var zero auditlogs.AuditLogData
+	if opts.AuditLogData == zero {
+		return newConverter(opts.ConverterConfig, baseExtenders...)
+	}
+
+	baseExtenders = append(baseExtenders,
+		auditlogs.NewAuditlogExtender(
+			opts.AuditLog.PolicyConfigMapName,
+			opts.AuditLogData))
+
+	return newConverter(opts.ConverterConfig, baseExtenders...)
 }
 
 func selectKubernetesVersion(defaultVersion, currentVersion string) (string, error) {

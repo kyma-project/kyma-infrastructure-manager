@@ -51,7 +51,13 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 		}
 	}
 
-	return switchState(sFnConfigureAuditLog)
+	s.instance.UpdateStateReady(
+		imv1.ConditionTypeRuntimeConfigured,
+		imv1.ConditionReasonAdministratorsConfigured,
+		"Cluster admin configuration complete",
+	)
+
+	return updateStatusAndStop()
 }
 
 //nolint:gochecknoglobals

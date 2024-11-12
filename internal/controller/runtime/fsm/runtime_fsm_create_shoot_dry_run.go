@@ -4,13 +4,34 @@ import (
 	"context"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 func sFnCreateShootDryRun(_ context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Create shoot [dry-run]")
 
-	newShoot, err := convertCreate(&s.instance, m.Config.ConverterConfig)
+	data, err := m.AuditLogging.GetAuditLogData(
+		s.instance.Spec.Shoot.Provider.Type,
+		s.instance.Spec.Shoot.Region)
+
+	if err != nil {
+		m.log.Error(err, msgFailedToConfigureAuditlogs)
+	}
+
+	if err != nil && m.RCCfg.AuditLogMandatory {
+		m.Metrics.IncRuntimeFSMStopCounter()
+		return updateStatePendingWithErrorAndStop(
+			&s.instance,
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonAuditLogError,
+			msgFailedToConfigureAuditlogs)
+	}
+
+	newShoot, err := convertCreate(&s.instance, shoot.CreateOpts{
+		ConverterConfig: m.ConverterConfig,
+		AuditLogData:    data,
+	})
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object [dry-run]")
 		m.Metrics.IncRuntimeFSMStopCounter()
