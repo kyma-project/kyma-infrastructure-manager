@@ -10,7 +10,7 @@ import (
 
 func Test_AuditlogsConfigurationError(t *testing.T) {
 	for _, tc := range []struct {
-		cfg               AuditlogsConfiguration
+		cfg               Configuration
 		expectedErr       error
 		expectedErrString string
 	}{
@@ -37,7 +37,7 @@ func Test_AuditlogsConfigurationError(t *testing.T) {
 
 func Test_AuditlogsConfigurationNoError(t *testing.T) {
 	for _, testCase := range []struct {
-		cfg          AuditlogsConfiguration
+		cfg          Configuration
 		providerType string
 		region       string
 		expected     AuditLogData

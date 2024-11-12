@@ -33,7 +33,7 @@ type RCCfg struct {
 	ShootNamesapace             string
 	AuditLogMandatory           bool
 	Metrics                     metrics.Metrics
-	AuditLogging                auditlogs.AuditlogsConfiguration
+	AuditLogging                auditlogs.Configuration
 	config.Config
 }
 

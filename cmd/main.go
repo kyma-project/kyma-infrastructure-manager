@@ -266,13 +266,13 @@ func initGardenerClients(kubeconfigPath string, namespace string) (client.Client
 	return gardenerClient, shootClient, dynamicKubeconfigAPI, nil
 }
 
-func loadAuditLogDataMap(p string) (auditlogs.AuditlogsConfiguration, error) {
+func loadAuditLogDataMap(p string) (auditlogs.Configuration, error) {
 	file, err := os.Open(p)
 	if err != nil {
 		return nil, err
 	}
 
-	var data auditlogs.AuditlogsConfiguration
+	var data auditlogs.Configuration
 	if err := json.NewDecoder(file).Decode(&data); err != nil {
 		return nil, err
 	}
