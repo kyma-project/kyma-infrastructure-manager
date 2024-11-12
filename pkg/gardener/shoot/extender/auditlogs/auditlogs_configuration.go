@@ -7,7 +7,11 @@ var (
 	zero                     = AuditLogData{}
 )
 
-type AuditlogsConfiguration map[string]map[string]AuditLogData
+type region = string
+
+type providerType = string
+
+type AuditlogsConfiguration map[providerType]map[region]AuditLogData
 
 func (a *AuditlogsConfiguration) GetAuditLogData(providerType, region string) (AuditLogData, error) {
 	providerCfg, found := (*a)[providerType]
