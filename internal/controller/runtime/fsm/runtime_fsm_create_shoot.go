@@ -10,12 +10,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-var (
-	ErrInvalidShootSeedName          = fmt.Errorf("invalid shoot seed name")
-	ErrProviderConfigurationNotFound = fmt.Errorf("provider configuration not found")
-	ErrRegionConfigurationNotFound   = fmt.Errorf("provider configuration not found")
-)
-
 const msgFailedToConfigureAuditlogs = "Failed to configure audit logs"
 
 func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
@@ -30,7 +24,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	}
 
 	if err != nil && m.RCCfg.AuditLogMandatory {
-	m.Metrics.IncRuntimeFSMStopCounter()
+		m.Metrics.IncRuntimeFSMStopCounter()
 		return updateStatePendingWithErrorAndStop(
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,
