@@ -14,8 +14,7 @@ type providerType = string
 type AuditlogsConfiguration map[providerType]map[region]AuditLogData
 
 func (a AuditlogsConfiguration) GetAuditLogData(providerType, region string) (AuditLogData, error) {
-providerCfg, found := (a)[providerType]
-	providerCfg, found := (*a)[providerType]
+	providerCfg, found := (a)[providerType]
 	if !found {
 		return zero, fmt.Errorf("%w: missing providerType: '%s'",
 			ErrConfigurationNotFound,
