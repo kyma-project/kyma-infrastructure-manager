@@ -21,7 +21,7 @@ func TestConverter(t *testing.T) {
 		// given
 		runtime := fixRuntime()
 		converterConfig := fixConverterConfig()
-		converter := NewConverterCreate(converterConfig)
+		converter := NewConverterCreate(CreateOpts{ConverterConfig: converterConfig})
 
 		// when
 		shoot, err := converter.ToShoot(runtime)
@@ -35,7 +35,10 @@ func TestConverter(t *testing.T) {
 		// given
 		runtime := fixRuntime()
 		converterConfig := fixConverterConfig()
-		converter := NewConverterPatch(converterConfig, fixReversedZones())
+		converter := NewConverterPatch(PatchOpts{
+			ConverterConfig: converterConfig,
+			Zones:           fixReversedZones(),
+		})
 
 		// when
 		shoot, err := converter.ToShoot(runtime)
