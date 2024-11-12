@@ -82,7 +82,6 @@ func NewConverterCreate(opts CreateOpts) Converter {
 func NewConverterPatch(opts PatchOpts) Converter {
 	baseExtenders := baseExtenders(opts.ConverterConfig)
 
-	//k8SVersion, _ := selectKubernetesVersion(cfg.Kubernetes.DefaultVersion, k8sVersionFromShoot)
 	//imageName, imageVersion, _ := selectImageVersion(cfg.MachineImage.DefaultName, cfg.MachineImage.DefaultVersion, imageNameFromShoot, imageVersionFromShoot)
 	//kubernetesExtender := extender2.NewKubernetesExtender(k8SVersion)
 
