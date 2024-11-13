@@ -26,7 +26,7 @@ type Config struct {
 }
 
 const (
-	InputTypeAll  = "all"
+	InputTypeTxt  = "txt"
 	InputTypeJSON = "json"
 )
 

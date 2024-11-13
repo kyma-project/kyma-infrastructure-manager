@@ -1,9 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
-	"log"
 	"log/slog"
 	"os"
 	"time"
@@ -68,7 +68,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = migrator.Do(getRuntimeIDsFromStdin(cfg))
+	slog.Info("Reading runtimeIds from stdin")
+	runtimeIds, err := getRuntimeIDsFromStdin(cfg)
+	if err != nil {
+		slog.Error("Failed to read runtime Ids from input: %v", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	err = migrator.Do(runtimeIds)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to migrate runtimes: %v", slog.Any("error", err)))
 		os.Exit(1)
@@ -105,16 +112,21 @@ func setupKubernetesKubeconfigProvider(kubeconfigPath string, namespace string, 
 		int64(expirationTime.Seconds())), nil
 }
 
-func getRuntimeIDsFromStdin(cfg config.Config) []string {
+func getRuntimeIDsFromStdin(cfg config.Config) ([]string, error) {
 	var runtimeIDs []string
+	var err error
+
 	if cfg.InputType == config.InputTypeJSON {
 		decoder := json.NewDecoder(os.Stdin)
-		slog.Info("Reading runtimeIds from stdin")
-		if err := decoder.Decode(&runtimeIDs); err != nil {
-			log.Printf("Could not load list of RuntimeIds - %s", err)
+		err = decoder.Decode(&runtimeIDs)
+	} else if cfg.InputType == config.InputTypeTxt {
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			runtimeIDs = append(runtimeIDs, scanner.Text())
 		}
+		err = scanner.Err()
 	}
-	return runtimeIDs
+	return runtimeIDs, err
 }
 
 func setupGardenerShootClient(kubeconfigPath, gardenerNamespace string) (gardener_types.ShootInterface, error) {
