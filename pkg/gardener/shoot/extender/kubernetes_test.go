@@ -111,7 +111,7 @@ func TestKubernetesVersionExtender(t *testing.T) {
 			Spec: imv1.RuntimeSpec{
 				Shoot: imv1.RuntimeShoot{
 					Kubernetes: imv1.Kubernetes{
-						Version: ptr.To("1.99"),
+						Version: nil,
 					},
 				},
 			},
@@ -123,7 +123,7 @@ func TestKubernetesVersionExtender(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.Equal(t, "1.99", shoot.Spec.Kubernetes.Version)
+		assert.Equal(t, "1.88", shoot.Spec.Kubernetes.Version)
 	})
 }
 
