@@ -28,12 +28,10 @@ type Migrator struct {
 	kcpClient          client.Client
 }
 
-func NewMigrator(cfg migrator.Config, converterConfig config.ConverterConfig, kubeconfigProvider kubeconfig.Provider, kcpClient client.Client) Migrator {
+func NewMigrator(cfg migrator.Config, kubeconfigProvider kubeconfig.Provider) Migrator {
 	return Migrator{
 		cfg:                cfg,
-		converterConfig:    converterConfig,
 		kubeconfigProvider: kubeconfigProvider,
-		kcpClient:          kcpClient,
 	}
 }
 
