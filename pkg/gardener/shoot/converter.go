@@ -17,7 +17,6 @@ func baseExtenders(cfg config.ConverterConfig) []Extend {
 	return []Extend{
 		extender2.ExtendWithAnnotations,
 		extender2.ExtendWithLabels,
-		extender2.NewKubernetesExtender(cfg.Kubernetes.DefaultVersion),
 		extender2.NewDNSExtender(cfg.DNS.SecretName, cfg.DNS.DomainPrefix, cfg.DNS.ProviderType),
 		extender2.NewOidcExtender(cfg.Kubernetes.DefaultOperatorOidc),
 		extender2.ExtendWithCloudProfile,
@@ -49,7 +48,10 @@ type CreateOpts struct {
 type PatchOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
-	Zones []string
+	Zones             []string
+	ShootK8SVersion   string
+	ShootImageName    string
+	ShootImageVersion string
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {
@@ -59,17 +61,19 @@ func NewConverterCreate(opts CreateOpts) Converter {
 		extender2.NewProviderExtenderForCreateOperation(
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.MachineImage.DefaultName,
-			opts.MachineImage.DefaultVersion))
-
-	var zero auditlogs.AuditLogData
-	if opts.AuditLogData == zero {
-		return newConverter(opts.ConverterConfig, baseExtenders...)
-	}
+			opts.MachineImage.DefaultVersion,
+		))
 
 	baseExtenders = append(baseExtenders,
-		auditlogs.NewAuditlogExtender(
-			opts.AuditLog.PolicyConfigMapName,
-			opts.AuditLogData))
+		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
+
+	var zero auditlogs.AuditLogData
+	if opts.AuditLogData != zero {
+		baseExtenders = append(baseExtenders,
+			auditlogs.NewAuditlogExtender(
+				opts.AuditLog.PolicyConfigMapName,
+				opts.AuditLogData))
+	}
 
 	return newConverter(opts.ConverterConfig, baseExtenders...)
 }
@@ -82,17 +86,20 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
+			opts.ShootImageName,
+			opts.ShootImageVersion,
 			opts.Zones))
 
-	var zero auditlogs.AuditLogData
-	if opts.AuditLogData == zero {
-		return newConverter(opts.ConverterConfig, baseExtenders...)
-	}
-
 	baseExtenders = append(baseExtenders,
-		auditlogs.NewAuditlogExtender(
-			opts.AuditLog.PolicyConfigMapName,
-			opts.AuditLogData))
+		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
+
+	var zero auditlogs.AuditLogData
+	if opts.AuditLogData != zero {
+		baseExtenders = append(baseExtenders,
+			auditlogs.NewAuditlogExtender(
+				opts.AuditLog.PolicyConfigMapName,
+				opts.AuditLogData))
+	}
 
 	return newConverter(opts.ConverterConfig, baseExtenders...)
 }
