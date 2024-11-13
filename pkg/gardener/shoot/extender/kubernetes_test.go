@@ -142,6 +142,18 @@ func TestCompareVersions(t *testing.T) {
 			expected: -1,
 		},
 		{
+			name:     "version1 is less than version2 with minor version",
+			version1: "1.0.0",
+			version2: "1.1.0",
+			expected: -1,
+		},
+		{
+			name:     "version1 is less than version2 with patch version",
+			version1: "1.0.0",
+			version2: "1.0.1",
+			expected: -1,
+		},
+		{
 			name:     "version1 is equal to version2",
 			version1: "1.0.0",
 			version2: "1.0.0",
@@ -154,8 +166,50 @@ func TestCompareVersions(t *testing.T) {
 			expected: 1,
 		},
 		{
+			name:     "version1 is greater than version2 with minor version",
+			version1: "1.1.0",
+			version2: "1.0.0",
+			expected: 1,
+		},
+		{
+			name:     "version1 is greater than version2 with patch version",
+			version1: "1.0.1",
+			version2: "1.0.0",
+			expected: 1,
+		},
+		{
+			name:     "versions are in strange format 1",
+			version1: "10.6.2800-118",
+			version2: "10.6.2800-119",
+			expected: -1,
+		},
+		{
+			name:     "versions are in strange format 2",
+			version1: "15.5.20240522+fips",
+			version2: "15.5.20240524+fips",
+			expected: -1,
+		},
+		{
+			name:     "versions are in strange format 3",
+			version1: "10.6.2800-118",
+			version2: "10.6.2900-118",
+			expected: -1,
+		},
+		{
+			name:     "versions are in strange format 4",
+			version1: "15.5.20240522+fips",
+			version2: "15.6.20240522+fips",
+			expected: -1,
+		},
+		{
 			name:      "invalid version1",
 			version1:  "invalid",
+			version2:  "1.0.0",
+			expectErr: true,
+		},
+		{
+			name:      "empty version1",
+			version1:  "",
 			version2:  "1.0.0",
 			expectErr: true,
 		},
@@ -163,6 +217,12 @@ func TestCompareVersions(t *testing.T) {
 			name:      "invalid version2",
 			version1:  "1.0.0",
 			version2:  "invalid",
+			expectErr: true,
+		},
+		{
+			name:      "empty version2",
+			version1:  "1.0.0",
+			version2:  "",
 			expectErr: true,
 		},
 	}
