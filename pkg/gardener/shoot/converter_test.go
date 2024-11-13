@@ -29,18 +29,22 @@ func TestConverter(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assertShootFields(t, runtime, shoot)
+		assert.Equal(t, "1.29", shoot.Spec.Kubernetes.Version)
+		assert.Equal(t, "gardenlinux", shoot.Spec.Provider.Workers[0].Machine.Image.Name)
+		assert.Equal(t, "1592.1.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
 	})
 
-	t.Run("Create shoot from Runtime for existing shoot", func(t *testing.T) {
+	t.Run("Create shoot from Runtime for existing shoot and keep versions", func(t *testing.T) {
 		// given
 		runtime := fixRuntime()
 		converterConfig := fixConverterConfig()
 		converter := NewConverterPatch(PatchOpts{
-			ConverterConfig: converterConfig,
-			Zones:           fixReversedZones(),
+			ConverterConfig:   converterConfig,
+			Zones:             fixReversedZones(),
+			ShootK8SVersion:   "1.30",
+			ShootImageName:    "gardenlinux",
+			ShootImageVersion: "1592.2.0",
 		})
-
-		//		converter := NewConverterPatch(converterConfig, fixReversedZones(), "1.30", "gardenlinux", "1592.2.0")
 
 		// when
 		shoot, err := converter.ToShoot(runtime)
@@ -56,9 +60,40 @@ func TestConverter(t *testing.T) {
 		}
 		assert.Equal(t, expectedZonesAreInSameOrder, shoot.Spec.Provider.Workers[0].Zones)
 		assert.Equal(t, expectedZonesAreInSameOrder, shoot.Spec.Provider.Workers[0].Zones)
-		//assert.Equal(t, "1.30", shoot.Spec.Kubernetes.Version)
-		//assert.Equal(t, "gardenlinux", shoot.Spec.Provider.Workers[0].Machine.Image.Name)
-		//assert.Equal(t, "1592.2.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
+		assert.Equal(t, "1.30", shoot.Spec.Kubernetes.Version)
+		assert.Equal(t, "gardenlinux", shoot.Spec.Provider.Workers[0].Machine.Image.Name)
+		assert.Equal(t, "1592.2.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
+	})
+
+	t.Run("Create shoot from Runtime for existing shoot and update versions", func(t *testing.T) {
+		// given
+		runtime := fixRuntime()
+		converterConfig := fixConverterConfig()
+		converter := NewConverterPatch(PatchOpts{
+			ConverterConfig:   converterConfig,
+			Zones:             fixReversedZones(),
+			ShootK8SVersion:   "1.27",
+			ShootImageName:    "gardenlinux",
+			ShootImageVersion: "1592.0.0",
+		})
+
+		// when
+		shoot, err := converter.ToShoot(runtime)
+
+		// then
+		require.NoError(t, err)
+		assertShootFields(t, runtime, shoot)
+
+		expectedZonesAreInSameOrder := []string{
+			"eu-central-1c",
+			"eu-central-1b",
+			"eu-central-1a",
+		}
+		assert.Equal(t, expectedZonesAreInSameOrder, shoot.Spec.Provider.Workers[0].Zones)
+		assert.Equal(t, expectedZonesAreInSameOrder, shoot.Spec.Provider.Workers[0].Zones)
+		assert.Equal(t, "1.28", shoot.Spec.Kubernetes.Version)
+		assert.Equal(t, "gardenlinux", shoot.Spec.Provider.Workers[0].Machine.Image.Name)
+		assert.Equal(t, "1592.1.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
 	})
 }
 

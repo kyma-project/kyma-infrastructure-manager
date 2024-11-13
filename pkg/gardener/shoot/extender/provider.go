@@ -171,6 +171,9 @@ func setWorkerSettings(provider *gardener.Provider) {
 	}
 }
 
+// It sets the machine image name and version to the values specified in the Runtime worker configuration.
+// If any value is not specified in the Runtime, it sets it as `machineImage.defaultVersion` or `machineImage.defaultName`, set in `converter_config.json`.
+// If the current image version with the same name on Shoot is greater than the version determined above, it sets the version to the current machine image version.
 func setMachineImage(provider *gardener.Provider, defMachineImgName, defMachineImgVer, currMachineImgName, currMachineImgVer string) {
 	for i := 0; i < len(provider.Workers); i++ {
 		worker := &provider.Workers[i]
@@ -180,8 +183,6 @@ func setMachineImage(provider *gardener.Provider, defMachineImgName, defMachineI
 				Name:    defMachineImgName,
 				Version: &defMachineImgVer,
 			}
-
-			continue
 		}
 		machineImageVersion := worker.Machine.Image.Version
 		if machineImageVersion == nil || *machineImageVersion == "" {
@@ -192,15 +193,15 @@ func setMachineImage(provider *gardener.Provider, defMachineImgName, defMachineI
 			worker.Machine.Image.Name = defMachineImgName
 		}
 
-		worker.Machine.Image.Version = machineImageVersion
-
 		// use current image version from shoot when it is greater than determined above - autoupdate case
 		if currMachineImgName == worker.Machine.Image.Name && currMachineImgVer != "" && currMachineImgVer != *machineImageVersion {
 			result, err := compareVersions(*machineImageVersion, currMachineImgVer)
 			if err == nil && result < 0 {
-				worker.Machine.Image.Version = &currMachineImgVer
+				machineImageVersion = &currMachineImgVer
 			}
 		}
+
+		worker.Machine.Image.Version = machineImageVersion
 	}
 }
 
