@@ -65,7 +65,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 		))
 
 	baseExtenders = append(baseExtenders,
-		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.Kubernetes.DefaultVersion))
+		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
 
 	var zero auditlogs.AuditLogData
 	if opts.AuditLogData != zero {
