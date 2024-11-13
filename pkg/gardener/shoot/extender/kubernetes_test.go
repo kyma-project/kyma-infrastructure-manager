@@ -126,3 +126,56 @@ func TestKubernetesVersionExtender(t *testing.T) {
 		assert.Equal(t, "1.99", shoot.Spec.Kubernetes.Version)
 	})
 }
+
+func TestCompareVersions(t *testing.T) {
+	tests := []struct {
+		name      string
+		version1  string
+		version2  string
+		expected  int
+		expectErr bool
+	}{
+		{
+			name:     "version1 is less than version2",
+			version1: "1.0.0",
+			version2: "2.0.0",
+			expected: -1,
+		},
+		{
+			name:     "version1 is equal to version2",
+			version1: "1.0.0",
+			version2: "1.0.0",
+			expected: 0,
+		},
+		{
+			name:     "version1 is greater than version2",
+			version1: "2.0.0",
+			version2: "1.0.0",
+			expected: 1,
+		},
+		{
+			name:      "invalid version1",
+			version1:  "invalid",
+			version2:  "1.0.0",
+			expectErr: true,
+		},
+		{
+			name:      "invalid version2",
+			version1:  "1.0.0",
+			version2:  "invalid",
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := compareVersions(tt.version1, tt.version2)
+			if tt.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}

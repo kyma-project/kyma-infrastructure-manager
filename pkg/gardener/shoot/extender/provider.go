@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defaultMachineImageName, defaultMachineImageVersion string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName, defMachineImgVer string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
 		provider.Type = rt.Spec.Shoot.Provider.Type
@@ -39,7 +39,7 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defaultMachineImag
 		provider.ControlPlaneConfig = controlPlaneConf
 		provider.InfrastructureConfig = infraConfig
 
-		setMachineImage(provider, defaultMachineImageName, defaultMachineImageVersion)
+		setMachineImage(provider, defMachineImgName, defMachineImgVer, "", "")
 		err = setWorkerConfig(provider, provider.Type, enableIMDSv2)
 		setWorkerSettings(provider)
 
@@ -72,13 +72,7 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 		provider.ControlPlaneConfig = controlPlaneConf
 		provider.InfrastructureConfig = infraConfig
 
-		imgName, imgVersion, err := selectImageVersion(defMachineImgName, defMachineImgVer, currMachineImgName, currMachineImgVer)
-
-		if err != nil {
-			return err
-		}
-
-		setMachineImage(provider, imgName, imgVersion)
+		setMachineImage(provider, defMachineImgName, defMachineImgVer, currMachineImgName, currMachineImgVer)
 		err = setWorkerConfig(provider, provider.Type, enableIMDSv2)
 		setWorkerSettings(provider)
 
@@ -177,28 +171,36 @@ func setWorkerSettings(provider *gardener.Provider) {
 	}
 }
 
-func setMachineImage(provider *gardener.Provider, defaultMachineImageName, defaultMachineImageVersion string) {
+func setMachineImage(provider *gardener.Provider, defMachineImgName, defMachineImgVer, currMachineImgName, currMachineImgVer string) {
 	for i := 0; i < len(provider.Workers); i++ {
 		worker := &provider.Workers[i]
 
 		if worker.Machine.Image == nil {
 			worker.Machine.Image = &gardener.ShootMachineImage{
-				Name:    defaultMachineImageName,
-				Version: &defaultMachineImageVersion,
+				Name:    defMachineImgName,
+				Version: &defMachineImgVer,
 			}
 
 			continue
 		}
 		machineImageVersion := worker.Machine.Image.Version
 		if machineImageVersion == nil || *machineImageVersion == "" {
-			machineImageVersion = &defaultMachineImageVersion
+			machineImageVersion = &defMachineImgVer
 		}
 
 		if worker.Machine.Image.Name == "" {
-			worker.Machine.Image.Name = defaultMachineImageName
+			worker.Machine.Image.Name = defMachineImgName
 		}
 
 		worker.Machine.Image.Version = machineImageVersion
+
+		// use current image version from shoot when it is greater than determined above - autoupdate case
+		if currMachineImgName == worker.Machine.Image.Name && currMachineImgVer != "" && currMachineImgVer != *machineImageVersion {
+			result, err := compareVersions(*machineImageVersion, currMachineImgVer)
+			if err == nil && result < 0 {
+				worker.Machine.Image.Version = &currMachineImgVer
+			}
+		}
 	}
 }
 
@@ -208,26 +210,4 @@ func alignWithExistingShoot(provider *gardener.Provider, zones []string) {
 	for i := range provider.Workers {
 		provider.Workers[i].Zones = zones
 	}
-}
-
-func selectImageVersion(defaultName, defaultVersion, currentName, currentVersion string) (string, string, error) {
-	if currentVersion == "" || currentName == "" {
-		return defaultName, defaultVersion, nil
-	}
-
-	if defaultName != currentName {
-		return defaultName, defaultVersion, nil
-	}
-
-	result, err := compareVersions(defaultVersion, currentVersion)
-	if err != nil {
-		return "", "", err
-	}
-
-	if result < 0 {
-		// current version is greater than default version
-		return currentName, currentVersion, nil
-	}
-
-	return defaultName, defaultVersion, nil
 }
