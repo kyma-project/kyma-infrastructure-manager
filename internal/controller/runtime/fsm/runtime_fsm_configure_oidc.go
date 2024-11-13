@@ -11,7 +11,6 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	k8s_client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -93,7 +92,7 @@ func recreateOpenIDConnectResources(ctx context.Context, m *fsm, s *systemState)
 	return errResourceCreation
 }
 
-func deleteExistingKymaOpenIDConnectResources(ctx context.Context, client client.Client) (err error) {
+func deleteExistingKymaOpenIDConnectResources(ctx context.Context, client k8s_client.Client) (err error) {
 	err = client.DeleteAllOf(ctx, &authenticationv1alpha1.OpenIDConnect{}, k8s_client.MatchingLabels(map[string]string{
 		imv1.LabelKymaManagedBy: "infrastructure-manager",
 	}))

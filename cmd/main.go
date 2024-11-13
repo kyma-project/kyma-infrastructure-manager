@@ -31,7 +31,6 @@ import (
 	"github.com/go-logr/logr"
 	validator "github.com/go-playground/validator/v10"
 	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/auditlogging"
 	kubeconfig_controller "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
 	runtime_controller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
@@ -39,6 +38,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/pkg/errors"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -181,9 +181,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = validateAuditLogConfiguration(config.ConverterConfig.AuditLog.TenantConfigPath)
+	auditLogDataMap, err := loadAuditLogDataMap(config.ConverterConfig.AuditLog.TenantConfigPath)
 	if err != nil {
-		setupLog.Error(err, "invalid Audit Log configuration")
+		setupLog.Error(err, "invalid audit log tenant configuration")
 		os.Exit(1)
 	}
 
@@ -195,7 +195,7 @@ func main() {
 		Config:                      config,
 		AuditLogMandatory:           auditLogMandatory,
 		Metrics:                     metrics,
-		AuditLogging:                auditlogging.NewAuditLogging(config.ConverterConfig.AuditLog.TenantConfigPath, config.ConverterConfig.AuditLog.PolicyConfigMapName, gardenerClient),
+		AuditLogging:                auditLogDataMap,
 	}
 	if shootSpecDumpEnabled {
 		cfg.PVCPath = "/testdata/kim"
@@ -266,49 +266,27 @@ func initGardenerClients(kubeconfigPath string, namespace string) (client.Client
 	return gardenerClient, shootClient, dynamicKubeconfigAPI, nil
 }
 
-func validateAuditLogConfiguration(tenantConfigPath string) error {
-	getReaderCloser := func() (io.ReadCloser, error) {
-		return os.Open(tenantConfigPath)
-	}
-
-	f, err := getReaderCloser()
-
-	defer func(f io.ReadCloser) {
-		_ = f.Close()
-	}(f)
-
+func loadAuditLogDataMap(p string) (auditlogs.Configuration, error) {
+	file, err := os.Open(p)
 	if err != nil {
-		setupLog.Error(err, "unable to open Audit Log configuration file")
-		return err
+		return nil, err
 	}
 
-	var auditLogConfig map[string]map[string]auditlogging.AuditLogData
-
-	if err = json.NewDecoder(f).Decode(&auditLogConfig); err != nil {
-		setupLog.Error(err, "unable to decode Audit Log configuration")
-		return err
+	var data auditlogs.Configuration
+	if err := json.NewDecoder(file).Decode(&data); err != nil {
+		return nil, err
 	}
-
-	if err = validateAuditLogDataMap(auditLogConfig); err != nil {
-		setupLog.Error(err, "invalid audit log configuration")
-		return err
-	}
-
-	return err
-}
-
-func validateAuditLogDataMap(data map[string]map[string]auditlogging.AuditLogData) error {
 	validate := validator.New(validator.WithRequiredStructEnabled())
 
 	for _, nestedMap := range data {
 		for _, auditLogData := range nestedMap {
 			if err := validate.Struct(auditLogData); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 
-	return nil
+	return data, nil
 }
 
 func refreshRuntimeMetrics(restConfig *rest.Config, logger logr.Logger, metrics metrics.Metrics) {

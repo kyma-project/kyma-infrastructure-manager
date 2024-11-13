@@ -340,3 +340,31 @@ func assertOIDCCRD(t *testing.T, expectedName, expectedClientID string, actual a
 	assert.Equal(t, authenticationv1alpha1.JWKSSpec{}, actual.Spec.JWKS)
 	assert.Nil(t, actual.Spec.MaxTokenExpirationSeconds)
 }
+
+func runtimeForTest() imv1.Runtime {
+	return imv1.Runtime{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-runtime",
+			Namespace: "namespace",
+		},
+		Spec: imv1.RuntimeSpec{
+			Shoot: imv1.RuntimeShoot{
+				Name:     "test-shoot",
+				Region:   "region",
+				Provider: imv1.Provider{Type: "aws"},
+			},
+		},
+	}
+}
+
+func shootForTest() *gardener.Shoot {
+	return &gardener.Shoot{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-shoot",
+			Namespace: "namespace",
+		},
+		Spec: gardener.ShootSpec{
+			Region:   "region",
+			Provider: gardener.Provider{Type: "aws"}},
+	}
+}

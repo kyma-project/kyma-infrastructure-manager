@@ -19,22 +19,19 @@ const shootType = "shoots"
 type CustomTracker struct {
 	clienttesting.ObjectTracker
 	shootSequence []*gardener_api.Shoot
-	seedSequence  []*gardener_api.Seed
 	shootCallCnt  int
-	seedCallCnt   int
 	mu            sync.Mutex
 }
 
-func NewCustomTracker(tracker clienttesting.ObjectTracker, shoots []*gardener_api.Shoot, seeds []*gardener_api.Seed) *CustomTracker {
+func NewCustomTracker(tracker clienttesting.ObjectTracker, shoots []*gardener_api.Shoot) *CustomTracker {
 	return &CustomTracker{
 		ObjectTracker: tracker,
 		shootSequence: shoots,
-		seedSequence:  seeds,
 	}
 }
 
 func (t *CustomTracker) IsSequenceFullyUsed() bool {
-	return (t.shootCallCnt == len(t.shootSequence) && len(t.shootSequence) > 0) && t.seedCallCnt == len(t.seedSequence)
+	return (t.shootCallCnt == len(t.shootSequence) && len(t.shootSequence) > 0)
 }
 
 func (t *CustomTracker) Get(gvr schema.GroupVersionResource, ns, name string, opts ...apimachinery.GetOptions) (runtime.Object, error) {
@@ -43,10 +40,7 @@ func (t *CustomTracker) Get(gvr schema.GroupVersionResource, ns, name string, op
 
 	if gvr.Resource == shootType {
 		return getNextObject(t.shootSequence, &t.shootCallCnt)
-	} else if gvr.Resource == "seeds" {
-		return getNextObject(t.seedSequence, &t.seedCallCnt)
 	}
-
 	return t.ObjectTracker.Get(gvr, ns, name, opts...)
 }
 

@@ -6,7 +6,6 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"
@@ -14,11 +13,35 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const fieldManagerName = "kim"
+
 func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Patch shoot state")
 
+	data, err := m.AuditLogging.GetAuditLogData(
+		s.instance.Spec.Shoot.Provider.Type,
+		s.instance.Spec.Shoot.Region)
+
+	if err != nil {
+		m.log.Error(err, msgFailedToConfigureAuditlogs)
+	}
+
+	if err != nil && m.RCCfg.AuditLogMandatory {
+		m.Metrics.IncRuntimeFSMStopCounter()
+		return updateStatePendingWithErrorAndStop(
+			&s.instance,
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonAuditLogError,
+			msgFailedToConfigureAuditlogs)
+	}
+
 	zonesFromShoot := getZones(s.shoot.Spec.Provider.Workers)
-	updatedShoot, err := convertPatch(&s.instance, m.Config.ConverterConfig, zonesFromShoot)
+	updatedShoot, err := convertPatch(&s.instance, gardener_shoot.PatchOpts{
+		ConverterConfig: m.ConverterConfig,
+		AuditLogData:    data,
+		Zones:           zonesFromShoot,
+	})
+
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object, exiting with no retry")
 		m.Metrics.IncRuntimeFSMStopCounter()
@@ -28,7 +51,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	m.log.Info("Shoot converted successfully", "Name", updatedShoot.Name, "Namespace", updatedShoot.Namespace)
 
 	err = m.ShootClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
-		FieldManager: "kim",
+		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
 	})
 
@@ -74,12 +97,12 @@ func getZones(workers []gardener.Worker) []string {
 	return zones
 }
 
-func convertPatch(instance *imv1.Runtime, cfg config.ConverterConfig, zonesFromShoot []string) (gardener.Shoot, error) {
+func convertPatch(instance *imv1.Runtime, opts gardener_shoot.PatchOpts) (gardener.Shoot, error) {
 	if err := instance.ValidateRequiredLabels(); err != nil {
 		return gardener.Shoot{}, err
 	}
 
-	converter := gardener_shoot.NewConverterPatch(cfg, zonesFromShoot)
+	converter := gardener_shoot.NewConverterPatch(opts)
 	newShoot, err := converter.ToShoot(*instance)
 	if err != nil {
 		return newShoot, err

@@ -142,11 +142,10 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 			instance: testRuntimeWithAdmin,
 			expected: tcSfnExpected{
 				err:    nil,
-				result: ctrl.Result{RequeueAfter: time.Second * 15},
+				result: ctrl.Result{RequeueAfter: 0},
 			},
 			fsm: must(
 				newFakeFSM,
-				withAuditLogging(true, nil),
 				withFakedK8sClient(testScheme, &testRuntimeWithAdmin),
 				withFn(sFnApplyClusterRoleBindingsStateSetup),
 				withFakeEventRecorder(1),
@@ -160,11 +159,10 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 			instance: testRuntime,
 			expected: tcSfnExpected{
 				err:    nil,
-				result: ctrl.Result{RequeueAfter: time.Second * 15},
+				result: ctrl.Result{RequeueAfter: 0},
 			},
 			fsm: must(
 				newFakeFSM,
-				withAuditLogging(true, nil),
 				withFakedK8sClient(testScheme, &testRuntime),
 				withFn(sFnApplyClusterRoleBindingsStateSetup),
 				withFakeEventRecorder(1),
@@ -181,7 +179,6 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 			},
 			fsm: must(
 				newFakeFSM,
-				withAuditLogging(true, nil),
 				withFakedK8sClient(testScheme, &testRuntime),
 				withFn(sFnApplyClusterRoleBindingsStateSetup),
 				withFakeEventRecorder(1),
