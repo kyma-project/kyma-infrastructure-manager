@@ -3,15 +3,11 @@ package config
 import (
 	"flag"
 	"fmt"
-	"io"
-	"log"
-	"os"
-
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/clientcmd"
+	"log"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -22,11 +18,11 @@ type Config struct {
 	OutputPath             string
 	IsDryRun               bool
 	InputType              string
-	ConverterConfigPath    string
+	InputFilePath          string
 }
 
 const (
-	InputTypeAll  = "all"
+	InputTypeTxt  = "txt"
 	InputTypeJSON = "json"
 )
 
@@ -49,7 +45,7 @@ func NewConfig() Config {
 	flag.StringVar(&result.OutputPath, "output-path", "/tmp/", "Path where generated yamls will be saved. Directory has to exist.")
 	flag.BoolVar(&result.IsDryRun, "dry-run", true, "Dry-run flag. Has to be set to 'false' otherwise it will not apply the Custom Resources on the KCP cluster.")
 	flag.StringVar(&result.InputType, "input-type", InputTypeJSON, "Type of input to be used. Possible values: **all** (will migrate all gardener shoots), and **json** (will migrate only cluster whose runtimeIds were passed as an input, see the example hack/runtime-migrator/input/runtimeids_sample.json).")
-	flag.StringVar(&result.ConverterConfigPath, "converter-config-filepath", "/path/to/converter_config.json", "A file path to the Gardener Shoot converter configuration.")
+	flag.StringVar(&result.InputFilePath, "input-file-path", "/path/to/input/file", "Path to the input file containing RuntimeCRs to be migrated.")
 
 	flag.Parse()
 
@@ -104,16 +100,4 @@ func CreateKcpClient(cfg *Config) (client.Client, error) {
 	})
 
 	return k8sClient, nil
-}
-
-func LoadConverterConfig(cfg Config) (config.ConverterConfig, error) {
-	getReader := func() (io.Reader, error) {
-		return os.Open(cfg.ConverterConfigPath)
-	}
-	var kimConfig config.Config
-	if err := kimConfig.Load(getReader); err != nil {
-		log.Print(err, "unable to load converter configuration")
-		return config.ConverterConfig{}, err
-	}
-	return kimConfig.ConverterConfig, nil
 }
