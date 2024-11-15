@@ -11,27 +11,11 @@ import (
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/runtime"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log/slog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-func NewMigration(migratorConfig config2.Config, converterConfig config.ConverterConfig, kubeconfigProvider kubeconfig.Provider, kcpClient client.Client, shootClient gardener_types.ShootInterface) (Migration, error) {
-
-	outputWriter, err := migration.NewOutputWriter(migratorConfig.OutputPath)
-	if err != nil {
-		return Migration{}, err
-	}
-
-	return Migration{
-		runtimeMigrator: runtime.NewMigrator(migratorConfig, converterConfig, kubeconfigProvider, kcpClient),
-		runtimeVerifier: runtime.NewVerifier(converterConfig, migratorConfig.OutputPath),
-		kcpClient:       kcpClient,
-		shootClient:     shootClient,
-		outputWriter:    outputWriter,
-		isDryRun:        migratorConfig.IsDryRun,
-	}, nil
-}
 
 type Migration struct {
 	runtimeMigrator runtime.Migrator
@@ -40,6 +24,23 @@ type Migration struct {
 	shootClient     gardener_types.ShootInterface
 	outputWriter    migration.OutputWriter
 	isDryRun        bool
+}
+
+func NewMigration(migratorConfig config2.Config, converterConfig config.ConverterConfig, auditLogConfig auditlogs.Configuration, kubeconfigProvider kubeconfig.Provider, kcpClient client.Client, shootClient gardener_types.ShootInterface) (Migration, error) {
+
+	outputWriter, err := migration.NewOutputWriter(migratorConfig.OutputPath)
+	if err != nil {
+		return Migration{}, err
+	}
+
+	return Migration{
+		runtimeMigrator: runtime.NewMigrator(migratorConfig, kubeconfigProvider),
+		runtimeVerifier: runtime.NewVerifier(converterConfig, auditLogConfig),
+		kcpClient:       kcpClient,
+		shootClient:     shootClient,
+		outputWriter:    outputWriter,
+		isDryRun:        migratorConfig.IsDryRun,
+	}, nil
 }
 
 func (m Migration) Do(runtimeIDs []string) error {
@@ -67,9 +68,15 @@ func (m Migration) Do(runtimeIDs []string) error {
 		slog.Error(errorMsg, "runtimeID", runtimeID)
 	}
 
-	reportValidationError := func(runtimeID, shootName string, msg string) {
-		results.ValidationFailed(runtimeID, shootName)
+	reportValidationError := func(runtimeID, shootName string, msg string, err error) {
+		errorMsg := fmt.Sprintf("%s: %v", msg, err)
+		results.ValidationErrorOccurred(runtimeID, shootName, errorMsg)
 		slog.Warn(msg, "runtimeID", runtimeID)
+	}
+
+	reportUnwantedUpdateDetected := func(runtimeID, shootName string, msg string) {
+		results.ValidationDetectedUnwantedUpdate(runtimeID, shootName)
+		slog.Info(msg, "runtimeID", runtimeID)
 	}
 
 	reportSuccess := func(runtimeID, shootName string, msg string) {
@@ -78,8 +85,6 @@ func (m Migration) Do(runtimeIDs []string) error {
 	}
 
 	for _, runtimeID := range runtimeIDs {
-		slog.Info(fmt.Sprintf("Migrating runtime with ID: %s", runtimeID))
-
 		shoot := findShoot(runtimeID, shootList)
 		if shoot == nil {
 			reportError(runtimeID, "", "Failed to find shoot", nil)
@@ -103,7 +108,7 @@ func (m Migration) Do(runtimeIDs []string) error {
 
 		shootComparisonResult, err := m.runtimeVerifier.Do(runtime, *shoot)
 		if err != nil {
-			reportError(runtimeID, shoot.Name, "Failed to verify runtime", err)
+			reportValidationError(runtimeID, shoot.Name, "Failed to verify runtime", err)
 
 			continue
 		}
@@ -113,7 +118,7 @@ func (m Migration) Do(runtimeIDs []string) error {
 			if err != nil {
 				reportError(runtimeID, shoot.Name, "Failed to save comparison result", err)
 			} else {
-				reportValidationError(runtimeID, shoot.Name, "Runtime CR can cause unwanted update in Gardener. Please verify the runtime CR.")
+				reportUnwantedUpdateDetected(runtimeID, shoot.Name, "Runtime CR can cause unwanted update in Gardener. Please verify the runtime CR.")
 			}
 
 			continue

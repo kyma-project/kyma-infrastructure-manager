@@ -7,36 +7,101 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	extender2 "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Extend func(imv1.Runtime, *gardener.Shoot) error
+
+func baseExtenders(cfg config.ConverterConfig) []Extend {
+	return []Extend{
+		extender2.ExtendWithAnnotations,
+		extender2.ExtendWithLabels,
+		extender2.NewDNSExtender(cfg.DNS.SecretName, cfg.DNS.DomainPrefix, cfg.DNS.ProviderType),
+		extender2.NewOidcExtender(cfg.Kubernetes.DefaultOperatorOidc),
+		extender2.ExtendWithCloudProfile,
+		extender2.ExtendWithNetworkFilter,
+		extender2.ExtendWithCertConfig,
+		extender2.ExtendWithExposureClassName,
+		extender2.ExtendWithTolerations,
+		extender2.NewMaintenanceExtender(cfg.Kubernetes.EnableKubernetesVersionAutoUpdate, cfg.Kubernetes.EnableMachineImageVersionAutoUpdate),
+	}
+}
 
 type Converter struct {
 	extenders []Extend
 	config    config.ConverterConfig
 }
 
-func NewConverter(config config.ConverterConfig) Converter {
-	extenders := []Extend{
-		extender2.ExtendWithAnnotations,
-		extender2.ExtendWithLabels,
-		extender2.NewKubernetesExtender(config.Kubernetes.DefaultVersion),
-		extender2.NewProviderExtender(config.Provider.AWS.EnableIMDSv2, config.MachineImage.DefaultName, config.MachineImage.DefaultVersion),
-		extender2.NewDNSExtender(config.DNS.SecretName, config.DNS.DomainPrefix, config.DNS.ProviderType),
-		extender2.NewOidcExtender(config.Kubernetes.DefaultOperatorOidc),
-		extender2.ExtendWithCloudProfile,
-		extender2.ExtendWithNetworkFilter,
-		extender2.ExtendWithCertConfig,
-		extender2.ExtendWithExposureClassName,
-		extender2.ExtendWithTolerations,
-		extender2.NewMaintenanceExtender(config.Kubernetes.EnableKubernetesVersionAutoUpdate, config.Kubernetes.EnableMachineImageVersionAutoUpdate),
-	}
-
+func newConverter(config config.ConverterConfig, extenders ...Extend) Converter {
 	return Converter{
 		extenders: extenders,
 		config:    config,
 	}
+}
+
+type CreateOpts struct {
+	config.ConverterConfig
+	auditlogs.AuditLogData
+}
+
+type PatchOpts struct {
+	config.ConverterConfig
+	auditlogs.AuditLogData
+	Zones             []string
+	ShootK8SVersion   string
+	ShootImageName    string
+	ShootImageVersion string
+}
+
+func NewConverterCreate(opts CreateOpts) Converter {
+	baseExtenders := baseExtenders(opts.ConverterConfig)
+
+	baseExtenders = append(baseExtenders,
+		extender2.NewProviderExtenderForCreateOperation(
+			opts.Provider.AWS.EnableIMDSv2,
+			opts.MachineImage.DefaultName,
+			opts.MachineImage.DefaultVersion,
+		))
+
+	baseExtenders = append(baseExtenders,
+		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
+
+	var zero auditlogs.AuditLogData
+	if opts.AuditLogData != zero {
+		baseExtenders = append(baseExtenders,
+			auditlogs.NewAuditlogExtender(
+				opts.AuditLog.PolicyConfigMapName,
+				opts.AuditLogData))
+	}
+
+	return newConverter(opts.ConverterConfig, baseExtenders...)
+}
+
+func NewConverterPatch(opts PatchOpts) Converter {
+	baseExtenders := baseExtenders(opts.ConverterConfig)
+
+	baseExtenders = append(baseExtenders,
+		extender2.NewProviderExtenderPatchOperation(
+			opts.Provider.AWS.EnableIMDSv2,
+			opts.MachineImage.DefaultName,
+			opts.MachineImage.DefaultVersion,
+			opts.ShootImageName,
+			opts.ShootImageVersion,
+			opts.Zones))
+
+	baseExtenders = append(baseExtenders,
+		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
+
+	var zero auditlogs.AuditLogData
+	if opts.AuditLogData != zero {
+		baseExtenders = append(baseExtenders,
+			auditlogs.NewAuditlogExtender(
+				opts.AuditLog.PolicyConfigMapName,
+				opts.AuditLogData))
+	}
+
+	return newConverter(opts.ConverterConfig, baseExtenders...)
 }
 
 func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
@@ -47,6 +112,10 @@ func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
 	// - if any logic is needed to be implemented, either enhance existing, or create a new extender
 
 	shoot := gardener.Shoot{
+		TypeMeta: v1.TypeMeta{
+			Kind:       "Shoot",
+			APIVersion: "core.gardener.cloud/v1beta1",
+		},
 		ObjectMeta: v1.ObjectMeta{
 			Name:      runtime.Spec.Shoot.Name,
 			Namespace: fmt.Sprintf("garden-%s", c.config.Gardener.ProjectName),

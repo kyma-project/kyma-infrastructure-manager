@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/yaml"
@@ -42,7 +44,26 @@ func sFnDumpShootSpec(_ context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 
 	// To make comparison easier we don't store object obtained from the cluster as it contains additional fields that are not relevant for the comparison.
 	// We use object created by the converter instead (the Provisioner uses the same approach)
-	convertedShoot, err := convertShoot(&s.instance, m.Config.ConverterConfig)
+	data, err := m.AuditLogging.GetAuditLogData(
+		s.instance.Spec.Shoot.Provider.Type,
+		s.instance.Spec.Shoot.Region)
+
+	if err != nil {
+		m.log.Error(err, msgFailedToConfigureAuditlogs)
+	}
+
+	if err != nil && m.RCCfg.AuditLogMandatory {
+		return updateStatePendingWithErrorAndStop(
+			&s.instance,
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonAuditLogError,
+			msgFailedToConfigureAuditlogs)
+	}
+
+	convertedShoot, err := convertCreate(&s.instance, shoot.CreateOpts{
+		ConverterConfig: m.ConverterConfig,
+		AuditLogData:    data,
+	})
 	if err != nil {
 		return updateStatusAndStopWithError(err)
 	}

@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func NewProviderExtender(enableIMDSv2 bool, defaultMachineImageName, defaultMachineImageVersion string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName, defMachineImgVer string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
 		provider.Type = rt.Spec.Shoot.Provider.Type
@@ -22,7 +22,8 @@ func NewProviderExtender(enableIMDSv2 bool, defaultMachineImageName, defaultMach
 
 		var err error
 		var controlPlaneConf, infraConfig *runtime.RawExtension
-		infraConfig, controlPlaneConf, err = getConfig(rt.Spec.Shoot)
+		zones := getZones(rt.Spec.Shoot.Provider.Workers)
+		infraConfig, controlPlaneConf, err = getConfig(rt.Spec.Shoot, zones)
 		if err != nil {
 			return err
 		}
@@ -38,9 +39,44 @@ func NewProviderExtender(enableIMDSv2 bool, defaultMachineImageName, defaultMach
 		provider.ControlPlaneConfig = controlPlaneConf
 		provider.InfrastructureConfig = infraConfig
 
-		setDefaultMachineImage(provider, defaultMachineImageName, defaultMachineImageVersion)
+		setMachineImage(provider, defMachineImgName, defMachineImgVer, "", "")
 		err = setWorkerConfig(provider, provider.Type, enableIMDSv2)
 		setWorkerSettings(provider)
+
+		return err
+	}
+}
+
+func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, defMachineImgVer, currMachineImgName, currMachineImgVer string, zones []string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+		var err error
+		provider := &shoot.Spec.Provider
+		provider.Type = rt.Spec.Shoot.Provider.Type
+		provider.Workers = rt.Spec.Shoot.Provider.Workers
+
+		var controlPlaneConf, infraConfig *runtime.RawExtension
+
+		infraConfig, controlPlaneConf, err = getConfig(rt.Spec.Shoot, zones)
+		if err != nil {
+			return err
+		}
+
+		if rt.Spec.Shoot.Provider.ControlPlaneConfig != nil {
+			controlPlaneConf = rt.Spec.Shoot.Provider.ControlPlaneConfig
+		}
+
+		if rt.Spec.Shoot.Provider.InfrastructureConfig != nil {
+			infraConfig = rt.Spec.Shoot.Provider.InfrastructureConfig
+		}
+
+		provider.ControlPlaneConfig = controlPlaneConf
+		provider.InfrastructureConfig = infraConfig
+
+		setMachineImage(provider, defMachineImgName, defMachineImgVer, currMachineImgName, currMachineImgVer)
+		err = setWorkerConfig(provider, provider.Type, enableIMDSv2)
+		setWorkerSettings(provider)
+
+		alignWithExistingShoot(provider, zones)
 
 		return err
 	}
@@ -49,10 +85,8 @@ func NewProviderExtender(enableIMDSv2 bool, defaultMachineImageName, defaultMach
 type InfrastructureProviderFunc func(workersCidr string, zones []string) ([]byte, error)
 type ControlPlaneProviderFunc func(zones []string) ([]byte, error)
 
-func getConfig(runtimeShoot imv1.RuntimeShoot) (infrastructureConfig *runtime.RawExtension, controlPlaneConfig *runtime.RawExtension, err error) {
+func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string) (infrastructureConfig *runtime.RawExtension, controlPlaneConfig *runtime.RawExtension, err error) {
 	getConfigForProvider := func(runtimeShoot imv1.RuntimeShoot, infrastructureConfigFunc InfrastructureProviderFunc, controlPlaneConfigFunc ControlPlaneProviderFunc) (*runtime.RawExtension, *runtime.RawExtension, error) {
-		zones := getZones(runtimeShoot.Provider.Workers)
-
 		infrastructureConfigBytes, err := infrastructureConfigFunc(runtimeShoot.Networking.Nodes, zones)
 		if err != nil {
 			return nil, nil, err
@@ -137,27 +171,44 @@ func setWorkerSettings(provider *gardener.Provider) {
 	}
 }
 
-func setDefaultMachineImage(provider *gardener.Provider, defaultMachineImageName, defaultMachineImageVersion string) {
+// It sets the machine image name and version to the values specified in the Runtime worker configuration.
+// If any value is not specified in the Runtime, it sets it as `machineImage.defaultVersion` or `machineImage.defaultName`, set in `converter_config.json`.
+// If the current image version with the same name on Shoot is greater than the version determined above, it sets the version to the current machine image version.
+func setMachineImage(provider *gardener.Provider, defMachineImgName, defMachineImgVer, currMachineImgName, currMachineImgVer string) {
 	for i := 0; i < len(provider.Workers); i++ {
 		worker := &provider.Workers[i]
 
 		if worker.Machine.Image == nil {
 			worker.Machine.Image = &gardener.ShootMachineImage{
-				Name:    defaultMachineImageName,
-				Version: &defaultMachineImageVersion,
+				Name:    defMachineImgName,
+				Version: &defMachineImgVer,
 			}
-
-			continue
 		}
 		machineImageVersion := worker.Machine.Image.Version
 		if machineImageVersion == nil || *machineImageVersion == "" {
-			machineImageVersion = &defaultMachineImageVersion
+			machineImageVersion = &defMachineImgVer
 		}
 
 		if worker.Machine.Image.Name == "" {
-			worker.Machine.Image.Name = defaultMachineImageName
+			worker.Machine.Image.Name = defMachineImgName
+		}
+
+		// use current image version from shoot when it is greater than determined above - autoupdate case
+		if currMachineImgName == worker.Machine.Image.Name && currMachineImgVer != "" && currMachineImgVer != *machineImageVersion {
+			result, err := compareVersions(*machineImageVersion, currMachineImgVer)
+			if err == nil && result < 0 {
+				machineImageVersion = &currMachineImgVer
+			}
 		}
 
 		worker.Machine.Image.Version = machineImageVersion
+	}
+}
+
+// We can't predict what will be the order of zones stored by Gardener.
+// Without this patch, gardener's admission webhook might reject the request if the zones order does not match.
+func alignWithExistingShoot(provider *gardener.Provider, zones []string) {
+	for i := range provider.Workers {
+		provider.Workers[i].Zones = zones
 	}
 }

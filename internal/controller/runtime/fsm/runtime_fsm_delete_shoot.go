@@ -3,6 +3,7 @@ package fsm
 import (
 	"context"
 
+	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -31,7 +32,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		})
 
 		if err != nil {
-			m.log.Error(err, "unable to patch shoot:", s.shoot.Name)
+			m.log.Error(err, "unable to patch shoot:", "Name", s.shoot.Name)
 			return requeue()
 		}
 	}
@@ -58,6 +59,13 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 
 	// out section
 	return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+}
+
+// workaround
+func setObjectFields(shoot *gardener.Shoot) {
+	shoot.Kind = "Shoot"
+	shoot.APIVersion = "core.gardener.cloud/v1beta1"
+	shoot.ManagedFields = nil
 }
 
 func isGardenerCloudDelConfirmationSet(a map[string]string) bool {
