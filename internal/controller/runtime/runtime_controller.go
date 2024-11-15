@@ -87,7 +87,7 @@ func NewRuntimeReconciler(mgr ctrl.Manager, shootClient client.Client, logger lo
 func (r *RuntimeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&imv1.Runtime{}).
-		WithOptions(controller.Options{MaxConcurrentReconciles: 10}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: 25}).
 		WithEventFilter(predicate.Or(
 			predicate.GenerationChangedPredicate{},
 			predicate.LabelChangedPredicate{},
