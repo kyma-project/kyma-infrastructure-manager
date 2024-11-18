@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defaultMachineImageName, defaultMachineImageVersion string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName, defMachineImgVer string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
 		provider.Type = rt.Spec.Shoot.Provider.Type
@@ -39,7 +39,7 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defaultMachineImag
 		provider.ControlPlaneConfig = controlPlaneConf
 		provider.InfrastructureConfig = infraConfig
 
-		setDefaultMachineImage(provider, defaultMachineImageName, defaultMachineImageVersion)
+		setMachineImage(provider, defMachineImgName, defMachineImgVer, "", "")
 		err = setWorkerConfig(provider, provider.Type, enableIMDSv2)
 		setWorkerSettings(provider)
 
@@ -47,7 +47,7 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defaultMachineImag
 	}
 }
 
-func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defaultMachineImageName, defaultMachineImageVersion string, zones []string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, defMachineImgVer, currMachineImgName, currMachineImgVer string, zones []string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		var err error
 		provider := &shoot.Spec.Provider
@@ -72,7 +72,7 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defaultMachineImageNam
 		provider.ControlPlaneConfig = controlPlaneConf
 		provider.InfrastructureConfig = infraConfig
 
-		setDefaultMachineImage(provider, defaultMachineImageName, defaultMachineImageVersion)
+		setMachineImage(provider, defMachineImgName, defMachineImgVer, currMachineImgName, currMachineImgVer)
 		err = setWorkerConfig(provider, provider.Type, enableIMDSv2)
 		setWorkerSettings(provider)
 
@@ -171,25 +171,34 @@ func setWorkerSettings(provider *gardener.Provider) {
 	}
 }
 
-func setDefaultMachineImage(provider *gardener.Provider, defaultMachineImageName, defaultMachineImageVersion string) {
+// It sets the machine image name and version to the values specified in the Runtime worker configuration.
+// If any value is not specified in the Runtime, it sets it as `machineImage.defaultVersion` or `machineImage.defaultName`, set in `converter_config.json`.
+// If the current image version with the same name on Shoot is greater than the version determined above, it sets the version to the current machine image version.
+func setMachineImage(provider *gardener.Provider, defMachineImgName, defMachineImgVer, currMachineImgName, currMachineImgVer string) {
 	for i := 0; i < len(provider.Workers); i++ {
 		worker := &provider.Workers[i]
 
 		if worker.Machine.Image == nil {
 			worker.Machine.Image = &gardener.ShootMachineImage{
-				Name:    defaultMachineImageName,
-				Version: &defaultMachineImageVersion,
+				Name:    defMachineImgName,
+				Version: &defMachineImgVer,
 			}
-
-			continue
 		}
 		machineImageVersion := worker.Machine.Image.Version
 		if machineImageVersion == nil || *machineImageVersion == "" {
-			machineImageVersion = &defaultMachineImageVersion
+			machineImageVersion = &defMachineImgVer
 		}
 
 		if worker.Machine.Image.Name == "" {
-			worker.Machine.Image.Name = defaultMachineImageName
+			worker.Machine.Image.Name = defMachineImgName
+		}
+
+		// use current image version from shoot when it is greater than determined above - autoupdate case
+		if currMachineImgName == worker.Machine.Image.Name && currMachineImgVer != "" && currMachineImgVer != *machineImageVersion {
+			result, err := compareVersions(*machineImageVersion, currMachineImgVer)
+			if err == nil && result < 0 {
+				machineImageVersion = &currMachineImgVer
+			}
 		}
 
 		worker.Machine.Image.Version = machineImageVersion

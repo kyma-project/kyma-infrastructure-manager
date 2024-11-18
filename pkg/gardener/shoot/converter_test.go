@@ -21,7 +21,7 @@ func TestConverter(t *testing.T) {
 		// given
 		runtime := fixRuntime()
 		converterConfig := fixConverterConfig()
-		converter := NewConverterCreate(converterConfig)
+		converter := NewConverterCreate(CreateOpts{ConverterConfig: converterConfig})
 
 		// when
 		shoot, err := converter.ToShoot(runtime)
@@ -29,13 +29,39 @@ func TestConverter(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assertShootFields(t, runtime, shoot)
+		assert.Equal(t, "1.28", shoot.Spec.Kubernetes.Version)
+		assert.Equal(t, "gardenlinux", shoot.Spec.Provider.Workers[0].Machine.Image.Name)
+		assert.Equal(t, "1591.1.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
 	})
 
-	t.Run("Create shoot from Runtime for existing shoot", func(t *testing.T) {
+	t.Run("Create shoot with default converter config versions", func(t *testing.T) {
+		// given
+		runtime := fixRuntimeWithNoVersionsSpecified()
+		converterConfig := fixConverterConfig()
+		converter := NewConverterCreate(CreateOpts{ConverterConfig: converterConfig})
+
+		// when
+		shoot, err := converter.ToShoot(runtime)
+
+		// then
+		require.NoError(t, err)
+		assertShootFields(t, runtime, shoot)
+		assert.Equal(t, "1.29", shoot.Spec.Kubernetes.Version)
+		assert.Equal(t, "gardenlinux", shoot.Spec.Provider.Workers[0].Machine.Image.Name)
+		assert.Equal(t, "1592.1.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
+	})
+
+	t.Run("Create shoot from Runtime for existing shoot and keep versions", func(t *testing.T) {
 		// given
 		runtime := fixRuntime()
 		converterConfig := fixConverterConfig()
-		converter := NewConverterPatch(converterConfig, fixReversedZones())
+		converter := NewConverterPatch(PatchOpts{
+			ConverterConfig:   converterConfig,
+			Zones:             fixReversedZones(),
+			ShootK8SVersion:   "1.30",
+			ShootImageName:    "gardenlinux",
+			ShootImageVersion: "1592.2.0",
+		})
 
 		// when
 		shoot, err := converter.ToShoot(runtime)
@@ -50,6 +76,41 @@ func TestConverter(t *testing.T) {
 			"eu-central-1a",
 		}
 		assert.Equal(t, expectedZonesAreInSameOrder, shoot.Spec.Provider.Workers[0].Zones)
+		assert.Equal(t, expectedZonesAreInSameOrder, shoot.Spec.Provider.Workers[0].Zones)
+		assert.Equal(t, "1.30", shoot.Spec.Kubernetes.Version)
+		assert.Equal(t, "gardenlinux", shoot.Spec.Provider.Workers[0].Machine.Image.Name)
+		assert.Equal(t, "1592.2.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
+	})
+
+	t.Run("Create shoot from Runtime for existing shoot and update versions", func(t *testing.T) {
+		// given
+		runtime := fixRuntime()
+		converterConfig := fixConverterConfig()
+		converter := NewConverterPatch(PatchOpts{
+			ConverterConfig:   converterConfig,
+			Zones:             fixReversedZones(),
+			ShootK8SVersion:   "1.27",
+			ShootImageName:    "gardenlinux",
+			ShootImageVersion: "1591.0.0",
+		})
+
+		// when
+		shoot, err := converter.ToShoot(runtime)
+
+		// then
+		require.NoError(t, err)
+		assertShootFields(t, runtime, shoot)
+
+		expectedZonesAreInSameOrder := []string{
+			"eu-central-1c",
+			"eu-central-1b",
+			"eu-central-1a",
+		}
+		assert.Equal(t, expectedZonesAreInSameOrder, shoot.Spec.Provider.Workers[0].Zones)
+		assert.Equal(t, expectedZonesAreInSameOrder, shoot.Spec.Provider.Workers[0].Zones)
+		assert.Equal(t, "1.28", shoot.Spec.Kubernetes.Version)
+		assert.Equal(t, "gardenlinux", shoot.Spec.Provider.Workers[0].Machine.Image.Name)
+		assert.Equal(t, "1591.1.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
 	})
 }
 
@@ -90,11 +151,85 @@ func fixConverterConfig() config.ConverterConfig {
 				EnableIMDSv2: true,
 			},
 		},
+		MachineImage: config.MachineImageConfig{
+			DefaultName:    "gardenlinux",
+			DefaultVersion: "1592.1.0",
+		},
 	}
 }
 
 func fixRuntime() imv1.Runtime {
 	kubernetesVersion := "1.28"
+	clientID := "client-id"
+	groupsClaim := "groups"
+	issuerURL := "https://my.cool.tokens.com"
+	usernameClaim := "sub"
+	imageVersion := "1591.1.0"
+
+	return imv1.Runtime{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "runtime",
+			Namespace: "kcp-system",
+		},
+		Spec: imv1.RuntimeSpec{
+			Shoot: imv1.RuntimeShoot{
+				Purpose:           "production",
+				Region:            "eu-central-1",
+				SecretBindingName: "my-secret",
+				Provider: imv1.Provider{
+					Type: hyperscaler.TypeAWS,
+					Workers: []gardener.Worker{
+						{
+							Name: "worker",
+							Machine: gardener.Machine{
+								Type: "m6i.large",
+								Image: &gardener.ShootMachineImage{
+									Name:    "gardenlinux",
+									Version: &imageVersion,
+								},
+							},
+							Minimum: 1,
+							Maximum: 3,
+							Zones: []string{
+								"eu-central-1a",
+								"eu-central-1b",
+								"eu-central-1c",
+							},
+						},
+					},
+				},
+				Kubernetes: imv1.Kubernetes{
+					Version: &kubernetesVersion,
+					KubeAPIServer: imv1.APIServer{
+						OidcConfig: gardener.OIDCConfig{
+							ClientID:    &clientID,
+							GroupsClaim: &groupsClaim,
+							IssuerURL:   &issuerURL,
+							SigningAlgs: []string{
+								"RS256",
+							},
+							UsernameClaim: &usernameClaim,
+						},
+					},
+				},
+				Networking: imv1.Networking{
+					Pods:     "100.64.0.0/12",
+					Nodes:    "10.250.0.0/16",
+					Services: "100.104.0.0/13",
+				},
+				ControlPlane: &gardener.ControlPlane{
+					HighAvailability: &gardener.HighAvailability{
+						FailureTolerance: gardener.FailureTolerance{
+							Type: gardener.FailureToleranceTypeZone,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func fixRuntimeWithNoVersionsSpecified() imv1.Runtime {
 	clientID := "client-id"
 	groupsClaim := "groups"
 	issuerURL := "https://my.cool.tokens.com"
@@ -129,7 +264,6 @@ func fixRuntime() imv1.Runtime {
 					},
 				},
 				Kubernetes: imv1.Kubernetes{
-					Version: &kubernetesVersion,
 					KubeAPIServer: imv1.APIServer{
 						OidcConfig: gardener.OIDCConfig{
 							ClientID:    &clientID,

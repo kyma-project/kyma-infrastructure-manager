@@ -67,7 +67,6 @@ const (
 	ConditionTypeRuntimeKubeconfigReady   RuntimeConditionType = "KubeconfigReady"
 	ConditionTypeOidcConfigured           RuntimeConditionType = "OidcConfigured"
 	ConditionTypeRuntimeConfigured        RuntimeConditionType = "Configured"
-	ConditionTypeAuditLogConfigured       RuntimeConditionType = "AuditlogConfigured"
 	ConditionTypeRuntimeDeprovisioned     RuntimeConditionType = "Deprovisioned"
 )
 
@@ -98,12 +97,11 @@ const (
 	ConditionReasonSerializationError   = RuntimeConditionReason("SerializationErr")
 	ConditionReasonDeleted              = RuntimeConditionReason("Deleted")
 
-	ConditionReasonAdministratorsConfigured     = RuntimeConditionReason("AdministratorsConfigured")
-	ConditionReasonAuditLogConfigured           = RuntimeConditionReason("AuditLogConfigured")
-	ConditionReasonAuditLogError                = RuntimeConditionReason("AuditLogErr")
-	ConditionReasonAuditLogMissingRegionMapping = RuntimeConditionReason("AuditLogMissingRegionMappingErr")
-	ConditionReasonOidcConfigured               = RuntimeConditionReason("OidcConfigured")
-	ConditionReasonOidcError                    = RuntimeConditionReason("OidcConfigurationErr")
+	ConditionReasonAuditLogError = RuntimeConditionReason("AuditLogErr")
+
+	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
+	ConditionReasonOidcConfigured           = RuntimeConditionReason("OidcConfigured")
+	ConditionReasonOidcError                = RuntimeConditionReason("OidcConfigurationErr")
 )
 
 //+kubebuilder:object:root=true

@@ -101,16 +101,6 @@ var (
 			return nil
 		}
 	}
-
-	withAuditLogging = func(isEnabled bool, err error) fakeFSMOpt {
-		return func(fsm *fsm) error {
-			fsm.AuditLogging = &stubAuditLogging{
-				isEnabled: isEnabled,
-				err:       err,
-			}
-			return nil
-		}
-	}
 )
 
 func newFakeFSM(opts ...fakeFSMOpt) (*fsm, error) {

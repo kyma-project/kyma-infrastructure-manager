@@ -37,7 +37,7 @@ func oSetExtension(d AuditLogData) operation {
 	return func(s *gardener.Shoot) error {
 		cfg := AuditlogExtensionConfig{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       "shoot-auditlog-service",
+				Kind:       "AuditlogConfig",
 				APIVersion: "service.auditlog.extensions.gardener.cloud/v1alpha1",
 			},
 			Type:                "standard",
