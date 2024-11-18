@@ -47,7 +47,11 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 
 		if imgardenerhandler.IsRetryable(lastErrors) {
 			m.log.Info(fmt.Sprintf("Retryable gardener errors during cluster provisioning for Shoot %s, reason: %s, scheduling for retry", s.shoot.Name, reason))
-			//TODO: should update status?
+			s.instance.UpdateStatePending(
+				imv1.ConditionTypeRuntimeProvisioned,
+				imv1.ConditionReasonShootCreationPending,
+				"Unknown",
+				"Retryable gardener errors during cluster provisioning")
 			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
 		}
 
