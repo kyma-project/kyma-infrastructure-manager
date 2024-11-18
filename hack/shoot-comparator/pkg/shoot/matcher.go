@@ -28,7 +28,7 @@ func NewMatcherForCreate(i interface{}) types.GomegaMatcher {
 func NewMatcherForPatch(i interface{}) types.GomegaMatcher {
 	return &Matcher{
 		toMatch:    i,
-		DNSMatcher: gomega.BeTrueBecause("immutable field"),
+		DNSMatcher: gstruct.Ignore(),
 	}
 }
 
