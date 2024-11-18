@@ -20,7 +20,7 @@ func CompareFiles(leftFile, rightFile string) (bool, string, error) {
 		return false, "", err
 	}
 
-	matcher := shoot.NewMatcher(leftObject)
+	matcher := shoot.NewMatcherForCreate(leftObject)
 
 	success, err := matcher.Match(rightObject)
 	if err != nil {
