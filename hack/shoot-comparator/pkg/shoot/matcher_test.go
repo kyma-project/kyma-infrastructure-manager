@@ -45,13 +45,13 @@ func deepCp(s v1beta1.Shoot, opts ...deepCpOpts) v1beta1.Shoot {
 }
 
 func testInvalidArgs(actual, expected interface{}) {
-	matcher := NewMatcher(expected)
+	matcher := NewMatcherForCreate(expected)
 	_, err := matcher.Match(actual)
 	Expect(err).To(HaveOccurred())
 }
 
 func testResults(actual, expected interface{}, expectedMatch bool) {
-	matcher := NewMatcher(expected)
+	matcher := NewMatcherForCreate(expected)
 	actualMatch, err := matcher.Match(actual)
 	Expect(err).ShouldNot(HaveOccurred(), err)
 	Expect(actualMatch).Should(Equal(expectedMatch), matcher.FailureMessage(actual))
