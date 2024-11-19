@@ -25,7 +25,7 @@ import (
 
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_oidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
-	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
@@ -95,7 +95,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = infrastructuremanagerv1.AddToScheme(scheme.Scheme)
+	err = imv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
@@ -107,7 +107,7 @@ var _ = BeforeSuite(func() {
 
 	clientScheme := runtime.NewScheme()
 	_ = gardener_api.AddToScheme(clientScheme)
-	_ = infrastructuremanagerv1.AddToScheme(clientScheme)
+	_ = imv1.AddToScheme(clientScheme)
 
 	// tracker will be updated with different shoot sequence for each test case
 	tracker := clienttesting.NewObjectTracker(clientScheme, serializer.NewCodecFactory(clientScheme).UniversalDecoder())
@@ -122,7 +122,7 @@ var _ = BeforeSuite(func() {
 	mm.On("CleanUpRuntimeGauge", mock.Anything, mock.Anything).Return()
 
 	fsmCfg := fsm.RCCfg{
-		Finalizer:                   infrastructuremanagerv1.Finalizer,
+		Finalizer:                   imv1.Finalizer,
 		Config:                      convConfig,
 		Metrics:                     mm,
 		AuditLogging:                map[string]map[string]auditlogs.AuditLogData{},
@@ -145,7 +145,7 @@ var _ = BeforeSuite(func() {
 	err = gardener_oidc.AddToScheme(shootClientScheme)
 	k8sFakeClientRoleBindings = fake.NewClientBuilder().WithScheme(shootClientScheme).Build()
 
-	fsm.GetShootClient = func(_ context.Context, _ client.SubResourceClient, _ *gardener_api.Shoot) (client.Client, error) {
+	fsm.GetShootClient = func(_ context.Context, _ client.Client, _ imv1.Runtime) (client.Client, error) {
 		return k8sFakeClientRoleBindings, nil
 	}
 

@@ -2,10 +2,12 @@ package fsm
 
 import (
 	"context"
+	"fmt"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"slices"
+	"time"
 
-	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
-	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,9 +26,7 @@ var (
 )
 
 func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	// prepare subresource client to request admin kubeconfig
-	srscClient := m.ShootClient.SubResource("adminkubeconfig")
-	shootAdminClient, err := GetShootClient(ctx, srscClient, s.shoot)
+	shootAdminClient, err := GetShootClient(ctx, m.Client, s.instance)
 	if err != nil {
 		updateCRBApplyFailed(&s.instance)
 		return updateStatusAndStopWithError(err)
@@ -61,25 +61,44 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 }
 
 //nolint:gochecknoglobals
-var GetShootClient = func(ctx context.Context,
-	adminKubeconfigClient client.SubResourceClient, shoot *gardener_api.Shoot) (client.Client, error) {
-	// request for admin kubeconfig with low expiration timeout
-	var req authenticationv1alpha1.AdminKubeconfigRequest
-	if err := adminKubeconfigClient.Create(ctx, shoot, &req); err != nil {
-		return nil, err
-	}
+var GetShootClient = func(ctx context.Context, cnt client.Client, runtime imv1.Runtime) (client.Client, error) {
+	runtimeID := runtime.Labels[imv1.LabelKymaRuntimeID]
 
-	restConfig, err := clientcmd.RESTConfigFromKubeConfig(req.Status.Kubeconfig)
+	secret, err := getKubeconfigSecret(ctx, cnt, runtimeID, runtime.Namespace)
 	if err != nil {
 		return nil, err
 	}
 
+	restConfig, err := clientcmd.RESTConfigFromKubeConfig(secret.Data[kubeconfigSecretKey])
+	if err != nil {
+		return nil, err
+	}
+
+	restConfig.Timeout = 250 * time.Millisecond
 	shootClientWithAdmin, err := client.New(restConfig, client.Options{})
 	if err != nil {
 		return nil, err
 	}
 
 	return shootClientWithAdmin, nil
+}
+
+func getKubeconfigSecret(ctx context.Context, cnt client.Client, runtimeID, namespace string) (corev1.Secret, error) {
+	secretName := fmt.Sprintf("kubeconfig-%s", runtimeID)
+
+	var kubeconfigSecret corev1.Secret
+	secretKey := types.NamespacedName{Name: secretName, Namespace: namespace}
+
+	err := cnt.Get(ctx, secretKey, &kubeconfigSecret)
+
+	if err != nil {
+		return corev1.Secret{}, err
+	}
+
+	if kubeconfigSecret.Data == nil {
+		return corev1.Secret{}, fmt.Errorf("kubeconfig secret `%s` does not contain kubeconfig data", kubeconfigSecret.Name)
+	}
+	return kubeconfigSecret, nil
 }
 
 func isRBACUserKindOneOf(names []string) func(rbacv1.Subject) bool {

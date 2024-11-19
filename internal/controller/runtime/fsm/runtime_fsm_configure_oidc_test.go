@@ -63,7 +63,7 @@ func TestOidcState(t *testing.T) {
 		var fakeClient = fake.NewClientBuilder().
 			WithScheme(scheme).
 			Build()
-		fsm := &fsm{K8s: K8s{
+		testFsm := &fsm{K8s: K8s{
 			ShootClient: fakeClient,
 			Client:      fakeClient,
 		},
@@ -77,8 +77,8 @@ func TestOidcState(t *testing.T) {
 		}
 		GetShootClient = func(
 			_ context.Context,
-			_ client.SubResourceClient,
-			_ *gardener.Shoot) (client.Client, error) {
+			_ client.Client,
+			_ imv1.Runtime) (client.Client, error) {
 			return fakeClient, nil
 		}
 		// end of fake client setup
@@ -106,7 +106,7 @@ func TestOidcState(t *testing.T) {
 		}
 
 		// when
-		stateFn, _, _ := sFnConfigureOidc(ctx, fsm, systemState)
+		stateFn, _, _ := sFnConfigureOidc(ctx, testFsm, systemState)
 
 		// then
 		require.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
@@ -131,14 +131,14 @@ func TestOidcState(t *testing.T) {
 		var fakeClient = fake.NewClientBuilder().
 			WithScheme(scheme).
 			Build()
-		fsm := &fsm{K8s: K8s{
+		testFsm := &fsm{K8s: K8s{
 			ShootClient: fakeClient,
 			Client:      fakeClient,
 		}}
 		GetShootClient = func(
 			_ context.Context,
-			_ client.SubResourceClient,
-			_ *gardener.Shoot) (client.Client, error) {
+			_ client.Client,
+			_ imv1.Runtime) (client.Client, error) {
 			return fakeClient, nil
 		}
 		// end of fake client setup
@@ -171,7 +171,7 @@ func TestOidcState(t *testing.T) {
 		}
 
 		// when
-		stateFn, _, _ := sFnConfigureOidc(ctx, fsm, systemState)
+		stateFn, _, _ := sFnConfigureOidc(ctx, testFsm, systemState)
 
 		// then
 		require.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
@@ -198,14 +198,14 @@ func TestOidcState(t *testing.T) {
 		var fakeClient = fake.NewClientBuilder().
 			WithScheme(scheme).
 			Build()
-		fsm := &fsm{K8s: K8s{
+		testFSM := &fsm{K8s: K8s{
 			ShootClient: fakeClient,
 			Client:      fakeClient,
 		}}
 		GetShootClient = func(
 			_ context.Context,
-			_ client.SubResourceClient,
-			_ *gardener.Shoot) (client.Client, error) {
+			_ client.Client,
+			_ imv1.Runtime) (client.Client, error) {
 			return fakeClient, nil
 		}
 		// end of fake client setup
@@ -241,7 +241,7 @@ func TestOidcState(t *testing.T) {
 		}
 
 		// when
-		stateFn, _, _ := sFnConfigureOidc(ctx, fsm, systemState)
+		stateFn, _, _ := sFnConfigureOidc(ctx, testFSM, systemState)
 
 		// then
 		require.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
