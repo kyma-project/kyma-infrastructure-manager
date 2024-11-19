@@ -202,7 +202,7 @@ func TestProviderExtender(t *testing.T) {
 			CurrentZonesConfig:          []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"},
 			TestForPatch:                true,
 		},
-		//"Patch option different image name - override image name and version with current image name and version": {},
+		// "Patch option different image name - override image name and version with current image name and version": {},
 	} {
 		t.Run(tname, func(t *testing.T) {
 			// given

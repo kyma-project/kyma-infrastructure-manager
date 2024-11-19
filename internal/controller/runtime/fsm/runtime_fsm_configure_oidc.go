@@ -72,7 +72,6 @@ func createDefaultOIDCConfig(defaultSharedIASTenant config.OidcProvider) gardene
 }
 
 func recreateOpenIDConnectResources(ctx context.Context, m *fsm, s *systemState) error {
-
 	shootAdminClient, shootClientError := GetShootClient(ctx, m.Client, s.instance)
 	if shootClientError != nil {
 		return shootClientError
