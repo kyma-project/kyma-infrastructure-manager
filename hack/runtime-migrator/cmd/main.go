@@ -5,15 +5,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-playground/validator/v10"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"io"
-	v12 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"log/slog"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	v12 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
@@ -28,7 +29,7 @@ import (
 )
 
 const (
-	contextTimeout      = 5 * time.Minute
+	timeoutK8sOperation = 5 * time.Second
 	expirationTime      = 60 * time.Minute
 	runtimeIDAnnotation = "kcp.provisioner.kyma-project.io/runtime-id"
 )
@@ -89,7 +90,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = migrator.Do(runtimeIds)
+	err = migrator.Do(context.Background(), runtimeIds)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to migrate runtimes: %v", slog.Any("error", err)))
 		os.Exit(1)

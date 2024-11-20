@@ -18,7 +18,6 @@ func baseExtenders(cfg config.ConverterConfig) []Extend {
 		extender2.ExtendWithAnnotations,
 		extender2.ExtendWithLabels,
 		extender2.ExtendWithSeedSelector,
-		extender2.NewDNSExtender(cfg.DNS.SecretName, cfg.DNS.DomainPrefix, cfg.DNS.ProviderType),
 		extender2.NewOidcExtender(cfg.Kubernetes.DefaultOperatorOidc),
 		extender2.ExtendWithCloudProfile,
 		extender2.ExtendWithNetworkFilter,
@@ -64,6 +63,10 @@ func NewConverterCreate(opts CreateOpts) Converter {
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
 		))
+
+	baseExtenders = append(baseExtenders,
+		extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType),
+	)
 
 	baseExtenders = append(baseExtenders,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
