@@ -17,6 +17,7 @@ func baseExtenders(cfg config.ConverterConfig) []Extend {
 	return []Extend{
 		extender2.ExtendWithAnnotations,
 		extender2.ExtendWithLabels,
+		extender2.ExtendWithSeedSelector,
 		extender2.NewOidcExtender(cfg.Kubernetes.DefaultOperatorOidc),
 		extender2.ExtendWithCloudProfile,
 		extender2.ExtendWithNetworkFilter,
