@@ -46,6 +46,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/flowcontrol"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -239,6 +240,8 @@ func initGardenerClients(kubeconfigPath string, namespace string) (client.Client
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
+	restConfig.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(5, 5)
 
 	gardenerClientSet, err := gardener_apis.NewForConfig(restConfig)
 	if err != nil {
