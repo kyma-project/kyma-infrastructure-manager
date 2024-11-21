@@ -30,11 +30,11 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 	}
 
 	DescribeTable("getMissing",
-		func(tc tcGetCRB) {
+		func(tc tcCRBData) {
 			actual := getMissing(tc.crbs, tc.admins)
 			Expect(actual).To(BeComparableTo(tc.expected))
 		},
-		Entry("should return a list with CRBs to be created", tcGetCRB{
+		Entry("should return a list with CRBs to be created", tcCRBData{
 			admins: []string{"test1", "test2"},
 			crbs:   nil,
 			expected: []rbacv1.ClusterRoleBinding{
@@ -42,7 +42,16 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 				toAdminClusterRoleBinding("test2"),
 			},
 		}),
-		Entry("should return nil list if no admins missing", tcGetCRB{
+		Entry("should return nil list if no admins missing", tcCRBData{
+			admins: []string{"test1", "test2", "test3"},
+			crbs: []rbacv1.ClusterRoleBinding{
+				toAdminClusterRoleBinding("test1"),
+				toManagedClusterRoleBinding("test2", "reconciler"),
+				toManagedClusterRoleBinding("test3", "infrastructure-manager"),
+			},
+			expected: nil,
+		}),
+		Entry("should return nil list if no admins missing", tcCRBData{
 			admins: []string{"test1"},
 			crbs: []rbacv1.ClusterRoleBinding{
 				toAdminClusterRoleBinding("test1"),
@@ -52,26 +61,26 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 	)
 
 	DescribeTable("getRemoved",
-		func(tc tcGetCRB) {
+		func(tc tcCRBData) {
 			actual := getRemoved(tc.crbs, tc.admins)
 			Expect(actual).To(BeComparableTo(tc.expected))
 		},
-		Entry("should return nil list if CRB list is nil", tcGetCRB{
+		Entry("should return nil list if CRB list is nil", tcCRBData{
 			admins:   []string{"test1"},
 			crbs:     nil,
 			expected: nil,
 		}),
-		Entry("should return nil list if CRB list is empty", tcGetCRB{
+		Entry("should return nil list if CRB list is empty", tcCRBData{
 			admins:   []string{"test1"},
 			crbs:     []rbacv1.ClusterRoleBinding{},
 			expected: nil,
 		}),
-		Entry("should return nil list if no admins to remove", tcGetCRB{
+		Entry("should return nil list if no admins to remove", tcCRBData{
 			admins:   []string{"test1"},
 			crbs:     []rbacv1.ClusterRoleBinding{toAdminClusterRoleBinding("test1")},
 			expected: nil,
 		}),
-		Entry("should return list if with CRBs to remove", tcGetCRB{
+		Entry("should return list if with CRBs to remove", tcCRBData{
 			admins: []string{"test2"},
 			crbs: []rbacv1.ClusterRoleBinding{
 				toAdminClusterRoleBinding("test1"),
@@ -81,6 +90,38 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 			expected: []rbacv1.ClusterRoleBinding{
 				toAdminClusterRoleBinding("test1"),
 				toAdminClusterRoleBinding("test3"),
+			},
+		}),
+		Entry("should not remove CRB managed by reconciler", tcCRBData{
+			admins: []string{"test1", "test2"},
+			crbs: []rbacv1.ClusterRoleBinding{
+				toManagedClusterRoleBinding("test1", "reconciler"),
+				toAdminClusterRoleBinding("test3"),
+			},
+			expected: []rbacv1.ClusterRoleBinding{
+				toAdminClusterRoleBinding("test3"),
+			},
+		}),
+		Entry("should not remove CRB not managed by reconciler or KIM", tcCRBData{
+			admins: []string{"test1", "test2"},
+			crbs: []rbacv1.ClusterRoleBinding{
+				toManagedClusterRoleBinding("test3", "should-stay"),
+				toManagedClusterRoleBinding("test4", ""),
+			},
+			expected: nil,
+		}),
+		Entry("should remove CRB managed by reconciler or KIM, that are not in the admin list", tcCRBData{
+			admins: []string{"test4", "test5"},
+			crbs: []rbacv1.ClusterRoleBinding{
+				toManagedClusterRoleBinding("test1", "infrastructure-manager"),
+				toManagedClusterRoleBinding("test2", "reconciler"),
+				toManagedClusterRoleBinding("test3", "should-stay"),
+				toManagedClusterRoleBinding("test4", "infrastructure-manager"),
+				toManagedClusterRoleBinding("test5", "reconciler"),
+			},
+			expected: []rbacv1.ClusterRoleBinding{
+				toManagedClusterRoleBinding("test1", "infrastructure-manager"),
+				toManagedClusterRoleBinding("test2", "reconciler"),
 			},
 		}),
 	)
@@ -198,7 +239,7 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 	)
 })
 
-type tcGetCRB struct {
+type tcCRBData struct {
 	crbs     []rbacv1.ClusterRoleBinding
 	admins   []string
 	expected []rbacv1.ClusterRoleBinding
@@ -235,4 +276,12 @@ func newTestScheme() (*runtime.Scheme, error) {
 		}
 	}
 	return schema, nil
+}
+
+func toManagedClusterRoleBinding(name, managedBy string) rbacv1.ClusterRoleBinding {
+	clusterRoleBinding := toAdminClusterRoleBinding(name)
+	clusterRoleBinding.Labels = map[string]string{
+		"reconciler.kyma-project.io/managed-by": managedBy,
+	}
+	return clusterRoleBinding
 }

@@ -10,8 +10,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-type ErrReason string
-
 func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Select shoot processing state")
 
