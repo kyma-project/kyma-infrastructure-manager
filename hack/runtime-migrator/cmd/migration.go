@@ -70,12 +70,12 @@ func (m Migration) Do(ctx context.Context, runtimeIDs []string) error {
 	reportValidationError := func(runtimeID, shootName string, msg string, err error) {
 		errorMsg := fmt.Sprintf("%s: %v", msg, err)
 		results.ValidationErrorOccurred(runtimeID, shootName, errorMsg)
-		slog.Warn(msg, "runtimeID", runtimeID)
+		slog.Error(msg, "runtimeID", runtimeID)
 	}
 
 	reportUnwantedUpdateDetected := func(runtimeID, shootName string, msg string) {
 		results.ValidationDetectedUnwantedUpdate(runtimeID, shootName)
-		slog.Info(msg, "runtimeID", runtimeID)
+		slog.Warn(msg, "runtimeID", runtimeID)
 	}
 
 	reportSuccess := func(runtimeID, shootName string, msg string) {
