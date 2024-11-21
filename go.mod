@@ -8,7 +8,7 @@ require (
 	github.com/gardener/gardener-extension-provider-aws v1.57.1
 	github.com/gardener/gardener-extension-provider-gcp v1.39.0
 	github.com/gardener/gardener-extension-provider-openstack v1.42.1
-	github.com/gardener/oidc-webhook-authenticator v0.32.0
+	github.com/gardener/oidc-webhook-authenticator v0.33.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-playground/validator/v10 v10.22.1
 	github.com/onsi/ginkgo/v2 v2.20.2

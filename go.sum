@@ -30,8 +30,8 @@ github.com/gardener/gardener-extension-provider-gcp v1.39.0 h1:fLx5tiu6EUa1VJzkq
 github.com/gardener/gardener-extension-provider-gcp v1.39.0/go.mod h1:0+YVRmwO0Scvm7M3AZoxq2k30tHxRUgAbQZbmhUs920=
 github.com/gardener/gardener-extension-provider-openstack v1.42.1 h1:Umj1dOFn0bLsNQR3dZup3+20j5UtSSAOm3ms5LkaZt0=
 github.com/gardener/gardener-extension-provider-openstack v1.42.1/go.mod h1:77m0Wte0mF1HiQxi3ixLqCyHoJKRs9INCAI/9CKF7Xc=
-github.com/gardener/oidc-webhook-authenticator v0.32.0 h1:neLYl+t62wkCVtgSIQbbckj+2zHD24kg81d0fADY4xg=
-github.com/gardener/oidc-webhook-authenticator v0.32.0/go.mod h1:a5jrgVLDX0jpQYFPRHlpr2mp3ZKFm6LNhrXPKzep1b4=
+github.com/gardener/oidc-webhook-authenticator v0.33.0 h1:2qMM9dol/S3Paz1GUxFb6ZXqWEKK/dfy/XFrbjNXZGk=
+github.com/gardener/oidc-webhook-authenticator v0.33.0/go.mod h1:a5jrgVLDX0jpQYFPRHlpr2mp3ZKFm6LNhrXPKzep1b4=
 github.com/go-jose/go-jose/v4 v4.0.3 h1:o8aphO8Hv6RPmH+GfzVuyf7YXSBibp+8YyHdOoDESGo=
 github.com/go-jose/go-jose/v4 v4.0.3/go.mod h1:NKb5HO1EZccyMpiZNbdUw/14tiXNyUJh188dfnMCAfc=
 github.com/go-jose/go-jose/v4 v4.0.4 h1:VsjPI33J0SB9vQM6PLmNjoHqMQNGPiZ0rHL7Ni7Q6/E=
