@@ -31,7 +31,7 @@ cat ./runtime-migrator \
 ```
 
 The above **execution example** will: 
-1. take the input from `input/runtimeIds.json` file (json with runtime identifiers array)
+1. take the input from the `input/runtimeIds.json` file (json with runtime identifiers array)
 1. proceed only with Runtime CRs creation for clusters listed in the input 
 1. save output files in the `/tmp/<generated name>` directory. The output directory contains the following:
     - `migration-results.json` - the output file with the migration results
@@ -39,7 +39,7 @@ The above **execution example** will:
     - `comparison-results` - the directory with the files generated during the comparison process
 1. They will not be applied on the KCP cluster (`dry-run` mode)
 
-The input can be also provided in a form of text file:
+The input can be also provided in the form of a text file:
 ```bash
 cat ./runtime-migrator \
   -gardener-kubeconfig-path=/Users/myuser/gardener-kubeconfig.yml \
