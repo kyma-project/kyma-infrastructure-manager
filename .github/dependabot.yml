@@ -6,6 +6,21 @@
 version: 2
 updates:
   - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/" # Location of package manifests
+    directories: 
+      - "/" # Location of package manifests
+      - "/hack/runtime-migrator"
+    groups:
+      k8s:
+        patterns:
+        - "k8s.io*"
+        update-types:
+        - "minor"
+        - "patch"
+      gardener:
+        patterns:
+        - "github.com/gardener/*"
+        update-types:
+        - "minor"
+        - "patch"
     schedule:
       interval: "weekly"
