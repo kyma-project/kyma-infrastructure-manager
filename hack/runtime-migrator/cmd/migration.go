@@ -119,7 +119,7 @@ func (m Migration) Do(ctx context.Context, runtimeIDs []string) error {
 				return
 			}
 
-			reportUnwantedUpdateDetected(runtimeID, shoot.Name, "Runtime CR can cause unwanted update in Gardener. Please verify the runtime CR.")
+			reportUnwantedUpdateDetected(runtimeID, shoot.Name, "Runtime CR can cause unwanted update in Gardener.")
 			return
 		}
 
