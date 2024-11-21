@@ -24,8 +24,8 @@ github.com/gabriel-vasile/mimetype v1.4.3 h1:in2uUcidCuFcDKtdcBxlR0rJ1+fsokWf+uq
 github.com/gabriel-vasile/mimetype v1.4.3/go.mod h1:d8uq/6HKRL6CGdk+aubisF/M5GcPfT7nKyLpA0lbSSk=
 github.com/gardener/gardener v1.106.1 h1:nbWHqV/rV5Q/7nfuMD5mudWmRnBYZfaJC3O0QaVqwYI=
 github.com/gardener/gardener v1.106.1/go.mod h1:l5TUgzs/Gv8SbuUFW/hCnfID6oo1/DRrGXx/IbjwQi8=
-github.com/gardener/gardener-extension-provider-aws v1.57.1 h1:9CLTxWw1q1TGTlW+8fJEj/ilxkZurcv2KmebLrgH5lU=
-github.com/gardener/gardener-extension-provider-aws v1.57.1/go.mod h1:7eonlUnJVODAER50EvdTrvZUVBL+peNOxfYNjyOzOks=
+github.com/gardener/gardener-extension-provider-aws v1.58.3 h1:YDv5s5BEVpPQ+x70tHOcwf762/vo/I6OvwjeT3FD3AU=
+github.com/gardener/gardener-extension-provider-aws v1.58.3/go.mod h1:EFrr2XNSCCEzC6U8Y/wUxCri3Y8zwgaRvFxEPkMOJww=
 github.com/gardener/gardener-extension-provider-gcp v1.39.0 h1:fLx5tiu6EUa1VJzkqLltnlkDm+l5xLCJuQ13h8o3Uhg=
 github.com/gardener/gardener-extension-provider-gcp v1.39.0/go.mod h1:0+YVRmwO0Scvm7M3AZoxq2k30tHxRUgAbQZbmhUs920=
 github.com/gardener/gardener-extension-provider-openstack v1.42.1 h1:Umj1dOFn0bLsNQR3dZup3+20j5UtSSAOm3ms5LkaZt0=
