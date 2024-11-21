@@ -97,7 +97,6 @@ func isRBACUserKindOneOf(names []string) func(rbacv1.Subject) bool {
 func getRemoved(crbs []rbacv1.ClusterRoleBinding, admins []string) (removed []rbacv1.ClusterRoleBinding) {
 	// iterate over cluster role bindings to find out removed administrators
 	for _, crb := range crbs {
-
 		if !managedByKIM(crb) {
 			// cluster role binding is not controlled by KIM
 			continue
@@ -126,7 +125,6 @@ func managedByKIM(crb rbacv1.ClusterRoleBinding) bool {
 	isManagedByReconciler := selector.Matches(labels.Set(labelsManagedByReconciler))
 	// Provisioner managed CRBs with label managed-by=reconciler, we have to manage them as well
 	return isManagedByKIM || isManagedByReconciler
-
 }
 
 //nolint:gochecknoglobals
