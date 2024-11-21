@@ -26,8 +26,8 @@ github.com/gardener/gardener v1.106.1 h1:nbWHqV/rV5Q/7nfuMD5mudWmRnBYZfaJC3O0QaV
 github.com/gardener/gardener v1.106.1/go.mod h1:l5TUgzs/Gv8SbuUFW/hCnfID6oo1/DRrGXx/IbjwQi8=
 github.com/gardener/gardener-extension-provider-aws v1.57.1 h1:9CLTxWw1q1TGTlW+8fJEj/ilxkZurcv2KmebLrgH5lU=
 github.com/gardener/gardener-extension-provider-aws v1.57.1/go.mod h1:7eonlUnJVODAER50EvdTrvZUVBL+peNOxfYNjyOzOks=
-github.com/gardener/gardener-extension-provider-gcp v1.39.0 h1:fLx5tiu6EUa1VJzkqLltnlkDm+l5xLCJuQ13h8o3Uhg=
-github.com/gardener/gardener-extension-provider-gcp v1.39.0/go.mod h1:0+YVRmwO0Scvm7M3AZoxq2k30tHxRUgAbQZbmhUs920=
+github.com/gardener/gardener-extension-provider-gcp v1.40.1 h1:ErTgztMj/6zLSN8sFJXQ2D3ZNyGD1t+GZjAcCBIP+mU=
+github.com/gardener/gardener-extension-provider-gcp v1.40.1/go.mod h1:7Ra8FdadX+y2xcSwJ1Y4gLOYoS5dcY28lIbNamafVqA=
 github.com/gardener/gardener-extension-provider-openstack v1.42.1 h1:Umj1dOFn0bLsNQR3dZup3+20j5UtSSAOm3ms5LkaZt0=
 github.com/gardener/gardener-extension-provider-openstack v1.42.1/go.mod h1:77m0Wte0mF1HiQxi3ixLqCyHoJKRs9INCAI/9CKF7Xc=
 github.com/gardener/oidc-webhook-authenticator v0.32.0 h1:neLYl+t62wkCVtgSIQbbckj+2zHD24kg81d0fADY4xg=
