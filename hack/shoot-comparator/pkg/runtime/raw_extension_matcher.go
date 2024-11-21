@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/kyma-project/infrastructure-manager/hack/shoot-comparator/pkg/utilz"
 	"github.com/onsi/gomega"
@@ -43,7 +44,9 @@ func (m *RawExtensionMatcher) Match(actual interface{}) (bool, error) {
 	sort.Sort(sortBytes(rawActual))
 	sort.Sort(sortBytes(rawToMatch))
 
-	return gomega.BeComparableTo(rawActual).Match(rawToMatch)
+	return gomega.
+		BeComparableTo(strings.TrimSpace(string(rawActual))).
+		Match(strings.TrimSpace(string(rawToMatch)))
 }
 
 func (m *RawExtensionMatcher) NegatedFailureMessage(_ interface{}) string {

@@ -14,13 +14,21 @@ import (
 )
 
 type Matcher struct {
-	toMatch interface{}
-	fails   []string
+	toMatch    interface{}
+	fails      []string
+	DNSMatcher types.GomegaMatcher
 }
 
-func NewMatcher(i interface{}) types.GomegaMatcher {
+func NewMatcherForCreate(i interface{}) types.GomegaMatcher {
 	return &Matcher{
 		toMatch: i,
+	}
+}
+
+func NewMatcherForPatch(i interface{}) types.GomegaMatcher {
+	return &Matcher{
+		toMatch:    i,
+		DNSMatcher: gstruct.Ignore(),
 	}
 }
 
@@ -54,6 +62,10 @@ func (m *Matcher) Match(actual interface{}) (success bool, err error) {
 	shootToMatch, err := getShoot(m.toMatch)
 	if err != nil {
 		return false, err
+	}
+
+	if m.DNSMatcher == nil {
+		m.DNSMatcher = newDNSMatcher(shootToMatch.Spec.DNS)
 	}
 
 	matchers := []propertyMatcher{
@@ -118,7 +130,7 @@ func (m *Matcher) Match(actual interface{}) (success bool, err error) {
 			path:          "spec/secretBindingName",
 		},
 		{
-			GomegaMatcher: newDNSMatcher(shootToMatch.Spec.DNS),
+			GomegaMatcher: m.DNSMatcher,
 			path:          "spec/dns",
 			actual:        shootActual.Spec.DNS,
 		},

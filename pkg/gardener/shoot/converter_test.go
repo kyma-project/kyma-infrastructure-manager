@@ -80,6 +80,14 @@ func TestConverter(t *testing.T) {
 		assert.Equal(t, "1.30", shoot.Spec.Kubernetes.Version)
 		assert.Equal(t, "gardenlinux", shoot.Spec.Provider.Workers[0].Machine.Image.Name)
 		assert.Equal(t, "1592.2.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
+		assert.Nil(t, shoot.Spec.DNS)
+
+		extensionLen := len(shoot.Spec.Extensions)
+		require.Equalf(t, extensionLen, 3, "unexpected number of extensions: %d, expected: 3", extensionLen)
+		// consider switchin to NotElementsMatch, whem released https://github.com/Antonboom/testifylint/issues/99
+		for _, extension := range shoot.Spec.Extensions {
+			assert.NotEqual(t, "shoot-dns-service", extension.Type, "unexpected immutable field extension: 'shoot-dns-service'")
+		}
 	})
 
 	t.Run("Create shoot from Runtime for existing shoot and update versions", func(t *testing.T) {

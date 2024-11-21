@@ -87,7 +87,7 @@ func getZones(workers []v1beta1.Worker) []string {
 }
 
 func compare(originalShoot, convertedShoot v1beta1.Shoot) (*Difference, error) {
-	matcher := shoot.NewMatcher(originalShoot)
+	matcher := shoot.NewMatcherForPatch(originalShoot)
 	equal, err := matcher.Match(convertedShoot)
 	if err != nil {
 		return nil, err

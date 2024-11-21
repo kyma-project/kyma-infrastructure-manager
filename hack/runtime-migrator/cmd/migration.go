@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"log/slog"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -85,7 +86,7 @@ func (m Migration) Do(ctx context.Context, runtimeIDs []string) error {
 	run := func(runtimeID string) {
 		shoot := findShoot(runtimeID, shootList)
 		if shoot == nil {
-			reportError(runtimeID, "", "Failed to find shoot", nil)
+			reportError(runtimeID, "", "Failed to find shoot", errors.New("no shoot with given runtimeID found"))
 			return
 		}
 
