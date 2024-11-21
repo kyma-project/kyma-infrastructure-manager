@@ -124,9 +124,9 @@ The `migration-results.json` file contains the following content:
 
 ```
 The following problems were detected in the above example:
-- The shoot with the `0a61a3c4-0ea8-4e39-860a-7853f0b6d180` runtime ID was not found ; the runtime Iidentifier may be incorrect, or the shoot was deleted for some reason.
-- The shoot with the `6daf5f59-b0ab-44af-bb8e-7735fd609449` runtime ID failed during the validation process. The error message indicates that the configuration is missing.
-- The shoot with the `99a38a99-e8d7-4b98-a6f2-5a54ed389c4d` runtime ID may cause an unwanted update in the Gardener. The comparison results are saved in the `/tmp/migration-2024-11-21T14:53:24+01:00/comparison-results/99a38a99-e8d7-4b98-a6f2-5a54ed389c4d` directory.
+- The runtime with the `0a61a3c4-0ea8-4e39-860a-7853f0b6d180` identifier was not found ; the identifier may be incorrect, or the corresponding shoot was deleted for some reason.
+- The validation process for the runtime with the `6daf5f59-b0ab-44af-bb8e-7735fd609449` identifier failed. 
+- The runtime with the `99a38a99-e8d7-4b98-a6f2-5a54ed389c4d` identifier may cause an unwanted update in the Gardener. The comparison results are saved in the `/tmp/migration-2024-11-21T14:53:24+01:00/comparison-results/99a38a99-e8d7-4b98-a6f2-5a54ed389c4d` directory.
 
 
 The `/tmp/migration-2024-11-21T14:53:24+01:00/comparison-results/99a38a99-e8d7-4b98-a6f2-5a54ed389c4d"` directory contains the following files:
