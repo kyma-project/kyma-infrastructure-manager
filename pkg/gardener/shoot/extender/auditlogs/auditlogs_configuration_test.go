@@ -72,5 +72,4 @@ func fixTestAuditlogData(id int) AuditLogData {
 		ServiceURL: fmt.Sprintf("https://test.service.%d", id),
 		SecretName: fmt.Sprintf("test-service-%d", id),
 	}
-
 }
