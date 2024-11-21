@@ -103,7 +103,7 @@ The `migration-results.json` file contains the following content:
       "runtimeId": "99a38a99-e8d7-4b98-a6f2-5a54ed389c4d",
       "shootName": "c-71da0f2",
       "status": "ValidationDetectedUnwantedUpdate",
-      "errorMessage": "Runtime may cause unwanted update in Gardener. Please verify the runtime CR.",
+      "errorMessage": "Runtime may cause unwanted update in Gardener",
       "runtimeCRFilePath": "/tmp/migration-2024-11-21T14:53:24+01:00/runtimes/99a38a99-e8d7-4b98-a6f2-5a54ed389c4d.yaml",
       "comparisonResultDirPath": "/tmp/migration-2024-11-21T14:53:24+01:00/comparison-results/99a38a99-e8d7-4b98-a6f2-5a54ed389c4d"
    },
