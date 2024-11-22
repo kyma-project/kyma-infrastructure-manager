@@ -164,18 +164,17 @@ main:
 	return nil
 }
 
-func getShoot(runtimeID string, shootList *v1beta1.ShootList) *v1beta1.Shoot {
+func findShoot(runtimeID string, shootList *v1beta1.ShootList) *v1beta1.Shoot {
 	for _, shoot := range shootList.Items {
 		if shoot.Annotations[runtimeIDAnnotation] == runtimeID {
 			return &shoot
 		}
 	}
-
 	return nil
 }
 
 func (m Migration) fetchShoot(ctx context.Context, shootList *v1beta1.ShootList, shootClient gardener_types.ShootInterface, runtimeID string) (*v1beta1.Shoot, error) {
-	shoot := getShoot(runtimeID, shootList)
+	shoot := findShoot(runtimeID, shootList)
 	if shoot == nil {
 		return nil, errors.New("shoot was deleted or the runtime ID is incorrect")
 	}
