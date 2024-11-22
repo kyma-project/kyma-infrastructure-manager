@@ -179,8 +179,11 @@ func (m Migration) fetchShoot(ctx context.Context, shootList *v1beta1.ShootList,
 		return nil, errors.New("shoot was deleted or the runtime ID is incorrect")
 	}
 
+	getCtx, cancel := context.WithTimeout(ctx, timeoutK8sOperation)
+	defer cancel()
+
 	// We are fetching the shoot from the gardener to make sure the runtime didn't get deleted during the migration process
-	refreshedShoot, err := m.shootClient.Get(ctx, shoot.Name, v1.GetOptions{})
+	refreshedShoot, err := m.shootClient.Get(getCtx, shoot.Name, v1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil, errors.New("shoot was deleted")
