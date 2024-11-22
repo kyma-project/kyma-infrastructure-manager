@@ -60,8 +60,6 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		}, client.IgnoreNotFound(err)
 	}
 
-	r.Log.Info("Reconciling Runtime", "Name", runtime.Name, "Namespace", runtime.Namespace)
-
 	runtimeID, ok := runtime.Labels["kyma-project.io/runtime-id"]
 	if !ok {
 		runtimeID = runtime.Name
@@ -72,8 +70,11 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		shootName = "N/D"
 	}
 
+	log := r.Log.WithValues("runtime", runtimeID, "shoot", shootName)
+	log.Info("Reconciling Runtime", "Name", runtime.Name, "Namespace", runtime.Namespace)
+
 	stateFSM := fsm.NewFsm(
-		r.Log.WithName(fmt.Sprintf("reqID %d", requCounter)).WithValues("runtime", runtimeID, "shoot", shootName),
+		log.WithName(fmt.Sprintf("reqID %d", requCounter)),
 		r.Cfg,
 		fsm.K8s{
 			Client:        r.Client,
