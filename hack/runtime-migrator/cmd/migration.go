@@ -176,7 +176,7 @@ func findShoot(runtimeID string, shootList *v1beta1.ShootList) *v1beta1.Shoot {
 func (m Migration) fetchShoot(ctx context.Context, shootList *v1beta1.ShootList, shootClient gardener_types.ShootInterface, runtimeID string) (*v1beta1.Shoot, error) {
 	shoot := findShoot(runtimeID, shootList)
 	if shoot == nil {
-		return nil, errors.New("shoot was deleted or the runtime ID is incorrect")
+		return nil, errors.New("shoot was deleted or the runtimeID is incorrect")
 	}
 
 	getCtx, cancel := context.WithTimeout(ctx, timeoutK8sOperation)
