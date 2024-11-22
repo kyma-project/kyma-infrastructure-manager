@@ -71,7 +71,8 @@ const defaultMinimalRotationTimeRatio = 0.6
 const defaultExpirationTime = 24 * time.Hour
 const defaultGardenerRequestTimeout = 60 * time.Second
 const defaultControlPlaneRequeueDuration = 10 * time.Second
-const defaultGardenerRequeueDuration = 15 * time.Second
+const defaultGardenerRateLimiterQps = 5
+const defaultGardenerRateLimiterBurst = 5
 
 func main() {
 	var metricsAddr string
@@ -82,6 +83,9 @@ func main() {
 	var minimalRotationTimeRatio float64
 	var expirationTime time.Duration
 	var gardenerRequestTimeout time.Duration
+	var runtimeControllerGardenerRequestTimeout time.Duration
+	var runtimeControllerGardenerRateLimiterQps int
+	var runtimeControllerGardenerRateLimiterBurst int
 	var converterConfigFilepath string
 	var shootSpecDumpEnabled bool
 	var auditLogMandatory bool
@@ -96,6 +100,9 @@ func main() {
 	flag.Float64Var(&minimalRotationTimeRatio, "minimal-rotation-time", defaultMinimalRotationTimeRatio, "The ratio determines what is the minimal time that needs to pass to rotate certificate.")
 	flag.DurationVar(&expirationTime, "kubeconfig-expiration-time", defaultExpirationTime, "Dynamic kubeconfig expiration time")
 	flag.DurationVar(&gardenerRequestTimeout, "gardener-request-timeout", defaultGardenerRequestTimeout, "Timeout duration for requests to Gardener")
+	flag.DurationVar(&runtimeControllerGardenerRequestTimeout, "rt-ctrl-gardener-request-timeout", defaultGardenerRequestTimeout, "Timeout duration for requests from Runtime Controller to Gardener")
+	flag.IntVar(&runtimeControllerGardenerRateLimiterQps, "rt-ctrl-gardener-ratelimiter-qps", defaultGardenerRateLimiterQps, "Timeout duration for requests to Gardener")
+	flag.IntVar(&runtimeControllerGardenerRateLimiterBurst, "rt-ctrl-gardener-ratelimiter-burst", defaultGardenerRateLimiterBurst, "Timeout duration for requests to Gardener")
 	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "A file path to the gardener shoot converter configuration.")
 	flag.BoolVar(&shootSpecDumpEnabled, "shoot-spec-dump-enabled", false, "Feature flag to allow persisting specs of created shoots")
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration")
