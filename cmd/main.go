@@ -109,7 +109,7 @@ func main() {
 	flag.Float64Var(&minimalRotationTimeRatio, "minimal-rotation-time", defaultMinimalRotationTimeRatio, "The ratio determines what is the minimal time that needs to pass to rotate certificate.")
 	flag.DurationVar(&expirationTime, "kubeconfig-expiration-time", defaultExpirationTime, "Dynamic kubeconfig expiration time")
 	flag.DurationVar(&gardenerCtrlReconciliationTimeout, "gardener-ctrl-reconcilation-timeout", defaultGardenerReconciliationTimeout, "Timeout duration for reconlication for Gardener Cluster Controller")
-	flag.DurationVar(&runtimeCtrlGardenerRequestTimeout, "rt-ctrl-gardener-request-timeout", defaultRuntimeCtrlGardenerRequestTimeout, "Timeout duration for Gardener client for Runtime Controller")
+	flag.DurationVar(&runtimeCtrlGardenerRequestTimeout, "runtime-ctrl-gardener-request-timeout", defaultRuntimeCtrlGardenerRequestTimeout, "Timeout duration for Gardener client for Runtime Controller")
 	flag.IntVar(&runtimeCtrlGardenerRateLimiterQps, "runtime-ctrl-gardener-ratelimiter-qps", defaultRuntimeCtrlGardenerRateLimiterQps, "Gardener client rate limiter QPS for Runtime Controller")
 	flag.IntVar(&runtimeCtrlGardenerRateLimiterBurst, "runtime-ctrl-gardener-ratelimiter-burst", defaultRuntimeCtrlGardenerRateLimiterBurst, "Gardener client rate limiter burst for Runtime Controller")
 	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "A file path to the gardener shoot converter configuration.")
