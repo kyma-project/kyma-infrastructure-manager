@@ -37,7 +37,7 @@ func NewMigration(migratorConfig config2.Config, converterConfig config.Converte
 	}
 
 	return Migration{
-		runtimeMigrator: runtime.NewMigrator(migratorConfig, kubeconfigProvider),
+		runtimeMigrator: runtime.NewMigrator(migratorConfig, kubeconfigProvider, kcpClient),
 		runtimeVerifier: runtime.NewVerifier(converterConfig, auditLogConfig),
 		kcpClient:       kcpClient,
 		shootClient:     shootClient,

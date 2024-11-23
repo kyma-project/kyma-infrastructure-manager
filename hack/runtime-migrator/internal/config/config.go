@@ -69,22 +69,6 @@ func addToScheme(s *runtime.Scheme) error {
 
 type GetClient = func() (client.Client, error)
 
-func (cfg *Config) Client() (client.Client, error) {
-	restCfg, err := clientcmd.BuildConfigFromFlags("", cfg.KcpKubeconfigPath)
-	if err != nil {
-		return nil, fmt.Errorf("unable to fetch rest config: %w", err)
-	}
-
-	scheme := runtime.NewScheme()
-	if err := addToScheme(scheme); err != nil {
-		return nil, err
-	}
-
-	return client.New(restCfg, client.Options{
-		Scheme: scheme,
-	})
-}
-
 func CreateKcpClient(cfg *Config) (client.Client, error) {
 	restCfg, err := clientcmd.BuildConfigFromFlags("", cfg.KcpKubeconfigPath)
 	if err != nil {
