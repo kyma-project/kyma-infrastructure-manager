@@ -5,6 +5,39 @@ metadata:
   name: infrastructure-manager-role
 rules:
 - apiGroups:
+  - infrastructuremanager.kyma-project.io
+  resources:
+  - runtimes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - infrastructuremanager.kyma-project.io
+  resources:
+  - runtimes/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - infrastructuremanager.kyma-project.io
+  resources:
+  - runtimes/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: infrastructure-manager-role
+  namespace: kcp-system
+rules:
+- apiGroups:
   - ""
   resources:
   - secrets
@@ -31,37 +64,6 @@ rules:
   - infrastructuremanager.kyma-project.io
   resources:
   - gardenerclusters/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - infrastructuremanager.kyma-project.io
-  resources:
   - gardenerclusters/status
   verbs:
-  - update
-- apiGroups:
-  - infrastructuremanager.kyma-project.io
-  resources:
-  - runtimes
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - infrastructuremanager.kyma-project.io
-  resources:
-  - runtimes/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - infrastructuremanager.kyma-project.io
-  resources:
-  - runtimes/status
-  verbs:
-  - get
-  - patch
   - update
