@@ -12,6 +12,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+const (
+	kubeconfigSecretKey = "config"
+)
+
 func sFnCreateKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Create Gardener Cluster CR state")
 
@@ -110,7 +114,7 @@ func makeGardenerClusterForRuntime(runtime imv1.Runtime, shoot *gardener.Shoot) 
 				Secret: imv1.Secret{
 					Name:      fmt.Sprintf("kubeconfig-%s", runtime.Labels[imv1.LabelKymaRuntimeID]),
 					Namespace: runtime.Namespace,
-					Key:       "config",
+					Key:       kubeconfigSecretKey,
 				},
 			},
 		},
