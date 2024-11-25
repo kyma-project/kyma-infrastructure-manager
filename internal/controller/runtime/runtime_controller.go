@@ -19,6 +19,7 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/go-logr/logr"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -42,6 +43,7 @@ type RuntimeReconciler struct {
 	Log           logr.Logger
 	Cfg           fsm.RCCfg
 	EventRecorder record.EventRecorder
+	RequestID     atomic.Uint64
 }
 
 //+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=runtimes,verbs=get;list;watch;create;update;patch;delete
@@ -70,11 +72,11 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		shootName = "N/D"
 	}
 
-	log := r.Log.WithValues("runtimeID", runtimeID, "shootName", shootName)
+	log := r.Log.WithValues("runtimeID", runtimeID, "shootName", shootName, "requestID", r.RequestID.Add(1))
 	log.Info("Reconciling Runtime", "Name", runtime.Name, "Namespace", runtime.Namespace)
 
 	stateFSM := fsm.NewFsm(
-		log.WithName(fmt.Sprintf("reqID %d", requCounter)),
+		log,
 		r.Cfg,
 		fsm.K8s{
 			Client:        r.Client,
