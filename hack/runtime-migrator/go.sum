@@ -35,8 +35,8 @@ github.com/gardener/cert-management v0.16.0 h1:OlE8nnPgqUii5jBknwASy5EtQlJ3Udy2f
 github.com/gardener/cert-management v0.16.0/go.mod h1:09sH/cxbK3o4xdwCjM7HE9gGX2wq2lLhhVIqiMpmZy4=
 github.com/gardener/etcd-druid v0.24.1 h1:BfFQXOevuJ5oOvM3rkQSJ5XITMJzY/a2j54e7XcBIos=
 github.com/gardener/etcd-druid v0.24.1/go.mod h1:6C0eyfdlw6CowLm/l4ZiKwrvkc+5NHrnc/rY2wCUwys=
-github.com/gardener/gardener v1.108.0 h1:XJNLWRucboac4LYGqLpzIt8XaLxymFBsz7nHxfVF1gw=
-github.com/gardener/gardener v1.108.0/go.mod h1:dmgxecs+i3vWlitYftNuCGVRu0ZWYTlKLBFE6iV+dBk=
+github.com/gardener/gardener v1.108.1 h1:31H+L42LCAvAyIbs8LBFbkf8uw06D1GkyyGoo9SDHUk=
+github.com/gardener/gardener v1.108.1/go.mod h1:dmgxecs+i3vWlitYftNuCGVRu0ZWYTlKLBFE6iV+dBk=
 github.com/gardener/gardener-extension-provider-aws v1.58.3 h1:YDv5s5BEVpPQ+x70tHOcwf762/vo/I6OvwjeT3FD3AU=
 github.com/gardener/gardener-extension-provider-aws v1.58.3/go.mod h1:EFrr2XNSCCEzC6U8Y/wUxCri3Y8zwgaRvFxEPkMOJww=
 github.com/gardener/gardener-extension-provider-gcp v1.40.1 h1:ErTgztMj/6zLSN8sFJXQ2D3ZNyGD1t+GZjAcCBIP+mU=
