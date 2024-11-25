@@ -3,12 +3,13 @@ package migration
 import (
 	"encoding/json"
 	"fmt"
-	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/runtime"
 	"os"
 	"path"
-	"sigs.k8s.io/yaml"
 	"time"
+
+	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/runtime"
+	"sigs.k8s.io/yaml"
 )
 
 type OutputWriter struct {

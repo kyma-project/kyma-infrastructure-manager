@@ -1,6 +1,8 @@
 package runtime
 
 import (
+	"slices"
+
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/hack/shoot-comparator/pkg/shoot"
@@ -8,7 +10,6 @@ import (
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"k8s.io/utils/ptr"
-	"slices"
 )
 
 type Verifier struct {
