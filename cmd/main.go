@@ -22,10 +22,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	corev1 "k8s.io/api/core/v1"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"time"
+
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_apis "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
