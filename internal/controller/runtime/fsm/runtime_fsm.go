@@ -26,14 +26,17 @@ type writerGetter = func(filePath string) (io.Writer, error)
 
 // runtime reconciler specific configuration
 type RCCfg struct {
-	GardenerRequeueDuration     time.Duration
-	ControlPlaneRequeueDuration time.Duration
-	Finalizer                   string
-	PVCPath                     string
-	ShootNamesapace             string
-	AuditLogMandatory           bool
-	Metrics                     metrics.Metrics
-	AuditLogging                auditlogs.Configuration
+	GardenerRequeueDuration       time.Duration
+	RequeueDurationShootCreate    time.Duration
+	RequeueDurationShootDelete    time.Duration
+	RequeueDurationShootReconcile time.Duration
+	ControlPlaneRequeueDuration   time.Duration
+	Finalizer                     string
+	PVCPath                       string
+	ShootNamesapace               string
+	AuditLogMandatory             bool
+	Metrics                       metrics.Metrics
+	AuditLogging                  auditlogs.Configuration
 	config.Config
 }
 

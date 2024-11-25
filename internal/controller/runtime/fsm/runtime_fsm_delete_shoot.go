@@ -2,17 +2,11 @@ package fsm
 
 import (
 	"context"
-	"time"
-
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-const (
-	deletionRequeueTime = 2 * time.Minute
 )
 
 func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
@@ -21,7 +15,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	// wait section
 	if !s.shoot.GetDeletionTimestamp().IsZero() {
 		m.log.Info("Waiting for shoot to be deleted", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
-		return requeueAfter(deletionRequeueTime)
+		return requeueAfter(m.RCCfg.RequeueDurationShootDelete)
 	}
 
 	// action section
@@ -63,7 +57,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	}
 
 	// out section
-	return updateStatusAndRequeueAfter(deletionRequeueTime)
+	return updateStatusAndRequeueAfter(m.RCCfg.RequeueDurationShootDelete)
 }
 
 // workaround

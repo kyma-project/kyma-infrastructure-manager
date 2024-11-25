@@ -121,12 +121,15 @@ var _ = BeforeSuite(func() {
 	mm.On("CleanUpRuntimeGauge", mock.Anything, mock.Anything).Return()
 
 	fsmCfg := fsm.RCCfg{
-		Finalizer:                   imv1.Finalizer,
-		Config:                      convConfig,
-		Metrics:                     mm,
-		AuditLogging:                map[string]map[string]auditlogs.AuditLogData{},
-		GardenerRequeueDuration:     3 * time.Second,
-		ControlPlaneRequeueDuration: 3 * time.Second,
+		Finalizer:                     imv1.Finalizer,
+		Config:                        convConfig,
+		Metrics:                       mm,
+		AuditLogging:                  map[string]map[string]auditlogs.AuditLogData{},
+		GardenerRequeueDuration:       3 * time.Second,
+		ControlPlaneRequeueDuration:   3 * time.Second,
+		RequeueDurationShootReconcile: 3 * time.Second,
+		RequeueDurationShootCreate:    3 * time.Second,
+		RequeueDurationShootDelete:    3 * time.Second,
 	}
 
 	runtimeReconciler = NewRuntimeReconciler(mgr, gardenerTestClient, logger, fsmCfg)

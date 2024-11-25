@@ -24,6 +24,8 @@ type fakeFSMOpt func(*fsm) error
 
 const defaultControlPlaneRequeueDuration = 10 * time.Second
 const defaultGardenerRequeueDuration = 15 * time.Second
+const defaultRequeueDurationShootCreate = 15 * time.Second
+const defaultRequeueDurationShootDelete = 15 * time.Second
 
 var (
 	errFailedToCreateFakeFSM = fmt.Errorf("failed to create fake FSM")

@@ -69,18 +69,17 @@ func init() {
 
 // Default values for the Runtime controller configuration
 const (
-	defaultControlPlaneRequeueDuration         = 10 * time.Second
-	defaultRuntimeCtrlGardenerRequestTimeout   = 1 * time.Second
-	defaultRuntimeCtrlGardenerRateLimiterQps   = 5
-	defaultRuntimeCtrlGardenerRateLimiterBurst = 5
-)
-
-// Default values for the Gardener Cluster controller configuration
-const (
+	defaultControlPlaneRequeueDuration   = 10 * time.Second
+	defaultGardenerRequestTimeout        = 3 * time.Second
+	defaultGardenerRateLimiterQps        = 5
+	defaultGardenerRateLimiterBurst      = 5
 	defaultMinimalRotationTimeRatio      = 0.6
 	defaultExpirationTime                = 24 * time.Hour
 	defaultGardenerReconciliationTimeout = 60 * time.Second
 	defaultGardenerRequeueDuration       = 15 * time.Second
+	defaultShootCreateRequeueDuration    = 60 * time.Second
+	defaultShootDeleteRequeueDuration    = 90 * time.Second
+	defaultShootReconcileRequeueDuration = 30 * time.Second
 )
 
 func main() {
@@ -109,9 +108,9 @@ func main() {
 	flag.Float64Var(&minimalRotationTimeRatio, "minimal-rotation-time", defaultMinimalRotationTimeRatio, "The ratio determines what is the minimal time that needs to pass to rotate certificate.")
 	flag.DurationVar(&expirationTime, "kubeconfig-expiration-time", defaultExpirationTime, "Dynamic kubeconfig expiration time")
 	flag.DurationVar(&gardenerCtrlReconciliationTimeout, "gardener-ctrl-reconcilation-timeout", defaultGardenerReconciliationTimeout, "Timeout duration for reconlication for Gardener Cluster Controller")
-	flag.DurationVar(&runtimeCtrlGardenerRequestTimeout, "runtime-ctrl-gardener-request-timeout", defaultRuntimeCtrlGardenerRequestTimeout, "Timeout duration for Gardener client for Runtime Controller")
-	flag.IntVar(&runtimeCtrlGardenerRateLimiterQps, "runtime-ctrl-gardener-ratelimiter-qps", defaultRuntimeCtrlGardenerRateLimiterQps, "Gardener client rate limiter QPS for Runtime Controller")
-	flag.IntVar(&runtimeCtrlGardenerRateLimiterBurst, "runtime-ctrl-gardener-ratelimiter-burst", defaultRuntimeCtrlGardenerRateLimiterBurst, "Gardener client rate limiter burst for Runtime Controller")
+	flag.DurationVar(&runtimeCtrlGardenerRequestTimeout, "gardener-request-timeout", defaultGardenerRequestTimeout, "Timeout duration for Gardener client for Runtime Controller")
+	flag.IntVar(&runtimeCtrlGardenerRateLimiterQps, "gardener-ratelimiter-qps", defaultGardenerRateLimiterQps, "Gardener client rate limiter QPS for Runtime Controller")
+	flag.IntVar(&runtimeCtrlGardenerRateLimiterBurst, "gardener-ratelimiter-burst", defaultGardenerRateLimiterBurst, "Gardener client rate limiter burst for Runtime Controller")
 	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "A file path to the gardener shoot converter configuration.")
 	flag.BoolVar(&shootSpecDumpEnabled, "shoot-spec-dump-enabled", false, "Feature flag to allow persisting specs of created shoots")
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration")
@@ -205,14 +204,17 @@ func main() {
 	}
 
 	cfg := fsm.RCCfg{
-		GardenerRequeueDuration:     defaultGardenerRequeueDuration,
-		ControlPlaneRequeueDuration: defaultControlPlaneRequeueDuration,
-		Finalizer:                   infrastructuremanagerv1.Finalizer,
-		ShootNamesapace:             gardenerNamespace,
-		Config:                      config,
-		AuditLogMandatory:           auditLogMandatory,
-		Metrics:                     metrics,
-		AuditLogging:                auditLogDataMap,
+		GardenerRequeueDuration:       defaultGardenerRequeueDuration,
+		RequeueDurationShootCreate:    defaultShootCreateRequeueDuration,
+		RequeueDurationShootDelete:    defaultShootDeleteRequeueDuration,
+		RequeueDurationShootReconcile: defaultShootReconcileRequeueDuration,
+		ControlPlaneRequeueDuration:   defaultControlPlaneRequeueDuration,
+		Finalizer:                     infrastructuremanagerv1.Finalizer,
+		ShootNamesapace:               gardenerNamespace,
+		Config:                        config,
+		AuditLogMandatory:             auditLogMandatory,
+		Metrics:                       metrics,
+		AuditLogging:                  auditLogDataMap,
 	}
 	if shootSpecDumpEnabled {
 		cfg.PVCPath = "/testdata/kim"

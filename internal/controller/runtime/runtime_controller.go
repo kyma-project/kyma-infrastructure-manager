@@ -51,6 +51,8 @@ var requCounter = 0 // nolint:gochecknoglobals
 func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	r.Log.Info(request.String())
 
+	// n\]
+
 	var runtime imv1.Runtime
 	if err := r.Get(ctx, request.NamespacedName, &runtime); err != nil {
 		return ctrl.Result{
