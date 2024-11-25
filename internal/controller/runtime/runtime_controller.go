@@ -18,7 +18,6 @@ package runtime
 
 import (
 	"context"
-	"fmt"
 	"sync/atomic"
 
 	"github.com/go-logr/logr"
