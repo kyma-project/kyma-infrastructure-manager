@@ -31,9 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-const (
-	numberOfWorkers = 25
-)
+const numberOfWorkers = 25
 
 // RuntimeReconciler reconciles a Runtime object
 // nolint:revive
