@@ -70,7 +70,7 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		shootName = "N/D"
 	}
 
-	log := r.Log.WithValues("runtime", runtimeID, "shoot", shootName)
+	log := r.Log.WithValues("runtimeID", runtimeID, "shootID", shootName)
 	log.Info("Reconciling Runtime", "Name", runtime.Name, "Namespace", runtime.Namespace)
 
 	stateFSM := fsm.NewFsm(
