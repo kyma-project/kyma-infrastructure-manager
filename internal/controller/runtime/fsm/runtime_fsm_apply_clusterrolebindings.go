@@ -3,6 +3,8 @@ package fsm
 import (
 	"context"
 	"fmt"
+	"slices"
+
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -12,7 +14,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"slices"
 )
 
 var (
