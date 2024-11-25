@@ -71,7 +71,7 @@ func init() {
 const (
 	defaultControlPlaneRequeueDuration   = 10 * time.Second
 	defaultGardenerRequestTimeout        = 3 * time.Second
-	defaultGardenerRateLimiterQps        = 5
+	defaultGardenerRateLimiterQPS        = 5
 	defaultGardenerRateLimiterBurst      = 5
 	defaultMinimalRotationTimeRatio      = 0.6
 	defaultExpirationTime                = 24 * time.Hour
@@ -92,7 +92,7 @@ func main() {
 	var expirationTime time.Duration
 	var gardenerCtrlReconciliationTimeout time.Duration
 	var runtimeCtrlGardenerRequestTimeout time.Duration
-	var runtimeCtrlGardenerRateLimiterQps int
+	var runtimeCtrlGardenerRateLimiterQPS int
 	var runtimeCtrlGardenerRateLimiterBurst int
 	var converterConfigFilepath string
 	var shootSpecDumpEnabled bool
@@ -109,7 +109,7 @@ func main() {
 	flag.DurationVar(&expirationTime, "kubeconfig-expiration-time", defaultExpirationTime, "Dynamic kubeconfig expiration time")
 	flag.DurationVar(&gardenerCtrlReconciliationTimeout, "gardener-ctrl-reconcilation-timeout", defaultGardenerReconciliationTimeout, "Timeout duration for reconlication for Gardener Cluster Controller")
 	flag.DurationVar(&runtimeCtrlGardenerRequestTimeout, "gardener-request-timeout", defaultGardenerRequestTimeout, "Timeout duration for Gardener client for Runtime Controller")
-	flag.IntVar(&runtimeCtrlGardenerRateLimiterQps, "gardener-ratelimiter-qps", defaultGardenerRateLimiterQps, "Gardener client rate limiter QPS for Runtime Controller")
+	flag.IntVar(&runtimeCtrlGardenerRateLimiterQPS, "gardener-ratelimiter-qps", defaultGardenerRateLimiterQPS, "Gardener client rate limiter QPS for Runtime Controller")
 	flag.IntVar(&runtimeCtrlGardenerRateLimiterBurst, "gardener-ratelimiter-burst", defaultGardenerRateLimiterBurst, "Gardener client rate limiter burst for Runtime Controller")
 	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "A file path to the gardener shoot converter configuration.")
 	flag.BoolVar(&shootSpecDumpEnabled, "shoot-spec-dump-enabled", false, "Feature flag to allow persisting specs of created shoots")
@@ -153,7 +153,7 @@ func main() {
 	}
 
 	gardenerNamespace := fmt.Sprintf("garden-%s", gardenerProjectName)
-	gardenerClient, shootClient, dynamicKubeconfigClient, err := initGardenerClients(gardenerKubeconfigPath, gardenerNamespace, runtimeCtrlGardenerRequestTimeout, runtimeCtrlGardenerRateLimiterQps, runtimeCtrlGardenerRateLimiterBurst)
+	gardenerClient, shootClient, dynamicKubeconfigClient, err := initGardenerClients(gardenerKubeconfigPath, gardenerNamespace, runtimeCtrlGardenerRequestTimeout, runtimeCtrlGardenerRateLimiterQPS, runtimeCtrlGardenerRateLimiterBurst)
 
 	if err != nil {
 		setupLog.Error(err, "unable to initialize gardener clients", "controller", "GardenerCluster")
