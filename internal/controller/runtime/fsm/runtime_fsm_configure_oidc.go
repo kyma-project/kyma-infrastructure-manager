@@ -72,8 +72,7 @@ func createDefaultOIDCConfig(defaultSharedIASTenant config.OidcProvider) gardene
 }
 
 func recreateOpenIDConnectResources(ctx context.Context, m *fsm, s *systemState) error {
-	srscClient := m.ShootClient.SubResource("adminkubeconfig")
-	shootAdminClient, shootClientError := GetShootClient(ctx, srscClient, s.shoot)
+	shootAdminClient, shootClientError := GetShootClient(ctx, m.Client, s.instance)
 	if shootClientError != nil {
 		return shootClientError
 	}

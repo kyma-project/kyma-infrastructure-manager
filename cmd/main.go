@@ -50,6 +50,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/flowcontrol"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -70,11 +71,20 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
-const defaultMinimalRotationTimeRatio = 0.6
-const defaultExpirationTime = 24 * time.Hour
-const defaultGardenerRequestTimeout = 60 * time.Second
-const defaultControlPlaneRequeueDuration = 10 * time.Second
-const defaultGardenerRequeueDuration = 15 * time.Second
+// Default values for the Runtime controller configuration
+const (
+	defaultControlPlaneRequeueDuration   = 10 * time.Second
+	defaultGardenerRequestTimeout        = 3 * time.Second
+	defaultGardenerRateLimiterQPS        = 5
+	defaultGardenerRateLimiterBurst      = 5
+	defaultMinimalRotationTimeRatio      = 0.6
+	defaultExpirationTime                = 24 * time.Hour
+	defaultGardenerReconciliationTimeout = 60 * time.Second
+	defaultGardenerRequeueDuration       = 15 * time.Second
+	defaultShootCreateRequeueDuration    = 60 * time.Second
+	defaultShootDeleteRequeueDuration    = 90 * time.Second
+	defaultShootReconcileRequeueDuration = 30 * time.Second
+)
 
 func main() {
 	var metricsAddr string
@@ -84,7 +94,10 @@ func main() {
 	var gardenerProjectName string
 	var minimalRotationTimeRatio float64
 	var expirationTime time.Duration
-	var gardenerRequestTimeout time.Duration
+	var gardenerCtrlReconciliationTimeout time.Duration
+	var runtimeCtrlGardenerRequestTimeout time.Duration
+	var runtimeCtrlGardenerRateLimiterQPS int
+	var runtimeCtrlGardenerRateLimiterBurst int
 	var converterConfigFilepath string
 	var shootSpecDumpEnabled bool
 	var auditLogMandatory bool
@@ -98,7 +111,10 @@ func main() {
 	flag.StringVar(&gardenerProjectName, "gardener-project-name", "gardener-project", "Name of the Gardener project")
 	flag.Float64Var(&minimalRotationTimeRatio, "minimal-rotation-time", defaultMinimalRotationTimeRatio, "The ratio determines what is the minimal time that needs to pass to rotate certificate.")
 	flag.DurationVar(&expirationTime, "kubeconfig-expiration-time", defaultExpirationTime, "Dynamic kubeconfig expiration time")
-	flag.DurationVar(&gardenerRequestTimeout, "gardener-request-timeout", defaultGardenerRequestTimeout, "Timeout duration for requests to Gardener")
+	flag.DurationVar(&gardenerCtrlReconciliationTimeout, "gardener-ctrl-reconcilation-timeout", defaultGardenerReconciliationTimeout, "Timeout duration for reconlication for Gardener Cluster Controller")
+	flag.DurationVar(&runtimeCtrlGardenerRequestTimeout, "gardener-request-timeout", defaultGardenerRequestTimeout, "Timeout duration for Gardener client for Runtime Controller")
+	flag.IntVar(&runtimeCtrlGardenerRateLimiterQPS, "gardener-ratelimiter-qps", defaultGardenerRateLimiterQPS, "Gardener client rate limiter QPS for Runtime Controller")
+	flag.IntVar(&runtimeCtrlGardenerRateLimiterBurst, "gardener-ratelimiter-burst", defaultGardenerRateLimiterBurst, "Gardener client rate limiter burst for Runtime Controller")
 	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "A file path to the gardener shoot converter configuration.")
 	flag.BoolVar(&shootSpecDumpEnabled, "shoot-spec-dump-enabled", false, "Feature flag to allow persisting specs of created shoots")
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration")
@@ -142,7 +158,7 @@ func main() {
 	}
 
 	gardenerNamespace := fmt.Sprintf("garden-%s", gardenerProjectName)
-	gardenerClient, shootClient, dynamicKubeconfigClient, err := initGardenerClients(gardenerKubeconfigPath, gardenerNamespace)
+	gardenerClient, shootClient, dynamicKubeconfigClient, err := initGardenerClients(gardenerKubeconfigPath, gardenerNamespace, runtimeCtrlGardenerRequestTimeout, runtimeCtrlGardenerRateLimiterQPS, runtimeCtrlGardenerRateLimiterBurst)
 
 	if err != nil {
 		setupLog.Error(err, "unable to initialize gardener clients", "controller", "GardenerCluster")
@@ -163,7 +179,7 @@ func main() {
 		logger,
 		rotationPeriod,
 		minimalRotationTimeRatio,
-		gardenerRequestTimeout,
+		gardenerCtrlReconciliationTimeout,
 		metrics,
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GardenerCluster")
@@ -193,14 +209,17 @@ func main() {
 	}
 
 	cfg := fsm.RCCfg{
-		GardenerRequeueDuration:     defaultGardenerRequeueDuration,
-		ControlPlaneRequeueDuration: defaultControlPlaneRequeueDuration,
-		Finalizer:                   infrastructuremanagerv1.Finalizer,
-		ShootNamesapace:             gardenerNamespace,
-		Config:                      config,
-		AuditLogMandatory:           auditLogMandatory,
-		Metrics:                     metrics,
-		AuditLogging:                auditLogDataMap,
+		GardenerRequeueDuration:       defaultGardenerRequeueDuration,
+		RequeueDurationShootCreate:    defaultShootCreateRequeueDuration,
+		RequeueDurationShootDelete:    defaultShootDeleteRequeueDuration,
+		RequeueDurationShootReconcile: defaultShootReconcileRequeueDuration,
+		ControlPlaneRequeueDuration:   defaultControlPlaneRequeueDuration,
+		Finalizer:                     infrastructuremanagerv1.Finalizer,
+		ShootNamesapace:               gardenerNamespace,
+		Config:                        config,
+		AuditLogMandatory:             auditLogMandatory,
+		Metrics:                       metrics,
+		AuditLogging:                  auditLogDataMap,
 	}
 	if shootSpecDumpEnabled {
 		cfg.PVCPath = "/testdata/kim"
@@ -239,11 +258,14 @@ func main() {
 	}
 }
 
-func initGardenerClients(kubeconfigPath string, namespace string) (client.Client, gardener_apis.ShootInterface, client.SubResourceClient, error) {
+func initGardenerClients(kubeconfigPath string, namespace string, timeout time.Duration, rlQPS, rlBurst int) (client.Client, gardener_apis.ShootInterface, client.SubResourceClient, error) {
 	restConfig, err := gardener.NewRestConfigFromFile(kubeconfigPath)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
+	restConfig.Timeout = timeout
+	restConfig.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(float32(rlQPS), rlBurst)
 
 	gardenerClientSet, err := gardener_apis.NewForConfig(restConfig)
 	if err != nil {

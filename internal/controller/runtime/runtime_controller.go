@@ -27,8 +27,11 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
+
+const numberOfWorkers = 25
 
 // RuntimeReconciler reconciles a Runtime object
 // nolint:revive
@@ -86,6 +89,7 @@ func NewRuntimeReconciler(mgr ctrl.Manager, shootClient client.Client, logger lo
 func (r *RuntimeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&imv1.Runtime{}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: numberOfWorkers}).
 		WithEventFilter(predicate.Or(
 			predicate.GenerationChangedPredicate{},
 			predicate.LabelChangedPredicate{},

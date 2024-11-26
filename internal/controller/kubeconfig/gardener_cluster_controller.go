@@ -34,6 +34,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	pkgctrl "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
@@ -43,6 +44,7 @@ const (
 	clusterCRNameLabel                = "operator.kyma-project.io/cluster-name"
 
 	rotationPeriodRatio = 0.95
+	numberOfWorkers     = 25
 )
 
 // GardenerClusterController reconciles a GardenerCluster object
@@ -436,5 +438,6 @@ func (controller *GardenerClusterController) SetupWithManager(mgr ctrl.Manager) 
 			predicate.AnnotationChangedPredicate{},
 			predicate.GenerationChangedPredicate{}),
 		)).
+		WithOptions(pkgctrl.Options{MaxConcurrentReconciles: numberOfWorkers}).
 		Complete(controller)
 }
