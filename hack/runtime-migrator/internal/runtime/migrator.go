@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"fmt"
+
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	migrator "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/config"
