@@ -18,7 +18,7 @@ package runtime
 
 import (
 	"context"
-	"fmt"
+	"sync/atomic"
 
 	"github.com/go-logr/logr"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -27,8 +27,11 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
+
+const numberOfWorkers = 25
 
 // RuntimeReconciler reconciles a Runtime object
 // nolint:revive
@@ -39,13 +42,12 @@ type RuntimeReconciler struct {
 	Log           logr.Logger
 	Cfg           fsm.RCCfg
 	EventRecorder record.EventRecorder
+	RequestID     atomic.Uint64
 }
 
 //+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=runtimes,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=runtimes/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=runtimes/finalizers,verbs=update
-
-var requCounter = 0 // nolint:gochecknoglobals
 
 func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	r.Log.Info(request.String())
@@ -57,10 +59,21 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		}, client.IgnoreNotFound(err)
 	}
 
-	r.Log.Info("Reconciling Runtime", "Name", runtime.Name, "Namespace", runtime.Namespace)
+	runtimeID, ok := runtime.Labels["kyma-project.io/runtime-id"]
+	if !ok {
+		runtimeID = runtime.Name
+	}
+
+	shootName, ok := runtime.Labels["kyma-project.io/shoot-name"]
+	if !ok {
+		shootName = "N/D"
+	}
+
+	log := r.Log.WithValues("runtimeID", runtimeID, "shootName", shootName, "requestID", r.RequestID.Add(1))
+	log.Info("Reconciling Runtime", "Name", runtime.Name, "Namespace", runtime.Namespace)
 
 	stateFSM := fsm.NewFsm(
-		r.Log.WithName(fmt.Sprintf("reqID %d", requCounter)),
+		log,
 		r.Cfg,
 		fsm.K8s{
 			Client:        r.Client,
@@ -86,6 +99,7 @@ func NewRuntimeReconciler(mgr ctrl.Manager, shootClient client.Client, logger lo
 func (r *RuntimeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&imv1.Runtime{}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: numberOfWorkers}).
 		WithEventFilter(predicate.Or(
 			predicate.GenerationChangedPredicate{},
 			predicate.LabelChangedPredicate{},

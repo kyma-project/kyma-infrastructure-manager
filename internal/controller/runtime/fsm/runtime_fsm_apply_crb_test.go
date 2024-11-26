@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
 	. "github.com/onsi/ginkgo/v2"
@@ -154,8 +153,8 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 	defaultSetup := func(f *fsm) error {
 		GetShootClient = func(
 			_ context.Context,
-			_ client.SubResourceClient,
-			_ *gardener_api.Shoot) (client.Client, error) {
+			_ client.Client,
+			_ imv1.Runtime) (client.Client, error) {
 			return f.Client, nil
 		}
 		return nil
@@ -229,8 +228,8 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 			setup: func(f *fsm) error {
 				GetShootClient = func(
 					_ context.Context,
-					_ client.SubResourceClient,
-					_ *gardener_api.Shoot) (client.Client, error) {
+					_ client.Client,
+					_ imv1.Runtime) (client.Client, error) {
 					return nil, testErr
 				}
 				return nil

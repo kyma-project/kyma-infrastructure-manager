@@ -2,6 +2,7 @@ package fsm
 
 import (
 	"context"
+	"fmt"
 	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -67,7 +68,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 		m.log.Error(err, "Failed to patch shoot object, exiting with no retry")
 		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, "Shoot patch error")
+		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("Gardener API shoot patch error: %v", err))
 	}
 
 	if updatedShoot.Generation == s.shoot.Generation {
