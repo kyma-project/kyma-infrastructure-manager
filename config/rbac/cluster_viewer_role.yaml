@@ -1,6 +1,6 @@
 # permissions for end users to view clusters.
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: clusterrole
@@ -10,7 +10,6 @@ metadata:
     app.kubernetes.io/part-of: infrastructure-manager
     app.kubernetes.io/managed-by: kustomize
   name: cluster-viewer-role
-  namespace: kcp-system
 rules:
 - apiGroups:
   - infrastructuremanager.kyma-project.io
