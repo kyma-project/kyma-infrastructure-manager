@@ -2,14 +2,15 @@ package fsm
 
 import (
 	"context"
+	"fmt"
 	"slices"
 
-	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
-	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,16 +18,17 @@ import (
 
 var (
 	//nolint:gochecknoglobals
-	labelsClusterRoleBindings = map[string]string{
-		"app":                                   "kyma",
+	labelsManagedByKIM = map[string]string{
 		"reconciler.kyma-project.io/managed-by": "infrastructure-manager",
+	}
+	//nolint:gochecknoglobals
+	labelsManagedByReconciler = map[string]string{
+		"reconciler.kyma-project.io/managed-by": "reconciler",
 	}
 )
 
 func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	// prepare subresource client to request admin kubeconfig
-	srscClient := m.ShootClient.SubResource("adminkubeconfig")
-	shootAdminClient, err := GetShootClient(ctx, srscClient, s.shoot)
+	shootAdminClient, err := GetShootClient(ctx, m.Client, s.instance)
 	if err != nil {
 		updateCRBApplyFailed(&s.instance)
 		return updateStatusAndStopWithError(err)
@@ -63,15 +65,15 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 }
 
 //nolint:gochecknoglobals
-var GetShootClient = func(ctx context.Context,
-	adminKubeconfigClient client.SubResourceClient, shoot *gardener_api.Shoot) (client.Client, error) {
-	// request for admin kubeconfig with low expiration timeout
-	var req authenticationv1alpha1.AdminKubeconfigRequest
-	if err := adminKubeconfigClient.Create(ctx, shoot, &req); err != nil {
+var GetShootClient = func(ctx context.Context, cnt client.Client, runtime imv1.Runtime) (client.Client, error) {
+	runtimeID := runtime.Labels[imv1.LabelKymaRuntimeID]
+
+	secret, err := getKubeconfigSecret(ctx, cnt, runtimeID, runtime.Namespace)
+	if err != nil {
 		return nil, err
 	}
 
-	restConfig, err := clientcmd.RESTConfigFromKubeConfig(req.Status.Kubeconfig)
+	restConfig, err := clientcmd.RESTConfigFromKubeConfig(secret.Data[kubeconfigSecretKey])
 	if err != nil {
 		return nil, err
 	}
@@ -84,6 +86,24 @@ var GetShootClient = func(ctx context.Context,
 	return shootClientWithAdmin, nil
 }
 
+func getKubeconfigSecret(ctx context.Context, cnt client.Client, runtimeID, namespace string) (corev1.Secret, error) {
+	secretName := fmt.Sprintf("kubeconfig-%s", runtimeID)
+
+	var kubeconfigSecret corev1.Secret
+	secretKey := types.NamespacedName{Name: secretName, Namespace: namespace}
+
+	err := cnt.Get(ctx, secretKey, &kubeconfigSecret)
+
+	if err != nil {
+		return corev1.Secret{}, err
+	}
+
+	if kubeconfigSecret.Data == nil {
+		return corev1.Secret{}, fmt.Errorf("kubeconfig secret `%s` does not contain kubeconfig data", kubeconfigSecret.Name)
+	}
+	return kubeconfigSecret, nil
+}
+
 func isRBACUserKindOneOf(names []string) func(rbacv1.Subject) bool {
 	return func(s rbacv1.Subject) bool {
 		return s.Kind == rbacv1.UserKind &&
@@ -94,7 +114,7 @@ func isRBACUserKindOneOf(names []string) func(rbacv1.Subject) bool {
 func getRemoved(crbs []rbacv1.ClusterRoleBinding, admins []string) (removed []rbacv1.ClusterRoleBinding) {
 	// iterate over cluster role bindings to find out removed administrators
 	for _, crb := range crbs {
-		if !labels.Set(crb.Labels).AsSelector().Matches(labels.Set(labelsClusterRoleBindings)) {
+		if !managedByKIM(crb) {
 			// cluster role binding is not controlled by KIM
 			continue
 		}
@@ -116,10 +136,18 @@ func getRemoved(crbs []rbacv1.ClusterRoleBinding, admins []string) (removed []rb
 	return removed
 }
 
+func managedByKIM(crb rbacv1.ClusterRoleBinding) bool {
+	selector := labels.Set(crb.Labels).AsSelector()
+	isManagedByKIM := selector.Matches(labels.Set(labelsManagedByKIM))
+	isManagedByReconciler := selector.Matches(labels.Set(labelsManagedByReconciler))
+	// Provisioner managed CRBs with label managed-by=reconciler, we have to manage them as well
+	return isManagedByKIM || isManagedByReconciler
+}
+
 //nolint:gochecknoglobals
 var newContainsAdmin = func(admin string) func(rbacv1.ClusterRoleBinding) bool {
 	return func(crb rbacv1.ClusterRoleBinding) bool {
-		if !labels.Set(crb.Labels).AsSelector().Matches(labels.Set(labelsClusterRoleBindings)) {
+		if !managedByKIM(crb) {
 			return false
 		}
 		isAdmin := isRBACUserKindOneOf([]string{admin})
@@ -144,7 +172,7 @@ func toAdminClusterRoleBinding(name string) rbacv1.ClusterRoleBinding {
 	return rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "admin-",
-			Labels:       labelsClusterRoleBindings,
+			Labels:       labelsManagedByKIM,
 		},
 		Subjects: []rbacv1.Subject{{
 			Kind:     rbacv1.UserKind,

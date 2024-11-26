@@ -5,20 +5,20 @@ go 1.23.1
 require (
 	github.com/Masterminds/semver/v3 v3.3.0
 	github.com/gardener/gardener v1.106.1
-	github.com/gardener/gardener-extension-provider-aws v1.57.1
-	github.com/gardener/gardener-extension-provider-gcp v1.39.0
+	github.com/gardener/gardener-extension-provider-aws v1.58.3
+	github.com/gardener/gardener-extension-provider-gcp v1.40.1
 	github.com/gardener/gardener-extension-provider-openstack v1.42.1
-	github.com/gardener/oidc-webhook-authenticator v0.32.0
+	github.com/gardener/oidc-webhook-authenticator v0.33.0
 	github.com/go-logr/logr v1.4.2
-	github.com/go-playground/validator/v10 v10.22.1
+	github.com/go-playground/validator/v10 v10.23.0
 	github.com/onsi/ginkgo/v2 v2.20.2
 	github.com/onsi/gomega v1.34.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.20.5
 	github.com/stretchr/testify v1.9.0
-	k8s.io/api v0.31.2
-	k8s.io/apimachinery v0.31.2
-	k8s.io/client-go v0.31.2
+	k8s.io/api v0.31.3
+	k8s.io/apimachinery v0.31.3
+	k8s.io/client-go v0.31.3
 	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
 	sigs.k8s.io/controller-runtime v0.19.1
 	sigs.k8s.io/yaml v1.4.0

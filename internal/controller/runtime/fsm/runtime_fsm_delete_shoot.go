@@ -16,7 +16,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	// wait section
 	if !s.shoot.GetDeletionTimestamp().IsZero() {
 		m.log.Info("Waiting for shoot to be deleted", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
-		return requeueAfter(m.RCCfg.GardenerRequeueDuration)
+		return requeueAfter(m.RCCfg.RequeueDurationShootDelete)
 	}
 
 	// action section
@@ -58,7 +58,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	}
 
 	// out section
-	return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+	return updateStatusAndRequeueAfter(m.RCCfg.RequeueDurationShootDelete)
 }
 
 // workaround

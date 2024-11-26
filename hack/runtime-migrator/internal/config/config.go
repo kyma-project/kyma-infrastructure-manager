@@ -33,6 +33,7 @@ func printConfig(cfg Config) {
 	log.Println("output-path:", cfg.OutputPath)
 	log.Println("dry-run:", cfg.IsDryRun)
 	log.Println("input-type:", cfg.InputType)
+	log.Println("input-file-path:", cfg.InputFilePath)
 	log.Println("")
 }
 
@@ -44,7 +45,7 @@ func NewConfig() Config {
 	flag.StringVar(&result.GardenerProjectName, "gardener-project-name", "gardener-project-name", "Name of the Gardener project.")
 	flag.StringVar(&result.OutputPath, "output-path", "/tmp/", "Path where generated yamls will be saved. Directory has to exist.")
 	flag.BoolVar(&result.IsDryRun, "dry-run", true, "Dry-run flag. Has to be set to 'false' otherwise it will not apply the Custom Resources on the KCP cluster.")
-	flag.StringVar(&result.InputType, "input-type", InputTypeJSON, "Type of input to be used. Possible values: **all** (will migrate all gardener shoots), and **json** (will migrate only cluster whose runtimeIds were passed as an input, see the example hack/runtime-migrator/input/runtimeids_sample.json).")
+	flag.StringVar(&result.InputType, "input-type", InputTypeJSON, "Type of input to be used. Possible values: **txt** (see the example hack/runtime-migrator/input/runtimeids_sample.txt), and **json** (see the example hack/runtime-migrator/input/runtimeids_sample.json).")
 	flag.StringVar(&result.InputFilePath, "input-file-path", "/path/to/input/file", "Path to the input file containing RuntimeCRs to be migrated.")
 
 	flag.Parse()
