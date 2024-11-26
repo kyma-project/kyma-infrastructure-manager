@@ -65,9 +65,9 @@ cat ./runtime-migrator \
 2024/11/22 17:05:28
 2024/11/22 17:05:33 INFO Migrating runtimes
 2024/11/22 17:05:33 INFO Reading runtimeIds from input file
-2024/11/22 17:05:43 INFO Runtime processed successfully runtimeID=1df09b5b-0347-459d-aa0a-715db8fcaad7
-2024/11/22 17:05:45 INFO Runtime processed successfully runtimeID=ea439a5e-aa59-4e3e-8bfb-9bab1b31371e
-2024/11/22 17:05:49 INFO Runtime processed successfully runtimeID=d6eeafee-ffd5-4f23-97dc-a1df197b3b30
+2024/11/22 17:05:43 INFO Runtime processed successfully (dry run) runtimeID=1df09b5b-0347-459d-aa0a-715db8fcaad7
+2024/11/22 17:05:45 INFO Runtime processed successfully (dry run) runtimeID=ea439a5e-aa59-4e3e-8bfb-9bab1b31371e
+2024/11/22 17:05:49 INFO Runtime processed successfully (dry run) runtimeID=d6eeafee-ffd5-4f23-97dc-a1df197b3b30
 2024/11/22 17:05:52 WARN Runtime CR can cause unwanted update in Gardener runtimeID=99a38a99-e8d7-4b98-a6f2-5a54ed389c4d
 2024/11/22 17:05:52 ERROR Failed to fetch shoot: shoot was deleted or the runtime ID is incorrect runtimeID=0a61a3c4-0ea8-4e39-860a-7853f0b6d180
 2024/11/22 17:05:55 ERROR Failed to verify runtime runtimeID=6daf5f59-b0ab-44af-bb8e-7735fd609449

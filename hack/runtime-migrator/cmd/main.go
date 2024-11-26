@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	timeoutK8sOperation = 15 * time.Second
+	timeoutK8sOperation = 20 * time.Second
 	expirationTime      = 60 * time.Minute
 	runtimeIDAnnotation = "kcp.provisioner.kyma-project.io/runtime-id"
 )

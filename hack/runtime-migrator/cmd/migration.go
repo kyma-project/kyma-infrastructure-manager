@@ -129,15 +129,17 @@ func (m Migration) Do(ctx context.Context, runtimeIDs []string) error {
 			return
 		}
 
-		if !m.isDryRun {
+		if m.isDryRun {
+			reportSuccess(runtimeID, shoot.Name, "Runtime processed successfully (dry-run)")
+		} else {
 			err = m.applyRuntimeCR(runtime)
 			if err != nil {
 				reportError(runtimeID, shoot.Name, "Failed to apply Runtime CR", err)
+				return
 			}
-			return
-		}
 
-		reportSuccess(runtimeID, shoot.Name, "Runtime processed successfully")
+			reportSuccess(runtimeID, shoot.Name, "Runtime have been applied")
+		}
 	}
 
 main:
