@@ -351,6 +351,7 @@ func newKubeAPIServerMatcher(k v1beta1.Kubernetes) types.GomegaMatcher {
 			"DefaultUnreachableTolerationSeconds": gstruct.Ignore(),
 			"EncryptionConfig":                    gstruct.Ignore(),
 			"StructuredAuthentication":            gstruct.Ignore(),
+			"StructuredAuthorization":             gstruct.Ignore(),
 		},
 	))
 }

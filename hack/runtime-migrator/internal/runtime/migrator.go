@@ -29,10 +29,11 @@ type Migrator struct {
 	kcpClient          client.Client
 }
 
-func NewMigrator(cfg migrator.Config, kubeconfigProvider kubeconfig.Provider) Migrator {
+func NewMigrator(cfg migrator.Config, kubeconfigProvider kubeconfig.Provider, kcpClient client.Client) Migrator {
 	return Migrator{
 		cfg:                cfg,
 		kubeconfigProvider: kubeconfigProvider,
+		kcpClient:          kcpClient,
 	}
 }
 
@@ -45,7 +46,7 @@ func (m Migrator) Do(ctx context.Context, shoot v1beta1.Shoot) (v1.Runtime, erro
 
 	var oidcConfig = getOidcConfig(shoot)
 	var licenceType = shoot.Annotations["kcp.provisioner.kyma-project.io/licence-type"]
-	labels, err := getAllRuntimeLabels(ctx, shoot, m.cfg.Client)
+	labels, err := getAllRuntimeLabels(ctx, shoot, m.kcpClient)
 	if err != nil {
 		return v1.Runtime{}, err
 	}
@@ -171,16 +172,10 @@ func getOidcConfig(shoot v1beta1.Shoot) v1beta1.OIDCConfig {
 	return oidcConfig
 }
 
-func getAllRuntimeLabels(ctx context.Context, shoot v1beta1.Shoot, getClient migrator.GetClient) (map[string]string, error) {
+func getAllRuntimeLabels(ctx context.Context, shoot v1beta1.Shoot, kcpClient client.Client) (map[string]string, error) {
 	enrichedRuntimeLabels := map[string]string{}
 	var err error
 
-	// add agreed labels from the GardenerCluster CR
-	k8sClient, clientErr := getClient()
-
-	if clientErr != nil {
-		return map[string]string{}, errors.Wrap(clientErr, fmt.Sprintf("Failed to get GardenerClient for shoot %s - %s\n", shoot.Name, clientErr))
-	}
 	gardenerCluster := v1.GardenerCluster{}
 
 	kymaID, found := shoot.Annotations["kcp.provisioner.kyma-project.io/runtime-id"]
@@ -189,7 +184,7 @@ func getAllRuntimeLabels(ctx context.Context, shoot v1beta1.Shoot, getClient mig
 	}
 
 	gardenerCRKey := types.NamespacedName{Name: kymaID, Namespace: "kcp-system"}
-	getGardenerCRerr := k8sClient.Get(ctx, gardenerCRKey, &gardenerCluster)
+	getGardenerCRerr := kcpClient.Get(ctx, gardenerCRKey, &gardenerCluster)
 	if getGardenerCRerr != nil {
 		var errMsg = fmt.Sprintf("Failed to retrieve GardenerCluster CR for shoot %s\n", shoot.Name)
 		return map[string]string{}, errors.Wrap(getGardenerCRerr, errMsg)
@@ -203,7 +198,7 @@ func getAllRuntimeLabels(ctx context.Context, shoot v1beta1.Shoot, getClient mig
 	enrichedRuntimeLabels["kyma-project.io/region"] = gardenerCluster.Labels["kyma-project.io/region"]
 	enrichedRuntimeLabels["kyma-project.io/shoot-name"] = gardenerCluster.Labels["kyma-project.io/shoot-name"]
 	enrichedRuntimeLabels["operator.kyma-project.io/kyma-name"] = gardenerCluster.Labels["operator.kyma-project.io/kyma-name"]
-	// The runtime CR should be controlled by the KIM in dry-run mode
+	// The runtime CR should be controlled by the Provisioner
 	enrichedRuntimeLabels["kyma-project.io/controlled-by-provisioner"] = "true"
 	// add custom label for the migrator
 	enrichedRuntimeLabels[migratorLabel] = "true"

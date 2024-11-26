@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"log/slog"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -36,7 +38,7 @@ func NewMigration(migratorConfig config2.Config, converterConfig config.Converte
 	}
 
 	return Migration{
-		runtimeMigrator: runtime.NewMigrator(migratorConfig, kubeconfigProvider),
+		runtimeMigrator: runtime.NewMigrator(migratorConfig, kubeconfigProvider, kcpClient),
 		runtimeVerifier: runtime.NewVerifier(converterConfig, auditLogConfig),
 		kcpClient:       kcpClient,
 		shootClient:     shootClient,
@@ -84,9 +86,14 @@ func (m Migration) Do(ctx context.Context, runtimeIDs []string) error {
 	}
 
 	run := func(runtimeID string) {
-		shoot := findShoot(runtimeID, shootList)
-		if shoot == nil {
-			reportError(runtimeID, "", "Failed to find shoot", errors.New("no shoot with given runtimeID found"))
+		shoot, err := m.fetchShoot(ctx, shootList, m.shootClient, runtimeID)
+		if err != nil {
+			reportError(runtimeID, "", "Failed to fetch shoot", err)
+			return
+		}
+
+		if shootIsBeingDeleted(shoot) {
+			reportError(runtimeID, shoot.Name, "Runtime is being deleted", nil)
 			return
 		}
 
@@ -123,15 +130,17 @@ func (m Migration) Do(ctx context.Context, runtimeIDs []string) error {
 			return
 		}
 
-		if !m.isDryRun {
+		if m.isDryRun {
+			reportSuccess(runtimeID, shoot.Name, "Runtime processed successfully (dry-run)")
+		} else {
 			err = m.applyRuntimeCR(runtime)
 			if err != nil {
 				reportError(runtimeID, shoot.Name, "Failed to apply Runtime CR", err)
+				return
 			}
-			return
-		}
 
-		reportSuccess(runtimeID, shoot.Name, "Runtime processed successfully")
+			reportSuccess(runtimeID, shoot.Name, "Runtime have been applied")
+		}
 	}
 
 main:
@@ -165,6 +174,32 @@ func findShoot(runtimeID string, shootList *v1beta1.ShootList) *v1beta1.Shoot {
 		}
 	}
 	return nil
+}
+
+func (m Migration) fetchShoot(ctx context.Context, shootList *v1beta1.ShootList, shootClient gardener_types.ShootInterface, runtimeID string) (*v1beta1.Shoot, error) {
+	shoot := findShoot(runtimeID, shootList)
+	if shoot == nil {
+		return nil, errors.New("shoot was deleted or the runtimeID is incorrect")
+	}
+
+	getCtx, cancel := context.WithTimeout(ctx, timeoutK8sOperation)
+	defer cancel()
+
+	// We are fetching the shoot from the gardener to make sure the runtime didn't get deleted during the migration process
+	refreshedShoot, err := m.shootClient.Get(getCtx, shoot.Name, v1.GetOptions{})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil, errors.New("shoot was deleted")
+		}
+
+		return nil, err
+	}
+
+	return refreshedShoot, nil
+}
+
+func shootIsBeingDeleted(shoot *v1beta1.Shoot) bool {
+	return !shoot.DeletionTimestamp.IsZero()
 }
 
 func (m Migration) applyRuntimeCR(runtime runtimev1.Runtime) error {

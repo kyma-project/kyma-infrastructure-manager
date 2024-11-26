@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	timeoutK8sOperation = 10 * time.Second
+	timeoutK8sOperation = 20 * time.Second
 	expirationTime      = 60 * time.Minute
 	runtimeIDAnnotation = "kcp.provisioner.kyma-project.io/runtime-id"
 )
@@ -53,45 +53,45 @@ func main() {
 
 	kcpClient, err := config.CreateKcpClient(&cfg)
 	if err != nil {
-		slog.Error("Failed to create kcp client: %v ", slog.Any("error", err))
+		slog.Error("Failed to create kcp client", slog.Any("error", err))
 		os.Exit(1)
 	}
 
 	gardenerShootClient, err := setupGardenerShootClient(cfg.GardenerKubeconfigPath, gardenerNamespace)
 	if err != nil {
-		slog.Error("Failed to setup Gardener shoot client: %v", slog.Any("error", err))
+		slog.Error("Failed to setup Gardener shoot client", slog.Any("error", err))
 		os.Exit(1)
 	}
 
 	auditLogConfig, err := getAuditLogConfig(kcpClient)
 	if err != nil {
-		slog.Error("Failed to get audit log config: %v", slog.Any("error", err))
+		slog.Error("Failed to get audit log config", slog.Any("error", err))
 		os.Exit(1)
 	}
 
 	converterConfig, err := getConverterConfig(kcpClient)
 	if err != nil {
-		slog.Error("Failed to get converter config: %v", slog.Any("error", err))
+		slog.Error("Failed to get converter config", slog.Any("error", err))
 		os.Exit(1)
 	}
 
 	slog.Info("Migrating runtimes")
 	migrator, err := NewMigration(cfg, converterConfig, auditLogConfig, kubeconfigProvider, kcpClient, gardenerShootClient)
 	if err != nil {
-		slog.Error("Failed to create migrator: %v", slog.Any("error", err))
+		slog.Error("Failed to create migrator", slog.Any("error", err))
 		os.Exit(1)
 	}
 
 	slog.Info("Reading runtimeIds from input file")
 	runtimeIds, err := getRuntimeIDsFromInputFile(cfg)
 	if err != nil {
-		slog.Error("Failed to read runtime Ids from input: %v", slog.Any("error", err))
+		slog.Error("Failed to read runtime Ids from input", slog.Any("error", err))
 		os.Exit(1)
 	}
 
 	err = migrator.Do(context.Background(), runtimeIds)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to migrate runtimes: %v", slog.Any("error", err)))
+		slog.Error("Failed to migrate runtimes", slog.Any("error", err))
 		os.Exit(1)
 	}
 }
