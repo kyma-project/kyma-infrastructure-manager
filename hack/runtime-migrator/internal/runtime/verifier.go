@@ -70,6 +70,7 @@ func (v Verifier) newConverter(shootToMatch v1beta1.Shoot) (gardener_shoot.Conve
 		ConverterConfig: v.converterConfig,
 		AuditLogData:    auditLogData,
 		Zones:           getZones(shootToMatch.Spec.Provider.Workers),
+		Extensions:      shootToMatch.Spec.Extensions,
 	}), nil
 }
 

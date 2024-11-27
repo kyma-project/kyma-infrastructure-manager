@@ -73,6 +73,26 @@ func newDNSExtensionConfig(domain, secretName, dnsProviderType string) *DNSExten
 	}
 }
 
+func NewDNSExtenderFromShoot(extensions []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+
+	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+		dnsExtension := func() *gardener.Extension {
+			for _, extension := range extensions {
+				if extension.Type == "shoot-dns-service" {
+					return &extension
+				}
+			}
+			return nil
+		}()
+
+		if dnsExtension != nil {
+			shoot.Spec.Extensions = append(shoot.Spec.Extensions, *dnsExtension)
+		}
+
+		return nil
+	}
+}
+
 func NewDNSExtender(secretName, domainPrefix, dnsProviderType string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		domain := fmt.Sprintf("%s.%s", runtime.Spec.Shoot.Name, domainPrefix)

@@ -52,6 +52,7 @@ type PatchOpts struct {
 	ShootK8SVersion   string
 	ShootImageName    string
 	ShootImageVersion string
+	Extensions        []gardener.Extension
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {
@@ -93,6 +94,10 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.ShootImageName,
 			opts.ShootImageVersion,
 			opts.Zones))
+
+	baseExtenders = append(baseExtenders,
+		extender2.NewDNSExtenderFromShoot(opts.Extensions),
+	)
 
 	baseExtenders = append(baseExtenders,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))

@@ -45,6 +45,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		ShootK8SVersion:   s.shoot.Spec.Kubernetes.Version,
 		ShootImageName:    imgName,
 		ShootImageVersion: imgVersion,
+		Extensions:        s.shoot.Spec.Extensions,
 	})
 
 	if err != nil {
