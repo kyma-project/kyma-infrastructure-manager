@@ -40,7 +40,9 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	k8slabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -48,6 +50,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/flowcontrol"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -133,6 +136,7 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "f1c68560.kyma-project.io",
+		Cache:                  restrictWatchedNamespace(),
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -332,5 +336,28 @@ func refreshRuntimeMetrics(restConfig *rest.Config, logger logr.Logger, metrics 
 
 	for _, rt := range rl.Items {
 		metrics.SetRuntimeStates(rt)
+	}
+}
+
+func restrictWatchedNamespace() cache.Options {
+	return cache.Options{
+		ByObject: map[client.Object]cache.ByObject{
+			&corev1.Secret{}: {
+				Label: k8slabels.Everything(),
+				Namespaces: map[string]cache.Config{
+					"kcp-system": {},
+				},
+			},
+			&infrastructuremanagerv1.Runtime{}: {
+				Namespaces: map[string]cache.Config{
+					"kcp-system": {},
+				},
+			},
+			&infrastructuremanagerv1.GardenerCluster{}: {
+				Namespaces: map[string]cache.Config{
+					"kcp-system": {},
+				},
+			},
+		},
 	}
 }
