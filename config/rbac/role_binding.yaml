@@ -1,17 +1,18 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   labels:
-    app.kubernetes.io/name: clusterrolebinding
+    app.kubernetes.io/name: rolebinding
     app.kubernetes.io/instance: infrastructure-manager-rolebinding
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: infrastructure-manager
     app.kubernetes.io/part-of: infrastructure-manager
     app.kubernetes.io/managed-by: kustomize
   name: infrastructure-manager-rolebinding
+  namespace: kcp-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: infrastructure-manager-role
 subjects:
 - kind: ServiceAccount
