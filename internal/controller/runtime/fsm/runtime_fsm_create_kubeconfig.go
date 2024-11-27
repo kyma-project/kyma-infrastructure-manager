@@ -16,7 +16,7 @@ const (
 	kubeconfigSecretKey = "config"
 )
 
-func sFnCreateKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+func sFnHandleKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Create Gardener Cluster CR state")
 
 	runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]

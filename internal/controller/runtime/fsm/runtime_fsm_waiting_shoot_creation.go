@@ -74,7 +74,7 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonShootCreationCompleted,
 			"Shoot creation completed",
-			sFnCreateKubeconfig)
+			sFnHandleKubeconfig)
 
 	default:
 		m.log.Info("WaitForShootCreation - unknown shoot operation state, stopping state machine", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
