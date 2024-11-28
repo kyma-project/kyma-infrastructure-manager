@@ -1,8 +1,6 @@
 package extender
 
 import (
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"testing"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -11,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 )
 
 func TestOidcExtender(t *testing.T) {
