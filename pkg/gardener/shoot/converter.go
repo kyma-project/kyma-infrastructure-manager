@@ -55,38 +55,38 @@ type PatchOpts struct {
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {
-	baseExtenders := baseExtenders(opts.ConverterConfig)
+	extendersForCreate := baseExtenders(opts.ConverterConfig)
 
-	baseExtenders = append(baseExtenders,
+	extendersForCreate = append(extendersForCreate,
 		extender2.NewProviderExtenderForCreateOperation(
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
 		))
 
-	baseExtenders = append(baseExtenders,
-		extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType),
-		extender2.NewOidcExtender(opts.Kubernetes.DefaultOperatorOidc),
+	extendersForCreate = append(extendersForCreate,
+		extender2.NewDNSExtenderForCreate(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType),
+		extender2.NewOidcExtenderForCreate(opts.Kubernetes.DefaultOperatorOidc),
 	)
 
-	baseExtenders = append(baseExtenders,
+	extendersForCreate = append(extendersForCreate,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
 
 	var zero auditlogs.AuditLogData
 	if opts.AuditLogData != zero {
-		baseExtenders = append(baseExtenders,
+		extendersForCreate = append(extendersForCreate,
 			auditlogs.NewAuditlogExtender(
 				opts.AuditLog.PolicyConfigMapName,
 				opts.AuditLogData))
 	}
 
-	return newConverter(opts.ConverterConfig, baseExtenders...)
+	return newConverter(opts.ConverterConfig, extendersForCreate...)
 }
 
 func NewConverterPatch(opts PatchOpts) Converter {
-	baseExtenders := baseExtenders(opts.ConverterConfig)
+	extendersForPatch := baseExtenders(opts.ConverterConfig)
 
-	baseExtenders = append(baseExtenders,
+	extendersForPatch = append(extendersForPatch,
 		extender2.NewProviderExtenderPatchOperation(
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.MachineImage.DefaultName,
@@ -95,23 +95,23 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.ShootImageVersion,
 			opts.Zones))
 
-	baseExtenders = append(baseExtenders,
-		extender2.NewDNSExtenderFromShoot(opts.Extensions),
-		extender2.NewOidcExtenderFromShoot(opts.Kubernetes.DefaultOperatorOidc, opts.Extensions),
+	extendersForPatch = append(extendersForPatch,
+		extender2.NewDNSExtenderForPatch(opts.Extensions),
+		extender2.NewOidcExtenderForPatch(opts.Kubernetes.DefaultOperatorOidc, opts.Extensions),
 	)
 
-	baseExtenders = append(baseExtenders,
+	extendersForPatch = append(extendersForPatch,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
 
 	var zero auditlogs.AuditLogData
 	if opts.AuditLogData != zero {
-		baseExtenders = append(baseExtenders,
+		extendersForPatch = append(extendersForPatch,
 			auditlogs.NewAuditlogExtender(
 				opts.AuditLog.PolicyConfigMapName,
 				opts.AuditLogData))
 	}
 
-	return newConverter(opts.ConverterConfig, baseExtenders...)
+	return newConverter(opts.ConverterConfig, extendersForPatch...)
 }
 
 func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {

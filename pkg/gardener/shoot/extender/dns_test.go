@@ -2,6 +2,7 @@ package extender
 
 import (
 	"encoding/json"
+	"k8s.io/utils/ptr"
 	"testing"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -13,7 +14,7 @@ import (
 )
 
 func TestDNSExtender(t *testing.T) {
-	t.Run("Create DNS config", func(t *testing.T) {
+	t.Run("Create DNS config for create scenario", func(t *testing.T) {
 		// given
 		secretName := "my-secret"
 		domainPrefix := "dev.mydomain.com"
@@ -25,7 +26,7 @@ func TestDNSExtender(t *testing.T) {
 				},
 			},
 		}
-		extender := NewDNSExtender(secretName, domainPrefix, dnsProviderType)
+		extender := NewDNSExtenderForCreate(secretName, domainPrefix, dnsProviderType)
 		shoot := fixEmptyGardenerShoot("test", "dev")
 
 		// when
@@ -42,6 +43,39 @@ func TestDNSExtender(t *testing.T) {
 		assertExtensionConfig(t, shoot.Spec.Extensions[0].ProviderConfig)
 		assert.Equal(t, secretName, shoot.Spec.Resources[0].Name)
 		assert.Equal(t, secretName, shoot.Spec.Resources[0].ResourceRef.Name)
+	})
+
+	t.Run("Create DNS config for patch scenario", func(t *testing.T) {
+		// given
+		runtimeShoot := imv1.Runtime{
+			Spec: imv1.RuntimeSpec{
+				Shoot: imv1.RuntimeShoot{
+					Name: "myshoot",
+				},
+			},
+		}
+
+		shoot := fixEmptyGardenerShoot("test", "dev")
+		emptyDnsExtension := gardener.Extension{
+			Type:           "shoot-dns-service",
+			ProviderConfig: &runtime.RawExtension{},
+			Disabled:       ptr.To(false),
+		}
+
+		shoot.Spec.Extensions = []gardener.Extension{
+			emptyDnsExtension,
+		}
+
+		extender := NewDNSExtenderForPatch(shoot.Spec.Extensions)
+
+		// when
+		err := extender(runtimeShoot, &shoot)
+
+		// then
+		require.NoError(t, err)
+		assert.Empty(t, shoot.Spec.DNS)
+		assert.Empty(t, shoot.Spec.Extensions[0].ProviderConfig)
+		assert.Equal(t, emptyDnsExtension, shoot.Spec.Extensions[0])
 	})
 }
 

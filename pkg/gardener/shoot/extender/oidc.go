@@ -15,7 +15,7 @@ func shouldDefaultOidcConfig(config gardener.OIDCConfig) bool {
 	return config.ClientID == nil && config.IssuerURL == nil
 }
 
-func NewOidcExtenderFromShoot(oidcProvider config.OidcProvider, extensions []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewOidcExtenderForPatch(oidcProvider config.OidcProvider, extensions []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		oidcExtension := func() *gardener.Extension {
 			for _, extension := range extensions {
@@ -47,7 +47,7 @@ func NewOidcExtenderFromShoot(oidcProvider config.OidcProvider, extensions []gar
 	}
 }
 
-func NewOidcExtender(oidcProvider config.OidcProvider) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewOidcExtenderForCreate(oidcProvider config.OidcProvider) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		setOIDCExtension(shoot)
 

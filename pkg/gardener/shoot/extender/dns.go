@@ -73,7 +73,7 @@ func newDNSExtensionConfig(domain, secretName, dnsProviderType string) *DNSExten
 	}
 }
 
-func NewDNSExtenderFromShoot(extensions []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewDNSExtenderForPatch(extensions []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		dnsExtension := func() *gardener.Extension {
@@ -93,7 +93,7 @@ func NewDNSExtenderFromShoot(extensions []gardener.Extension) func(runtime imv1.
 	}
 }
 
-func NewDNSExtender(secretName, domainPrefix, dnsProviderType string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewDNSExtenderForCreate(secretName, domainPrefix, dnsProviderType string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		domain := fmt.Sprintf("%s.%s", runtime.Spec.Shoot.Name, domainPrefix)
 		isPrimary := true
