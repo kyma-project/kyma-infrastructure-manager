@@ -17,17 +17,11 @@ func shouldDefaultOidcConfig(config gardener.OIDCConfig) bool {
 
 func NewOidcExtenderForPatch(oidcProvider config.OidcProvider, extensions []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		oidcExtension := func() *gardener.Extension {
-			for _, extension := range extensions {
-				if extension.Type == "shoot-oidc-service" {
-					return &extension
-				}
-			}
-			return nil
-		}()
+		extensionExtender := rewriteExtensionExtender("shoot-oidc-service", extensions)
 
-		if oidcExtension != nil {
-			shoot.Spec.Extensions = append(shoot.Spec.Extensions, *oidcExtension)
+		err := extensionExtender(runtime, shoot)
+		if err != nil {
+			return err
 		}
 
 		oidcConfig := runtime.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig

@@ -74,19 +74,22 @@ func newDNSExtensionConfig(domain, secretName, dnsProviderType string) *DNSExten
 }
 
 func NewDNSExtenderForPatch(extensions []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+	return rewriteExtensionExtender("shoot-dns-service", extensions)
+}
 
+func rewriteExtensionExtender(extensionType string, extensions []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		dnsExtension := func() *gardener.Extension {
+		extensionToSet := func() *gardener.Extension {
 			for _, extension := range extensions {
-				if extension.Type == "shoot-dns-service" {
+				if extension.Type == extensionType {
 					return &extension
 				}
 			}
 			return nil
 		}()
 
-		if dnsExtension != nil {
-			shoot.Spec.Extensions = append(shoot.Spec.Extensions, *dnsExtension)
+		if extensionToSet != nil {
+			shoot.Spec.Extensions = append(shoot.Spec.Extensions, *extensionToSet)
 		}
 
 		return nil
