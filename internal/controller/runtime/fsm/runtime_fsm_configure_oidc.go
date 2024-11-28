@@ -19,24 +19,15 @@ func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ct
 
 	if !isOidcExtensionEnabled(*s.shoot) {
 		m.log.Info("OIDC extension is disabled")
-		s.instance.UpdateStatePending(
-			imv1.ConditionTypeOidcConfigured,
-			imv1.ConditionReasonOidcConfigured,
-			"True",
-			"OIDC extension disabled",
-		)
+		setPendingState(&s.instance, "OIDC extension disabled")
+
 		return switchState(sFnApplyClusterRoleBindings)
 	}
 
 	if !multiOidcSupported(s.instance) {
 		// New OIDC functionality is supported only for new clusters
 		m.log.Info("Multi OIDC is not supported for migrated runtimes")
-		s.instance.UpdateStatePending(
-			imv1.ConditionTypeOidcConfigured,
-			imv1.ConditionReasonOidcConfigured,
-			"True",
-			"Multi OIDC not supported for migrated runtimes",
-		)
+		setPendingState(&s.instance, "Multi OIDC not supported for migrated runtimes")
 		return switchState(sFnApplyClusterRoleBindings)
 	}
 
@@ -49,16 +40,20 @@ func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ct
 		return updateStatusAndStopWithError(err)
 	}
 
-	s.instance.UpdateStatePending(
+	m.log.Info("OIDC has been configured", "Name", s.shoot.Name)
+	setPendingState(&s.instance, "OIDC configuration completed")
+
+	return switchState(sFnApplyClusterRoleBindings)
+}
+
+func setPendingState(instance *imv1.Runtime, message string) {
+	instance.UpdateStatePending(
 		imv1.ConditionTypeOidcConfigured,
 		imv1.ConditionReasonOidcConfigured,
 		"True",
-		"OIDC configuration completed",
+		message,
 	)
 
-	m.log.Info("OIDC has been configured", "Name", s.shoot.Name)
-
-	return switchState(sFnApplyClusterRoleBindings)
 }
 
 func defaultAdditionalOidcIfNotPresent(runtime *imv1.Runtime, cfg RCCfg) {
