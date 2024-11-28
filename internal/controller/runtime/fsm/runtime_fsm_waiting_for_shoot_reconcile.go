@@ -58,7 +58,7 @@ func sFnWaitForShootReconcile(_ context.Context, m *fsm, s *systemState) (stateF
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonConfigurationCompleted,
 			"Runtime processing completed successfully",
-			sFnConfigureOidc)
+			sFnHandleKubeconfig)
 	}
 
 	m.log.Info("sFnWaitForShootReconcile - unknown shoot operation state, stopping state machine", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
