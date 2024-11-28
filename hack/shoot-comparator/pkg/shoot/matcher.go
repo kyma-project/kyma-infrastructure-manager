@@ -2,9 +2,10 @@ package shoot
 
 import (
 	"fmt"
-	"github.com/kyma-project/infrastructure-manager/hack/shoot-comparator/pkg/runtime"
 	"reflect"
 	"strings"
+
+	"github.com/kyma-project/infrastructure-manager/hack/shoot-comparator/pkg/runtime"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/hack/shoot-comparator/pkg/errors"
@@ -81,7 +82,7 @@ func (m *Matcher) Match(actual interface{}) (success bool, err error) {
 			path:          "metadata/namespace",
 		},
 		{
-			GomegaMatcher: gstruct.MatchElements(idExtension, gstruct.AllowDuplicates, extensions(shootToMatch.Spec.Extensions)),
+			GomegaMatcher: gstruct.MatchElements(idExtension, gstruct.IgnoreMissing, extensions(shootToMatch.Spec.Extensions)),
 			actual:        shootActual.Spec.Extensions,
 			path:          "spec/extensions",
 		},

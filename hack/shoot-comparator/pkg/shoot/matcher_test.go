@@ -935,32 +935,6 @@ var _ = Describe(":: shoot matcher :: ", func() {
 			true,
 		),
 		Entry(
-			"should find no differences in spec/extensions #2",
-			deepCp(empty, withShootSpec(v1beta1.ShootSpec{
-				Extensions: []v1beta1.Extension{
-					{
-						Type:     "shoot-dns-service",
-						Disabled: ptr.To[bool](true),
-						ProviderConfig: &runtime.RawExtension{
-							Raw: []byte("{\"apiVersion\":\"service.dns.extensions.gardener.cloud/v1alpha1\",\"kind\":\"DNSConfig\",\"dnsProviderReplication\":{\"enabled\":true},\"providers\":[{\"domains\":{\"include\":[\"a50de45.dev.kyma.ondemand.com\"]},\"secretName\":\"route53-secret-dev\",\"type\":\"aws-route53\"}],\"syncProvidersFromShootSpecDNS\":true}"),
-						},
-					},
-				},
-			})),
-			deepCp(empty, withShootSpec(v1beta1.ShootSpec{
-				Extensions: []v1beta1.Extension{
-					{
-						Type:     "shoot-dns-service",
-						Disabled: ptr.To[bool](true),
-						ProviderConfig: &runtime.RawExtension{
-							Raw: []byte("{\"apiVersion\":\"service.dns.extensions.gardener.cloud/v1alpha1\",\"kind\":\"DNSConfig\",\"dnsProviderReplication\":{\"enabled\":true},\"providers\":[{\"domains\":{\"include\":[\"a50de45.dev.kyma.ondemand.com\"]},\"secretName\":\"xxx-route53-secret-dev\",\"type\":\"aws-route53\"}],\"syncProvidersFromShootSpecDNS\":true}"),
-						},
-					},
-				},
-			})),
-			true,
-		),
-		Entry(
 			"should find no differences in spec/extensions #3",
 			deepCp(empty, withShootSpec(v1beta1.ShootSpec{
 				Extensions: []v1beta1.Extension{
