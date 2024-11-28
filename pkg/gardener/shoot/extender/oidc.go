@@ -49,9 +49,7 @@ func NewOidcExtenderFromShoot(oidcProvider config.OidcProvider, extensions []gar
 
 func NewOidcExtender(oidcProvider config.OidcProvider) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		if CanEnableExtension(runtime) {
-			setOIDCExtension(shoot)
-		}
+		setOIDCExtension(shoot)
 
 		oidcConfig := runtime.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig
 		if shouldDefaultOidcConfig(oidcConfig) {
@@ -68,10 +66,6 @@ func NewOidcExtender(oidcProvider config.OidcProvider) func(runtime imv1.Runtime
 
 		return nil
 	}
-}
-
-func CanEnableExtension(runtime imv1.Runtime) bool {
-	return runtime.Labels["operator.kyma-project.io/created-by-migrator"] != "true"
 }
 
 func setOIDCExtension(shoot *gardener.Shoot) {

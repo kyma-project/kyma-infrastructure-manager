@@ -28,11 +28,6 @@ func TestOidcExtender(t *testing.T) {
 			migratorLabel:                map[string]string{migratorLabel: "false"},
 			expectedOidcExtensionEnabled: true,
 		},
-		{
-			name:                         "label created-by-migrator unset should configure OIDC",
-			migratorLabel:                nil,
-			expectedOidcExtensionEnabled: true,
-		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			// given
