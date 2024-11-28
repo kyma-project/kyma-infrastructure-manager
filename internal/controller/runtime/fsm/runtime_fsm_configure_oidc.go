@@ -53,7 +53,6 @@ func setPendingState(instance *imv1.Runtime, message string) {
 		"True",
 		message,
 	)
-
 }
 
 func defaultAdditionalOidcIfNotPresent(runtime *imv1.Runtime, cfg RCCfg) {
@@ -116,7 +115,7 @@ func isOidcExtensionEnabled(shoot gardener.Shoot) bool {
 }
 
 func multiOidcSupported(runtime imv1.Runtime) bool {
-	return runtime.Labels["operator.kyma-project.io/created-by-migrator"] != "true"
+	return runtime.Labels["operator.kyma-project.io/created-by-migrator"] != "true" //nolint:all
 }
 
 func createOpenIDConnectResource(additionalOidcConfig gardener.OIDCConfig, oidcID int) *authenticationv1alpha1.OpenIDConnect {

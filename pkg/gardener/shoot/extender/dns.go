@@ -78,7 +78,7 @@ func NewDNSExtenderForPatch(extensions []gardener.Extension) func(runtime imv1.R
 }
 
 func rewriteExtensionExtender(extensionType string, extensions []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+	return func(_ imv1.Runtime, shoot *gardener.Shoot) error {
 		extensionToSet := func() *gardener.Extension {
 			for _, extension := range extensions {
 				if extension.Type == extensionType {
