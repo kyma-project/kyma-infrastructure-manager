@@ -166,6 +166,15 @@ func (m *Matcher) Match(actual interface{}) (success bool, err error) {
 			actual:        shootToMatch.Labels,
 			path:          "metadata/labels",
 		},
+		{
+			GomegaMatcher: gstruct.MatchElements(
+				idResource,
+				gstruct.IgnoreMissing,
+				resources(shootToMatch.Spec.Resources),
+			),
+			actual: shootActual.Spec.Resources,
+			path:   "spec/resources",
+		},
 	}
 
 	for _, matcher := range matchers {
@@ -232,6 +241,14 @@ func idToleration(v interface{}) string {
 	return fmt.Sprintf("%s:%s", toleration.Key, val(toleration.Value))
 }
 
+func idResource(v interface{}) string {
+	res, ok := v.(v1beta1.NamedResourceReference)
+	if !ok {
+		panic("invalid type")
+	}
+	return fmt.Sprintf("%s", res.Name)
+}
+
 func tolerations(ts []v1beta1.Toleration) gstruct.Elements {
 	out := map[string]types.GomegaMatcher{}
 	for _, t := range ts {
@@ -239,6 +256,18 @@ func tolerations(ts []v1beta1.Toleration) gstruct.Elements {
 		out[ID] = gstruct.MatchAllFields(gstruct.Fields{
 			"Key":   gomega.BeComparableTo(t.Key),
 			"Value": gomega.BeComparableTo(t.Value),
+		})
+	}
+	return out
+}
+
+func resources(ts []v1beta1.NamedResourceReference) gstruct.Elements {
+	out := map[string]types.GomegaMatcher{}
+	for _, t := range ts {
+		ID := idResource(t)
+		out[ID] = gstruct.MatchAllFields(gstruct.Fields{
+			"Name":        gomega.BeComparableTo(t.Name),
+			"ResourceRef": gomega.BeComparableTo(t.ResourceRef),
 		})
 	}
 	return out
