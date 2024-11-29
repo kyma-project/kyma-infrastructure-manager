@@ -38,7 +38,7 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 				imv1.ConditionReasonCreationError,
 				"False",
 				"Shoot creation failed, no matching seeds")
-			return updateStatusAndRequeueAfter(m.RCCfg.RequeueDurationShootCreate)
+			return updateStatusAndStop()
 		}
 
 		m.log.Info(fmt.Sprintf("Shoot %s is in %s state, scheduling for retry", s.shoot.Name, s.shoot.Status.LastOperation.State))
