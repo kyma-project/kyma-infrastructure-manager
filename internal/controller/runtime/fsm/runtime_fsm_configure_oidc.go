@@ -19,7 +19,7 @@ func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ct
 
 	if !isOidcExtensionEnabled(*s.shoot) {
 		m.log.Info("OIDC extension is disabled")
-		(&s.instance).UpdateStatePending(
+		s.instance.UpdateStatePending(
 			imv1.ConditionTypeOidcConfigured,
 			imv1.ConditionReasonOidcConfigured,
 			"True",
@@ -32,7 +32,7 @@ func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ct
 	if !multiOidcSupported(s.instance) {
 		// New OIDC functionality is supported only for new clusters
 		m.log.Info("Multi OIDC is not supported for migrated runtimes")
-		(&s.instance).UpdateStatePending(
+		s.instance.UpdateStatePending(
 			imv1.ConditionTypeOidcConfigured,
 			imv1.ConditionReasonOidcConfigured,
 			"True",
@@ -51,7 +51,7 @@ func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ct
 	}
 
 	m.log.Info("OIDC has been configured", "Name", s.shoot.Name)
-	(&s.instance).UpdateStatePending(
+	s.instance.UpdateStatePending(
 		imv1.ConditionTypeOidcConfigured,
 		imv1.ConditionReasonOidcConfigured,
 		"True",
