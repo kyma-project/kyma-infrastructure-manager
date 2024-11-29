@@ -73,7 +73,7 @@ var _ = Describe("KIM sFnCreateKubeconfig", func() {
 		},
 	}
 
-	testFunction := buildTestFunction(sFnCreateKubeconfig)
+	testFunction := buildTestFunction(sFnHandleKubeconfig)
 
 	// WHEN/THAN
 

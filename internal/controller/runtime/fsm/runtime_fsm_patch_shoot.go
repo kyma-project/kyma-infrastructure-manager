@@ -73,7 +73,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	if updatedShoot.Generation == s.shoot.Generation {
 		m.log.Info("Gardener shoot for runtime did not change after patch, moving to processing", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
-		return switchState(sFnConfigureOidc)
+		return switchState(sFnHandleKubeconfig)
 	}
 
 	m.log.Info("Gardener shoot for runtime patched successfully", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
