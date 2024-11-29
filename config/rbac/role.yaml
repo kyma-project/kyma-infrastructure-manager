@@ -19,29 +19,6 @@ rules:
   - infrastructuremanager.kyma-project.io
   resources:
   - gardenerclusters
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - infrastructuremanager.kyma-project.io
-  resources:
-  - gardenerclusters/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - infrastructuremanager.kyma-project.io
-  resources:
-  - gardenerclusters/status
-  verbs:
-  - update
-- apiGroups:
-  - infrastructuremanager.kyma-project.io
-  resources:
   - runtimes
   verbs:
   - create
@@ -54,6 +31,8 @@ rules:
 - apiGroups:
   - infrastructuremanager.kyma-project.io
   resources:
+  - gardenerclusters/finalizers
+  - gardenerclusters/status
   - runtimes/finalizers
   verbs:
   - update

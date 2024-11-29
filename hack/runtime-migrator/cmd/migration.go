@@ -138,7 +138,7 @@ func (m Migration) Do(ctx context.Context, runtimeIDs []string) error {
 				return
 			}
 
-			reportSuccess(runtimeID, shoot.Name, "Runtime have been applied")
+			reportSuccess(runtimeID, shoot.Name, "Runtime has been applied")
 		}
 	}
 
