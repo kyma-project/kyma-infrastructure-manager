@@ -39,22 +39,33 @@ func main() {
 	flag.Parse()
 
 	gardenerNamespace := fmt.Sprintf("garden-%s", gardenerProjectName)
-	//shootInterface, err := setupGardenerShootClient(kubeconfigPath, gardenerNamespace)
-
-	//if err != nil {
-	//	slog.Error("Failed to setup Gardener shoot client", slog.Any("error", err))
-	//	return
-	//}
 
 	gardenerClient, err := initGardenerClient(kubeconfigPath, gardenerNamespace, 20*time.Second, 10, 10)
 	if err != nil {
 		slog.Error("Failed to create Gardener client", slog.Any("error", err))
 		return
 	}
+	err = experimentWithRuntimeClient(shootName, gardenerNamespace, gardenerClient)
+	if err != nil {
+		slog.Error("Failed to experiment with runtime client", slog.Any("error", err))
+		return
+	}
 
-	var shoot v1beta1.Shoot
+	//shootInterface, err := setupGardenerShootClient(kubeconfigPath, gardenerNamespace)
+	//
+	//if err != nil {
+	//	slog.Error("Failed to setup Gardener shoot client", slog.Any("error", err))
+	//	return
+	//}
 
-	gardenerClient.Get(context.Background(), client.ObjectKey{Name: shootName, Namespace: gardenerNamespace}, &shoot)
+}
+
+func experimentWithRuntimeClient(shootName string, namespace string, gardenerClient client.Client) error {
+	shoot := &v1beta1.Shoot{}
+	err := gardenerClient.Get(context.Background(), client.ObjectKey{Name: shootName, Namespace: namespace}, shoot)
+	if err != nil {
+		return errors.Wrap(err, "failed to get Shoot")
+	}
 
 	shoot.Spec.DNS = nil
 	currentExtensions := shoot.Spec.Extensions
@@ -68,24 +79,20 @@ func main() {
 
 	shoot.Spec.Extensions = newExtensions
 
-	err = gardenerClient.Patch(context.Background(), &shoot, client.Apply, &client.PatchOptions{
+	setObjectFields(shoot)
+
+	err = gardenerClient.Patch(context.Background(), shoot, client.Apply, &client.PatchOptions{
 		FieldManager: "shoot-investigator",
 		Force:        ptr.To(true),
 	})
 
-	if err != nil {
-		slog.Error("Failed to patch shoot", slog.Any("error", err))
-		return
-	}
+	return nil
+}
 
-	//shoot, err := shootInterface.Get(context.Background(), shootName, v1.GetOptions{})
-	//if err != nil {
-	//	slog.Error("Failed to get shoot", slog.Any("error", err))
-	//	return
-	//}
-
-	slog.Info("Shoot", slog.Any("shoot", shoot))
-
+func setObjectFields(shoot *v1beta1.Shoot) {
+	shoot.Kind = "Shoot"
+	shoot.APIVersion = "core.gardener.cloud/v1beta1"
+	shoot.ManagedFields = nil
 }
 
 func setupGardenerShootClient(kubeconfigPath, gardenerNamespace string) (gardener_types.ShootInterface, error) {
