@@ -62,7 +62,9 @@ func NewConverterCreate(opts CreateOpts) Converter {
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
-		))
+		),
+		extender2.NewDNSExtenderForCreate(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType),
+	)
 
 	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.ConverterConfig, opts.AuditLogData))
 

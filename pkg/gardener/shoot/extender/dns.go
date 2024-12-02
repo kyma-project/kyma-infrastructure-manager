@@ -1,12 +1,10 @@
 package extender
 
 import (
-	"encoding/json"
 	"fmt"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 )
 
@@ -115,20 +113,6 @@ func NewDNSExtenderForCreate(secretName, domainPrefix, dnsProviderType string) f
 				},
 			},
 		}
-
-		extensionJSON, err := json.Marshal(newDNSExtensionConfig(domain, secretName, dnsProviderType))
-		if err != nil {
-			return err
-		}
-
-		dnsExtension := gardener.Extension{
-			Type: "shoot-dns-service",
-			ProviderConfig: &apimachineryruntime.RawExtension{
-				Raw: extensionJSON,
-			},
-		}
-
-		shoot.Spec.Extensions = append(shoot.Spec.Extensions, dnsExtension)
 
 		return nil
 	}
