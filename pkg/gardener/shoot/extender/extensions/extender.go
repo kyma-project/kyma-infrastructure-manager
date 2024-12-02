@@ -78,6 +78,8 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensio
 
 func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensions []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+		shoot.Spec.Extensions = currentGardenerExtensions
+
 		for _, ext := range extensionsToApply {
 			gardenerExtension, err := ext.Create(runtime, *shoot)
 			if err != nil {
