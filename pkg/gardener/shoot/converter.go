@@ -2,6 +2,7 @@ package shoot
 
 import (
 	"fmt"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -19,8 +20,8 @@ func baseExtenders(cfg config.ConverterConfig) []Extend {
 		extender2.ExtendWithLabels,
 		extender2.ExtendWithSeedSelector,
 		extender2.ExtendWithCloudProfile,
-		extender2.ExtendWithNetworkFilter,
-		extender2.ExtendWithCertConfig,
+		//extender2.ExtendWithNetworkFilter,
+		//extender2.ExtendWithCertConfig,
 		extender2.ExtendWithExposureClassName,
 		extender2.ExtendWithTolerations,
 		extender2.NewMaintenanceExtender(cfg.Kubernetes.EnableKubernetesVersionAutoUpdate, cfg.Kubernetes.EnableMachineImageVersionAutoUpdate),
@@ -52,6 +53,7 @@ type PatchOpts struct {
 	ShootImageName    string
 	ShootImageVersion string
 	Extensions        []gardener.Extension
+	Resources         []gardener.NamedResourceReference
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {
@@ -64,10 +66,12 @@ func NewConverterCreate(opts CreateOpts) Converter {
 			opts.MachineImage.DefaultVersion,
 		))
 
-	extendersForCreate = append(extendersForCreate,
-		extender2.NewDNSExtenderForCreate(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType),
-		extender2.NewOidcExtenderForCreate(opts.Kubernetes.DefaultOperatorOidc),
-	)
+	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.ConverterConfig, opts.AuditLogData))
+
+	//extendersForCreate = append(extendersForCreate,
+	//	extender2.NewDNSExtenderForCreate(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType),
+	//	extender2.NewOidcExtenderForCreate(opts.Kubernetes.DefaultOperatorOidc),
+	//)
 
 	extendersForCreate = append(extendersForCreate,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
@@ -96,9 +100,13 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.Zones))
 
 	extendersForPatch = append(extendersForPatch,
-		extender2.NewDNSExtenderForPatch(opts.Extensions),
-		extender2.NewOidcExtenderForPatch(opts.Kubernetes.DefaultOperatorOidc, opts.Extensions),
-	)
+		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.Extensions),
+		extender2.NewResourcesExtenderForPatch(opts.Resources))
+
+	//extendersForPatch = append(extendersForPatch,
+	//	extender2.NewDNSExtenderForPatch(opts.Extensions),
+	//	extender2.NewOidcExtenderForPatch(opts.Kubernetes.DefaultOperatorOidc, opts.Extensions),
+	//)
 
 	extendersForPatch = append(extendersForPatch,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))

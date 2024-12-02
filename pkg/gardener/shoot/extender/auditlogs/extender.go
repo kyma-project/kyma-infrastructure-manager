@@ -13,7 +13,7 @@ func NewAuditlogExtender(policyConfigMapName string, data AuditLogData) Extend {
 	return func(_ imv1.Runtime, shoot *gardener.Shoot) error {
 		for _, f := range []operation{
 			oSetSecret(data.SecretName),
-			oSetExtension(data),
+			//oSetExtension(data),
 			oSetPolicyConfigmap(policyConfigMapName),
 		} {
 			if err := f(shoot); err != nil {
