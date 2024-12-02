@@ -1,10 +1,11 @@
 package extensions
 
 import (
+	"slices"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
-	"slices"
 )
 
 type CreateExtension func(shoot *gardener.Shoot) (gardener.Extension, error)
