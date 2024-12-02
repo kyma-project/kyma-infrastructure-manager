@@ -54,5 +54,4 @@ func NewAuditLogExtension(d AuditLogData) (gardener.Extension, error) {
 			Raw: buffer.Bytes(),
 		},
 	}, nil
-
 }
