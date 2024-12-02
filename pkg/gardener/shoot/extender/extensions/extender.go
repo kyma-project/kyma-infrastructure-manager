@@ -19,7 +19,7 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 	return newExtensionsExtender([]Extension{
 		{
 			Type: CertExtensionType,
-			Factory: func(shoot *gardener.Shoot) (gardener.Extension, error) {
+			Factory: func(_ *gardener.Shoot) (gardener.Extension, error) {
 				return NewCertExtension()
 			},
 		},
