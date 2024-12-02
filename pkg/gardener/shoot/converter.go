@@ -20,8 +20,6 @@ func baseExtenders(cfg config.ConverterConfig) []Extend {
 		extender2.ExtendWithLabels,
 		extender2.ExtendWithSeedSelector,
 		extender2.ExtendWithCloudProfile,
-		//extender2.ExtendWithNetworkFilter,
-		//extender2.ExtendWithCertConfig,
 		extender2.ExtendWithExposureClassName,
 		extender2.ExtendWithTolerations,
 		extender2.NewMaintenanceExtender(cfg.Kubernetes.EnableKubernetesVersionAutoUpdate, cfg.Kubernetes.EnableMachineImageVersionAutoUpdate),

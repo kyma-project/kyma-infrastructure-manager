@@ -44,7 +44,7 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 		},
 		{
 			Type: auditlogExtensionType,
-			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+			Create: func(_ imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
 				return NewAuditLogExtension(auditLogData)
 			},
 		},
