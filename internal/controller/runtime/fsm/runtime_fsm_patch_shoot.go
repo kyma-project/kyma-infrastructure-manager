@@ -46,6 +46,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		ShootImageName:    imgName,
 		ShootImageVersion: imgVersion,
 		Extensions:        s.shoot.Spec.Extensions,
+		Resources:         s.shoot.Spec.Resources,
 	})
 
 	if err != nil {

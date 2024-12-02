@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -13,12 +14,6 @@ const (
 	auditlogExtensionType = "shoot-auditlog-service"
 	auditlogReferenceName = "auditlog-credentials"
 )
-
-type AuditLogData struct {
-	TenantID   string `json:"tenantID" validate:"required"`
-	ServiceURL string `json:"serviceURL" validate:"required,url"`
-	SecretName string `json:"secretName" validate:"required"`
-}
 
 type AuditlogExtensionConfig struct {
 	metav1.TypeMeta `json:",inline"`
@@ -32,7 +27,7 @@ type AuditlogExtensionConfig struct {
 	SecretReferenceName string `json:"secretReferenceName"`
 }
 
-func NewAuditLogExtension(d AuditLogData) (*gardener.Extension, error) {
+func NewAuditLogExtension(d auditlogs.AuditLogData) (*gardener.Extension, error) {
 	cfg := AuditlogExtensionConfig{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "AuditlogConfig",

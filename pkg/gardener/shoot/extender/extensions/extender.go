@@ -6,6 +6,7 @@ import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 )
 
 type CreateExtensionFunc func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error)
@@ -15,7 +16,7 @@ type Extension struct {
 	Create CreateExtensionFunc
 }
 
-func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData AuditLogData) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData auditlogs.AuditLogData) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			Type: NetworkFilterType,
@@ -50,7 +51,7 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 	}, nil)
 }
 
-func NewExtensionsExtenderForPatch(auditLogData AuditLogData, extensionsOnTheShoot []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			Type: OidcExtensionType,

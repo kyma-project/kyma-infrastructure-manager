@@ -76,6 +76,7 @@ func (v Verifier) newConverter(shootToMatch v1beta1.Shoot) (gardener_shoot.Conve
 		ShootImageName:    imgName,
 		ShootImageVersion: imgVersion,
 		Extensions:        shootToMatch.Spec.Extensions,
+		Resources:         shootToMatch.Spec.Resources,
 	}), nil
 }
 
