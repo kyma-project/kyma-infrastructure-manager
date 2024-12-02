@@ -38,7 +38,7 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 		},
 		{
 			Type: OidcExtensionType,
-			Create: func(_ imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+			Create: func(_ imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
 				return NewOIDCExtension()
 			},
 		},
