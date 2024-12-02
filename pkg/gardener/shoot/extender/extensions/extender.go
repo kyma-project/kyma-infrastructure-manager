@@ -1,6 +1,7 @@
 package extensions
 
 import (
+	"encoding/json"
 	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -69,8 +70,35 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensio
 		},
 		{
 			Type: auditlogExtensionType,
-			Create: func(_ imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
-				return NewAuditLogExtension(auditLogData)
+			Create: func(_ imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+				auditLogIndex := slices.IndexFunc(shoot.Spec.Extensions, func(e gardener.Extension) bool {
+					return e.Type == auditlogExtensionType
+				})
+
+				if auditLogIndex == -1 {
+					return nil, nil
+				}
+
+				var existingAuditLogConfig auditlogs.AuditlogExtensionConfig
+				if err := json.Unmarshal(shoot.Spec.Extensions[auditLogIndex].ProviderConfig.Raw, &existingAuditLogConfig); err != nil {
+					return nil, err
+				}
+
+				newAuditLogExtension, err := NewAuditLogExtension(auditLogData)
+				if err != nil {
+					return nil, err
+				}
+
+				var newAuditLogConfig auditlogs.AuditlogExtensionConfig
+				if err := json.Unmarshal(newAuditLogExtension.ProviderConfig.Raw, &newAuditLogConfig); err != nil {
+					return nil, err
+				}
+
+				if newAuditLogConfig != existingAuditLogConfig {
+					return newAuditLogExtension, nil
+				}
+
+				return nil, nil
 			},
 		},
 	}, extensionsOnTheShoot)
