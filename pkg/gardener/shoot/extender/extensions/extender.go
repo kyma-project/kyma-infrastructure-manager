@@ -1,10 +1,11 @@
 package extensions
 
 import (
+	"slices"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
-	"slices"
 )
 
 type CreateExtension func(runtime imv1.Runtime, shoot *gardener.Shoot) (gardener.Extension, error)
@@ -14,8 +15,14 @@ type Extension struct {
 	Factory CreateExtension
 }
 
-func NewExtensionsExtenderForCreate(config config.ConverterConfig) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData AuditLogData) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
+		{
+			Type: CertExtensionType,
+			Factory: func(runtime imv1.Runtime, shoot *gardener.Shoot) (gardener.Extension, error) {
+				return NewCertExtension()
+			},
+		},
 		{
 			Type: DNSExtensionType,
 			Factory: func(runtime imv1.Runtime, shoot *gardener.Shoot) (gardener.Extension, error) {
@@ -28,7 +35,30 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig) func(runtime 
 				return NewOIDCExtension()
 			},
 		},
+		{
+			Type: auditlogExtensionType,
+			Factory: func(runtime imv1.Runtime, shoot *gardener.Shoot) (gardener.Extension, error) {
+				return NewAuditLogExtension(auditLogData)
+			},
+		},
 	}, nil)
+}
+
+func NewExtensionsExtenderForPatch(auditLogData AuditLogData, extensionsOnTheShoot []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+	return newExtensionsExtender([]Extension{
+		{
+			Type: OidcExtensionType,
+			Factory: func(runtime imv1.Runtime, shoot *gardener.Shoot) (gardener.Extension, error) {
+				return NewOIDCExtension()
+			},
+		},
+		{
+			Type: auditlogExtensionType,
+			Factory: func(runtime imv1.Runtime, shoot *gardener.Shoot) (gardener.Extension, error) {
+				return NewAuditLogExtension(auditLogData)
+			},
+		},
+	}, extensionsOnTheShoot)
 }
 
 func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensions []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
