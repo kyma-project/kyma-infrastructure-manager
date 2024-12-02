@@ -37,7 +37,7 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 		},
 		{
 			Type: OidcExtensionType,
-			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+			Create: func(_ imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
 				return NewOIDCExtension()
 			},
 		},
@@ -54,7 +54,7 @@ func NewExtensionsExtenderForPatch(auditLogData AuditLogData, extensionsOnTheSho
 	return newExtensionsExtender([]Extension{
 		{
 			Type: OidcExtensionType,
-			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+			Create: func(_ imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
 				// If oidc is not set on the shoot we skip it
 				oidcIndex := slices.IndexFunc(shoot.Spec.Extensions, func(e gardener.Extension) bool {
 					return e.Type == OidcExtensionType
@@ -68,7 +68,7 @@ func NewExtensionsExtenderForPatch(auditLogData AuditLogData, extensionsOnTheSho
 		},
 		{
 			Type: auditlogExtensionType,
-			Create: func(runtime imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
+			Create: func(_ imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
 				return NewAuditLogExtension(auditLogData)
 			},
 		},
