@@ -370,7 +370,7 @@ func newKubeAPIServerMatcher(k v1beta1.Kubernetes) types.GomegaMatcher {
 			"KubernetesConfig":                    gstruct.Ignore(),
 			"AdmissionPlugins":                    gstruct.Ignore(),
 			"APIAudiences":                        gstruct.Ignore(),
-			"AuditConfig":                         gstruct.Ignore(),
+			"AuditConfig":                         gomega.BeComparableTo(k.KubeAPIServer.AuditConfig),
 			"RuntimeConfig":                       gstruct.Ignore(),
 			"ServiceAccountConfig":                gstruct.Ignore(),
 			"WatchCacheSizes":                     gstruct.Ignore(),
