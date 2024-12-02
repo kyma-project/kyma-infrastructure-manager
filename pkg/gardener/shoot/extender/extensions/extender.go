@@ -8,7 +8,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 )
 
-type CreateExtensionFunc func(shoot *gardener.Shoot) (*gardener.Extension, error)
+type CreateExtensionFunc func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error)
 
 type Extension struct {
 	Type   string
@@ -18,26 +18,32 @@ type Extension struct {
 func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData AuditLogData) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
+			Type: NetworkFilterType,
+			Create: func(runtime imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
+				return NewNetworkFilterExtension(!runtime.Spec.Security.Networking.Filter.Egress.Enabled)
+			},
+		},
+		{
 			Type: CertExtensionType,
-			Create: func(_ *gardener.Shoot) (*gardener.Extension, error) {
+			Create: func(_ imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
 				return NewCertExtension()
 			},
 		},
 		{
 			Type: DNSExtensionType,
-			Create: func(shoot *gardener.Shoot) (*gardener.Extension, error) {
+			Create: func(_ imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
 				return NewDNSExtension(shoot.Name, config.DNS.SecretName, config.DNS.DomainPrefix, config.DNS.ProviderType)
 			},
 		},
 		{
 			Type: OidcExtensionType,
-			Create: func(_ *gardener.Shoot) (*gardener.Extension, error) {
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
 				return NewOIDCExtension()
 			},
 		},
 		{
 			Type: auditlogExtensionType,
-			Create: func(_ *gardener.Shoot) (*gardener.Extension, error) {
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
 				return NewAuditLogExtension(auditLogData)
 			},
 		},
@@ -48,7 +54,7 @@ func NewExtensionsExtenderForPatch(auditLogData AuditLogData, extensionsOnTheSho
 	return newExtensionsExtender([]Extension{
 		{
 			Type: OidcExtensionType,
-			Create: func(shoot *gardener.Shoot) (*gardener.Extension, error) {
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
 				// If oidc is not set on the shoot we skip it
 				oidcIndex := slices.IndexFunc(shoot.Spec.Extensions, func(e gardener.Extension) bool {
 					return e.Type == OidcExtensionType
@@ -62,7 +68,7 @@ func NewExtensionsExtenderForPatch(auditLogData AuditLogData, extensionsOnTheSho
 		},
 		{
 			Type: auditlogExtensionType,
-			Create: func(_ *gardener.Shoot) (*gardener.Extension, error) {
+			Create: func(runtime imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
 				return NewAuditLogExtension(auditLogData)
 			},
 		},
@@ -70,9 +76,9 @@ func NewExtensionsExtenderForPatch(auditLogData AuditLogData, extensionsOnTheSho
 }
 
 func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensions []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-	return func(_ imv1.Runtime, shoot *gardener.Shoot) error {
+	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		for _, ext := range extensionsToApply {
-			gardenerExtension, err := ext.Create(shoot)
+			gardenerExtension, err := ext.Create(runtime, *shoot)
 			if err != nil {
 				return err
 			}
