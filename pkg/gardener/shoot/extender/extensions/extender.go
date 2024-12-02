@@ -8,36 +8,36 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 )
 
-type CreateExtension func(shoot *gardener.Shoot) (gardener.Extension, error)
+type CreateExtensionFunc func(shoot *gardener.Shoot) (*gardener.Extension, error)
 
 type Extension struct {
-	Type    string
-	Factory CreateExtension
+	Type   string
+	Create CreateExtensionFunc
 }
 
 func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData AuditLogData) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			Type: CertExtensionType,
-			Factory: func(_ *gardener.Shoot) (gardener.Extension, error) {
+			Create: func(_ *gardener.Shoot) (*gardener.Extension, error) {
 				return NewCertExtension()
 			},
 		},
 		{
 			Type: DNSExtensionType,
-			Factory: func(shoot *gardener.Shoot) (gardener.Extension, error) {
+			Create: func(shoot *gardener.Shoot) (*gardener.Extension, error) {
 				return NewDNSExtension(shoot.Name, config.DNS.SecretName, config.DNS.DomainPrefix, config.DNS.ProviderType)
 			},
 		},
 		{
 			Type: OidcExtensionType,
-			Factory: func(_ *gardener.Shoot) (gardener.Extension, error) {
+			Create: func(_ *gardener.Shoot) (*gardener.Extension, error) {
 				return NewOIDCExtension()
 			},
 		},
 		{
 			Type: auditlogExtensionType,
-			Factory: func(_ *gardener.Shoot) (gardener.Extension, error) {
+			Create: func(_ *gardener.Shoot) (*gardener.Extension, error) {
 				return NewAuditLogExtension(auditLogData)
 			},
 		},
@@ -48,13 +48,21 @@ func NewExtensionsExtenderForPatch(auditLogData AuditLogData, extensionsOnTheSho
 	return newExtensionsExtender([]Extension{
 		{
 			Type: OidcExtensionType,
-			Factory: func(_ *gardener.Shoot) (gardener.Extension, error) {
+			Create: func(shoot *gardener.Shoot) (*gardener.Extension, error) {
+				// If oidc is not set on the shoot we skip it
+				oidcIndex := slices.IndexFunc(shoot.Spec.Extensions, func(e gardener.Extension) bool {
+					return e.Type == OidcExtensionType
+				})
+
+				if oidcIndex == -1 {
+					return nil, nil
+				}
 				return NewOIDCExtension()
 			},
 		},
 		{
 			Type: auditlogExtensionType,
-			Factory: func(_ *gardener.Shoot) (gardener.Extension, error) {
+			Create: func(_ *gardener.Shoot) (*gardener.Extension, error) {
 				return NewAuditLogExtension(auditLogData)
 			},
 		},
@@ -64,9 +72,14 @@ func NewExtensionsExtenderForPatch(auditLogData AuditLogData, extensionsOnTheSho
 func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensions []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(_ imv1.Runtime, shoot *gardener.Shoot) error {
 		for _, ext := range extensionsToApply {
-			gardenerExtension, err := ext.Factory(shoot)
+			gardenerExtension, err := ext.Create(shoot)
 			if err != nil {
 				return err
+			}
+
+			// If the extension should not be applied we skip it
+			if gardenerExtension == nil {
+				continue
 			}
 
 			index := slices.IndexFunc(currentGardenerExtensions, func(e gardener.Extension) bool {
@@ -74,9 +87,9 @@ func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensi
 			})
 
 			if index == -1 {
-				shoot.Spec.Extensions = append(shoot.Spec.Extensions, gardenerExtension)
+				shoot.Spec.Extensions = append(shoot.Spec.Extensions, *gardenerExtension)
 			} else {
-				shoot.Spec.Extensions[index] = gardenerExtension
+				shoot.Spec.Extensions[index] = *gardenerExtension
 			}
 		}
 

@@ -33,14 +33,14 @@ func NewCertConfig() *ExtensionProviderConfig {
 	}
 }
 
-func NewCertExtension() (gardener.Extension, error) {
+func NewCertExtension() (*gardener.Extension, error) {
 	certConfig := NewCertConfig()
 	jsonCertConfig, encodingErr := json.Marshal(certConfig)
 	if encodingErr != nil {
-		return gardener.Extension{}, encodingErr
+		return nil, encodingErr
 	}
 
-	certServiceExtension := gardener.Extension{
+	certServiceExtension := &gardener.Extension{
 		Type:           CertExtensionType,
 		ProviderConfig: &apimachineryRuntime.RawExtension{Raw: jsonCertConfig},
 	}

@@ -32,7 +32,7 @@ type AuditlogExtensionConfig struct {
 	SecretReferenceName string `json:"secretReferenceName"`
 }
 
-func NewAuditLogExtension(d AuditLogData) (gardener.Extension, error) {
+func NewAuditLogExtension(d AuditLogData) (*gardener.Extension, error) {
 	cfg := AuditlogExtensionConfig{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "AuditlogConfig",
@@ -45,10 +45,10 @@ func NewAuditLogExtension(d AuditLogData) (gardener.Extension, error) {
 	}
 	var buffer bytes.Buffer
 	if err := json.NewEncoder(&buffer).Encode(&cfg); err != nil {
-		return gardener.Extension{}, err
+		return nil, err
 	}
 
-	return gardener.Extension{
+	return &gardener.Extension{
 		Type: auditlogExtensionType,
 		ProviderConfig: &runtime.RawExtension{
 			Raw: buffer.Bytes(),

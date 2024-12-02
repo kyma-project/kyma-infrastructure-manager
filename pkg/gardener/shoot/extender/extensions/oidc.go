@@ -9,8 +9,8 @@ const (
 	OidcExtensionType = "shoot-oidc-service"
 )
 
-func NewOIDCExtension() (gardener.Extension, error) {
-	return gardener.Extension{
+func NewOIDCExtension() (*gardener.Extension, error) {
+	return &gardener.Extension{
 		Type:     OidcExtensionType,
 		Disabled: ptr.To(false),
 	}, nil
