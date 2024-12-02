@@ -64,12 +64,7 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		runtimeID = runtime.Name
 	}
 
-	shootName, ok := runtime.Labels["kyma-project.io/shoot-name"]
-	if !ok {
-		shootName = "N/D"
-	}
-
-	log := r.Log.WithValues("runtimeID", runtimeID, "shootName", shootName, "requestID", r.RequestID.Add(1))
+	log := r.Log.WithValues("runtimeID", runtimeID, "shootName", runtime.Spec.Shoot.Name, "requestID", r.RequestID.Add(1))
 	log.Info("Reconciling Runtime", "Name", runtime.Name, "Namespace", runtime.Namespace)
 
 	stateFSM := fsm.NewFsm(

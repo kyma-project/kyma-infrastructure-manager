@@ -31,6 +31,16 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 
 	switch s.shoot.Status.LastOperation.State {
 	case gardener.LastOperationStateProcessing, gardener.LastOperationStatePending, gardener.LastOperationStateAborted, gardener.LastOperationStateError:
+		if stateNoMatchingSeeds(s.shoot) {
+			m.log.Info(fmt.Sprintf("Shoot %s has no matching seeds, setting error state", s.shoot.Name))
+			s.instance.UpdateStatePending(
+				imv1.ConditionTypeRuntimeProvisioned,
+				imv1.ConditionReasonCreationError,
+				"False",
+				"Shoot creation failed, no matching seeds")
+			return updateStatusAndStop()
+		}
+
 		m.log.Info(fmt.Sprintf("Shoot %s is in %s state, scheduling for retry", s.shoot.Name, s.shoot.Status.LastOperation.State))
 
 		s.instance.UpdateStatePending(
@@ -74,10 +84,21 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonShootCreationCompleted,
 			"Shoot creation completed",
-			sFnCreateKubeconfig)
+			sFnHandleKubeconfig)
 
 	default:
 		m.log.Info("WaitForShootCreation - unknown shoot operation state, stopping state machine", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
 		return stopWithMetrics()
 	}
+}
+
+func stateNoMatchingSeeds(shoot *gardener.Shoot) bool {
+	if shoot == nil {
+		return false
+	}
+
+	var seedsCount int
+	var provider string
+	_, err := fmt.Sscanf(shoot.Status.LastOperation.Description, "Failed to schedule Shoot: none out of the %d seeds has a matching provider for %q", &seedsCount, &provider)
+	return err == nil
 }
