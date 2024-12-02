@@ -68,11 +68,6 @@ func NewConverterCreate(opts CreateOpts) Converter {
 
 	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.ConverterConfig, opts.AuditLogData))
 
-	//extendersForCreate = append(extendersForCreate,
-	//	extender2.NewDNSExtenderForCreate(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType),
-	//	extender2.NewOidcExtenderForCreate(opts.Kubernetes.DefaultOperatorOidc),
-	//)
-
 	extendersForCreate = append(extendersForCreate,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
 
@@ -102,11 +97,6 @@ func NewConverterPatch(opts PatchOpts) Converter {
 	extendersForPatch = append(extendersForPatch,
 		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.Extensions),
 		extender2.NewResourcesExtenderForPatch(opts.Resources))
-
-	//extendersForPatch = append(extendersForPatch,
-	//	extender2.NewDNSExtenderForPatch(opts.Extensions),
-	//	extender2.NewOidcExtenderForPatch(opts.Kubernetes.DefaultOperatorOidc, opts.Extensions),
-	//)
 
 	extendersForPatch = append(extendersForPatch,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))

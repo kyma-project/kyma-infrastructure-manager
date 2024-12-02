@@ -6,7 +6,7 @@ import (
 )
 
 func NewResourcesExtenderForPatch(resources []gardener.NamedResourceReference) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+	return func(_ imv1.Runtime, shoot *gardener.Shoot) error {
 		shoot.Spec.Resources = resources
 
 		return nil
