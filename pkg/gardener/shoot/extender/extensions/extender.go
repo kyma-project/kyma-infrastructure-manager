@@ -1,14 +1,13 @@
 package extensions
 
 import (
-	"slices"
-
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
+	"slices"
 )
 
-type CreateExtension func(runtime imv1.Runtime, shoot *gardener.Shoot) (gardener.Extension, error)
+type CreateExtension func(shoot *gardener.Shoot) (gardener.Extension, error)
 
 type Extension struct {
 	Type    string
@@ -19,25 +18,25 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 	return newExtensionsExtender([]Extension{
 		{
 			Type: CertExtensionType,
-			Factory: func(runtime imv1.Runtime, shoot *gardener.Shoot) (gardener.Extension, error) {
+			Factory: func(shoot *gardener.Shoot) (gardener.Extension, error) {
 				return NewCertExtension()
 			},
 		},
 		{
 			Type: DNSExtensionType,
-			Factory: func(runtime imv1.Runtime, shoot *gardener.Shoot) (gardener.Extension, error) {
-				return NewDNSExtension(runtime.Spec.Shoot.Name, config.DNS.SecretName, config.DNS.DomainPrefix, config.DNS.ProviderType)
+			Factory: func(shoot *gardener.Shoot) (gardener.Extension, error) {
+				return NewDNSExtension(shoot.Name, config.DNS.SecretName, config.DNS.DomainPrefix, config.DNS.ProviderType)
 			},
 		},
 		{
 			Type: OidcExtensionType,
-			Factory: func(runtime imv1.Runtime, shoot *gardener.Shoot) (gardener.Extension, error) {
+			Factory: func(_ *gardener.Shoot) (gardener.Extension, error) {
 				return NewOIDCExtension()
 			},
 		},
 		{
 			Type: auditlogExtensionType,
-			Factory: func(runtime imv1.Runtime, shoot *gardener.Shoot) (gardener.Extension, error) {
+			Factory: func(_ *gardener.Shoot) (gardener.Extension, error) {
 				return NewAuditLogExtension(auditLogData)
 			},
 		},
@@ -48,13 +47,13 @@ func NewExtensionsExtenderForPatch(auditLogData AuditLogData, extensionsOnTheSho
 	return newExtensionsExtender([]Extension{
 		{
 			Type: OidcExtensionType,
-			Factory: func(runtime imv1.Runtime, shoot *gardener.Shoot) (gardener.Extension, error) {
+			Factory: func(_ *gardener.Shoot) (gardener.Extension, error) {
 				return NewOIDCExtension()
 			},
 		},
 		{
 			Type: auditlogExtensionType,
-			Factory: func(runtime imv1.Runtime, shoot *gardener.Shoot) (gardener.Extension, error) {
+			Factory: func(_ *gardener.Shoot) (gardener.Extension, error) {
 				return NewAuditLogExtension(auditLogData)
 			},
 		},
@@ -62,9 +61,9 @@ func NewExtensionsExtenderForPatch(auditLogData AuditLogData, extensionsOnTheSho
 }
 
 func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensions []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+	return func(_ imv1.Runtime, shoot *gardener.Shoot) error {
 		for _, ext := range extensionsToApply {
-			gardenerExtension, err := ext.Factory(runtime, shoot)
+			gardenerExtension, err := ext.Factory(shoot)
 			if err != nil {
 				return err
 			}
