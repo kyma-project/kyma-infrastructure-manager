@@ -16,7 +16,6 @@ func shouldDefaultOidcConfig(config gardener.OIDCConfig) bool {
 
 func NewOidcExtender(oidcProvider config.OidcProvider) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-
 		oidcConfig := runtime.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig
 		if shouldDefaultOidcConfig(oidcConfig) {
 			oidcConfig = gardener.OIDCConfig{

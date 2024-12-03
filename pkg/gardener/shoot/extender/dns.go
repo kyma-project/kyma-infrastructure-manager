@@ -5,7 +5,6 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"k8s.io/utils/ptr"
 )
 
 // The types were copied from the following file: https://github.com/gardener/gardener-extension-shoot-dns-service/blob/master/pkg/apis/service/types.go
@@ -50,24 +49,6 @@ type DNSIncludeExclude struct {
 type DNSProviderReplication struct {
 	// Enabled indicates whether replication is on
 	Enabled bool `json:"enabled"`
-}
-
-func newDNSExtensionConfig(domain, secretName, dnsProviderType string) *DNSExtensionProviderConfig {
-	return &DNSExtensionProviderConfig{
-		APIVersion:                    "service.dns.extensions.gardener.cloud/v1alpha1",
-		Kind:                          "DNSConfig",
-		DNSProviderReplication:        &DNSProviderReplication{Enabled: true},
-		SyncProvidersFromShootSpecDNS: ptr.To(true),
-		Providers: []DNSProvider{
-			{
-				Domains: &DNSIncludeExclude{
-					Include: []string{domain},
-				},
-				SecretName: ptr.To(secretName),
-				Type:       ptr.To(dnsProviderType),
-			},
-		},
-	}
 }
 
 func NewDNSExtender(secretName, domainPrefix, dnsProviderType string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
