@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	auditlogExtensionType = "shoot-auditlog-service"
+	AuditlogExtensionType = "shoot-auditlog-service"
 	auditlogReferenceName = "auditlog-credentials"
 )
 
@@ -44,7 +44,7 @@ func NewAuditLogExtension(d auditlogs.AuditLogData) (*gardener.Extension, error)
 	}
 
 	return &gardener.Extension{
-		Type: auditlogExtensionType,
+		Type: AuditlogExtensionType,
 		ProviderConfig: &runtime.RawExtension{
 			Raw: buffer.Bytes(),
 		},

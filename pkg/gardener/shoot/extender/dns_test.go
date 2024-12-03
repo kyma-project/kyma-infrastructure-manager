@@ -1,7 +1,6 @@
 package extender
 
 import (
-	"encoding/json"
 	"testing"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -9,8 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 )
 
 func TestDNSExtender(t *testing.T) {
@@ -26,7 +23,7 @@ func TestDNSExtender(t *testing.T) {
 				},
 			},
 		}
-		extender := NewDNSExtenderForCreate(secretName, domainPrefix, dnsProviderType)
+		extender := NewDNSExtender(secretName, domainPrefix, dnsProviderType)
 		shoot := fixEmptyGardenerShoot("test", "dev")
 
 		// when
@@ -40,54 +37,6 @@ func TestDNSExtender(t *testing.T) {
 		assert.Equal(t, secretName, *shoot.Spec.DNS.Providers[0].SecretName)
 		assert.Equal(t, true, *shoot.Spec.DNS.Providers[0].Primary)
 	})
-
-	t.Run("Create DNS config for patch scenario", func(t *testing.T) {
-		// given
-		runtimeShoot := imv1.Runtime{
-			Spec: imv1.RuntimeSpec{
-				Shoot: imv1.RuntimeShoot{
-					Name: "myshoot",
-				},
-			},
-		}
-
-		shoot := fixEmptyGardenerShoot("test", "dev")
-		emptyDnsExtension := gardener.Extension{
-			Type:           "shoot-dns-service",
-			ProviderConfig: &runtime.RawExtension{},
-			Disabled:       ptr.To(false),
-		}
-
-		shoot.Spec.Extensions = []gardener.Extension{
-			emptyDnsExtension,
-		}
-
-		extender := NewDNSExtenderForPatch(shoot.Spec.Extensions)
-
-		// when
-		err := extender(runtimeShoot, &shoot)
-
-		// then
-		require.NoError(t, err)
-		assert.Empty(t, shoot.Spec.DNS)
-		assert.Empty(t, shoot.Spec.Extensions[0].ProviderConfig)
-		assert.Equal(t, emptyDnsExtension, shoot.Spec.Extensions[0])
-	})
-}
-
-func assertExtensionConfig(t *testing.T, rawExtension *runtime.RawExtension) {
-	var extension DNSExtensionProviderConfig
-	err := json.Unmarshal(rawExtension.Raw, &extension)
-
-	require.NoError(t, err)
-	assert.Equal(t, "DNSConfig", extension.Kind)
-	assert.Equal(t, "service.dns.extensions.gardener.cloud/v1alpha1", extension.APIVersion)
-	assert.Equal(t, true, extension.DNSProviderReplication.Enabled)
-	assert.Equal(t, true, *extension.SyncProvidersFromShootSpecDNS)
-	assert.Equal(t, 1, len(extension.Providers))
-	assert.Equal(t, "myshoot.dev.mydomain.com", extension.Providers[0].Domains.Include[0])
-	assert.Equal(t, "my-secret", *extension.Providers[0].SecretName)
-	assert.Equal(t, "aws-route53", *extension.Providers[0].Type)
 }
 
 func fixEmptyGardenerShoot(name, namespace string) gardener.Shoot {

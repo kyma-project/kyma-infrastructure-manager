@@ -4,7 +4,6 @@ import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
-	"k8s.io/utils/ptr"
 )
 
 const (
@@ -15,14 +14,8 @@ func shouldDefaultOidcConfig(config gardener.OIDCConfig) bool {
 	return config.ClientID == nil && config.IssuerURL == nil
 }
 
-func NewOidcExtenderForPatch(oidcProvider config.OidcProvider, extensions []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewOidcExtender(oidcProvider config.OidcProvider) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		extensionExtender := rewriteExtensionExtender("shoot-oidc-service", extensions)
-
-		err := extensionExtender(runtime, shoot)
-		if err != nil {
-			return err
-		}
 
 		oidcConfig := runtime.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig
 		if shouldDefaultOidcConfig(oidcConfig) {
@@ -39,36 +32,6 @@ func NewOidcExtenderForPatch(oidcProvider config.OidcProvider, extensions []gard
 
 		return nil
 	}
-}
-
-func NewOidcExtenderForCreate(oidcProvider config.OidcProvider) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		setOIDCExtension(shoot)
-
-		oidcConfig := runtime.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig
-		if shouldDefaultOidcConfig(oidcConfig) {
-			oidcConfig = gardener.OIDCConfig{
-				ClientID:       &oidcProvider.ClientID,
-				GroupsClaim:    &oidcProvider.GroupsClaim,
-				IssuerURL:      &oidcProvider.IssuerURL,
-				SigningAlgs:    oidcProvider.SigningAlgs,
-				UsernameClaim:  &oidcProvider.UsernameClaim,
-				UsernamePrefix: &oidcProvider.UsernamePrefix,
-			}
-		}
-		setKubeAPIServerOIDCConfig(shoot, oidcConfig)
-
-		return nil
-	}
-}
-
-func setOIDCExtension(shoot *gardener.Shoot) {
-	oidcService := gardener.Extension{
-		Type:     OidcExtensionType,
-		Disabled: ptr.To(false),
-	}
-
-	shoot.Spec.Extensions = append(shoot.Spec.Extensions, oidcService)
 }
 
 func setKubeAPIServerOIDCConfig(shoot *gardener.Shoot, oidcConfig gardener.OIDCConfig) {

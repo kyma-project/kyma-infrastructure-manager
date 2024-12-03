@@ -19,6 +19,7 @@ func baseExtenders(cfg config.ConverterConfig) []Extend {
 		extender2.ExtendWithAnnotations,
 		extender2.ExtendWithLabels,
 		extender2.ExtendWithSeedSelector,
+		extender2.NewOidcExtender(cfg.Kubernetes.DefaultOperatorOidc),
 		extender2.ExtendWithCloudProfile,
 		extender2.ExtendWithExposureClassName,
 		extender2.ExtendWithTolerations,
@@ -63,8 +64,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
 		),
-		extender2.NewDNSExtenderForCreate(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType),
-		extender2.NewOidcExtenderForCreate(opts.Kubernetes.DefaultOperatorOidc),
+		extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType),
 	)
 
 	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.ConverterConfig, opts.AuditLogData))
@@ -75,7 +75,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 	var zero auditlogs.AuditLogData
 	if opts.AuditLogData != zero {
 		extendersForCreate = append(extendersForCreate,
-			auditlogs.NewAuditlogExtender(
+			auditlogs.NewAuditlogExtenderForCreate(
 				opts.AuditLog.PolicyConfigMapName,
 				opts.AuditLogData))
 	}
@@ -99,17 +99,12 @@ func NewConverterPatch(opts PatchOpts) Converter {
 		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.Extensions),
 		extender2.NewResourcesExtenderForPatch(opts.Resources))
 
-	extendersForPatch = append(extendersForPatch,
-		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion),
-		extender2.NewOidcExtenderForPatch(opts.Kubernetes.DefaultOperatorOidc, opts.Extensions),
-	)
+	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
 
 	var zero auditlogs.AuditLogData
 	if opts.AuditLogData != zero {
 		extendersForPatch = append(extendersForPatch,
-			auditlogs.NewAuditlogExtender(
-				opts.AuditLog.PolicyConfigMapName,
-				opts.AuditLogData))
+			auditlogs.NewAuditlogExtenderForPatch(opts.AuditLog.PolicyConfigMapName))
 	}
 
 	return newConverter(opts.ConverterConfig, extendersForPatch...)
