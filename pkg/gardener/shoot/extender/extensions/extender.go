@@ -57,21 +57,21 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensio
 		{
 			Type: AuditlogExtensionType,
 			Create: func(_ imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+
+				newAuditLogExtension, err := NewAuditLogExtension(auditLogData)
+				if err != nil {
+					return nil, err
+				}
+
 				auditLogIndex := slices.IndexFunc(shoot.Spec.Extensions, func(e gardener.Extension) bool {
 					return e.Type == AuditlogExtensionType
 				})
 
 				if auditLogIndex == -1 {
-					return nil, nil
+					return newAuditLogExtension, nil
 				}
-
 				var existingAuditLogConfig auditlogs.AuditlogExtensionConfig
 				if err := json.Unmarshal(shoot.Spec.Extensions[auditLogIndex].ProviderConfig.Raw, &existingAuditLogConfig); err != nil {
-					return nil, err
-				}
-
-				newAuditLogExtension, err := NewAuditLogExtension(auditLogData)
-				if err != nil {
 					return nil, err
 				}
 

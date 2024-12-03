@@ -73,8 +73,8 @@ func newDNSExtensionConfig(domain, secretName, dnsProviderType string) *DNSExten
 	}
 }
 
-func NewDNSExtension(shootName, secretName, domainPrefix, dnsProviderType string) (*gardener.Extension, error) {
-	domain := fmt.Sprintf("%s.%s", shootName, domainPrefix)
+func NewDNSExtension(shootName, secretName, domainSuffix, dnsProviderType string) (*gardener.Extension, error) {
+	domain := fmt.Sprintf("%s.%s", shootName, domainSuffix)
 
 	extensionJSON, err := json.Marshal(newDNSExtensionConfig(domain, secretName, dnsProviderType))
 	if err != nil {
