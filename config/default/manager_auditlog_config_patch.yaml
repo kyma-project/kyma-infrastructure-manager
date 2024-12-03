@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infrastructure-manager
+  namespace: system
+spec:
+  template:
+    spec:
+      volumes:
+        - name: gardener-audit-log-tenant-config
+          configMap:
+            name: audit-extension-config
+      containers:
+        - name: manager
+          volumeMounts:
+            - name: gardener-audit-log-tenant-config
+              mountPath: /gardener/tenant
