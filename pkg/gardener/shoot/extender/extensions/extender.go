@@ -87,6 +87,12 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensio
 				return nil, nil
 			},
 		},
+		{
+			Type: NetworkFilterType,
+			Create: func(runtime imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
+				return NewNetworkFilterExtension(!runtime.Spec.Security.Networking.Filter.Egress.Enabled)
+			},
+		},
 	}, extensionsOnTheShoot)
 }
 
