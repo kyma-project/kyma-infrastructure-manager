@@ -19,6 +19,7 @@ package runtime
 import (
 	"context"
 	"encoding/json"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	v12 "k8s.io/api/core/v1"
 	"path/filepath"
 	"testing"
@@ -377,7 +378,7 @@ func addAuditLogConfigToShoot(shoot *gardener_api.Shoot) {
 
 	ext := &shoot.Spec.Extensions[len(shoot.Spec.Extensions)-1]
 
-	cfg := auditlogs.AuditlogExtensionConfig{
+	cfg := extensions.AuditlogExtensionConfig{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       extensionKind,
 			APIVersion: extensionVersion,

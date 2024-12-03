@@ -70,12 +70,12 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensio
 				if auditLogIndex == -1 {
 					return newAuditLogExtension, nil
 				}
-				var existingAuditLogConfig auditlogs.AuditlogExtensionConfig
+				var existingAuditLogConfig AuditlogExtensionConfig
 				if err := json.Unmarshal(shoot.Spec.Extensions[auditLogIndex].ProviderConfig.Raw, &existingAuditLogConfig); err != nil {
 					return nil, err
 				}
 
-				var newAuditLogConfig auditlogs.AuditlogExtensionConfig
+				var newAuditLogConfig AuditlogExtensionConfig
 				if err := json.Unmarshal(newAuditLogExtension.ProviderConfig.Raw, &newAuditLogConfig); err != nil {
 					return nil, err
 				}

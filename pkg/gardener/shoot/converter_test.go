@@ -83,7 +83,7 @@ func TestConverter(t *testing.T) {
 		assert.Nil(t, shoot.Spec.DNS)
 
 		extensionLen := len(shoot.Spec.Extensions)
-		require.Equalf(t, extensionLen, 0, "unexpected number of extensions: %d, expected: 0", extensionLen)
+		require.Equalf(t, extensionLen, 2, "unexpected number of extensions: %d, expected: 2", extensionLen)
 		// consider switchin to NotElementsMatch, whem released https://github.com/Antonboom/testifylint/issues/99
 		for _, extension := range shoot.Spec.Extensions {
 			assert.NotEqual(t, "shoot-dns-service", extension.Type, "unexpected immutable field extension: 'shoot-dns-service'")

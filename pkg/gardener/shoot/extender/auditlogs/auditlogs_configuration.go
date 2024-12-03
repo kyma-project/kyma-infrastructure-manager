@@ -10,6 +10,12 @@ type region = string
 
 type providerType = string
 
+type AuditLogData struct {
+	TenantID   string `json:"tenantID" validate:"required"`
+	ServiceURL string `json:"serviceURL" validate:"required,url"`
+	SecretName string `json:"secretName" validate:"required"`
+}
+
 type Configuration map[providerType]map[region]AuditLogData
 
 func (a Configuration) GetAuditLogData(providerType, region string) (AuditLogData, error) {
