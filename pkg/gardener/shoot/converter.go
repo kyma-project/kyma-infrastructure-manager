@@ -63,7 +63,9 @@ func NewConverterCreate(opts CreateOpts) Converter {
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
 		),
-		extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType))
+		extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType),
+		extender2.ExtendWithTolerations,
+	)
 
 	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.ConverterConfig, opts.AuditLogData))
 
@@ -91,8 +93,7 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.MachineImage.DefaultVersion,
 			opts.ShootImageName,
 			opts.ShootImageVersion,
-			opts.Zones),
-		extender2.ExtendWithTolerations)
+			opts.Zones))
 
 	extendersForPatch = append(extendersForPatch,
 		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.Extensions),
