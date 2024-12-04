@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/kyma-project/infrastructure-manager/hack/shoot-comparator/pkg/runtime"
+
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/hack/shoot-comparator/pkg/errors"
 	"github.com/onsi/gomega"
@@ -164,6 +166,15 @@ func (m *Matcher) Match(actual interface{}) (success bool, err error) {
 			actual:        shootToMatch.Labels,
 			path:          "metadata/labels",
 		},
+		{
+			GomegaMatcher: gstruct.MatchElements(
+				idResource,
+				gstruct.IgnoreMissing,
+				resources(shootToMatch.Spec.Resources),
+			),
+			actual: shootActual.Spec.Resources,
+			path:   "spec/resources",
+		},
 	}
 
 	for _, matcher := range matchers {
@@ -230,6 +241,14 @@ func idToleration(v interface{}) string {
 	return fmt.Sprintf("%s:%s", toleration.Key, val(toleration.Value))
 }
 
+func idResource(v interface{}) string {
+	res, ok := v.(v1beta1.NamedResourceReference)
+	if !ok {
+		panic("invalid type")
+	}
+	return fmt.Sprintf("%s", res.Name)
+}
+
 func tolerations(ts []v1beta1.Toleration) gstruct.Elements {
 	out := map[string]types.GomegaMatcher{}
 	for _, t := range ts {
@@ -237,6 +256,18 @@ func tolerations(ts []v1beta1.Toleration) gstruct.Elements {
 		out[ID] = gstruct.MatchAllFields(gstruct.Fields{
 			"Key":   gomega.BeComparableTo(t.Key),
 			"Value": gomega.BeComparableTo(t.Value),
+		})
+	}
+	return out
+}
+
+func resources(ts []v1beta1.NamedResourceReference) gstruct.Elements {
+	out := map[string]types.GomegaMatcher{}
+	for _, t := range ts {
+		ID := idResource(t)
+		out[ID] = gstruct.MatchAllFields(gstruct.Fields{
+			"Name":        gomega.BeComparableTo(t.Name),
+			"ResourceRef": gomega.BeComparableTo(t.ResourceRef),
 		})
 	}
 	return out
@@ -339,7 +370,7 @@ func newKubeAPIServerMatcher(k v1beta1.Kubernetes) types.GomegaMatcher {
 			"KubernetesConfig":                    gstruct.Ignore(),
 			"AdmissionPlugins":                    gstruct.Ignore(),
 			"APIAudiences":                        gstruct.Ignore(),
-			"AuditConfig":                         gstruct.Ignore(),
+			"AuditConfig":                         gomega.BeComparableTo(k.KubeAPIServer.AuditConfig),
 			"RuntimeConfig":                       gstruct.Ignore(),
 			"ServiceAccountConfig":                gstruct.Ignore(),
 			"WatchCacheSizes":                     gstruct.Ignore(),
@@ -393,7 +424,7 @@ func extensions(es []v1beta1.Extension) gstruct.Elements {
 		ID := idExtension(e)
 		out[ID] = gstruct.MatchAllFields(gstruct.Fields{
 			"Type":           gomega.BeComparableTo(e.Type),
-			"ProviderConfig": newProviderCfgMatcher(e.Type, e.ProviderConfig),
+			"ProviderConfig": runtime.NewRawExtensionMatcher(e.ProviderConfig),
 			"Disabled":       gomega.BeComparableTo(e.Disabled),
 		})
 	}

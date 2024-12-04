@@ -25,6 +25,19 @@ func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ct
 			"True",
 			"OIDC extension disabled",
 		)
+
+		return switchState(sFnApplyClusterRoleBindings)
+	}
+
+	if !multiOidcSupported(s.instance) {
+		// New OIDC functionality is supported only for new clusters
+		m.log.Info("Multi OIDC is not supported for migrated runtimes")
+		s.instance.UpdateStatePending(
+			imv1.ConditionTypeOidcConfigured,
+			imv1.ConditionReasonOidcConfigured,
+			"True",
+			"Multi OIDC not supported for migrated runtimes",
+		)
 		return switchState(sFnApplyClusterRoleBindings)
 	}
 
@@ -37,14 +50,13 @@ func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ct
 		return updateStatusAndStopWithError(err)
 	}
 
+	m.log.Info("OIDC has been configured", "Name", s.shoot.Name)
 	s.instance.UpdateStatePending(
 		imv1.ConditionTypeOidcConfigured,
 		imv1.ConditionReasonOidcConfigured,
 		"True",
 		"OIDC configuration completed",
 	)
-
-	m.log.Info("OIDC has been configured", "Name", s.shoot.Name)
 
 	return switchState(sFnApplyClusterRoleBindings)
 }
@@ -106,6 +118,10 @@ func isOidcExtensionEnabled(shoot gardener.Shoot) bool {
 		}
 	}
 	return false
+}
+
+func multiOidcSupported(runtime imv1.Runtime) bool {
+	return runtime.Labels["operator.kyma-project.io/created-by-migrator"] != "true" //nolint:all
 }
 
 func createOpenIDConnectResource(additionalOidcConfig gardener.OIDCConfig, oidcID int) *authenticationv1alpha1.OpenIDConnect {

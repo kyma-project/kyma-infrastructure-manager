@@ -1,7 +1,6 @@
 package extender
 
 import (
-	"encoding/json"
 	"testing"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -9,11 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func TestDNSExtender(t *testing.T) {
-	t.Run("Create DNS config", func(t *testing.T) {
+	t.Run("Create DNS config for create scenario", func(t *testing.T) {
 		// given
 		secretName := "my-secret"
 		domainPrefix := "dev.mydomain.com"
@@ -38,26 +36,7 @@ func TestDNSExtender(t *testing.T) {
 		assert.Equal(t, dnsProviderType, *shoot.Spec.DNS.Providers[0].Type)
 		assert.Equal(t, secretName, *shoot.Spec.DNS.Providers[0].SecretName)
 		assert.Equal(t, true, *shoot.Spec.DNS.Providers[0].Primary)
-		assert.NotEmpty(t, shoot.Spec.Extensions[0].ProviderConfig)
-		assertExtensionConfig(t, shoot.Spec.Extensions[0].ProviderConfig)
-		assert.Equal(t, secretName, shoot.Spec.Resources[0].Name)
-		assert.Equal(t, secretName, shoot.Spec.Resources[0].ResourceRef.Name)
 	})
-}
-
-func assertExtensionConfig(t *testing.T, rawExtension *runtime.RawExtension) {
-	var extension DNSExtensionProviderConfig
-	err := json.Unmarshal(rawExtension.Raw, &extension)
-
-	require.NoError(t, err)
-	assert.Equal(t, "DNSConfig", extension.Kind)
-	assert.Equal(t, "service.dns.extensions.gardener.cloud/v1alpha1", extension.APIVersion)
-	assert.Equal(t, true, extension.DNSProviderReplication.Enabled)
-	assert.Equal(t, true, *extension.SyncProvidersFromShootSpecDNS)
-	assert.Equal(t, 1, len(extension.Providers))
-	assert.Equal(t, "myshoot.dev.mydomain.com", extension.Providers[0].Domains.Include[0])
-	assert.Equal(t, "my-secret", *extension.Providers[0].SecretName)
-	assert.Equal(t, "aws-route53", *extension.Providers[0].Type)
 }
 
 func fixEmptyGardenerShoot(name, namespace string) gardener.Shoot {
