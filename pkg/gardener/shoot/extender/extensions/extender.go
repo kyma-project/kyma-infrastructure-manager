@@ -57,7 +57,6 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensio
 		{
 			Type: AuditlogExtensionType,
 			Create: func(_ imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-
 				newAuditLogExtension, err := NewAuditLogExtension(auditLogData)
 				if err != nil {
 					return nil, err
