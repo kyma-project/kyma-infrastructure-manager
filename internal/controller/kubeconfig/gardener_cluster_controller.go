@@ -79,10 +79,10 @@ type KubeconfigProvider interface {
 	Fetch(ctx context.Context, shootName string) (string, error)
 }
 
-//+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=gardenerclusters,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;delete
-//+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=gardenerclusters/finalizers,verbs=update
-//+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=gardenerclusters/status,verbs=update
+//+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=gardenerclusters,verbs=get;list;watch;create;update;patch;delete,namespace=kcp-system
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;delete,namespace=kcp-system
+//+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=gardenerclusters/finalizers,verbs=get;list;delete;create;update;patch,namespace=kcp-system
+//+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=gardenerclusters/status,verbs=get;list;delete;create;update;patch,namespace=kcp-system
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
