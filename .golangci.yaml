@@ -38,9 +38,6 @@ linters-settings:
       - os.WriteFile
 
   govet:
-    # Enable all analyzers.
-    # Default: false
-    enable-all: true
     # Disable analyzers by name.
     # Run `go tool vet help` to see all analyzers.
     # Default: []
@@ -55,7 +52,6 @@ linters-settings:
 
 
 linters:
-  disable-all: true
   enable:
     ## enabled by default
     - errcheck # checking for unchecked errors, these unchecked errors can be critical bugs in some cases
@@ -65,41 +61,9 @@ linters:
     - staticcheck # is a go vet on steroids, applying a ton of static analysis checks
     - typecheck # like the front-end of a Go compiler, parses and type-checks Go code
     - unused # checks for unused constants, variables, functions and types
-    ## disabled by default
-    - asasalint # checks for pass []any as any in variadic func(...any)
-    - asciicheck # checks that your code does not contain non-ASCII identifiers
-    - durationcheck # checks for two durations multiplied together
-    - errname # checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error
-    - errorlint # finds code that will cause problems with the error wrapping scheme introduced in Go 1.13
-    - exportloopref # checks for pointers to enclosing loop variables
-    - gci # controls golang package import order and makes it always deterministic
-    - gochecknoglobals # checks that no global variables exist
-    - goconst # finds repeated strings that could be replaced by a constant
-    - gocritic # provides diagnostics that check for bugs, performance and style issues
-    - godox # detects TODOs keywords
-    # - goimports # in addition to fixing imports, goimports also formats your code in the same style as gofmt. Dissabled as can't work together with `gci` 
-    - mnd # detects magic numbers
-      # - gomoddirectives # manages the use of 'replace', 'retract', and 'excludes' directives in go.mod
-    - nestif # reports deeply nested if statements
-    - nilerr # finds the code that returns nil even if it checks that the error is not nil
-    - nilnil # checks that there is no simultaneous return of nil error and an invalid value
-    - revive # fast, configurable, extensible, flexible, and beautiful linter for Go, drop-in replacement of golint
-    - unconvert # removes unnecessary type conversions
-    - unparam # reports unused function parameters
-    - whitespace # detects leading and trailing whitespace
-
 
 issues:
   # Maximum count of issues with the same text.
   # Set to 0 to disable.
   # Default: 3
   max-same-issues: 5
-
-  exclude-rules:
-    - source: "(noinspection|TODO)"
-      linters: [ godot ]
-    - source: "//noinspection"
-      linters: [ gocritic ]
-    - path: "_test\\.go"
-      linters:
-        - goconst
