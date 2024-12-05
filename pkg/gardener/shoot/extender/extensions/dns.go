@@ -1,11 +1,15 @@
-package extender
+package extensions
 
 import (
+	"encoding/json"
 	"fmt"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 )
+
+const DNSExtensionType = "shoot-dns-service"
 
 // The types were copied from the following file: https://github.com/gardener/gardener-extension-shoot-dns-service/blob/master/pkg/apis/service/types.go
 type DNSExtensionProviderConfig struct {
@@ -51,27 +55,36 @@ type DNSProviderReplication struct {
 	Enabled bool `json:"enabled"`
 }
 
-func NewDNSExtender(secretName, domainPrefix, dnsProviderType string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		domain := fmt.Sprintf("%s.%s", runtime.Spec.Shoot.Name, domainPrefix)
-		isPrimary := true
-
-		shoot.Spec.DNS = &gardener.DNS{
-			Domain: &domain,
-			Providers: []gardener.DNSProvider{
-				{
-					Domains: &gardener.DNSIncludeExclude{
-						Include: []string{
-							domain,
-						},
-					},
-					Primary:    &isPrimary,
-					SecretName: &secretName,
-					Type:       &dnsProviderType,
+func newDNSExtensionConfig(domain, secretName, dnsProviderType string) *DNSExtensionProviderConfig {
+	return &DNSExtensionProviderConfig{
+		APIVersion:                    "service.dns.extensions.gardener.cloud/v1alpha1",
+		Kind:                          "DNSConfig",
+		DNSProviderReplication:        &DNSProviderReplication{Enabled: true},
+		SyncProvidersFromShootSpecDNS: ptr.To(true),
+		Providers: []DNSProvider{
+			{
+				Domains: &DNSIncludeExclude{
+					Include: []string{domain},
 				},
+				SecretName: ptr.To(secretName),
+				Type:       ptr.To(dnsProviderType),
 			},
-		}
-
-		return nil
+		},
 	}
+}
+
+func NewDNSExtension(shootName, secretName, domainSuffix, dnsProviderType string) (*gardener.Extension, error) {
+	domain := fmt.Sprintf("%s.%s", shootName, domainSuffix)
+
+	extensionJSON, err := json.Marshal(newDNSExtensionConfig(domain, secretName, dnsProviderType))
+	if err != nil {
+		return nil, err
+	}
+
+	return &gardener.Extension{
+		Type: DNSExtensionType,
+		ProviderConfig: &apimachineryruntime.RawExtension{
+			Raw: extensionJSON,
+		},
+	}, nil
 }
