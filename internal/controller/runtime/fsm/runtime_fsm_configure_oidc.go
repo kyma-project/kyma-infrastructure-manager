@@ -114,6 +114,9 @@ func deleteExistingKymaOpenIDConnectResources(ctx context.Context, client k8s_cl
 func isOidcExtensionEnabled(shoot gardener.Shoot) bool {
 	for _, extension := range shoot.Spec.Extensions {
 		if extension.Type == extender.OidcExtensionType {
+			if extension.Disabled == nil {
+				return true
+			}
 			return !(*extension.Disabled)
 		}
 	}
