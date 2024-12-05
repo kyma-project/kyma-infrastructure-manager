@@ -110,6 +110,14 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 			},
 			expected: nil,
 		}),
+		Entry("should not remove Service account CRB not managed by reconciler or KIM", tcCRBData{
+			admins: []string{"test1", "test2"},
+			crbs: []rbacv1.ClusterRoleBinding{
+				toServiceAccountClusterRoleBinding("test3-should-stay"),
+				toServiceAccountClusterRoleBinding("test4-should-stay"),
+			},
+			expected: nil,
+		}),
 		Entry("should remove CRB managed by reconciler or KIM, that are not in the admin list", tcCRBData{
 			admins: []string{"test4", "test5"},
 			crbs: []rbacv1.ClusterRoleBinding{
@@ -284,4 +292,23 @@ func toManagedClusterRoleBinding(name, managedBy string) rbacv1.ClusterRoleBindi
 		"reconciler.kyma-project.io/managed-by": managedBy,
 	}
 	return clusterRoleBinding
+}
+
+func toServiceAccountClusterRoleBinding(name string) rbacv1.ClusterRoleBinding {
+	return rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      "cluster-admin",
+			Namespace: "cicdnamespace",
+			APIGroup:  rbacv1.GroupName,
+		}},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     "cluster-admin",
+		},
+	}
 }
