@@ -224,6 +224,9 @@ func getControlPlane(shoot v1beta1.Shoot) *v1beta1.ControlPlane {
 func checkIfShootNetworkFilteringEnabled(shoot v1beta1.Shoot) bool {
 	for _, extension := range shoot.Spec.Extensions {
 		if extension.Type == ShootNetworkingFilterExtensionType {
+			if extension.Disabled == nil {
+				return true
+			}
 			return !(*extension.Disabled)
 		}
 	}
