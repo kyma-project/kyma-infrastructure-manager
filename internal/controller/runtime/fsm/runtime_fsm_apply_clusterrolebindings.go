@@ -111,6 +111,13 @@ func isRBACUserKindOneOf(names []string) func(rbacv1.Subject) bool {
 	}
 }
 
+func isRBACServiceAccountKindOneOf(names []string) func(rbacv1.Subject) bool {
+	return func(s rbacv1.Subject) bool {
+		return s.Kind == rbacv1.ServiceAccountKind &&
+			slices.Contains(names, s.Name)
+	}
+}
+
 func getRemoved(crbs []rbacv1.ClusterRoleBinding, admins []string) (removed []rbacv1.ClusterRoleBinding) {
 	// iterate over cluster role bindings to find out removed administrators
 	for _, crb := range crbs {
@@ -126,6 +133,12 @@ func getRemoved(crbs []rbacv1.ClusterRoleBinding, admins []string) (removed []rb
 		index := slices.IndexFunc(crb.Subjects, isRBACUserKindOneOf(admins))
 		if index >= 0 {
 			// cluster role binding does not contain user subject
+			continue
+		}
+
+		index = slices.IndexFunc(crb.Subjects, isRBACServiceAccountKindOneOf(admins))
+		if index >= 0 {
+			// cluster role binding does not contain serviceaccount subject
 			continue
 		}
 
