@@ -66,11 +66,34 @@ func (v Verifier) newConverter(shootToMatch v1beta1.Shoot) (gardener_shoot.Conve
 		return gardener_shoot.Converter{}, err
 	}
 
+	imgName, imgVersion := getImageNameAndVersion(shootToMatch.Spec.Provider.Workers)
+
 	return gardener_shoot.NewConverterPatch(gardener_shoot.PatchOpts{
-		ConverterConfig: v.converterConfig,
-		AuditLogData:    auditLogData,
-		Zones:           getZones(shootToMatch.Spec.Provider.Workers),
+		ConverterConfig:   v.converterConfig,
+		AuditLogData:      auditLogData,
+		Zones:             getZones(shootToMatch.Spec.Provider.Workers),
+		ShootK8SVersion:   shootToMatch.Spec.Kubernetes.Version,
+		ShootImageName:    imgName,
+		ShootImageVersion: imgVersion,
+		Extensions:        shootToMatch.Spec.Extensions,
+		Resources:         shootToMatch.Spec.Resources,
 	}), nil
+}
+
+func getImageNameAndVersion(workers []v1beta1.Worker) (string, string) {
+	var imageName, imageVersion string
+
+	for _, worker := range workers {
+		if worker.Machine.Image != nil {
+			imageName = worker.Machine.Image.Name
+			if worker.Machine.Image.Version != nil {
+				imageVersion = *worker.Machine.Image.Version
+			}
+			break
+		}
+	}
+
+	return imageName, imageVersion
 }
 
 func getZones(workers []v1beta1.Worker) []string {

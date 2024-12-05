@@ -19,6 +19,8 @@ package runtime
 import (
 	"context"
 	"encoding/json"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
+	v12 "k8s.io/api/core/v1"
 	"path/filepath"
 	"testing"
 	"time"
@@ -36,7 +38,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
 	v1 "k8s.io/api/autoscaling/v1"
-	v12 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	//nolint:revive
@@ -346,9 +347,13 @@ func fixConverterConfigForTests() config.Config {
 }
 
 func addAuditLogConfigToShoot(shoot *gardener_api.Shoot) {
-	shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig = &gardener_api.AuditConfig{
-		AuditPolicy: &gardener_api.AuditPolicy{
-			ConfigMapRef: &v12.ObjectReference{Name: "policy-config-map"},
+	shoot.Spec.Kubernetes = gardener_api.Kubernetes{
+		KubeAPIServer: &gardener_api.KubeAPIServerConfig{
+			AuditConfig: &gardener_api.AuditConfig{
+				AuditPolicy: &gardener_api.AuditPolicy{
+					ConfigMapRef: &v12.ObjectReference{Name: "policy-config-map"},
+				},
+			},
 		},
 	}
 
@@ -373,7 +378,7 @@ func addAuditLogConfigToShoot(shoot *gardener_api.Shoot) {
 
 	ext := &shoot.Spec.Extensions[len(shoot.Spec.Extensions)-1]
 
-	cfg := auditlogs.AuditlogExtensionConfig{
+	cfg := extensions.AuditlogExtensionConfig{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       extensionKind,
 			APIVersion: extensionVersion,

@@ -20,6 +20,7 @@ rules:
   - infrastructuremanager.kyma-project.io
   resources:
   - gardenerclusters
+  - runtimes
   verbs:
   - create
   - delete

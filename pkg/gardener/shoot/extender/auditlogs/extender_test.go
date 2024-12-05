@@ -24,7 +24,7 @@ func Test_AuditlogExtender(t *testing.T) {
 		},
 	} {
 		// given
-		extendWithAuditlogs := NewAuditlogExtender(tc.policyConfigmapName, tc.data)
+		extendWithAuditlogs := NewAuditlogExtenderForCreate(tc.policyConfigmapName, tc.data)
 
 		// when
 		err := extendWithAuditlogs(zero, &tc.shoot)
