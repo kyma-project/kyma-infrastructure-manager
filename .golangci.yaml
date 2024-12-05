@@ -44,12 +44,6 @@ linters-settings:
     disable:
       - fieldalignment # too strict
     # Settings per analyzer.
-    settings:
-      shadow:
-        # Whether to be strict about shadowing; can be noisy.
-        # Default: false
-        strict: false
-
 
 linters:
   enable:
