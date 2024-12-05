@@ -7,8 +7,8 @@ on:
 
 permissions:
   contents: read
-  # Optional: allow read access to pull request. Use with `only-new-issues` option.
-  # pull-requests: read
+  pull-requests: read
+  checks: write
 
 jobs:
   golangci-lint:
@@ -35,7 +35,7 @@ jobs:
           # Note: By default, the `.golangci.yml` file should be at the root of the repository.
           # The location of the configuration file can be changed by using `--config=`
           # args: --timeout=30m --config=/my/path/.golangci.yml --issues-exit-code=0 
-          args: --timeout=10m --skip-files=.*_test\.go --skip-dirs=internal/controller/runtime/fsm/testing --verbose
+          args: --timeout=10m --skip-files=.*_test\.go --skip-dirs=internal/controller/runtime/fsm/testing
 
           # Optional: show only new issues if it's a pull request. The default value is `false`.
           # only-new-issues: true
