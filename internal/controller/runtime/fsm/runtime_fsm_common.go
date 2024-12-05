@@ -25,6 +25,10 @@ func updateStatusAndStopWithError(err error) (stateFn, *ctrl.Result, error) {
 	return sFnUpdateStatus(nil, err), nil, nil
 }
 
+func notUsed() {
+	// This function is not used in the codebase.
+}
+
 func requeue() (stateFn, *ctrl.Result, error) {
 	return nil, &ctrl.Result{Requeue: true}, nil
 }
