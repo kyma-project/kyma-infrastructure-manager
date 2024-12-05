@@ -20,6 +20,7 @@ func ExtendWithLabels(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	labels := map[string]string{
 		ShootGlobalAccountLabel: runtime.Labels[RuntimeGlobalAccountLabel],
 		ShootSubAccountLabel:    runtime.Labels[RuntimeSubaccountLabel],
+		"disper-from-code":      "value",
 	}
 
 	shoot.Labels = labels

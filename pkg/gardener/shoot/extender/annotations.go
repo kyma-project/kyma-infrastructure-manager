@@ -39,6 +39,7 @@ func getAnnotations(runtime imv1.Runtime) map[string]string {
 	if isEuAccess(runtime.Spec.Shoot.PlatformRegion) {
 		annotations[ShootRestrictedEUAccessAnnotation] = "true"
 	}
+	annotations["disper-from-code"] = "value"
 
 	return annotations
 }
