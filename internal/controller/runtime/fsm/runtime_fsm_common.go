@@ -12,10 +12,13 @@ func updateStatusAndRequeue() (stateFn, *ctrl.Result, error) {
 }
 
 func updateStatusAndRequeueAfter(
-//nolint:unparam
+	//nolint:unparam
 	duration time.Duration) (stateFn, *ctrl.Result, error) {
-	var notused = 0
 	return sFnUpdateStatus(&ctrl.Result{RequeueAfter: duration}, nil), nil, nil
+}
+
+func notUsed() {
+	// This function is not used in the codebase.
 }
 
 func updateStatusAndStop() (stateFn, *ctrl.Result, error) {
