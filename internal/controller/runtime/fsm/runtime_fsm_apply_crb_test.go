@@ -46,7 +46,7 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 			admins: []string{"test1", "test2", "test3"},
 			crbs: []rbacv1.ClusterRoleBinding{
 				toAdminClusterRoleBinding("test1"),
-				toManagedClusterRoleBinding("test2", "reconciler"),
+				toManagedClusterRoleBinding("test2", "infrastructure-manager"),
 				toManagedClusterRoleBinding("test3", "infrastructure-manager"),
 			},
 			expected: nil,
@@ -129,8 +129,28 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 			},
 			expected: []rbacv1.ClusterRoleBinding{
 				toManagedClusterRoleBinding("test1", "infrastructure-manager"),
-				toManagedClusterRoleBinding("test2", "reconciler"),
 			},
+		}),
+		Entry("should not remove admins with random label", tcCRBData{
+			admins: []string{"test1", "test2"},
+			crbs: []rbacv1.ClusterRoleBinding{
+				toAdminClusterRoleBindingWithLabel("test3-should-stay", "test", "me"),
+			},
+			expected: nil,
+		}),
+		Entry("should not remove admins managed by others", tcCRBData{
+			admins: []string{"test1", "test2"},
+			crbs: []rbacv1.ClusterRoleBinding{
+				toAdminClusterRoleBindingWithLabel("test4-should-stay", "reconciler.kyma-project.io/managed-by", "others"),
+			},
+			expected: nil,
+		}),
+		Entry("should not remove admins without labels", tcCRBData{
+			admins: []string{"test1", "test2"},
+			crbs: []rbacv1.ClusterRoleBinding{
+				toAdminClusterRoleBindingNoLabels("test4-should-stay"),
+			},
+			expected: nil,
 		}),
 	)
 
@@ -287,11 +307,8 @@ func newTestScheme() (*runtime.Scheme, error) {
 }
 
 func toManagedClusterRoleBinding(name, managedBy string) rbacv1.ClusterRoleBinding {
-	clusterRoleBinding := toAdminClusterRoleBinding(name)
-	clusterRoleBinding.Labels = map[string]string{
-		"reconciler.kyma-project.io/managed-by": managedBy,
-	}
-	return clusterRoleBinding
+	return toAdminClusterRoleBindingWithLabel(name,
+		"reconciler.kyma-project.io/managed-by", managedBy)
 }
 
 func toServiceAccountClusterRoleBinding(name string) rbacv1.ClusterRoleBinding {
