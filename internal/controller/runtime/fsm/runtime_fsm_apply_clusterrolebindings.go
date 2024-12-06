@@ -21,10 +21,6 @@ var (
 	labelsManagedByKIM = map[string]string{
 		"reconciler.kyma-project.io/managed-by": "infrastructure-manager",
 	}
-	//nolint:gochecknoglobals
-	labelsManagedByReconciler = map[string]string{
-		"reconciler.kyma-project.io/managed-by": "reconciler",
-	}
 )
 
 func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
@@ -104,16 +100,15 @@ func getKubeconfigSecret(ctx context.Context, cnt client.Client, runtimeID, name
 	return kubeconfigSecret, nil
 }
 
-func isRBACUserKindOneOf(names []string) func(rbacv1.Subject) bool {
+func isRBACUserKind() func(rbacv1.Subject) bool {
 	return func(s rbacv1.Subject) bool {
-		return s.Kind == rbacv1.UserKind &&
-			slices.Contains(names, s.Name)
+		return s.Kind == rbacv1.UserKind
 	}
 }
 
-func isRBACServiceAccountKind() func(rbacv1.Subject) bool {
+func isRBACUserKindOneOf(names []string) func(rbacv1.Subject) bool {
 	return func(s rbacv1.Subject) bool {
-		return s.Kind == rbacv1.ServiceAccountKind
+		return slices.Contains(names, s.Name)
 	}
 }
 
@@ -126,18 +121,17 @@ func getRemoved(crbs []rbacv1.ClusterRoleBinding, admins []string) (removed []rb
 		}
 
 		if crb.RoleRef.Kind != "ClusterRole" && crb.RoleRef.Name != "cluster-admin" {
+			// cluster role binding is not admin
 			continue
 		}
 
-		index := slices.IndexFunc(crb.Subjects, isRBACUserKindOneOf(admins))
-		if index >= 0 {
-			// cluster role binding does not contain user subject
+		if !slices.ContainsFunc(crb.Subjects, isRBACUserKind()) {
+			// cluster role binding is not user kind
 			continue
 		}
 
-		index = slices.IndexFunc(crb.Subjects, isRBACServiceAccountKind())
-		if index >= 0 {
-			// cluster role binding does not contain serviceaccount subject
+		if slices.ContainsFunc(crb.Subjects, isRBACUserKindOneOf(admins)) {
+			// the administrator was not removed
 			continue
 		}
 
@@ -149,11 +143,9 @@ func getRemoved(crbs []rbacv1.ClusterRoleBinding, admins []string) (removed []rb
 }
 
 func managedByKIM(crb rbacv1.ClusterRoleBinding) bool {
-	selector := labels.Set(crb.Labels).AsSelector()
-	isManagedByKIM := selector.Matches(labels.Set(labelsManagedByKIM))
-	isManagedByReconciler := selector.Matches(labels.Set(labelsManagedByReconciler))
-	// Provisioner managed CRBs with label managed-by=reconciler, we have to manage them as well
-	return isManagedByKIM || isManagedByReconciler
+	selector := labels.Set(labelsManagedByKIM).AsSelector()
+	isManagedByKIM := selector.Matches(labels.Set(crb.Labels))
+	return isManagedByKIM
 }
 
 //nolint:gochecknoglobals
@@ -180,11 +172,17 @@ func getMissing(crbs []rbacv1.ClusterRoleBinding, admins []string) (missing []rb
 	return missing
 }
 
-func toAdminClusterRoleBinding(name string) rbacv1.ClusterRoleBinding {
+func toAdminClusterRoleBindingWithLabel(name string, key, value string) rbacv1.ClusterRoleBinding {
+	// initialize labels
+	labels := map[string]string{}
+	if key != "" {
+		labels[key] = value
+	}
+	// build CRB
 	return rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "admin-",
-			Labels:       labelsManagedByKIM,
+			Labels:       labels,
 		},
 		Subjects: []rbacv1.Subject{{
 			Kind:     rbacv1.UserKind,
@@ -197,6 +195,14 @@ func toAdminClusterRoleBinding(name string) rbacv1.ClusterRoleBinding {
 			Name:     "cluster-admin",
 		},
 	}
+}
+
+func toAdminClusterRoleBindingNoLabels(name string) rbacv1.ClusterRoleBinding {
+	return toAdminClusterRoleBindingWithLabel(name, "", "")
+}
+
+func toAdminClusterRoleBinding(name string) rbacv1.ClusterRoleBinding {
+	return toAdminClusterRoleBindingWithLabel(name, "reconciler.kyma-project.io/managed-by", "infrastructure-manager")
 }
 
 //nolint:gochecknoglobals
