@@ -83,6 +83,8 @@ const (
 	defaultShootCreateRequeueDuration    = 60 * time.Second
 	defaultShootDeleteRequeueDuration    = 90 * time.Second
 	defaultShootReconcileRequeueDuration = 30 * time.Second
+	defaultRuntimeCtrlWorkersCnt         = 25
+	defaultGardenerClusterCtrlWorkersCnt = 25
 )
 
 func main() {
@@ -97,6 +99,8 @@ func main() {
 	var runtimeCtrlGardenerRequestTimeout time.Duration
 	var runtimeCtrlGardenerRateLimiterQPS int
 	var runtimeCtrlGardenerRateLimiterBurst int
+	var runtimeCtrlWorkersCnt int
+	var gardenerClusterCtrlWorkersCnt int
 	var converterConfigFilepath string
 	var shootSpecDumpEnabled bool
 	var auditLogMandatory bool
@@ -114,6 +118,8 @@ func main() {
 	flag.DurationVar(&runtimeCtrlGardenerRequestTimeout, "gardener-request-timeout", defaultGardenerRequestTimeout, "Timeout duration for Gardener client for Runtime Controller")
 	flag.IntVar(&runtimeCtrlGardenerRateLimiterQPS, "gardener-ratelimiter-qps", defaultGardenerRateLimiterQPS, "Gardener client rate limiter QPS for Runtime Controller")
 	flag.IntVar(&runtimeCtrlGardenerRateLimiterBurst, "gardener-ratelimiter-burst", defaultGardenerRateLimiterBurst, "Gardener client rate limiter burst for Runtime Controller")
+	flag.IntVar(&runtimeCtrlWorkersCnt, "runtime-ctrl-workers-cnt", defaultRuntimeCtrlWorkersCnt, "A number of workers running in parallel for Runtime Controller")
+	flag.IntVar(&gardenerClusterCtrlWorkersCnt, "gardener-cluster-ctrl-workers-cnt", defaultGardenerClusterCtrlWorkersCnt, "A number of workers running in parallel for Gardener Cluster Controller")
 	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "A file path to the gardener shoot converter configuration.")
 	flag.BoolVar(&shootSpecDumpEnabled, "shoot-spec-dump-enabled", false, "Feature flag to allow persisting specs of created shoots")
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration")
@@ -178,7 +184,7 @@ func main() {
 		minimalRotationTimeRatio,
 		gardenerCtrlReconciliationTimeout,
 		metrics,
-	).SetupWithManager(mgr); err != nil {
+	).SetupWithManager(mgr, gardenerClusterCtrlWorkersCnt); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GardenerCluster")
 		os.Exit(1)
 	}
@@ -229,7 +235,7 @@ func main() {
 		cfg,
 	)
 
-	if err = runtimeReconciler.SetupWithManager(mgr); err != nil {
+	if err = runtimeReconciler.SetupWithManager(mgr, runtimeCtrlWorkersCnt); err != nil {
 		setupLog.Error(err, "unable to setup controller with Manager", "controller", "Runtime")
 		os.Exit(1)
 	}
