@@ -110,10 +110,6 @@ func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensi
 		shoot.Spec.Extensions = currentGardenerExtensions
 
 		for _, ext := range extensionsToApply {
-			if ext.Create == nil {
-				continue
-			}
-
 			gardenerExtension, err := ext.Create(runtime, *shoot)
 			if err != nil {
 				return err
