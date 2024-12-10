@@ -44,7 +44,6 @@ const (
 	clusterCRNameLabel                = "operator.kyma-project.io/cluster-name"
 
 	rotationPeriodRatio = 0.95
-	numberOfWorkers     = 25
 )
 
 // GardenerClusterController reconciles a GardenerCluster object
@@ -431,7 +430,7 @@ func (controller *GardenerClusterController) newSecret(cluster imv1.GardenerClus
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (controller *GardenerClusterController) SetupWithManager(mgr ctrl.Manager) error {
+func (controller *GardenerClusterController) SetupWithManager(mgr ctrl.Manager, numberOfWorkers int) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&imv1.GardenerCluster{}, builder.WithPredicates(predicate.Or(
 			predicate.LabelChangedPredicate{},

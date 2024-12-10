@@ -92,7 +92,7 @@ var _ = BeforeSuite(func() {
 
 	Expect(gardenerClusterController).NotTo(BeNil())
 
-	err = gardenerClusterController.SetupWithManager(mgr)
+	err = gardenerClusterController.SetupWithManager(mgr, 1)
 	Expect(err).To(BeNil())
 
 	Expect(gardenerClusterController).NotTo(BeNil())

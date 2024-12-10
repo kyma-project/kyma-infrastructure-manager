@@ -135,7 +135,7 @@ var _ = BeforeSuite(func() {
 
 	runtimeReconciler = NewRuntimeReconciler(mgr, gardenerTestClient, logger, fsmCfg)
 	Expect(runtimeReconciler).NotTo(BeNil())
-	err = runtimeReconciler.SetupWithManager(mgr)
+	err = runtimeReconciler.SetupWithManager(mgr, 1)
 	Expect(err).To(BeNil())
 
 	//+kubebuilder:scaffold:scheme
