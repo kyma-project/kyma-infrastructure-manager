@@ -18,6 +18,7 @@ type Extension struct {
 }
 
 func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData auditlogs.AuditLogData) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+
 	return newExtensionsExtender([]Extension{
 		{
 			Type: NetworkFilterType,
@@ -46,6 +47,11 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 		{
 			Type: AuditlogExtensionType,
 			Create: func(_ imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
+				var zero auditlogs.AuditLogData
+				if auditLogData == zero {
+					return nil, nil
+				}
+
 				return NewAuditLogExtension(auditLogData)
 			},
 		},
@@ -57,6 +63,11 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensio
 		{
 			Type: AuditlogExtensionType,
 			Create: func(_ imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+				var zero auditlogs.AuditLogData
+				if auditLogData == zero {
+					return nil, nil
+				}
+
 				newAuditLogExtension, err := NewAuditLogExtension(auditLogData)
 				if err != nil {
 					return nil, err
@@ -100,6 +111,10 @@ func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensi
 		shoot.Spec.Extensions = currentGardenerExtensions
 
 		for _, ext := range extensionsToApply {
+			if ext.Create == nil {
+				continue
+			}
+
 			gardenerExtension, err := ext.Create(runtime, *shoot)
 			if err != nil {
 				return err
