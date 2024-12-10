@@ -18,7 +18,6 @@ type Extension struct {
 }
 
 func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData auditlogs.AuditLogData) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-
 	return newExtensionsExtender([]Extension{
 		{
 			Type: NetworkFilterType,
