@@ -143,28 +143,28 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			disableNetworkFilter: true,
 		},
 		{
-			name:                 "Should add Auditlog extension at the end without changing order and data of other extensions",
+			name:                 "Should add AuditLog extension at the end without changing order and data of other extensions",
 			previousExtensions:   fixExtensionsOnTheShootWithoutAuditLogs(),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
 			disableNetworkFilter: true,
 		},
 		{
-			name:                 "Should add Auditlog and Network filter extensions at the end without changing order and data of other extensions",
+			name:                 "Should add AuditLog and Network filter extensions at the end without changing order and data of other extensions",
 			previousExtensions:   fixExtensionsOnTheShootWithoutAuditLogsAndNetworkFilter(),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
 			disableNetworkFilter: true,
 		},
 		{
-			name:                 "Should not update Auditlog extension when input auditLogData is empty",
+			name:                 "Should not update existing AuditLog extension when input auditLogData is empty",
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
 			inputAuditLogData:    auditlogs.AuditLogData{},
 			expectedAuditLogData: oldAuditLogData,
 			disableNetworkFilter: true,
 		},
 		{
-			name:                 "Should not add Auditlog extension to existing shoot extension when input auditLogData is empty",
+			name:                 "Should not add AuditLog extension to existing shoot extensions when input auditLogData is empty",
 			previousExtensions:   fixExtensionsOnTheShootWithoutAuditLogs(),
 			inputAuditLogData:    auditlogs.AuditLogData{},
 			disableNetworkFilter: false,
@@ -329,7 +329,7 @@ func getExpectedExtensionsOrderMapForPatch(extensions []gardener.Extension, empt
 	if len(extensions) == 4 {
 		// add missing one at the end with an exception for Auditlog extension when input auditLogData is empty
 		if _, ok := extensionOrderMap[AuditlogExtensionType]; !ok {
-			if !emptyAuditlogData {
+			if !emptyAuditlogData { // case when Auditlog extension is missing and should not be added
 				extensionOrderMap[AuditlogExtensionType] = 4
 			}
 		}
