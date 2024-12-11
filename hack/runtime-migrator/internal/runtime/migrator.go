@@ -3,13 +3,13 @@ package runtime
 import (
 	"context"
 	"fmt"
-
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	migrator "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/pkg/errors"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -145,10 +145,26 @@ func getAdministratorsList(ctx context.Context, provider kubeconfig.Provider, sh
 	})
 
 	subjects := make([]string, 0)
-
 	for _, clusterRoleBinding := range clusterRoleBindings.Items {
-		for _, subject := range clusterRoleBinding.Subjects {
-			subjects = append(subjects, subject.Name)
+		// We are interested only in cluster-admin role
+		if clusterRoleBinding.RoleRef.Kind == "ClusterRole" && clusterRoleBinding.RoleRef.Name == "cluster-admin" {
+			willMigrate := false
+			for _, subject := range clusterRoleBinding.Subjects {
+				// We are interested only in users
+				if subject.Kind == rbacv1.UserKind {
+					subjects = append(subjects, subject.Name)
+					willMigrate = true
+				}
+			}
+
+			if willMigrate {
+				clusterRoleBinding.ObjectMeta.Labels["kyma-project.io/deprecation"] = "this ClusterRoleBinding is deprecated and will be removed in next days"
+				_, err := clientset.RbacV1().ClusterRoleBindings().Update(ctx, &clusterRoleBinding, metav1.UpdateOptions{})
+
+				if err != nil {
+					return []string{}, errors.Wrap(err, fmt.Sprintf("Failed to update ClusterRoleBinding with deprecation label %s", clusterRoleBinding.Name))
+				}
+			}
 		}
 	}
 
