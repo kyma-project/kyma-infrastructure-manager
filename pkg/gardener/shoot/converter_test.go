@@ -2,7 +2,11 @@ package shoot
 
 import (
 	"fmt"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	"io"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"strings"
 	"testing"
 
@@ -21,7 +25,15 @@ func TestConverter(t *testing.T) {
 		// given
 		runtime := fixRuntime()
 		converterConfig := fixConverterConfig()
-		converter := NewConverterCreate(CreateOpts{ConverterConfig: converterConfig})
+		auditLogData := auditlogs.AuditLogData{
+			TenantID:   "test-auditlog-tenant",
+			ServiceURL: "test-auditlog-service-url",
+			SecretName: "doesnt matter",
+		}
+		converter := NewConverterCreate(CreateOpts{
+			ConverterConfig: converterConfig,
+			AuditLogData:    auditLogData,
+		})
 
 		// when
 		shoot, err := converter.ToShoot(runtime)
@@ -32,13 +44,24 @@ func TestConverter(t *testing.T) {
 		assert.Equal(t, "1.28", shoot.Spec.Kubernetes.Version)
 		assert.Equal(t, "gardenlinux", shoot.Spec.Provider.Workers[0].Machine.Image.Name)
 		assert.Equal(t, "1591.1.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
+
+		extensionLen := len(shoot.Spec.Extensions)
+		require.Equalf(t, 5, extensionLen, "unexpected number of extensions: %d, expected: 5", extensionLen)
 	})
 
 	t.Run("Create shoot with default converter config versions", func(t *testing.T) {
 		// given
 		runtime := fixRuntimeWithNoVersionsSpecified()
 		converterConfig := fixConverterConfig()
-		converter := NewConverterCreate(CreateOpts{ConverterConfig: converterConfig})
+		auditLogData := auditlogs.AuditLogData{
+			TenantID:   "test-auditlog-tenant",
+			ServiceURL: "test-auditlog-service-url",
+			SecretName: "doesnt matter",
+		}
+		converter := NewConverterCreate(CreateOpts{
+			ConverterConfig: converterConfig,
+			AuditLogData:    auditLogData,
+		})
 
 		// when
 		shoot, err := converter.ToShoot(runtime)
@@ -49,18 +72,30 @@ func TestConverter(t *testing.T) {
 		assert.Equal(t, "1.29", shoot.Spec.Kubernetes.Version)
 		assert.Equal(t, "gardenlinux", shoot.Spec.Provider.Workers[0].Machine.Image.Name)
 		assert.Equal(t, "1592.1.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
+
+		extensionLen := len(shoot.Spec.Extensions)
+		require.Equalf(t, 5, extensionLen, "unexpected number of extensions: %d, expected: 5", extensionLen)
 	})
 
 	t.Run("Create shoot from Runtime for existing shoot and keep versions", func(t *testing.T) {
 		// given
 		runtime := fixRuntime()
 		converterConfig := fixConverterConfig()
+
+		auditLogData := auditlogs.AuditLogData{
+			TenantID:   "test-auditlog-tenant",
+			ServiceURL: "test-auditlog-service-url",
+			SecretName: "doesnt matter",
+		}
+
 		converter := NewConverterPatch(PatchOpts{
 			ConverterConfig:   converterConfig,
 			Zones:             fixReversedZones(),
 			ShootK8SVersion:   "1.30",
 			ShootImageName:    "gardenlinux",
 			ShootImageVersion: "1592.2.0",
+			Extensions:        fixAllExtensionsOnTheShoot(),
+			AuditLogData:      auditLogData,
 		})
 
 		// when
@@ -76,30 +111,33 @@ func TestConverter(t *testing.T) {
 			"eu-central-1a",
 		}
 		assert.Equal(t, expectedZonesAreInSameOrder, shoot.Spec.Provider.Workers[0].Zones)
-		assert.Equal(t, expectedZonesAreInSameOrder, shoot.Spec.Provider.Workers[0].Zones)
 		assert.Equal(t, "1.30", shoot.Spec.Kubernetes.Version)
 		assert.Equal(t, "gardenlinux", shoot.Spec.Provider.Workers[0].Machine.Image.Name)
 		assert.Equal(t, "1592.2.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
 		assert.Nil(t, shoot.Spec.DNS)
 
 		extensionLen := len(shoot.Spec.Extensions)
-		require.Equalf(t, extensionLen, 2, "unexpected number of extensions: %d, expected: 2", extensionLen)
-		// consider switchin to NotElementsMatch, whem released https://github.com/Antonboom/testifylint/issues/99
-		for _, extension := range shoot.Spec.Extensions {
-			assert.NotEqual(t, "shoot-dns-service", extension.Type, "unexpected immutable field extension: 'shoot-dns-service'")
-		}
+		require.Equalf(t, extensionLen, 5, "unexpected number of extensions: %d, expected: 5", extensionLen)
 	})
 
 	t.Run("Create shoot from Runtime for existing shoot and update versions", func(t *testing.T) {
 		// given
 		runtime := fixRuntime()
 		converterConfig := fixConverterConfig()
+		auditLogData := auditlogs.AuditLogData{
+			TenantID:   "test-auditlog-tenant",
+			ServiceURL: "test-auditlog-service-url",
+			SecretName: "doesnt matter",
+		}
+
 		converter := NewConverterPatch(PatchOpts{
 			ConverterConfig:   converterConfig,
 			Zones:             fixReversedZones(),
 			ShootK8SVersion:   "1.27",
 			ShootImageName:    "gardenlinux",
 			ShootImageVersion: "1591.0.0",
+			Extensions:        fixAllExtensionsOnTheShoot(),
+			AuditLogData:      auditLogData,
 		})
 
 		// when
@@ -119,6 +157,9 @@ func TestConverter(t *testing.T) {
 		assert.Equal(t, "1.28", shoot.Spec.Kubernetes.Version)
 		assert.Equal(t, "gardenlinux", shoot.Spec.Provider.Workers[0].Machine.Image.Name)
 		assert.Equal(t, "1591.1.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
+
+		extensionLen := len(shoot.Spec.Extensions)
+		require.Equalf(t, extensionLen, 5, "unexpected number of extensions: %d, expected: 5", extensionLen)
 	})
 }
 
@@ -162,6 +203,37 @@ func fixConverterConfig() config.ConverterConfig {
 		MachineImage: config.MachineImageConfig{
 			DefaultName:    "gardenlinux",
 			DefaultVersion: "1592.1.0",
+		},
+	}
+}
+
+func fixAllExtensionsOnTheShoot() []gardener.Extension {
+	return []gardener.Extension{
+		{
+			Type: extensions.AuditlogExtensionType,
+			ProviderConfig: &runtime.RawExtension{
+				Raw: []byte(`{"apiVersion":"service.auditlog.extensions.gardener.cloud/v1alpha1","kind":"AuditlogConfig","type":"standard","tenantID":"test-auditlog-tenant","serviceURL":"test-auditlog-service-url","secretReferenceName":"auditlog-credentials"}`),
+			},
+		},
+		{
+			Type: extensions.DNSExtensionType,
+			ProviderConfig: &runtime.RawExtension{
+				Raw: []byte(`{"apiVersion":"service.dns.extensions.gardener.cloud/v1alpha1","dnsProviderReplication":{"enabled":true},"syncProvidersFromShootSpecDNS":true,"providers":[{"domains":{"include":["test-shoot-name.test-domain"],"exclude":null},"secretName":"test-dns-secret","type":"test-provider"}],"kind":"DNSConfig"}`),
+			},
+		},
+		{
+			Type: extensions.CertExtensionType,
+			ProviderConfig: &runtime.RawExtension{
+				Raw: []byte(`{"apiVersion":"service.cert.extensions.gardener.cloud/v1alpha1","kind":"CertConfig","shootIssuers":{"enabled":true}}`),
+			},
+		},
+		{
+			Type:     extensions.NetworkFilterType,
+			Disabled: ptr.To(true),
+		},
+		{
+			Type:     extensions.OidcExtensionType,
+			Disabled: ptr.To(false),
 		},
 	}
 }
