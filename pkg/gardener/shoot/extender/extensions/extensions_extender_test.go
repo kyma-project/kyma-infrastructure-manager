@@ -24,54 +24,77 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 			ProviderType: "test-provider",
 		},
 	}
-	auditLogData := auditlogs.AuditLogData{
+	newAuditLogData := auditlogs.AuditLogData{
 		TenantID:   "test-auditlog-tenant",
 		ServiceURL: "test-auditlog-service-url",
 		SecretName: "doesnt matter",
 	}
 
-	runtime := fixRuntimeCRForExtensionExtenderTests(false)
-
-	shoot := &gardener.Shoot{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-shoot-name",
+	for _, testcase := range []struct {
+		name                 string
+		inputAuditLogData    auditlogs.AuditLogData
+		disableNetworkFilter bool
+		extensionOrderMap    map[string]int
+	}{
+		{
+			name:                 "Should create all extensions for new Shoot in the right order, network filter is enabled",
+			inputAuditLogData:    newAuditLogData,
+			disableNetworkFilter: false,
+			extensionOrderMap:    getExpectedExtensionsOrderMapForCreate(),
 		},
-	}
+		{
+			name:                 "Should create all extensions for new Shoot in the right order, network filter is disabled",
+			inputAuditLogData:    newAuditLogData,
+			disableNetworkFilter: true,
+			extensionOrderMap:    getExpectedExtensionsOrderMapForCreate(),
+		},
+		{
+			name:              "Should not include AuditLog extension for new Shoot when input auditLogData is empty",
+			inputAuditLogData: auditlogs.AuditLogData{},
+			extensionOrderMap: getExpectedExtensionsOrderMapForCreateWithoutAuditLogs(),
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			runtime := fixRuntimeCRForExtensionExtenderTests(!testcase.disableNetworkFilter)
 
-	extender := NewExtensionsExtenderForCreate(config, auditLogData)
+			shoot := &gardener.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-shoot-name",
+				},
+			}
 
-	err := extender(runtime, shoot)
-	assert.NoError(t, err)
-	assert.NotNil(t, shoot.Spec.Extensions)
-	require.Len(t, shoot.Spec.Extensions, 5)
+			extender := NewExtensionsExtenderForCreate(config, testcase.inputAuditLogData)
 
-	orderMap := getExpectedExtensionsOrderMapForCreate()
+			err := extender(runtime, shoot)
+			assert.NoError(t, err)
+			assert.NotNil(t, shoot.Spec.Extensions)
 
-	// checks if all Shoot extensions are correctly filled with data and are generated in the right order
-	for idx, ext := range shoot.Spec.Extensions {
-		assert.NotEmpty(t, ext.Type)
-		assert.Equal(t, orderMap[ext.Type], idx)
-		switch ext.Type {
-		case NetworkFilterType:
-			verifyNetworkFilterExtension(t, ext, true)
+			orderMap := testcase.extensionOrderMap
+			require.Len(t, shoot.Spec.Extensions, len(orderMap))
 
-		case CertExtensionType:
-			verifyCertExtension(t, ext)
+			for idx, ext := range shoot.Spec.Extensions {
+				assert.NotEmpty(t, ext.Type)
+				assert.Equal(t, orderMap[ext.Type], idx)
 
-		case DNSExtensionType:
-			verifyDNSExtension(t, ext)
+				switch ext.Type {
+				case NetworkFilterType:
+					verifyNetworkFilterExtension(t, ext, testcase.disableNetworkFilter)
 
-		case OidcExtensionType:
-			verifyOIDCExtension(t, ext)
+				case CertExtensionType:
+					verifyCertExtension(t, ext)
 
-		case AuditlogExtensionType:
-			verifyAuditLogExtension(t, ext, auditLogData)
-		}
+				case DNSExtensionType:
+					verifyDNSExtension(t, ext)
+
+				case OidcExtensionType:
+					verifyOIDCExtension(t, ext)
+				}
+			}
+		})
 	}
 }
 
 func TestNewExtensionsExtenderForPatch(t *testing.T) {
-
 	oldAuditLogData := auditlogs.AuditLogData{
 		TenantID:   "test-auditlog-tenant",
 		ServiceURL: "test-auditlog-service-url",
@@ -140,6 +163,12 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			expectedAuditLogData: oldAuditLogData,
 			disableNetworkFilter: true,
 		},
+		{
+			name:                 "Should not add Auditlog extension to existing shoot extension when input auditLogData is empty",
+			previousExtensions:   fixExtensionsOnTheShootWithoutAuditLogs(),
+			inputAuditLogData:    auditlogs.AuditLogData{},
+			disableNetworkFilter: false,
+		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			runtime := fixRuntimeCRForExtensionExtenderTests(!testCase.disableNetworkFilter)
@@ -150,13 +179,15 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 				},
 			}
 
+			isEmptyAuditLogData := testCase.inputAuditLogData == (auditlogs.AuditLogData{})
+
 			extender := NewExtensionsExtenderForPatch(testCase.inputAuditLogData, testCase.previousExtensions)
-			orderMap := getExpectedExtensionsOrderMap(testCase.previousExtensions)
+			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, isEmptyAuditLogData)
 
 			err := extender(runtime, shoot)
 			assert.NoError(t, err)
 			assert.NotNil(t, shoot.Spec.Extensions)
-			require.Len(t, shoot.Spec.Extensions, 5)
+			require.Len(t, shoot.Spec.Extensions, len(orderMap))
 
 			for idx, ext := range shoot.Spec.Extensions {
 				assert.NotEmpty(t, ext.Type)
@@ -288,7 +319,7 @@ func fixExtensionsOnTheShootWithoutAuditLogsAndNetworkFilter() []gardener.Extens
 }
 
 // returns a map with the expected index order of extensions for different ExtenderForPatch unit tests
-func getExpectedExtensionsOrderMap(extensions []gardener.Extension) map[string]int {
+func getExpectedExtensionsOrderMapForPatch(extensions []gardener.Extension, emptyAuditlogData bool) map[string]int {
 	extensionOrderMap := make(map[string]int)
 
 	for idx, ext := range extensions {
@@ -296,8 +327,11 @@ func getExpectedExtensionsOrderMap(extensions []gardener.Extension) map[string]i
 	}
 
 	if len(extensions) == 4 {
+		// add missing one at the end with an exception for Auditlog extension when input auditLogData is empty
 		if _, ok := extensionOrderMap[AuditlogExtensionType]; !ok {
-			extensionOrderMap[AuditlogExtensionType] = 4
+			if !emptyAuditlogData {
+				extensionOrderMap[AuditlogExtensionType] = 4
+			}
 		}
 
 		if _, ok := extensionOrderMap[NetworkFilterType]; !ok {
@@ -306,6 +340,7 @@ func getExpectedExtensionsOrderMap(extensions []gardener.Extension) map[string]i
 	}
 
 	if len(extensions) == 3 {
+		// add missing two at the end
 		extensionOrderMap[AuditlogExtensionType] = 3
 		extensionOrderMap[NetworkFilterType] = 4
 	}
@@ -322,6 +357,17 @@ func getExpectedExtensionsOrderMapForCreate() map[string]int {
 	extensionOrderMap[DNSExtensionType] = 2
 	extensionOrderMap[OidcExtensionType] = 3
 	extensionOrderMap[AuditlogExtensionType] = 4
+
+	return extensionOrderMap
+}
+
+func getExpectedExtensionsOrderMapForCreateWithoutAuditLogs() map[string]int {
+	extensionOrderMap := make(map[string]int)
+
+	extensionOrderMap[NetworkFilterType] = 0
+	extensionOrderMap[CertExtensionType] = 1
+	extensionOrderMap[DNSExtensionType] = 2
+	extensionOrderMap[OidcExtensionType] = 3
 
 	return extensionOrderMap
 }
