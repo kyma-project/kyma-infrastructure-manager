@@ -86,44 +86,58 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 
 	for _, testCase := range []struct {
 		name                 string
-		auditLogData         auditlogs.AuditLogData
+		inputAuditLogData    auditlogs.AuditLogData
+		expectedAuditLogData auditlogs.AuditLogData
 		disableNetworkFilter bool
 		previousExtensions   []gardener.Extension
 	}{
 		{
 			name:                 "Existing extensions should not change order during patching if nothing has changed",
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
-			auditLogData:         oldAuditLogData,
+			inputAuditLogData:    oldAuditLogData,
+			expectedAuditLogData: oldAuditLogData,
 			disableNetworkFilter: true,
 		},
 		{
 			name:                 "Should update Audit Log extension without changing order and data of other extensions",
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
-			auditLogData:         newAuditLogData,
+			inputAuditLogData:    newAuditLogData,
+			expectedAuditLogData: newAuditLogData,
 			disableNetworkFilter: true,
 		},
 		{
 			name:                 "Should update Network filter extension without changing order and data of other extensions",
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
-			auditLogData:         oldAuditLogData,
+			inputAuditLogData:    oldAuditLogData,
+			expectedAuditLogData: oldAuditLogData,
 			disableNetworkFilter: false,
 		},
 		{
 			name:                 "Should add Network filter extension at the end without changing order and data of other extensions",
 			previousExtensions:   fixExtensionsOnTheShootWithoutNetworkFilter(),
-			auditLogData:         oldAuditLogData,
+			inputAuditLogData:    oldAuditLogData,
+			expectedAuditLogData: oldAuditLogData,
 			disableNetworkFilter: true,
 		},
 		{
 			name:                 "Should add Auditlog extension at the end without changing order and data of other extensions",
 			previousExtensions:   fixExtensionsOnTheShootWithoutAuditLogs(),
-			auditLogData:         oldAuditLogData,
+			inputAuditLogData:    oldAuditLogData,
+			expectedAuditLogData: oldAuditLogData,
 			disableNetworkFilter: true,
 		},
 		{
 			name:                 "Should add Auditlog and Network filter extensions at the end without changing order and data of other extensions",
 			previousExtensions:   fixExtensionsOnTheShootWithoutAuditLogsAndNetworkFilter(),
-			auditLogData:         oldAuditLogData,
+			inputAuditLogData:    oldAuditLogData,
+			expectedAuditLogData: oldAuditLogData,
+			disableNetworkFilter: true,
+		},
+		{
+			name:                 "Should not update Auditlog extension when input auditLogData is empty",
+			previousExtensions:   fixAllExtensionsOnTheShoot(),
+			inputAuditLogData:    auditlogs.AuditLogData{},
+			expectedAuditLogData: oldAuditLogData,
 			disableNetworkFilter: true,
 		},
 	} {
@@ -136,7 +150,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 				},
 			}
 
-			extender := NewExtensionsExtenderForPatch(testCase.auditLogData, testCase.previousExtensions)
+			extender := NewExtensionsExtenderForPatch(testCase.inputAuditLogData, testCase.previousExtensions)
 			orderMap := getExpectedExtensionsOrderMap(testCase.previousExtensions)
 
 			err := extender(runtime, shoot)
@@ -162,7 +176,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 					verifyOIDCExtension(t, ext)
 
 				case AuditlogExtensionType:
-					verifyAuditLogExtension(t, ext, testCase.auditLogData)
+					verifyAuditLogExtension(t, ext, testCase.expectedAuditLogData)
 				}
 			}
 		})
@@ -174,7 +188,7 @@ func fixAllExtensionsOnTheShoot() []gardener.Extension {
 		{
 			Type: AuditlogExtensionType,
 			ProviderConfig: &runtime.RawExtension{
-				Raw: []byte(`{"type":"standard","tenantID":"test-auditlog-tenant","serviceURL":"test-auditlog-service-url","secretReferenceName":"test-auditlog-secret"}`),
+				Raw: []byte(`{"apiVersion":"service.auditlog.extensions.gardener.cloud/v1alpha1","kind":"AuditlogConfig","type":"standard","tenantID":"test-auditlog-tenant","serviceURL":"test-auditlog-service-url","secretReferenceName":"auditlog-credentials"}`),
 			},
 		},
 		{
@@ -230,7 +244,7 @@ func fixExtensionsOnTheShootWithoutNetworkFilter() []gardener.Extension {
 		{
 			Type: AuditlogExtensionType,
 			ProviderConfig: &runtime.RawExtension{
-				Raw: []byte(`{"type":"standard","tenantID":"test-auditlog-tenant","serviceURL":"test-auditlog-service-url","secretReferenceName":"test-auditlog-secret"}`),
+				Raw: []byte(`{"apiVersion":"service.auditlog.extensions.gardener.cloud/v1alpha1","kind":"AuditlogConfig","type":"standard","tenantID":"test-auditlog-tenant","serviceURL":"test-auditlog-service-url","secretReferenceName":"auditlog-credentials"}`),
 			},
 		},
 		{
