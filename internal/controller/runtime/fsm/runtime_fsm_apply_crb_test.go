@@ -77,7 +77,7 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 		}),
 		Entry("should return nil list if no admins to remove", tcCRBData{
 			admins:   []string{"test1"},
-			crbs:     []rbacv1.ClusterRoleBinding{toAdminClusterRoleBinding("test1")},
+			crbs:     []rbacv1.ClusterRoleBinding{toAdminClusterRoleBinding("test1"), toAdminClusterRoleBindingFromIncident()},
 			expected: nil,
 		}),
 		Entry("should return list if with CRBs to remove", tcCRBData{
@@ -107,6 +107,7 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 			crbs: []rbacv1.ClusterRoleBinding{
 				toManagedClusterRoleBinding("test3", "should-stay"),
 				toManagedClusterRoleBinding("test4", ""),
+				toAdminClusterRoleBindingFromIncident(),
 			},
 			expected: nil,
 		}),
