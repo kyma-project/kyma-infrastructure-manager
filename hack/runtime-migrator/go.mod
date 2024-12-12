@@ -3,7 +3,7 @@ module github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app
 go 1.23.1
 
 require (
-	github.com/gardener/gardener v1.108.0
+	github.com/gardener/gardener v1.110.0
 	github.com/go-playground/validator/v10 v10.23.0
 	github.com/kyma-project/infrastructure-manager v0.0.0-20241023155010-55a6abeb1690
 	github.com/kyma-project/infrastructure-manager/hack/shoot-comparator v0.0.0-20241023155010-55a6abeb1690
@@ -11,13 +11,13 @@ require (
 	k8s.io/api v0.31.3
 	k8s.io/apimachinery v0.31.3
 	k8s.io/client-go v0.31.3
-	k8s.io/utils v0.0.0-20241104163129-6fe5fd82f078
+	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	sigs.k8s.io/controller-runtime v0.19.3
 	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
-	github.com/Masterminds/semver/v3 v3.3.0 // indirect
+	github.com/Masterminds/semver/v3 v3.3.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
@@ -57,20 +57,20 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/net v0.32.0 // indirect
-	golang.org/x/oauth2 v0.23.0 // indirect
+	golang.org/x/oauth2 v0.24.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/term v0.27.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.8.0 // indirect
-	google.golang.org/protobuf v1.35.1 // indirect
+	google.golang.org/protobuf v1.35.2 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.31.2 // indirect
+	k8s.io/apiextensions-apiserver v0.31.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20240808142205-8e686545bdb8 // indirect
+	k8s.io/kube-openapi v0.0.0-20240903163716-9e1beecbcb38 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.4.3 // indirect
 )
 
 replace (
