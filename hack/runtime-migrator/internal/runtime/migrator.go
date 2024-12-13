@@ -15,6 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"slices"
 )
 
 const (
@@ -38,7 +39,7 @@ func NewMigrator(cfg migrator.Config, kubeconfigProvider kubeconfig.Provider, kc
 }
 
 func (m Migrator) Do(ctx context.Context, shoot v1beta1.Shoot) (v1.Runtime, error) {
-	subjects, err := getAdministratorsList(ctx, m.kubeconfigProvider, shoot.Name)
+	subjects, err := processAdministrators(ctx, m.kubeconfigProvider, shoot.Name, m.cfg.IsDryRun)
 
 	if err != nil {
 		return v1.Runtime{}, err
@@ -124,7 +125,7 @@ func (m Migrator) Do(ctx context.Context, shoot v1beta1.Shoot) (v1.Runtime, erro
 	return runtime, nil
 }
 
-func getAdministratorsList(ctx context.Context, provider kubeconfig.Provider, shootName string) ([]string, error) {
+func processAdministrators(ctx context.Context, provider kubeconfig.Provider, shootName string, isDryRun bool) ([]string, error) {
 	var clusterKubeconfig, err = provider.Fetch(ctx, shootName)
 	if clusterKubeconfig == "" {
 		return []string{}, err
@@ -140,35 +141,79 @@ func getAdministratorsList(ctx context.Context, provider kubeconfig.Provider, sh
 		return []string{}, err
 	}
 
-	var clusterRoleBindings, _ = clientset.RbacV1().ClusterRoleBindings().List(ctx, metav1.ListOptions{
+	clusterRoleBindings, err := clientset.RbacV1().ClusterRoleBindings().List(ctx, metav1.ListOptions{
 		LabelSelector: "reconciler.kyma-project.io/managed-by=reconciler,app=kyma",
 	})
 
-	subjects := make([]string, 0)
-	for _, clusterRoleBinding := range clusterRoleBindings.Items {
-		// We are interested only in cluster-admin role
-		if clusterRoleBinding.RoleRef.Kind == "ClusterRole" && clusterRoleBinding.RoleRef.Name == "cluster-admin" {
-			willMigrate := false
-			for _, subject := range clusterRoleBinding.Subjects {
-				// We are interested only in users
-				if subject.Kind == rbacv1.UserKind {
-					subjects = append(subjects, subject.Name)
-					willMigrate = true
-				}
-			}
+	if err != nil {
+		return []string{}, err
+	}
 
-			if willMigrate {
-				clusterRoleBinding.ObjectMeta.Labels["kyma-project.io/deprecation"] = "this ClusterRoleBinding is deprecated and will be removed in next days"
-				_, err := clientset.RbacV1().ClusterRoleBindings().Update(ctx, &clusterRoleBinding, metav1.UpdateOptions{})
+	filteredCRBs := filterSupportedTypesOfCRBs(clusterRoleBindings.Items)
 
-				if err != nil {
-					return []string{}, errors.Wrap(err, fmt.Sprintf("Failed to update ClusterRoleBinding with deprecation label %s", clusterRoleBinding.Name))
-				}
+	if len(filteredCRBs) == 0 {
+		return []string{}, nil
+	}
+
+	subjects := getAdministratorsList(filteredCRBs)
+
+	if !isDryRun {
+		labelsCRBsAsDeprecated(ctx, clientset, filteredCRBs)
+	}
+	return subjects, nil
+}
+
+func filterSupportedTypesOfCRBs(bindings []rbacv1.ClusterRoleBinding) []rbacv1.ClusterRoleBinding {
+	filtered := make([]rbacv1.ClusterRoleBinding, 0)
+
+	for _, clusterRoleBinding := range bindings {
+		// We are interested only in cluster-admin cluster role
+		if clusterRoleBinding.RoleRef.Kind != "ClusterRole" || clusterRoleBinding.RoleRef.Name != "cluster-admin" {
+			continue
+		}
+		for _, subject := range clusterRoleBinding.Subjects {
+			// We are interested only in users
+			if subject.Kind == rbacv1.UserKind {
+				filtered = append(filtered, clusterRoleBinding)
+				break
 			}
 		}
 	}
+	return filtered
+}
 
-	return subjects, nil
+func getAdministratorsList(bindings []rbacv1.ClusterRoleBinding) []string {
+	subjects := make([]string, 0)
+	for _, clusterRoleBinding := range bindings {
+		for _, subject := range clusterRoleBinding.Subjects {
+			// We are interested only in users
+			if subject.Kind != rbacv1.UserKind && !slices.Contains(subjects, subject.Name) {
+				subjects = append(subjects, subject.Name)
+			}
+		}
+	}
+	return subjects
+}
+
+func labelsCRBsAsDeprecated(ctx context.Context, clientset *kubernetes.Clientset, deprecatedCRBs []rbacv1.ClusterRoleBinding) error {
+	for _, clusterRoleBinding := range deprecatedCRBs {
+		if clusterRoleBinding.RoleRef.Kind != "ClusterRole" || clusterRoleBinding.RoleRef.Name != "cluster-admin" {
+			continue
+		}
+
+		for _, subject := range clusterRoleBinding.Subjects {
+			if subject.Kind != rbacv1.UserKind {
+				continue
+			}
+			clusterRoleBinding.ObjectMeta.Labels["kyma-project.io/deprecation"] = "this ClusterRoleBinding is deprecated and will be removed in next days"
+			_, err := clientset.RbacV1().ClusterRoleBindings().Update(ctx, &clusterRoleBinding, metav1.UpdateOptions{})
+
+			if err != nil {
+				return errors.Wrap(err, fmt.Sprintf("Failed to update ClusterRoleBinding with deprecation label %s", clusterRoleBinding.Name))
+			}
+		}
+	}
+	return nil
 }
 
 func getOidcConfig(shoot v1beta1.Shoot) v1beta1.OIDCConfig {
