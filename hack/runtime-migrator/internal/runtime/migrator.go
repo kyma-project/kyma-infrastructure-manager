@@ -173,7 +173,7 @@ func filterOnlySupportedTypesOfCRBs(bindings []rbacv1.ClusterRoleBinding) []rbac
 		if clusterRoleBinding.RoleRef.Kind != "ClusterRole" || clusterRoleBinding.RoleRef.Name != "cluster-admin" {
 			return true
 		}
-		// at least one subject should be of a user type
+		// leave only cluster-admin CRBs where at least one subject is of a user type
 		if slices.ContainsFunc(clusterRoleBinding.Subjects, func(subject rbacv1.Subject) bool { return subject.Kind == rbacv1.UserKind }) {
 			return false
 		}
@@ -186,7 +186,7 @@ func getAdministratorsList(bindings []rbacv1.ClusterRoleBinding) []string {
 	for _, clusterRoleBinding := range bindings {
 		for _, subject := range clusterRoleBinding.Subjects {
 			// We are interested only in users
-			if subject.Kind != rbacv1.UserKind && !slices.Contains(subjects, subject.Name) {
+			if subject.Kind == rbacv1.UserKind && !slices.Contains(subjects, subject.Name) {
 				subjects = append(subjects, subject.Name)
 			}
 		}
