@@ -21,7 +21,7 @@ import (
 )
 
 func TestConverter(t *testing.T) {
-	t.Run("Create shoot from Runtime", func(t *testing.T) {
+	t.Run("Create shoot from Runtime with valid Auditlog Configuration", func(t *testing.T) {
 		// given
 		runtime := fixRuntime()
 		converterConfig := fixConverterConfig()
@@ -47,6 +47,31 @@ func TestConverter(t *testing.T) {
 
 		extensionLen := len(shoot.Spec.Extensions)
 		require.Equalf(t, 5, extensionLen, "unexpected number of extensions: %d, expected: 5", extensionLen)
+	})
+
+	t.Run("Create shoot from Runtime with empty Auditlog Configuration", func(t *testing.T) {
+		// given
+		runtime := fixRuntime()
+		converterConfig := fixConverterConfig()
+		emptyAuditLogData := auditlogs.AuditLogData{}
+
+		converter := NewConverterCreate(CreateOpts{
+			ConverterConfig: converterConfig,
+			AuditLogData:    emptyAuditLogData,
+		})
+
+		// when
+		shoot, err := converter.ToShoot(runtime)
+
+		// then
+		require.NoError(t, err)
+		assertShootFields(t, runtime, shoot)
+		assert.Equal(t, "1.28", shoot.Spec.Kubernetes.Version)
+		assert.Equal(t, "gardenlinux", shoot.Spec.Provider.Workers[0].Machine.Image.Name)
+		assert.Equal(t, "1591.1.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
+
+		extensionLen := len(shoot.Spec.Extensions)
+		require.Equalf(t, 4, extensionLen, "unexpected number of extensions: %d, expected: 4", extensionLen)
 	})
 
 	t.Run("Create shoot with default converter config versions", func(t *testing.T) {
