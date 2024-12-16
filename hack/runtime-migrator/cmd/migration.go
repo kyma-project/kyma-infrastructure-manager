@@ -47,7 +47,6 @@ func NewMigration(migratorConfig config2.Config, converterConfig config.Converte
 }
 
 func (m Migration) Do(ctx context.Context, runtimeIDs []string) error {
-
 	listCtx, cancel := context.WithTimeout(ctx, timeoutK8sOperation)
 	defer cancel()
 
