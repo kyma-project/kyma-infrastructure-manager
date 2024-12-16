@@ -33,7 +33,7 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 	var crbList rbacv1.ClusterRoleBindingList
 	if err := shootAdminClient.List(ctx, &crbList); err != nil {
 		updateCRBApplyFailed(&s.instance)
-		m.log.Info("Cannot list Cluster Role Bindings on shoot, scheduling for retry", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
+		m.log.Info("Cannot list Cluster Role Bindings on shoot, scheduling for retry")
 		return requeue()
 	}
 
@@ -46,10 +46,10 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 	} {
 		if err := fn(); err != nil {
 			updateCRBApplyFailed(&s.instance)
-			m.log.Info("Cannot setup Cluster Role Bindings on shoot, scheduling for retry", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
+			m.log.Info("Cannot setup Cluster Role Bindings on shoot, scheduling for retry")
 			return requeue()
 		}
-		logRemovedClusterRoleBindings(removed, m, s)
+		logDeletedClusterRoleBindings(removed, m, s)
 	}
 
 	s.instance.UpdateStateReady(
@@ -61,13 +61,13 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 	return updateStatusAndStop()
 }
 
-func logRemovedClusterRoleBindings(removed []rbacv1.ClusterRoleBinding, m *fsm, s *systemState) {
+func logDeletedClusterRoleBindings(removed []rbacv1.ClusterRoleBinding, m *fsm, s *systemState) {
 	if cap(removed) > 0 {
 		var crbsNames []string
 		for _, binding := range removed {
 			crbsNames = append(crbsNames, binding.Name)
 		}
-		m.log.Info("Following CRBs were deleted", "deletedCRBs", crbsNames, "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
+		m.log.Info("Following CRBs were deleted", "deletedCRBs", crbsNames)
 	}
 }
 
