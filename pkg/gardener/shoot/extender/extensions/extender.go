@@ -46,6 +46,10 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 		{
 			Type: AuditlogExtensionType,
 			Create: func(_ imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
+				if auditLogData == (auditlogs.AuditLogData{}) {
+					return nil, nil
+				}
+
 				return NewAuditLogExtension(auditLogData)
 			},
 		},
@@ -55,8 +59,12 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
-			Type: AuditlogExtensionType,
-			Create: func(_ imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+			AuditlogExtensionType,
+			func(_ imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+				if auditLogData == (auditlogs.AuditLogData{}) {
+					return nil, nil
+				}
+
 				newAuditLogExtension, err := NewAuditLogExtension(auditLogData)
 				if err != nil {
 					return nil, err

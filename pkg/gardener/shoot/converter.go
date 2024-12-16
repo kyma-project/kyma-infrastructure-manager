@@ -72,8 +72,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 	extendersForCreate = append(extendersForCreate,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
 
-	var zero auditlogs.AuditLogData
-	if opts.AuditLogData != zero {
+	if opts.AuditLogData != (auditlogs.AuditLogData{}) {
 		extendersForCreate = append(extendersForCreate,
 			auditlogs.NewAuditlogExtenderForCreate(
 				opts.AuditLog.PolicyConfigMapName,
@@ -101,10 +100,9 @@ func NewConverterPatch(opts PatchOpts) Converter {
 
 	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
 
-	var zero auditlogs.AuditLogData
-	if opts.AuditLogData != zero {
+	if opts.AuditLogData != (auditlogs.AuditLogData{}) {
 		extendersForPatch = append(extendersForPatch,
-			auditlogs.NewAuditlogExtenderForPatch(opts.AuditLog.PolicyConfigMapName))
+			auditlogs.NewAuditlogExtenderForPatch(opts.ConverterConfig.AuditLog.PolicyConfigMapName))
 	}
 
 	return newConverter(opts.ConverterConfig, extendersForPatch...)
