@@ -196,7 +196,7 @@ func getAdministratorsList(bindings []rbacv1.ClusterRoleBinding) []string {
 
 func labelsCRBsAsDeprecated(ctx context.Context, clientset *kubernetes.Clientset, deprecatedCRBs []rbacv1.ClusterRoleBinding) error {
 	for _, clusterRoleBinding := range deprecatedCRBs {
-		clusterRoleBinding.ObjectMeta.Labels["kyma-project.io/deprecation"] = "this ClusterRoleBinding is deprecated and will be removed in next days"
+		clusterRoleBinding.ObjectMeta.Labels["kyma-project.io/deprecation"] = "to-be-removed-soon"
 		_, err := clientset.RbacV1().ClusterRoleBindings().Update(ctx, &clusterRoleBinding, metav1.UpdateOptions{})
 
 		if err != nil {
