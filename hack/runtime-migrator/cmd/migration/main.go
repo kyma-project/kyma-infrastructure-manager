@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -76,7 +74,7 @@ func main() {
 	}
 
 	slog.Info("Reading runtimeIds from input file")
-	runtimeIds, err := getRuntimeIDsFromInputFile(cfg)
+	runtimeIds, err := config.GetRuntimeIDsFromInputFile(cfg)
 	if err != nil {
 		slog.Error("Failed to read runtime Ids from input", slog.Any("error", err))
 		os.Exit(1)
@@ -87,33 +85,6 @@ func main() {
 		slog.Error("Failed to migrate runtimes", slog.Any("error", err))
 		os.Exit(1)
 	}
-}
-
-func getRuntimeIDsFromInputFile(cfg config.Config) ([]string, error) {
-	var runtimeIDs []string
-	var err error
-
-	if cfg.InputType == config.InputTypeJSON {
-		file, err := os.Open(cfg.InputFilePath)
-		if err != nil {
-			return nil, err
-		}
-		decoder := json.NewDecoder(file)
-		err = decoder.Decode(&runtimeIDs)
-	} else if cfg.InputType == config.InputTypeTxt {
-		file, err := os.Open(cfg.InputFilePath)
-		if err != nil {
-			return nil, err
-		}
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			runtimeIDs = append(runtimeIDs, scanner.Text())
-		}
-		err = scanner.Err()
-	} else {
-		return nil, fmt.Errorf("invalid input type: %s", cfg.InputType)
-	}
-	return runtimeIDs, err
 }
 
 func getConverterConfig(kcpClient client.Client) (kimConfig.ConverterConfig, error) {

@@ -6,6 +6,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/backup"
+	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,12 +23,25 @@ const (
 type Backup struct {
 	shootClient        gardener_types.ShootInterface
 	kubeconfigProvider kubeconfig.Provider
-	isDryRun           bool
 	outputWriter       backup.OutputWriter
+	cfg                config.Config
+}
+
+func NewBackup(cfg config.Config, kubeconfigProvider kubeconfig.Provider, shootClient gardener_types.ShootInterface) (Backup, error) {
+	outputWriter, err := backup.NewOutputWriter(cfg.OutputPath)
+	if err != nil {
+		return Backup{}, err
+	}
+
+	return Backup{
+		shootClient:        shootClient,
+		kubeconfigProvider: kubeconfigProvider,
+		outputWriter:       outputWriter,
+		cfg:                cfg,
+	}, nil
 }
 
 func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
-
 	listCtx, cancel := context.WithTimeout(ctx, timeoutK8sOperation)
 	defer cancel()
 
@@ -36,7 +50,7 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 		return err
 	}
 
-	backuper := backup.NewBackuper(b.isDryRun, b.kubeconfigProvider)
+	backuper := backup.NewBackuper(b.cfg.IsDryRun, b.kubeconfigProvider)
 	for _, runtimeID := range runtimeIDs {
 		shoot, err := b.fetchShoot(ctx, shootList, runtimeID)
 		if err != nil {
