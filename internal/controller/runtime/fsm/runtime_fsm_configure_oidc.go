@@ -45,8 +45,8 @@ func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ct
 	err := recreateOpenIDConnectResources(ctx, m, s)
 
 	if err != nil {
-		m.log.Error(err, "Failed to create OpenIDConnect resource")
 		updateConditionFailed(&s.instance)
+		m.log.Error(err, "Failed to create OpenIDConnect resource. Scheduling for retry")
 		return requeue()
 	}
 
