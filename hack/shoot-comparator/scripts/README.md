@@ -109,8 +109,8 @@ The following is an example of the `result.txt` file content:
 ```
 Comparing files older than:0001-01-01 00:00:00 +0000 UTC
 
-Number of files in /Users/i326211/dev/temp/kim-test/shoot-comparator/test2/kim directory = 2
-Number of files in /Users/i326211/dev/temp/kim-test/shoot-comparator/test2/provisioner directory = 2
+Number of files in /Users/myuser/dev/temp/kim-test/shoot-comparator/test2/kim directory = 2
+Number of files in /Users/myuser/dev/temp/kim-test/shoot-comparator/test2/provisioner directory = 2
 
 Differences found.
 

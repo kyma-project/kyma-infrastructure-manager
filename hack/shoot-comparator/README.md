@@ -48,8 +48,8 @@ The output directory will contain the `result.txt` file. Exemplary content of th
 ```
 Comparing files older than:0001-01-01 00:00:00 +0000 UTC
 
-Number of files in /Users/i326211/dev/temp/kim-test/shoot-comparator/test1/kim directory = 2
-Number of files in /Users/i326211/dev/temp/kim-test/shoot-comparator/test1/provisioner directory = 2
+Number of files in /Users/myuser/dev/temp/kim-test/shoot-comparator/test1/kim directory = 2
+Number of files in /Users/myuser/dev/temp/kim-test/shoot-comparator/test1/provisioner directory = 2
 
 No differences found.
 ```
@@ -67,8 +67,8 @@ Exemplary content of the `result.txt` file:
 ```
 Comparing files older than:0001-01-01 00:00:00 +0000 UTC
 
-Number of files in /Users/i326211/dev/temp/kim-test/shoot-comparator/test2/kim directory = 2
-Number of files in /Users/i326211/dev/temp/kim-test/shoot-comparator/test2/provisioner directory = 2
+Number of files in /Users/myuser/dev/temp/kim-test/shoot-comparator/test2/kim directory = 2
+Number of files in /Users/myuser/dev/temp/kim-test/shoot-comparator/test2/provisioner directory = 2
 
 Differences found.
 
@@ -84,19 +84,19 @@ The following is an example of the `result.txt` file when some files exist only 
 ```
 Comparing files older than:0001-01-01 00:00:00 +0000 UTC
 
-Number of files in /Users/i326211/dev/temp/kim-test/shoot-comparator/test3/kim directory = 22
-Number of files in /Users/i326211/dev/temp/kim-test/shoot-comparator/test3/provisioner directory = 157
+Number of files in /Users/myuser/dev/temp/kim-test/shoot-comparator/test3/kim directory = 22
+Number of files in /Users/myuser/dev/temp/kim-test/shoot-comparator/test3/provisioner directory = 157
 
 Differences found.
 
 ------------------------------------------------------------------------------------------
-Files existing in /Users/i326211/dev/temp/kim-test/shoot-comparator/test3/kim folder only:
+Files existing in /Users/myuser/dev/temp/kim-test/shoot-comparator/test3/kim folder only:
 - garden-kyma-dev-kim-pvc-test3.yaml
 - garden-kyma-dev-kims-aws-pvc-shootCR.yaml
 ------------------------------------------------------------------------------------------
 
 ------------------------------------------------------------------------------------------
-Files existing in /Users/i326211/dev/temp/kim-test/shoot-comparator/test3/provisioner folder only:
+Files existing in /Users/myuser/dev/temp/kim-test/shoot-comparator/test3/provisioner folder only:
 - garden-kyma-dev-a2f8da9.yaml
 - garden-kyma-dev-a3008c5.yaml
 ------------------------------------------------------------------------------------------

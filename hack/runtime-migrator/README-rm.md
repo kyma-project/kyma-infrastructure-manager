@@ -56,13 +56,13 @@ cat ./runtime-migrator \
 
 ```
 2024/11/22 17:05:28 INFO Starting runtime-migrator
-2024/11/22 17:05:28 gardener-kubeconfig-path: /Users/i326211/Downloads/kubeconfig-garden-kyma-stage.yaml
-2024/11/22 17:05:28 kcp-kubeconfig-path: /Users/i326211/dev/config/sap
+2024/11/22 17:05:28 gardener-kubeconfig-path: /Users/myuser/Downloads/kubeconfig-garden-kyma-stage.yaml
+2024/11/22 17:05:28 kcp-kubeconfig-path: /Users/myuser/dev/config/sap
 2024/11/22 17:05:28 gardener-project-name: kyma-stage
 2024/11/22 17:05:28 output-path: /tmp/
 2024/11/22 17:05:28 dry-run: true
 2024/11/22 17:05:28 input-type: txt
-2024/11/22 17:05:28 input-file-path: /Users/i326211/dev/source/infrastructure-manager/hack/runtime-migrator/input/runtimes-stage-docs.txt
+2024/11/22 17:05:28 input-file-path: /Users/myuser/dev/source/infrastructure-manager/hack/runtime-migrator/input/runtimes-stage-docs.txt
 2024/11/22 17:05:28
 2024/11/22 17:05:33 INFO Migrating runtimes
 2024/11/22 17:05:33 INFO Reading runtimeIds from input file
