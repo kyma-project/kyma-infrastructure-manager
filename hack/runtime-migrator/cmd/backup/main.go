@@ -7,10 +7,7 @@ import (
 	"os"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"time"
 )
-
-const expirationTime = 60 * time.Minute
 
 func main() {
 	slog.Info("Starting runtime-backuper")

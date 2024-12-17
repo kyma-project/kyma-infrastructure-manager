@@ -83,7 +83,7 @@ func (m Migration) Do(ctx context.Context, runtimeIDs []string) error {
 	}
 
 	run := func(runtimeID string) {
-		shoot, err := m.fetchShoot(ctx, shootList, m.shootClient, runtimeID)
+		shoot, err := m.fetchShoot(ctx, shootList, runtimeID)
 		if err != nil {
 			reportError(runtimeID, "", "Failed to fetch shoot", err)
 			return
@@ -145,7 +145,7 @@ main:
 		select {
 		case <-ctx.Done():
 			// application context was canceled
-			reportError(runtimeID, "", "Failed to find shoot", nil)
+			reportError(runtimeID, "", "Processing interrupted", nil)
 			break main
 
 		default:
@@ -173,7 +173,7 @@ func findShoot(runtimeID string, shootList *v1beta1.ShootList) *v1beta1.Shoot {
 	return nil
 }
 
-func (m Migration) fetchShoot(ctx context.Context, shootList *v1beta1.ShootList, shootClient gardener_types.ShootInterface, runtimeID string) (*v1beta1.Shoot, error) {
+func (m Migration) fetchShoot(ctx context.Context, shootList *v1beta1.ShootList, runtimeID string) (*v1beta1.Shoot, error) {
 	shoot := findShoot(runtimeID, shootList)
 	if shoot == nil {
 		return nil, errors.New("shoot was deleted or the runtimeID is incorrect")
