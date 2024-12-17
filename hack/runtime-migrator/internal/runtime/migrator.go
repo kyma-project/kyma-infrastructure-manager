@@ -3,18 +3,20 @@ package runtime
 import (
 	"context"
 	"fmt"
-
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	migrator "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/pkg/errors"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"log/slog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"slices"
 )
 
 const (
@@ -38,7 +40,7 @@ func NewMigrator(cfg migrator.Config, kubeconfigProvider kubeconfig.Provider, kc
 }
 
 func (m Migrator) Do(ctx context.Context, shoot v1beta1.Shoot) (v1.Runtime, error) {
-	subjects, err := getAdministratorsList(ctx, m.kubeconfigProvider, shoot.Name)
+	subjects, err := processAdministrators(ctx, m.kubeconfigProvider, shoot.Name, m.cfg.IsDryRun)
 
 	if err != nil {
 		return v1.Runtime{}, err
@@ -124,7 +126,7 @@ func (m Migrator) Do(ctx context.Context, shoot v1beta1.Shoot) (v1.Runtime, erro
 	return runtime, nil
 }
 
-func getAdministratorsList(ctx context.Context, provider kubeconfig.Provider, shootName string) ([]string, error) {
+func processAdministrators(ctx context.Context, provider kubeconfig.Provider, shootName string, isDryRun bool) ([]string, error) {
 	var clusterKubeconfig, err = provider.Fetch(ctx, shootName)
 	if clusterKubeconfig == "" {
 		return []string{}, err
@@ -140,19 +142,69 @@ func getAdministratorsList(ctx context.Context, provider kubeconfig.Provider, sh
 		return []string{}, err
 	}
 
-	var clusterRoleBindings, _ = clientset.RbacV1().ClusterRoleBindings().List(ctx, metav1.ListOptions{
+	clusterRoleBindings, err := clientset.RbacV1().ClusterRoleBindings().List(ctx, metav1.ListOptions{
 		LabelSelector: "reconciler.kyma-project.io/managed-by=reconciler,app=kyma",
 	})
 
-	subjects := make([]string, 0)
+	if err != nil {
+		return []string{}, err
+	}
 
-	for _, clusterRoleBinding := range clusterRoleBindings.Items {
-		for _, subject := range clusterRoleBinding.Subjects {
-			subjects = append(subjects, subject.Name)
+	filteredCRBs := filterOnlySupportedTypesOfCRBs(clusterRoleBindings.Items)
+
+	if len(filteredCRBs) == 0 {
+		return []string{}, nil
+	}
+
+	if !isDryRun {
+		err := labelsCRBsAsDeprecated(ctx, clientset, filteredCRBs)
+		if err != nil {
+			return []string{}, err
 		}
 	}
 
+	subjects := getAdministratorsList(filteredCRBs)
+
 	return subjects, nil
+}
+
+func filterOnlySupportedTypesOfCRBs(bindings []rbacv1.ClusterRoleBinding) []rbacv1.ClusterRoleBinding {
+	return slices.DeleteFunc(bindings, func(clusterRoleBinding rbacv1.ClusterRoleBinding) bool {
+		if clusterRoleBinding.RoleRef.Kind != "ClusterRole" || clusterRoleBinding.RoleRef.Name != "cluster-admin" {
+			return true
+		}
+		// leave only cluster-admin CRBs where at least one subject is of a user type
+		if slices.ContainsFunc(clusterRoleBinding.Subjects, func(subject rbacv1.Subject) bool { return subject.Kind == rbacv1.UserKind }) {
+			return false
+		}
+		return true
+	})
+}
+
+func getAdministratorsList(bindings []rbacv1.ClusterRoleBinding) []string {
+	subjects := make([]string, 0)
+	for _, clusterRoleBinding := range bindings {
+		for _, subject := range clusterRoleBinding.Subjects {
+			// We are interested only in users
+			if subject.Kind == rbacv1.UserKind && !slices.Contains(subjects, subject.Name) {
+				subjects = append(subjects, subject.Name)
+			}
+		}
+	}
+	return subjects
+}
+
+func labelsCRBsAsDeprecated(ctx context.Context, clientset *kubernetes.Clientset, deprecatedCRBs []rbacv1.ClusterRoleBinding) error {
+	for _, clusterRoleBinding := range deprecatedCRBs {
+		clusterRoleBinding.ObjectMeta.Labels["kyma-project.io/deprecation"] = "to-be-removed-soon"
+		_, err := clientset.RbacV1().ClusterRoleBindings().Update(ctx, &clusterRoleBinding, metav1.UpdateOptions{})
+
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("Failed to update ClusterRoleBinding with deprecation label %s", clusterRoleBinding.Name))
+		}
+		slog.Info(fmt.Sprintf("ClusterRoleBinding %s has been labeled as deprecated", clusterRoleBinding.Name))
+	}
+	return nil
 }
 
 func getOidcConfig(shoot v1beta1.Shoot) v1beta1.OIDCConfig {
