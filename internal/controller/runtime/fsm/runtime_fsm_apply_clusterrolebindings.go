@@ -208,31 +208,6 @@ func toAdminClusterRoleBindingWithLabel(name string, key, value string) rbacv1.C
 	}
 }
 
-func toAdminClusterRoleBindingFromIncident() rbacv1.ClusterRoleBinding {
-	return rbacv1.ClusterRoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			CreationTimestamp: metav1.Time{},
-			Name:              "name-operator-admin",
-			ResourceVersion:   "38739378",
-			UID:               "aaaaaaaa-1e51-415c-8f38-9d835ea36347",
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "ClusterRole",
-			Name:     "cluster-admin",
-		},
-		Subjects: []rbacv1.Subject{
-			{Kind: "User", Name: "xyz1@sap.com", APIGroup: "rbac.authorization.k8s.io"},
-			{Kind: "User", Name: "xyz2@sap.com", APIGroup: "rbac.authorization.k8s.io"},
-			{Kind: "User", Name: "xyz3@sap.com", APIGroup: "rbac.authorization.k8s.io"},
-			{Kind: "User", Name: "xyz4@sap.com", APIGroup: "rbac.authorization.k8s.io"},
-			{Kind: "User", Name: "xyz5@sap.com", APIGroup: "rbac.authorization.k8s.io"},
-			{Kind: "User", Name: "xyz6@sap.com", APIGroup: "rbac.authorization.k8s.io"},
-			{Kind: "User", Name: "xyz7@sap.com", APIGroup: "rbac.authorization.k8s.io"},
-		},
-	}
-}
-
 func toAdminClusterRoleBindingNoLabels(name string) rbacv1.ClusterRoleBinding {
 	return toAdminClusterRoleBindingWithLabel(name, "", "")
 }
