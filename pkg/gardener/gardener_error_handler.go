@@ -13,8 +13,20 @@ type ErrReason string
 
 func IsRetryable(lastErrors []gardener.LastError) bool {
 	if len(lastErrors) > 0 &&
-		!gardenerhelper.HasNonRetryableErrorCode(lastErrors...) {
+		!gardenerhelper.HasNonRetryableErrorCode(lastErrors...) ||
+		HasErrorInfraRateLimitsExceeded(lastErrors...) {
 		return true
+	}
+	return false
+}
+
+func HasErrorInfraRateLimitsExceeded(lastErrors ...gardener.LastError) bool {
+	for _, lastError := range lastErrors {
+		for _, code := range lastError.Codes {
+			if code == gardener.ErrorInfraRateLimitsExceeded {
+				return true
+			}
+		}
 	}
 	return false
 }
