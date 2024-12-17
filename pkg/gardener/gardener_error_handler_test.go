@@ -78,6 +78,12 @@ func fixRetryableErrors() []gardener.LastError {
 				gardener.ErrorRetryableInfraDependencies,
 			},
 		},
+		{
+			Description: "Third description - non-retryable error according to gardener API which we deliberately consider as retryable",
+			Codes: []gardener.ErrorCode{
+				gardener.ErrorInfraRateLimitsExceeded,
+			},
+		},
 	}
 }
 
@@ -110,17 +116,11 @@ func fixNonRetryableErrors() []gardener.LastError {
 		{
 			Description: "Fifth description - non-retryable",
 			Codes: []gardener.ErrorCode{
-				gardener.ErrorInfraRateLimitsExceeded,
-			},
-		},
-		{
-			Description: "Sixth description - non-retryable",
-			Codes: []gardener.ErrorCode{
 				gardener.ErrorConfigurationProblem,
 			},
 		},
 		{
-			Description: "Seventh description - non-retryable",
+			Description: "Sixth description - non-retryable",
 			Codes: []gardener.ErrorCode{
 				gardener.ErrorProblematicWebhook,
 			},
