@@ -12,7 +12,6 @@ import (
 	runtimev1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	config2 "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/config"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/migration"
-	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/runtime"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
@@ -21,8 +20,8 @@ import (
 )
 
 type Migration struct {
-	runtimeMigrator runtime.Migrator
-	runtimeVerifier runtime.Verifier
+	runtimeMigrator migration.Migrator
+	runtimeVerifier migration.Verifier
 	kcpClient       client.Client
 	shootClient     gardener_types.ShootInterface
 	outputWriter    migration.OutputWriter
@@ -37,8 +36,8 @@ func NewMigration(migratorConfig config2.Config, converterConfig config.Converte
 	}
 
 	return Migration{
-		runtimeMigrator: runtime.NewMigrator(migratorConfig, kubeconfigProvider, kcpClient),
-		runtimeVerifier: runtime.NewVerifier(converterConfig, auditLogConfig),
+		runtimeMigrator: migration.NewMigrator(migratorConfig, kubeconfigProvider, kcpClient),
+		runtimeVerifier: migration.NewVerifier(converterConfig, auditLogConfig),
 		kcpClient:       kcpClient,
 		shootClient:     shootClient,
 		outputWriter:    outputWriter,
