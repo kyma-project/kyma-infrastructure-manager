@@ -1,14 +1,14 @@
 package config
 
 import (
+	"context"
+	"encoding/json"
 	"flag"
-	"fmt"
+	"github.com/go-playground/validator/v10"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	v12 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"log"
-
-	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -56,34 +56,34 @@ func NewConfig() Config {
 	return result
 }
 
-func addToScheme(s *runtime.Scheme) error {
-	for _, add := range []func(s *runtime.Scheme) error{
-		corev1.AddToScheme,
-		v1.AddToScheme,
-	} {
-		if err := add(s); err != nil {
-			return fmt.Errorf("unable to add scheme: %w", err)
-		}
+func GetAuditLogConfig(kcpClient client.Client) (auditlogs.Configuration, error) {
+	var cm v12.ConfigMap
+	key := types.NamespacedName{
+		Name:      "audit-extension-config",
+		Namespace: "kcp-system",
 	}
-	return nil
-}
 
-type GetClient = func() (client.Client, error)
-
-func CreateKcpClient(cfg *Config) (client.Client, error) {
-	restCfg, err := clientcmd.BuildConfigFromFlags("", cfg.KcpKubeconfigPath)
+	err := kcpClient.Get(context.Background(), key, &cm)
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch rest config: %w", err)
-	}
-
-	scheme := runtime.NewScheme()
-	if err := addToScheme(scheme); err != nil {
 		return nil, err
 	}
 
-	var k8sClient, _ = client.New(restCfg, client.Options{
-		Scheme: scheme,
-	})
+	configBytes := []byte(cm.Data["config"])
 
-	return k8sClient, nil
+	var data auditlogs.Configuration
+	if err := json.Unmarshal(configBytes, &data); err != nil {
+		return nil, err
+	}
+
+	validate := validator.New(validator.WithRequiredStructEnabled())
+
+	for _, nestedMap := range data {
+		for _, auditLogData := range nestedMap {
+			if err := validate.Struct(auditLogData); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return data, nil
 }
