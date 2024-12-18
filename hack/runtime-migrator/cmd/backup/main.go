@@ -28,12 +28,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	_, err = config.CreateKcpClient(&cfg)
-	if err != nil {
-		slog.Error("Failed to create kcp client", slog.Any("error", err))
-		os.Exit(1)
-	}
-
 	shootClient, err := config.SetupGardenerShootClient(cfg.GardenerKubeconfigPath, gardenerNamespace)
 	if err != nil {
 		slog.Error("Failed to setup Gardener shoot client", slog.Any("error", err))

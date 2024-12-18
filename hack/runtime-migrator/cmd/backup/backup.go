@@ -8,6 +8,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/backup"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
+	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log/slog"
@@ -63,6 +64,10 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
+		if shootIsBeingDeleted(shoot) {
+			continue
+		}
+
 		runtimeBackup, err := backuper.Do(ctx, *shoot)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to backup runtime: %v", err)
@@ -81,13 +86,21 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 		b.results.OperationSucceeded(runtimeID, shoot.Name)
 	}
 
+	resultsFile, err := b.outputWriter.SaveBackupResults(b.results)
+	if err != nil {
+		return err
+	}
+
+	slog.Info(fmt.Sprintf("Backup completed. Successfully sopred backups: %d, Failed backups: %d", b.results.Succeeded, b.results.Failed))
+	slog.Info(fmt.Sprintf("Backup results saved in: %s", resultsFile))
+
 	return nil
 }
 
 func (b Backup) fetchShoot(ctx context.Context, shootList *v1beta1.ShootList, runtimeID string) (*v1beta1.Shoot, error) {
 	shoot := findShoot(runtimeID, shootList)
 	if shoot == nil {
-		return nil, nil
+		return nil, errors.New("shoot was deleted or the runtimeID is incorrect")
 	}
 
 	getCtx, cancel := context.WithTimeout(ctx, timeoutK8sOperation)
@@ -97,7 +110,7 @@ func (b Backup) fetchShoot(ctx context.Context, shootList *v1beta1.ShootList, ru
 	refreshedShoot, err := b.shootClient.Get(getCtx, shoot.Name, v1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
-			return nil, nil
+			return nil, errors.New("shoot was deleted")
 		}
 
 		return nil, err
@@ -113,4 +126,8 @@ func findShoot(runtimeID string, shootList *v1beta1.ShootList) *v1beta1.Shoot {
 		}
 	}
 	return nil
+}
+
+func shootIsBeingDeleted(shoot *v1beta1.Shoot) bool {
+	return !shoot.DeletionTimestamp.IsZero()
 }
