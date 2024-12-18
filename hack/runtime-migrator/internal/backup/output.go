@@ -45,7 +45,12 @@ func (ow OutputWriter) Save(runtimeID string, runtimeBackup RuntimeBackup) error
 		return err
 	}
 
-	return saveYaml(runtimeBackup.Shoot, fmt.Sprintf("%s/%s/%s.yaml", ow.BackupDir, runtimeID, runtimeBackup.Shoot.Name))
+	err = saveYaml(runtimeBackup.ShootToRestore, fmt.Sprintf("%s/%s/%s-to-restore.yaml", ow.BackupDir, runtimeID, runtimeBackup.ShootToRestore.Name))
+	if err != nil {
+		return err
+	}
+
+	return saveYaml(runtimeBackup.OriginalShoot, fmt.Sprintf("%s/%s/%s-original.yaml", ow.BackupDir, runtimeID, runtimeBackup.OriginalShoot.Name))
 }
 
 func (ow OutputWriter) SaveBackupResults(results Results) (string, error) {

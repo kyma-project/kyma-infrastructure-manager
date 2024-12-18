@@ -59,5 +59,5 @@ func (br *Results) OperationSucceeded(runtimeID string, shootName string) {
 }
 
 func (br *Results) getBackupDirPath(runtimeID string) string {
-	return fmt.Sprintf("%s/%s/%s.yaml", br.OutputDirectory, backupFolderName, runtimeID)
+	return fmt.Sprintf("%s/%s/%s", br.OutputDirectory, backupFolderName, runtimeID)
 }

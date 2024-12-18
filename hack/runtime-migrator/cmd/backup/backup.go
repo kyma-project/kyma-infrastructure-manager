@@ -58,8 +58,8 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 	for _, runtimeID := range runtimeIDs {
 		shoot, err := b.fetchShoot(ctx, shootList, runtimeID)
 		if err != nil {
-			errMsg := fmt.Sprintf("Failed to fetch runtime: %v", err)
-			b.results.ErrorOccurred(runtimeID, shoot.Name, errMsg)
+			errMsg := fmt.Sprintf("Failed to fetch shoot: %v", err)
+			b.results.ErrorOccurred(runtimeID, "", errMsg)
 			slog.Error(errMsg, "runtimeID", runtimeID)
 			continue
 		}
@@ -76,14 +76,19 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
-		if !b.cfg.IsDryRun {
+		if b.cfg.IsDryRun {
+			slog.Info("Runtime processed successfully (dry-run)", "runtimeID", runtimeID)
+		} else {
 			if err := b.outputWriter.Save(runtimeID, runtimeBackup); err != nil {
 				errMsg := fmt.Sprintf("Failed to store backup: %v", err)
+				b.results.ErrorOccurred(runtimeID, shoot.Name, errMsg)
 				slog.Error(errMsg, "runtimeID", runtimeID)
 				continue
 			}
 		}
+
 		b.results.OperationSucceeded(runtimeID, shoot.Name)
+		slog.Info("Runtime backup created successfully successfully", "runtimeID", runtimeID)
 	}
 
 	resultsFile, err := b.outputWriter.SaveBackupResults(b.results)
