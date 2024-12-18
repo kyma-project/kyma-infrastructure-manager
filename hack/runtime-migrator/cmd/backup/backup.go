@@ -8,9 +8,9 @@ import (
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/backup"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
-	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"log/slog"
 	"time"
 )
 
@@ -54,20 +54,20 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 	for _, runtimeID := range runtimeIDs {
 		shoot, err := b.fetchShoot(ctx, shootList, runtimeID)
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed to fetch shoot for runtimeID=%s", runtimeID))
-		}
-
-		if shoot == nil {
+			slog.Error(fmt.Sprintf("Failed to fetch runtime: %v", err), "runtimeID", runtimeID)
 			continue
 		}
 
 		runtimeBackup, err := backuper.Do(ctx, *shoot)
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed to backup runtimeID=%s", runtimeID))
+			slog.Error(fmt.Sprintf("Failed to backup runtime: %v", err), "runtimeID", runtimeID)
+			continue
 		}
 
-		if err := b.outputWriter.Save(runtimeBackup); err != nil {
-			return err
+		if !b.cfg.IsDryRun {
+			if err := b.outputWriter.Save(runtimeBackup); err != nil {
+				slog.Error(fmt.Sprintf("Failed to store backup: %v", err), "runtimeID", runtimeID)
+			}
 		}
 	}
 
