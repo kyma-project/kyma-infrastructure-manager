@@ -24,6 +24,7 @@ type Backup struct {
 	shootClient        gardener_types.ShootInterface
 	kubeconfigProvider kubeconfig.Provider
 	outputWriter       backup.OutputWriter
+	results            backup.Results
 	cfg                config.Config
 }
 
@@ -37,6 +38,7 @@ func NewBackup(cfg config.Config, kubeconfigProvider kubeconfig.Provider, shootC
 		shootClient:        shootClient,
 		kubeconfigProvider: kubeconfigProvider,
 		outputWriter:       outputWriter,
+		results:            backup.NewBackupResults(outputWriter.NewResultsDir),
 		cfg:                cfg,
 	}, nil
 }
@@ -51,24 +53,32 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 	}
 
 	backuper := backup.NewBackuper(b.cfg.IsDryRun, b.kubeconfigProvider)
+
 	for _, runtimeID := range runtimeIDs {
 		shoot, err := b.fetchShoot(ctx, shootList, runtimeID)
 		if err != nil {
-			slog.Error(fmt.Sprintf("Failed to fetch runtime: %v", err), "runtimeID", runtimeID)
+			errMsg := fmt.Sprintf("Failed to fetch runtime: %v", err)
+			b.results.ErrorOccurred(runtimeID, shoot.Name, errMsg)
+			slog.Error(errMsg, "runtimeID", runtimeID)
 			continue
 		}
 
 		runtimeBackup, err := backuper.Do(ctx, *shoot)
 		if err != nil {
-			slog.Error(fmt.Sprintf("Failed to backup runtime: %v", err), "runtimeID", runtimeID)
+			errMsg := fmt.Sprintf("Failed to backup runtime: %v", err)
+			b.results.ErrorOccurred(runtimeID, shoot.Name, errMsg)
+			slog.Error(errMsg, "runtimeID", runtimeID)
 			continue
 		}
 
 		if !b.cfg.IsDryRun {
-			if err := b.outputWriter.Save(runtimeBackup); err != nil {
-				slog.Error(fmt.Sprintf("Failed to store backup: %v", err), "runtimeID", runtimeID)
+			if err := b.outputWriter.Save(runtimeID, runtimeBackup); err != nil {
+				errMsg := fmt.Sprintf("Failed to store backup: %v", err)
+				slog.Error(errMsg, "runtimeID", runtimeID)
+				continue
 			}
 		}
+		b.results.OperationSucceeded(runtimeID, shoot.Name)
 	}
 
 	return nil
