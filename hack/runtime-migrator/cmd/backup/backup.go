@@ -58,6 +58,7 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 			errMsg := fmt.Sprintf("Failed to fetch shoot: %v", err)
 			b.results.ErrorOccurred(runtimeID, "", errMsg)
 			slog.Error(errMsg, "runtimeID", runtimeID)
+
 			continue
 		}
 
@@ -70,6 +71,7 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 			errMsg := fmt.Sprintf("Failed to backup runtime: %v", err)
 			b.results.ErrorOccurred(runtimeID, shootToBackup.Name, errMsg)
 			slog.Error(errMsg, "runtimeID", runtimeID)
+
 			continue
 		}
 
@@ -80,6 +82,7 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 				errMsg := fmt.Sprintf("Failed to store backup: %v", err)
 				b.results.ErrorOccurred(runtimeID, shootToBackup.Name, errMsg)
 				slog.Error(errMsg, "runtimeID", runtimeID)
+
 				continue
 			}
 		}

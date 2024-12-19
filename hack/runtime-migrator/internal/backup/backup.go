@@ -50,15 +50,6 @@ func (b Backuper) getShootToRestore(shootFromGardener v1beta1.Shoot) v1beta1.Sho
 			Labels:      shootFromGardener.Labels,
 		},
 		Spec: v1beta1.ShootSpec{
-			Purpose:           shootFromGardener.Spec.Purpose,
-			Region:            shootFromGardener.Spec.Region,
-			SecretBindingName: shootFromGardener.Spec.SecretBindingName,
-			Networking: &v1beta1.Networking{
-				Type:     shootFromGardener.Spec.Networking.Type,
-				Nodes:    shootFromGardener.Spec.Networking.Nodes,
-				Pods:     shootFromGardener.Spec.Networking.Pods,
-				Services: shootFromGardener.Spec.Networking.Services,
-			},
 			ControlPlane:      shootFromGardener.Spec.ControlPlane,
 			CloudProfileName:  shootFromGardener.Spec.CloudProfileName,
 			DNS:               shootFromGardener.Spec.DNS,
@@ -75,10 +66,19 @@ func (b Backuper) getShootToRestore(shootFromGardener v1beta1.Shoot) v1beta1.Sho
 			Maintenance: &v1beta1.Maintenance{
 				AutoUpdate: shootFromGardener.Spec.Maintenance.AutoUpdate,
 			},
+			Networking: &v1beta1.Networking{
+				Type:     shootFromGardener.Spec.Networking.Type,
+				Nodes:    shootFromGardener.Spec.Networking.Nodes,
+				Pods:     shootFromGardener.Spec.Networking.Pods,
+				Services: shootFromGardener.Spec.Networking.Services,
+			},
 			// TODO: consider if we need to do the backup selectively (workers)
-			Provider:     shootFromGardener.Spec.Provider,
-			Resources:    shootFromGardener.Spec.Resources,
-			SeedSelector: shootFromGardener.Spec.SeedSelector,
+			Provider:          shootFromGardener.Spec.Provider,
+			Purpose:           shootFromGardener.Spec.Purpose,
+			Region:            shootFromGardener.Spec.Region,
+			Resources:         shootFromGardener.Spec.Resources,
+			SecretBindingName: shootFromGardener.Spec.SecretBindingName,
+			SeedSelector:      shootFromGardener.Spec.SeedSelector,
 			// Tolerations is not specified in patch
 			//Tolerations:  shootFromGardener.Spec.Tolerations,
 		},
