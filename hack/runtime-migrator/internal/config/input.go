@@ -2,17 +2,12 @@ package config
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/go-playground/validator/v10"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
-	v12 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"log"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"time"
 )
 
 type Config struct {
@@ -26,8 +21,9 @@ type Config struct {
 }
 
 const (
-	InputTypeTxt  = "txt"
-	InputTypeJSON = "json"
+	InputTypeTxt        = "txt"
+	InputTypeJSON       = "json"
+	TimeoutK8sOperation = 20 * time.Second
 )
 
 func printConfig(cfg Config) {
@@ -57,38 +53,6 @@ func NewConfig() Config {
 	printConfig(result)
 
 	return result
-}
-
-func GetAuditLogConfig(kcpClient client.Client) (auditlogs.Configuration, error) {
-	var cm v12.ConfigMap
-	key := types.NamespacedName{
-		Name:      "audit-extension-config",
-		Namespace: "kcp-system",
-	}
-
-	err := kcpClient.Get(context.Background(), key, &cm)
-	if err != nil {
-		return nil, err
-	}
-
-	configBytes := []byte(cm.Data["config"])
-
-	var data auditlogs.Configuration
-	if err := json.Unmarshal(configBytes, &data); err != nil {
-		return nil, err
-	}
-
-	validate := validator.New(validator.WithRequiredStructEnabled())
-
-	for _, nestedMap := range data {
-		for _, auditLogData := range nestedMap {
-			if err := validate.Struct(auditLogData); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	return data, nil
 }
 
 func GetRuntimeIDsFromInputFile(cfg Config) ([]string, error) {

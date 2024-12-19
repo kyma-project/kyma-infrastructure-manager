@@ -3,13 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/backup"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/config"
+	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
-	"github.com/pkg/errors"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log/slog"
 	"time"
@@ -18,7 +16,6 @@ import (
 const (
 	timeoutK8sOperation = 20 * time.Second
 	expirationTime      = 60 * time.Minute
-	runtimeIDAnnotation = "kcp.provisioner.kyma-project.io/runtime-id"
 )
 
 type Backup struct {
@@ -56,7 +53,7 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 	backuper := backup.NewBackuper(b.cfg.IsDryRun, b.kubeconfigProvider)
 
 	for _, runtimeID := range runtimeIDs {
-		shoot, err := b.fetchShoot(ctx, shootList, runtimeID)
+		shootToBackup, err := shoot.Fetch(ctx, shootList, b.shootClient, runtimeID)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to fetch shoot: %v", err)
 			b.results.ErrorOccurred(runtimeID, "", errMsg)
@@ -64,14 +61,14 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
-		if shootIsBeingDeleted(shoot) {
+		if shoot.IsBeingDeleted(shootToBackup) {
 			continue
 		}
 
-		runtimeBackup, err := backuper.Do(ctx, *shoot)
+		runtimeBackup, err := backuper.Do(ctx, *shootToBackup)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to backup runtime: %v", err)
-			b.results.ErrorOccurred(runtimeID, shoot.Name, errMsg)
+			b.results.ErrorOccurred(runtimeID, shootToBackup.Name, errMsg)
 			slog.Error(errMsg, "runtimeID", runtimeID)
 			continue
 		}
@@ -81,13 +78,13 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 		} else {
 			if err := b.outputWriter.Save(runtimeID, runtimeBackup); err != nil {
 				errMsg := fmt.Sprintf("Failed to store backup: %v", err)
-				b.results.ErrorOccurred(runtimeID, shoot.Name, errMsg)
+				b.results.ErrorOccurred(runtimeID, shootToBackup.Name, errMsg)
 				slog.Error(errMsg, "runtimeID", runtimeID)
 				continue
 			}
 		}
 
-		b.results.OperationSucceeded(runtimeID, shoot.Name)
+		b.results.OperationSucceeded(runtimeID, shootToBackup.Name)
 		slog.Info("Runtime backup created successfully successfully", "runtimeID", runtimeID)
 	}
 
@@ -96,43 +93,8 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 		return err
 	}
 
-	slog.Info(fmt.Sprintf("Backup completed. Successfully sopred backups: %d, Failed backups: %d", b.results.Succeeded, b.results.Failed))
+	slog.Info(fmt.Sprintf("Backup completed. Successfully stored backups: %d, Failed backups: %d", b.results.Succeeded, b.results.Failed))
 	slog.Info(fmt.Sprintf("Backup results saved in: %s", resultsFile))
 
 	return nil
-}
-
-func (b Backup) fetchShoot(ctx context.Context, shootList *v1beta1.ShootList, runtimeID string) (*v1beta1.Shoot, error) {
-	shoot := findShoot(runtimeID, shootList)
-	if shoot == nil {
-		return nil, errors.New("shoot was deleted or the runtimeID is incorrect")
-	}
-
-	getCtx, cancel := context.WithTimeout(ctx, timeoutK8sOperation)
-	defer cancel()
-
-	// We are fetching the shoot from the gardener to make sure the runtime didn't get deleted during the migration process
-	refreshedShoot, err := b.shootClient.Get(getCtx, shoot.Name, v1.GetOptions{})
-	if err != nil {
-		if k8serrors.IsNotFound(err) {
-			return nil, errors.New("shoot was deleted")
-		}
-
-		return nil, err
-	}
-
-	return refreshedShoot, nil
-}
-
-func findShoot(runtimeID string, shootList *v1beta1.ShootList) *v1beta1.Shoot {
-	for _, shoot := range shootList.Items {
-		if shoot.Annotations[runtimeIDAnnotation] == runtimeID {
-			return &shoot
-		}
-	}
-	return nil
-}
-
-func shootIsBeingDeleted(shoot *v1beta1.Shoot) bool {
-	return !shoot.DeletionTimestamp.IsZero()
 }
