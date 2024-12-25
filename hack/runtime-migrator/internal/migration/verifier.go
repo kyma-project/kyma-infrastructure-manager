@@ -1,4 +1,4 @@
-package runtime
+package migration
 
 import (
 	"slices"

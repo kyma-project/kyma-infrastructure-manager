@@ -8,7 +8,6 @@ import (
 	"time"
 
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/runtime"
 	"sigs.k8s.io/yaml"
 )
 
@@ -67,7 +66,7 @@ func (ow OutputWriter) SaveRuntimeCR(runtime v1.Runtime) error {
 	return saveYaml(runtime, fmt.Sprintf("%s/%s.yaml", ow.RuntimeDir, runtime.Name))
 }
 
-func (ow OutputWriter) SaveComparisonResult(comparisonResult runtime.ShootComparisonResult) error {
+func (ow OutputWriter) SaveComparisonResult(comparisonResult ShootComparisonResult) error {
 	comparisonResultsForRuntimeDir := path.Join(ow.ComparisonResultsDir, comparisonResult.RuntimeID)
 	err := os.MkdirAll(comparisonResultsForRuntimeDir, os.ModePerm)
 	if err != nil {
@@ -89,7 +88,7 @@ func (ow OutputWriter) SaveComparisonResult(comparisonResult runtime.ShootCompar
 	return saveYaml(comparisonResult.ConvertedShoot, path.Join(comparisonResultsForRuntimeDir, "converted-shoot.yaml"))
 }
 
-func writeResultsToDiffFile(shootName string, difference *runtime.Difference, resultsDir string) error {
+func writeResultsToDiffFile(shootName string, difference *Difference, resultsDir string) error {
 	writeAndCloseFunc := func(filePath string, text string) error {
 		file, err := os.Create(filePath)
 		if err != nil {

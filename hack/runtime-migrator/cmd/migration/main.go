@@ -11,15 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
-	"github.com/go-playground/validator/v10"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/config"
 	kimConfig "github.com/kyma-project/infrastructure-manager/pkg/config"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
-	"github.com/pkg/errors"
 	v12 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,7 +38,7 @@ func main() {
 
 	gardenerNamespace := fmt.Sprintf("garden-%s", cfg.GardenerProjectName)
 
-	kubeconfigProvider, err := setupKubernetesKubeconfigProvider(cfg.GardenerKubeconfigPath, gardenerNamespace, expirationTime)
+	kubeconfigProvider, err := config.SetupKubernetesKubeconfigProvider(cfg.GardenerKubeconfigPath, gardenerNamespace, expirationTime)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to create kubeconfig provider: %v", err))
 		os.Exit(1)
@@ -57,13 +50,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	gardenerShootClient, err := setupGardenerShootClient(cfg.GardenerKubeconfigPath, gardenerNamespace)
+	gardenerShootClient, err := config.SetupGardenerShootClient(cfg.GardenerKubeconfigPath, gardenerNamespace)
 	if err != nil {
 		slog.Error("Failed to setup Gardener shoot client", slog.Any("error", err))
 		os.Exit(1)
 	}
 
-	auditLogConfig, err := getAuditLogConfig(kcpClient)
+	auditLogConfig, err := config.GetAuditLogConfig(kcpClient)
 	if err != nil {
 		slog.Error("Failed to get audit log config", slog.Any("error", err))
 		os.Exit(1)
@@ -96,36 +89,6 @@ func main() {
 	}
 }
 
-func setupKubernetesKubeconfigProvider(kubeconfigPath string, namespace string, expirationTime time.Duration) (kubeconfig.Provider, error) {
-	restConfig, err := gardener.NewRestConfigFromFile(kubeconfigPath)
-	if err != nil {
-		return kubeconfig.Provider{}, err
-	}
-
-	gardenerClientSet, err := gardener_types.NewForConfig(restConfig)
-	if err != nil {
-		return kubeconfig.Provider{}, err
-	}
-
-	gardenerClient, err := client.New(restConfig, client.Options{})
-	if err != nil {
-		return kubeconfig.Provider{}, err
-	}
-
-	shootClient := gardenerClientSet.Shoots(namespace)
-	dynamicKubeconfigAPI := gardenerClient.SubResource("adminkubeconfig")
-
-	err = v1beta1.AddToScheme(gardenerClient.Scheme())
-	if err != nil {
-		return kubeconfig.Provider{}, errors.Wrap(err, "failed to register Gardener schema")
-	}
-
-	return kubeconfig.NewKubeconfigProvider(shootClient,
-		dynamicKubeconfigAPI,
-		namespace,
-		int64(expirationTime.Seconds())), nil
-}
-
 func getRuntimeIDsFromInputFile(cfg config.Config) ([]string, error) {
 	var runtimeIDs []string
 	var err error
@@ -151,54 +114,6 @@ func getRuntimeIDsFromInputFile(cfg config.Config) ([]string, error) {
 		return nil, fmt.Errorf("invalid input type: %s", cfg.InputType)
 	}
 	return runtimeIDs, err
-}
-
-func setupGardenerShootClient(kubeconfigPath, gardenerNamespace string) (gardener_types.ShootInterface, error) {
-	restConfig, err := gardener.NewRestConfigFromFile(kubeconfigPath)
-	if err != nil {
-		return nil, err
-	}
-
-	gardenerClientSet, err := gardener_types.NewForConfig(restConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	shootClient := gardenerClientSet.Shoots(gardenerNamespace)
-
-	return shootClient, nil
-}
-
-func getAuditLogConfig(kcpClient client.Client) (auditlogs.Configuration, error) {
-	var cm v12.ConfigMap
-	key := types.NamespacedName{
-		Name:      "audit-extension-config",
-		Namespace: "kcp-system",
-	}
-
-	err := kcpClient.Get(context.Background(), key, &cm)
-	if err != nil {
-		return nil, err
-	}
-
-	configBytes := []byte(cm.Data["config"])
-
-	var data auditlogs.Configuration
-	if err := json.Unmarshal(configBytes, &data); err != nil {
-		return nil, err
-	}
-
-	validate := validator.New(validator.WithRequiredStructEnabled())
-
-	for _, nestedMap := range data {
-		for _, auditLogData := range nestedMap {
-			if err := validate.Struct(auditLogData); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	return data, nil
 }
 
 func getConverterConfig(kcpClient client.Client) (kimConfig.ConverterConfig, error) {
