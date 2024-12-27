@@ -1,15 +1,13 @@
 package config
 
 import (
-	"context"
+	"bufio"
 	"encoding/json"
 	"flag"
-	"github.com/go-playground/validator/v10"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
-	v12 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
+	"fmt"
 	"log"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"os"
+	"time"
 )
 
 type Config struct {
@@ -23,8 +21,9 @@ type Config struct {
 }
 
 const (
-	InputTypeTxt  = "txt"
-	InputTypeJSON = "json"
+	InputTypeTxt        = "txt"
+	InputTypeJSON       = "json"
+	TimeoutK8sOperation = 20 * time.Second
 )
 
 func printConfig(cfg Config) {
@@ -56,34 +55,29 @@ func NewConfig() Config {
 	return result
 }
 
-func GetAuditLogConfig(kcpClient client.Client) (auditlogs.Configuration, error) {
-	var cm v12.ConfigMap
-	key := types.NamespacedName{
-		Name:      "audit-extension-config",
-		Namespace: "kcp-system",
-	}
+func GetRuntimeIDsFromInputFile(cfg Config) ([]string, error) {
+	var runtimeIDs []string
+	var err error
 
-	err := kcpClient.Get(context.Background(), key, &cm)
-	if err != nil {
-		return nil, err
-	}
-
-	configBytes := []byte(cm.Data["config"])
-
-	var data auditlogs.Configuration
-	if err := json.Unmarshal(configBytes, &data); err != nil {
-		return nil, err
-	}
-
-	validate := validator.New(validator.WithRequiredStructEnabled())
-
-	for _, nestedMap := range data {
-		for _, auditLogData := range nestedMap {
-			if err := validate.Struct(auditLogData); err != nil {
-				return nil, err
-			}
+	if cfg.InputType == InputTypeJSON {
+		file, err := os.Open(cfg.InputFilePath)
+		if err != nil {
+			return nil, err
 		}
+		decoder := json.NewDecoder(file)
+		err = decoder.Decode(&runtimeIDs)
+	} else if cfg.InputType == InputTypeTxt {
+		file, err := os.Open(cfg.InputFilePath)
+		if err != nil {
+			return nil, err
+		}
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			runtimeIDs = append(runtimeIDs, scanner.Text())
+		}
+		err = scanner.Err()
+	} else {
+		return nil, fmt.Errorf("invalid input type: %s", cfg.InputType)
 	}
-
-	return data, nil
+	return runtimeIDs, err
 }

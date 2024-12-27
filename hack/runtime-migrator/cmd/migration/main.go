@@ -1,10 +1,11 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/go-playground/validator/v10"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"io"
 	"log/slog"
 	"os"
@@ -21,9 +22,7 @@ import (
 )
 
 const (
-	timeoutK8sOperation = 20 * time.Second
-	expirationTime      = 60 * time.Minute
-	runtimeIDAnnotation = "kcp.provisioner.kyma-project.io/runtime-id"
+	expirationTime = 60 * time.Minute
 )
 
 func main() {
@@ -56,7 +55,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	auditLogConfig, err := config.GetAuditLogConfig(kcpClient)
+	auditLogConfig, err := getAuditLogConfig(kcpClient)
 	if err != nil {
 		slog.Error("Failed to get audit log config", slog.Any("error", err))
 		os.Exit(1)
@@ -76,7 +75,7 @@ func main() {
 	}
 
 	slog.Info("Reading runtimeIds from input file")
-	runtimeIds, err := getRuntimeIDsFromInputFile(cfg)
+	runtimeIds, err := config.GetRuntimeIDsFromInputFile(cfg)
 	if err != nil {
 		slog.Error("Failed to read runtime Ids from input", slog.Any("error", err))
 		os.Exit(1)
@@ -87,33 +86,6 @@ func main() {
 		slog.Error("Failed to migrate runtimes", slog.Any("error", err))
 		os.Exit(1)
 	}
-}
-
-func getRuntimeIDsFromInputFile(cfg config.Config) ([]string, error) {
-	var runtimeIDs []string
-	var err error
-
-	if cfg.InputType == config.InputTypeJSON {
-		file, err := os.Open(cfg.InputFilePath)
-		if err != nil {
-			return nil, err
-		}
-		decoder := json.NewDecoder(file)
-		err = decoder.Decode(&runtimeIDs)
-	} else if cfg.InputType == config.InputTypeTxt {
-		file, err := os.Open(cfg.InputFilePath)
-		if err != nil {
-			return nil, err
-		}
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			runtimeIDs = append(runtimeIDs, scanner.Text())
-		}
-		err = scanner.Err()
-	} else {
-		return nil, fmt.Errorf("invalid input type: %s", cfg.InputType)
-	}
-	return runtimeIDs, err
 }
 
 func getConverterConfig(kcpClient client.Client) (kimConfig.ConverterConfig, error) {
@@ -142,4 +114,36 @@ func getConverterConfig(kcpClient client.Client) (kimConfig.ConverterConfig, err
 	}
 
 	return cfg.ConverterConfig, nil
+}
+
+func getAuditLogConfig(kcpClient client.Client) (auditlogs.Configuration, error) {
+	var cm v12.ConfigMap
+	key := types.NamespacedName{
+		Name:      "audit-extension-config",
+		Namespace: "kcp-system",
+	}
+
+	err := kcpClient.Get(context.Background(), key, &cm)
+	if err != nil {
+		return nil, err
+	}
+
+	configBytes := []byte(cm.Data["config"])
+
+	var data auditlogs.Configuration
+	if err := json.Unmarshal(configBytes, &data); err != nil {
+		return nil, err
+	}
+
+	validate := validator.New(validator.WithRequiredStructEnabled())
+
+	for _, nestedMap := range data {
+		for _, auditLogData := range nestedMap {
+			if err := validate.Struct(auditLogData); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return data, nil
 }
