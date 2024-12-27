@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/init"
+	init2 "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/init"
 	kimConfig "github.com/kyma-project/infrastructure-manager/pkg/config"
 	v12 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -27,7 +27,9 @@ const (
 
 func main() {
 	slog.Info("Starting runtime-migrator")
-	cfg := init.NewConfig()
+	cfg := init2.NewConfig()
+
+	init2.PrintConfig(cfg)
 
 	opts := zap.Options{
 		Development: true,
@@ -37,19 +39,19 @@ func main() {
 
 	gardenerNamespace := fmt.Sprintf("garden-%s", cfg.GardenerProjectName)
 
-	kubeconfigProvider, err := init.SetupKubernetesKubeconfigProvider(cfg.GardenerKubeconfigPath, gardenerNamespace, expirationTime)
+	kubeconfigProvider, err := init2.SetupKubernetesKubeconfigProvider(cfg.GardenerKubeconfigPath, gardenerNamespace, expirationTime)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to create kubeconfig provider: %v", err))
 		os.Exit(1)
 	}
 
-	kcpClient, err := init.CreateKcpClient(&cfg)
+	kcpClient, err := init2.CreateKcpClient(&cfg)
 	if err != nil {
 		slog.Error("Failed to create kcp client", slog.Any("error", err))
 		os.Exit(1)
 	}
 
-	gardenerShootClient, err := init.SetupGardenerShootClient(cfg.GardenerKubeconfigPath, gardenerNamespace)
+	gardenerShootClient, err := init2.SetupGardenerShootClient(cfg.GardenerKubeconfigPath, gardenerNamespace)
 	if err != nil {
 		slog.Error("Failed to setup Gardener shoot client", slog.Any("error", err))
 		os.Exit(1)
@@ -75,7 +77,7 @@ func main() {
 	}
 
 	slog.Info("Reading runtimeIds from input file")
-	runtimeIds, err := init.GetRuntimeIDsFromInputFile(cfg)
+	runtimeIds, err := init2.GetRuntimeIDsFromInputFile(cfg)
 	if err != nil {
 		slog.Error("Failed to read runtime Ids from input", slog.Any("error", err))
 		os.Exit(1)

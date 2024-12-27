@@ -26,7 +26,7 @@ const (
 	TimeoutK8sOperation = 20 * time.Second
 )
 
-func printConfig(cfg Config) {
+func PrintConfig(cfg Config) {
 	log.Println("gardener-kubeconfig-path:", cfg.GardenerKubeconfigPath)
 	log.Println("kcp-kubeconfig-path:", cfg.KcpKubeconfigPath)
 	log.Println("gardener-project-name:", cfg.GardenerProjectName)
@@ -49,8 +49,6 @@ func NewConfig() Config {
 	flag.StringVar(&result.InputFilePath, "input-file-path", "/path/to/input/file", "Path to the input file containing RuntimeCRs to be migrated.")
 
 	flag.Parse()
-
-	printConfig(result)
 
 	return result
 }
@@ -80,4 +78,25 @@ func GetRuntimeIDsFromInputFile(cfg Config) ([]string, error) {
 		return nil, fmt.Errorf("invalid input type: %s", cfg.InputType)
 	}
 	return runtimeIDs, err
+}
+
+type RestoreConfig struct {
+	Config
+	BackupDir string
+}
+
+func NewRestoreConfig() RestoreConfig {
+	restoreConfig := RestoreConfig{
+		Config: NewConfig(),
+	}
+
+	flag.StringVar(&restoreConfig.BackupDir, "backup-path", "/path/to/backup/dir", "Path to the directory containing backup.")
+	flag.Parse()
+
+	return restoreConfig
+}
+
+func PrintRestoreConfig(cfg RestoreConfig) {
+	log.Println("backup-path:", cfg.BackupDir)
+	PrintConfig(cfg.Config)
 }

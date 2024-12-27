@@ -14,6 +14,8 @@ func main() {
 	slog.Info("Starting runtime-backuper")
 	cfg := init.NewConfig()
 
+	init.PrintConfig(cfg)
+
 	opts := zap.Options{
 		Development: true,
 	}
