@@ -5,7 +5,7 @@ import (
 	"fmt"
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/backup"
-	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/input"
+	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/init"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,10 +23,10 @@ type Backup struct {
 	kubeconfigProvider kubeconfig.Provider
 	outputWriter       backup.OutputWriter
 	results            backup.Results
-	cfg                input.Config
+	cfg                init.Config
 }
 
-func NewBackup(cfg input.Config, kubeconfigProvider kubeconfig.Provider, shootClient gardener_types.ShootInterface) (Backup, error) {
+func NewBackup(cfg init.Config, kubeconfigProvider kubeconfig.Provider, shootClient gardener_types.ShootInterface) (Backup, error) {
 	outputWriter, err := backup.NewOutputWriter(cfg.OutputPath)
 	if err != nil {
 		return Backup{}, err

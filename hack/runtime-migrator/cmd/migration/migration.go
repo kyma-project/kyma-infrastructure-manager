@@ -8,7 +8,7 @@ import (
 
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	runtimev1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	config2 "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/input"
+	config2 "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/init"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/migration"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"

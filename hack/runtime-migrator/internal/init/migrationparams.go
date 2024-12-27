@@ -1,4 +1,4 @@
-package input
+package init
 
 import (
 	"bufio"

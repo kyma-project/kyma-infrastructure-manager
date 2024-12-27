@@ -4,14 +4,14 @@ import (
 	"context"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
-	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/input"
+	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/init"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	rbacv1 "k8s.io/api/rbac/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Backuper struct {
-	cfg                input.Config
+	cfg                init.Config
 	isDryRun           bool
 	kubeconfigProvider kubeconfig.Provider
 }
