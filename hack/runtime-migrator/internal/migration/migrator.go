@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	migrator "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/config"
+	migrator "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/input"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/pkg/errors"

@@ -2,19 +2,16 @@ package main
 
 import (
 	"fmt"
-	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/config"
+	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/input"
 	"log/slog"
 	"os"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"time"
 )
-
-const expirationTime = 60 * time.Minute
 
 func main() {
 	slog.Info("Starting runtime-restorer")
-	cfg := config.NewConfig()
+	cfg := input.NewConfig()
 
 	opts := zap.Options{
 		Development: true,
@@ -24,19 +21,19 @@ func main() {
 
 	gardenerNamespace := fmt.Sprintf("garden-%s", cfg.GardenerProjectName)
 
-	_, err := config.SetupKubernetesKubeconfigProvider(cfg.GardenerKubeconfigPath, gardenerNamespace, expirationTime)
+	_, err := input.SetupKubernetesKubeconfigProvider(cfg.GardenerKubeconfigPath, gardenerNamespace, expirationTime)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to create kubeconfig provider: %v", err))
 		os.Exit(1)
 	}
 
-	_, err = config.CreateKcpClient(&cfg)
+	_, err = input.CreateKcpClient(&cfg)
 	if err != nil {
 		slog.Error("Failed to create kcp client", slog.Any("error", err))
 		os.Exit(1)
 	}
 
-	_, err = config.SetupGardenerShootClient(cfg.GardenerKubeconfigPath, gardenerNamespace)
+	_, err = input.SetupGardenerShootClient(cfg.GardenerKubeconfigPath, gardenerNamespace)
 	if err != nil {
 		slog.Error("Failed to setup Gardener shoot client", slog.Any("error", err))
 		os.Exit(1)
