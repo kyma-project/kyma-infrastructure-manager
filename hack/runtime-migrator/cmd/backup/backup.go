@@ -63,6 +63,9 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 		}
 
 		if shoot.IsBeingDeleted(shootToBackup) {
+			errMsg := fmt.Sprintf("Shoot is being deleted: %v", err)
+			b.results.ErrorOccurred(runtimeID, shootToBackup.Name, errMsg)
+			slog.Error(errMsg, "runtimeID", runtimeID)
 			continue
 		}
 
@@ -77,18 +80,19 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 
 		if b.cfg.IsDryRun {
 			slog.Info("Runtime processed successfully (dry-run)", "runtimeID", runtimeID)
-		} else {
-			if err := b.outputWriter.Save(runtimeID, runtimeBackup); err != nil {
-				errMsg := fmt.Sprintf("Failed to store backup: %v", err)
-				b.results.ErrorOccurred(runtimeID, shootToBackup.Name, errMsg)
-				slog.Error(errMsg, "runtimeID", runtimeID)
 
-				continue
-			}
-
-			slog.Info("Runtime backup created successfully successfully", "runtimeID", runtimeID)
+			continue
 		}
 
+		if err := b.outputWriter.Save(runtimeID, runtimeBackup); err != nil {
+			errMsg := fmt.Sprintf("Failed to store backup: %v", err)
+			b.results.ErrorOccurred(runtimeID, shootToBackup.Name, errMsg)
+			slog.Error(errMsg, "runtimeID", runtimeID)
+
+			continue
+		}
+
+		slog.Info("Runtime backup created successfully successfully", "runtimeID", runtimeID)
 		b.results.OperationSucceeded(runtimeID, shootToBackup.Name)
 	}
 
