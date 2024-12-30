@@ -1,19 +1,38 @@
 package restore
 
 import (
-	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/initialisation"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
+	"context"
+	"fmt"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"os"
+	"path"
+	"sigs.k8s.io/yaml"
 )
 
 type Restorer struct {
-	cfg                initialisation.Config
-	isDryRun           bool
-	kubeconfigProvider kubeconfig.Provider
+	backupDir string
 }
 
-func NewRestorer(isDryRun bool, kubeconfigProvider kubeconfig.Provider) Restorer {
+func NewRestorer(backupDir string) Restorer {
 	return Restorer{
-		isDryRun:           isDryRun,
-		kubeconfigProvider: kubeconfigProvider,
+		backupDir: backupDir,
 	}
+}
+
+func (r Restorer) Do(_ context.Context, runtimeID string, shootName string) (v1beta1.Shoot, error) {
+	filePath := path.Join(r.backupDir, fmt.Sprintf("%s/%s.yaml", runtimeID, shootName))
+
+	fileBytes, err := os.ReadFile(filePath)
+	if err != nil {
+		return v1beta1.Shoot{}, err
+	}
+
+	var shoot v1beta1.Shoot
+
+	err = yaml.Unmarshal(fileBytes, &shoot)
+	if err != nil {
+		return v1beta1.Shoot{}, err
+	}
+
+	return shoot, nil
 }

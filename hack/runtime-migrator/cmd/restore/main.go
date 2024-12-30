@@ -36,13 +36,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	shootClient, err := initialisation.SetupGardenerShootClient(cfg.GardenerKubeconfigPath, gardenerNamespace)
+	shootClient, dynamicGardenerClient, err := initialisation.SetupGardenerShootClients(cfg.GardenerKubeconfigPath, gardenerNamespace)
 	if err != nil {
 		slog.Error("Failed to setup Gardener shoot client", slog.Any("error", err))
 		os.Exit(1)
 	}
 
-	restore, err := NewRestore(cfg, kubeconfigProvider, shootClient)
+	restore, err := NewRestore(cfg, kubeconfigProvider, shootClient, dynamicGardenerClient)
 	if err != nil {
 		slog.Error("Failed to setup Gardener shoot client", slog.Any("error", err))
 		os.Exit(1)

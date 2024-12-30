@@ -27,8 +27,6 @@ func addToScheme(s *runtime.Scheme) error {
 	return nil
 }
 
-type GetClient = func() (client.Client, error)
-
 func CreateKcpClient(cfg *Config) (client.Client, error) {
 	restCfg, err := clientcmd.BuildConfigFromFlags("", cfg.KcpKubeconfigPath)
 	if err != nil {
@@ -77,18 +75,27 @@ func SetupKubernetesKubeconfigProvider(kubeconfigPath string, namespace string, 
 		int64(expirationTime.Seconds())), nil
 }
 
-func SetupGardenerShootClient(kubeconfigPath, gardenerNamespace string) (gardener_types.ShootInterface, error) {
+func SetupGardenerShootClients(kubeconfigPath, gardenerNamespace string) (gardener_types.ShootInterface, client.Client, error) {
 	restConfig, err := gardener.NewRestConfigFromFile(kubeconfigPath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	gardenerClientSet, err := gardener_types.NewForConfig(restConfig)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	shootClient := gardenerClientSet.Shoots(gardenerNamespace)
 
-	return shootClient, nil
+	scheme := runtime.NewScheme()
+	if err := addToScheme(scheme); err != nil {
+		return nil, nil, err
+	}
+
+	var dynamicClient, _ = client.New(restConfig, client.Options{
+		Scheme: scheme,
+	})
+
+	return shootClient, dynamicClient, nil
 }

@@ -30,7 +30,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	shootClient, err := initialisation.SetupGardenerShootClient(cfg.GardenerKubeconfigPath, gardenerNamespace)
+	shootClient, _, err := initialisation.SetupGardenerShootClients(cfg.GardenerKubeconfigPath, gardenerNamespace)
 	if err != nil {
 		slog.Error("Failed to setup Gardener shoot client", slog.Any("error", err))
 		os.Exit(1)

@@ -9,7 +9,9 @@ import (
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"log/slog"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 )
 
@@ -19,25 +21,29 @@ const (
 )
 
 type Restore struct {
-	shootClient        gardener_types.ShootInterface
-	kubeconfigProvider kubeconfig.Provider
-	outputWriter       restore.OutputWriter
-	results            restore.Results
-	cfg                initialisation.RestoreConfig
+	shootClient           gardener_types.ShootInterface
+	dynamicGardenerClient client.Client
+	kubeconfigProvider    kubeconfig.Provider
+	outputWriter          restore.OutputWriter
+	results               restore.Results
+	cfg                   initialisation.RestoreConfig
 }
 
-func NewRestore(cfg initialisation.RestoreConfig, kubeconfigProvider kubeconfig.Provider, shootClient gardener_types.ShootInterface) (Restore, error) {
+const fieldManagerName = "kim"
+
+func NewRestore(cfg initialisation.RestoreConfig, kubeconfigProvider kubeconfig.Provider, shootClient gardener_types.ShootInterface, dynamicGardenerClient client.Client) (Restore, error) {
 	outputWriter, err := restore.NewOutputWriter(cfg.OutputPath)
 	if err != nil {
 		return Restore{}, err
 	}
 
 	return Restore{
-		shootClient:        shootClient,
-		kubeconfigProvider: kubeconfigProvider,
-		outputWriter:       outputWriter,
-		results:            restore.NewRestoreResults(outputWriter.NewResultsDir),
-		cfg:                cfg,
+		shootClient:           shootClient,
+		dynamicGardenerClient: dynamicGardenerClient,
+		kubeconfigProvider:    kubeconfigProvider,
+		outputWriter:          outputWriter,
+		results:               restore.NewRestoreResults(outputWriter.NewResultsDir),
+		cfg:                   cfg,
 	}, err
 }
 
@@ -50,10 +56,10 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 		return err
 	}
 
-	_ = restore.NewRestorer(r.cfg.IsDryRun, r.kubeconfigProvider)
+	restorer := restore.NewRestorer(r.cfg.BackupDir)
 
 	for _, runtimeID := range runtimeIDs {
-		shootToBackup, err := shoot.Fetch(ctx, shootList, r.shootClient, runtimeID)
+		currentShoot, err := shoot.Fetch(ctx, shootList, r.shootClient, runtimeID)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to fetch shoot: %v", err)
 			r.results.ErrorOccurred(runtimeID, "", errMsg)
@@ -62,14 +68,20 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
-		if shoot.IsBeingDeleted(shootToBackup) {
+		if shoot.IsBeingDeleted(currentShoot) {
 			errMsg := fmt.Sprintf("Shoot is being deleted: %v", err)
-			r.results.ErrorOccurred(runtimeID, shootToBackup.Name, errMsg)
+			r.results.ErrorOccurred(runtimeID, currentShoot.Name, errMsg)
 			slog.Error(errMsg, "runtimeID", runtimeID)
 			continue
 		}
 
-		//
+		shootToRestore, err := restorer.Do(context.Background(), runtimeID, currentShoot.Name)
+		if err != nil {
+			errMsg := fmt.Sprintf("Failed to restore runtime: %v", err)
+			r.results.ErrorOccurred(runtimeID, currentShoot.Name, errMsg)
+			slog.Error(errMsg, "runtimeID", runtimeID)
+			continue
+		}
 
 		if r.cfg.IsDryRun {
 			slog.Info("Runtime processed successfully (dry-run)", "runtimeID", runtimeID)
@@ -77,8 +89,20 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
+		err = r.dynamicGardenerClient.Patch(ctx, &shootToRestore, client.Apply, &client.PatchOptions{
+			FieldManager: fieldManagerName,
+			Force:        ptr.To(true),
+		})
+
+		if err != nil {
+			errMsg := fmt.Sprintf("Failed to restore runtime: %v", err)
+			r.results.ErrorOccurred(runtimeID, currentShoot.Name, errMsg)
+			slog.Error(errMsg, "runtimeID", runtimeID)
+			continue
+		}
+
 		slog.Info("Runtime backup created successfully successfully", "runtimeID", runtimeID)
-		r.results.OperationSucceeded(runtimeID, shootToBackup.Name)
+		r.results.OperationSucceeded(runtimeID, currentShoot.Name)
 	}
 
 	return nil
