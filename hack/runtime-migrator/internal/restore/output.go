@@ -13,7 +13,7 @@ type OutputWriter struct {
 }
 
 func NewOutputWriter(outputDir string) (OutputWriter, error) {
-	newResultsDir := path.Join(outputDir, fmt.Sprintf("backup-%s", time.Now().Format(time.RFC3339)))
+	newResultsDir := path.Join(outputDir, fmt.Sprintf("restore-%s", time.Now().Format(time.RFC3339)))
 
 	err := os.MkdirAll(newResultsDir, os.ModePerm)
 	if err != nil {
@@ -31,7 +31,7 @@ func (ow OutputWriter) SaveRestoreResults(results Results) (string, error) {
 		return "", err
 	}
 
-	fileName := fmt.Sprintf("%s/backup-results.json", ow.NewResultsDir)
+	fileName := fmt.Sprintf("%s/restore-results.json", ow.NewResultsDir)
 	return fileName, writeFile(fileName, resultFile)
 }
 

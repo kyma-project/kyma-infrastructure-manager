@@ -86,10 +86,15 @@ type RestoreConfig struct {
 }
 
 func NewRestoreConfig() RestoreConfig {
-	restoreConfig := RestoreConfig{
-		Config: NewConfig(),
-	}
+	restoreConfig := RestoreConfig{}
 
+	flag.StringVar(&restoreConfig.KcpKubeconfigPath, "kcp-kubeconfig-path", "/path/to/kcp/kubeconfig", "Path to the Kubeconfig file of KCP cluster.")
+	flag.StringVar(&restoreConfig.GardenerKubeconfigPath, "gardener-kubeconfig-path", "/path/to/gardener/kubeconfig", "Kubeconfig file for Gardener cluster.")
+	flag.StringVar(&restoreConfig.GardenerProjectName, "gardener-project-name", "gardener-project-name", "Name of the Gardener project.")
+	flag.StringVar(&restoreConfig.OutputPath, "output-path", "/tmp/", "Path where generated yamls will be saved. Directory has to exist.")
+	flag.BoolVar(&restoreConfig.IsDryRun, "dry-run", true, "Dry-run flag. Has to be set to 'false' otherwise it will not apply the Custom Resources on the KCP cluster.")
+	flag.StringVar(&restoreConfig.InputType, "input-type", InputTypeJSON, "Type of input to be used. Possible values: **txt** (see the example hack/runtime-migrator/input/runtimeids_sample.txt), and **json** (see the example hack/runtime-migrator/input/runtimeids_sample.json).")
+	flag.StringVar(&restoreConfig.InputFilePath, "input-file-path", "/path/to/input/file", "Path to the input file containing RuntimeCRs to be migrated.")
 	flag.StringVar(&restoreConfig.BackupDir, "backup-path", "/path/to/backup/dir", "Path to the directory containing backup.")
 	flag.Parse()
 

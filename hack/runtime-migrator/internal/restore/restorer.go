@@ -20,7 +20,7 @@ func NewRestorer(backupDir string) Restorer {
 }
 
 func (r Restorer) Do(_ context.Context, runtimeID string, shootName string) (v1beta1.Shoot, error) {
-	filePath := path.Join(r.backupDir, fmt.Sprintf("%s/%s.yaml", runtimeID, shootName))
+	filePath := path.Join(r.backupDir, fmt.Sprintf("backup/%s/%s-to-restore.yaml", runtimeID, shootName))
 
 	fileBytes, err := os.ReadFile(filePath)
 	if err != nil {

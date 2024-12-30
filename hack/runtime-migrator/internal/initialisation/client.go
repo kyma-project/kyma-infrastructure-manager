@@ -93,9 +93,9 @@ func SetupGardenerShootClients(kubeconfigPath, gardenerNamespace string) (garden
 		return nil, nil, err
 	}
 
-	var dynamicClient, _ = client.New(restConfig, client.Options{
+	dynamicClient, err := client.New(restConfig, client.Options{
 		Scheme: scheme,
 	})
 
-	return shootClient, dynamicClient, nil
+	return shootClient, dynamicClient, err
 }

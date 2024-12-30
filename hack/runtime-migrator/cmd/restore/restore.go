@@ -85,6 +85,7 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 
 		if r.cfg.IsDryRun {
 			slog.Info("Runtime processed successfully (dry-run)", "runtimeID", runtimeID)
+			r.results.OperationSucceeded(runtimeID, currentShoot.Name)
 
 			continue
 		}
@@ -101,9 +102,17 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
-		slog.Info("Runtime backup created successfully successfully", "runtimeID", runtimeID)
+		slog.Info("Runtime restore performed successfully", "runtimeID", runtimeID)
 		r.results.OperationSucceeded(runtimeID, currentShoot.Name)
 	}
+
+	resultsFile, err := r.outputWriter.SaveRestoreResults(r.results)
+	if err != nil {
+		return err
+	}
+
+	slog.Info(fmt.Sprintf("Restore completed. Successfully restored backups: %d, Failed operations: %d", r.results.Succeeded, r.results.Failed))
+	slog.Info(fmt.Sprintf("Restore results saved in: %s", resultsFile))
 
 	return nil
 }
