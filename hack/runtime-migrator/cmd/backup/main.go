@@ -51,7 +51,7 @@ func main() {
 
 	err = backup.Do(context.Background(), runtimeIds)
 	if err != nil {
-		slog.Error("Failed to read runtime Ids from input", slog.Any("error", err))
+		slog.Error("Failed to backup runtimes", slog.Any("error", err))
 		os.Exit(1)
 	}
 }
