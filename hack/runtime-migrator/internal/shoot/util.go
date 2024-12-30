@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
-	init2 "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/init"
+	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/initialisation"
 	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,7 +18,7 @@ func Fetch(ctx context.Context, shootList *v1beta1.ShootList, shootClient garden
 		return nil, errors.New("shoot was deleted or the runtimeID is incorrect")
 	}
 
-	getCtx, cancel := context.WithTimeout(ctx, init2.TimeoutK8sOperation)
+	getCtx, cancel := context.WithTimeout(ctx, initialisation.TimeoutK8sOperation)
 	defer cancel()
 
 	// We are fetching the shoot from the gardener to make sure the runtime didn't get deleted during the migration process

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/backup"
-	init2 "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/init"
+	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/initialisation"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/restore"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
@@ -24,7 +24,7 @@ type Restore struct {
 	kubeconfigProvider kubeconfig.Provider
 	outputWriter       backup.OutputWriter
 	results            backup.Results
-	cfg                init2.Config
+	cfg                initialisation.Config
 }
 
 func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
