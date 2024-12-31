@@ -97,5 +97,10 @@ func SetupGardenerShootClients(kubeconfigPath, gardenerNamespace string) (garden
 		Scheme: scheme,
 	})
 
+	err = v1beta1.AddToScheme(dynamicClient.Scheme())
+	if err != nil {
+		return nil, nil, err
+	}
+
 	return shootClient, dynamicClient, err
 }

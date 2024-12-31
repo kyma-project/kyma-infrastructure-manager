@@ -34,5 +34,8 @@ func (r Restorer) Do(_ context.Context, runtimeID string, shootName string) (v1b
 		return v1beta1.Shoot{}, err
 	}
 
+	shoot.Kind = "Shoot"
+	shoot.APIVersion = "core.gardener.cloud/v1beta1"
+
 	return shoot, nil
 }
