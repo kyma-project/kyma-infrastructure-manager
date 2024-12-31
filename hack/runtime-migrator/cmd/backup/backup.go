@@ -71,7 +71,7 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
-		runtimeBackup, err := backuper.Do(ctx, *shootToBackup)
+		runtimeBackup, err := backuper.Do(ctx, *shootToBackup, runtimeID)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to backup runtime: %v", err)
 			b.results.ErrorOccurred(runtimeID, shootToBackup.Name, errMsg)

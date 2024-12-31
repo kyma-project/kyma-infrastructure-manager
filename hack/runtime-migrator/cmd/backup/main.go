@@ -24,19 +24,19 @@ func main() {
 
 	gardenerNamespace := fmt.Sprintf("garden-%s", cfg.GardenerProjectName)
 
-	kubeconfigProvider, err := initialisation.SetupKubernetesKubeconfigProvider(cfg.GardenerKubeconfigPath, gardenerNamespace, expirationTime)
-	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to create kubeconfig provider: %v", err))
-		os.Exit(1)
-	}
-
 	shootClient, _, err := initialisation.SetupGardenerShootClients(cfg.GardenerKubeconfigPath, gardenerNamespace)
 	if err != nil {
 		slog.Error("Failed to setup Gardener shoot client", slog.Any("error", err))
 		os.Exit(1)
 	}
 
-	backup, err := NewBackup(cfg, kubeconfigProvider, shootClient)
+	kcpClient, err := initialisation.CreateKcpClient(&cfg)
+	if err != nil {
+		slog.Error("Failed to create kcp client", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	backup, err := NewBackup(cfg, kcpClient, shootClient)
 	if err != nil {
 		slog.Error("Failed to initialize backup", slog.Any("error", err))
 		os.Exit(1)

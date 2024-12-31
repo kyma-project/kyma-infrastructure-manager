@@ -32,8 +32,8 @@ type RuntimeBackup struct {
 	OIDCConfig          []authenticationv1alpha1.OpenIDConnect
 }
 
-func (b Backuper) Do(_ context.Context, shoot v1beta1.Shoot) (RuntimeBackup, error) {
-	crbs, err := b.getCRBs(shoot.Labels["kcp.provisioner.kyma-project.io/runtime-id"])
+func (b Backuper) Do(_ context.Context, shoot v1beta1.Shoot, runtimeID string) (RuntimeBackup, error) {
+	crbs, err := b.getCRBs(runtimeID)
 	if err != nil {
 		return RuntimeBackup{}, err
 	}
