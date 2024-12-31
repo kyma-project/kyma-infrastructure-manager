@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/initialisation"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/restore"
@@ -72,14 +73,16 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 			errMsg := fmt.Sprintf("Shoot is being deleted: %v", err)
 			r.results.ErrorOccurred(runtimeID, currentShoot.Name, errMsg)
 			slog.Error(errMsg, "runtimeID", runtimeID)
+
 			continue
 		}
 
-		shootToRestore, err := restorer.Do(context.Background(), runtimeID, currentShoot.Name)
+		shootToRestore, err := restorer.Do(runtimeID, currentShoot.Name)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to restore runtime: %v", err)
 			r.results.ErrorOccurred(runtimeID, currentShoot.Name, errMsg)
 			slog.Error(errMsg, "runtimeID", runtimeID)
+
 			continue
 		}
 
@@ -90,15 +93,12 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
-		err = r.dynamicGardenerClient.Patch(ctx, &shootToRestore, client.Apply, &client.PatchOptions{
-			FieldManager: fieldManagerName,
-			Force:        ptr.To(true),
-		})
-
+		err = r.applyResources(ctx, shootToRestore)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to restore runtime: %v", err)
 			r.results.ErrorOccurred(runtimeID, currentShoot.Name, errMsg)
 			slog.Error(errMsg, "runtimeID", runtimeID)
+
 			continue
 		}
 
@@ -115,4 +115,14 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 	slog.Info(fmt.Sprintf("Restore results saved in: %s", resultsFile))
 
 	return nil
+}
+
+func (r Restore) applyResources(ctx context.Context, shootToRestore v1beta1.Shoot) error {
+	patchCtx, cancel := context.WithTimeout(ctx, timeoutK8sOperation)
+	defer cancel()
+
+	return r.dynamicGardenerClient.Patch(patchCtx, &shootToRestore, client.Apply, &client.PatchOptions{
+		FieldManager: fieldManagerName,
+		Force:        ptr.To(true),
+	})
 }
