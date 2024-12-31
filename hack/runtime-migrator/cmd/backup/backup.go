@@ -10,6 +10,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log/slog"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 )
 
@@ -21,23 +22,24 @@ const (
 type Backup struct {
 	shootClient        gardener_types.ShootInterface
 	kubeconfigProvider kubeconfig.Provider
+	kcpClient          client.Client
 	outputWriter       backup.OutputWriter
 	results            backup.Results
 	cfg                initialisation.Config
 }
 
-func NewBackup(cfg initialisation.Config, kubeconfigProvider kubeconfig.Provider, shootClient gardener_types.ShootInterface) (Backup, error) {
+func NewBackup(cfg initialisation.Config, kcpClient client.Client, shootClient gardener_types.ShootInterface) (Backup, error) {
 	outputWriter, err := backup.NewOutputWriter(cfg.OutputPath)
 	if err != nil {
 		return Backup{}, err
 	}
 
 	return Backup{
-		shootClient:        shootClient,
-		kubeconfigProvider: kubeconfigProvider,
-		outputWriter:       outputWriter,
-		results:            backup.NewBackupResults(outputWriter.NewResultsDir),
-		cfg:                cfg,
+		shootClient:  shootClient,
+		kcpClient:    kcpClient,
+		outputWriter: outputWriter,
+		results:      backup.NewBackupResults(outputWriter.NewResultsDir),
+		cfg:          cfg,
 	}, nil
 }
 
@@ -50,7 +52,7 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 		return err
 	}
 
-	backuper := backup.NewBackuper(b.cfg.IsDryRun, b.kubeconfigProvider)
+	backuper := backup.NewBackuper(b.cfg.IsDryRun, b.kcpClient)
 
 	for _, runtimeID := range runtimeIDs {
 		shootToBackup, err := shoot.Fetch(ctx, shootList, b.shootClient, runtimeID)

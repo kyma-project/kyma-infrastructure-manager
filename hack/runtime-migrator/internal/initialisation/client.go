@@ -1,6 +1,7 @@
 package initialisation
 
 import (
+	"context"
 	"fmt"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
@@ -10,9 +11,14 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
+)
+
+const (
+	kubeconfigSecretKey = "config"
 )
 
 func addToScheme(s *runtime.Scheme) error {
@@ -101,4 +107,42 @@ func SetupGardenerShootClients(kubeconfigPath, gardenerNamespace string) (garden
 	}
 
 	return shootClient, dynamicClient, err
+}
+
+//nolint:gochecknoglobals
+func GetRuntimeClient(ctx context.Context, kcpClient client.Client, runtimeID string) (client.Client, error) {
+	secret, err := getKubeconfigSecret(ctx, kcpClient, runtimeID, "kcp-system")
+	if err != nil {
+		return nil, err
+	}
+
+	restConfig, err := clientcmd.RESTConfigFromKubeConfig(secret.Data[kubeconfigSecretKey])
+	if err != nil {
+		return nil, err
+	}
+
+	shootClientWithAdmin, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		return nil, err
+	}
+
+	return shootClientWithAdmin, nil
+}
+
+func getKubeconfigSecret(ctx context.Context, cnt client.Client, runtimeID, namespace string) (corev1.Secret, error) {
+	secretName := fmt.Sprintf("kubeconfig-%s", runtimeID)
+
+	var kubeconfigSecret corev1.Secret
+	secretKey := types.NamespacedName{Name: secretName, Namespace: namespace}
+
+	err := cnt.Get(ctx, secretKey, &kubeconfigSecret)
+
+	if err != nil {
+		return corev1.Secret{}, err
+	}
+
+	if kubeconfigSecret.Data == nil {
+		return corev1.Secret{}, fmt.Errorf("kubeconfig secret `%s` does not contain kubeconfig data", kubeconfigSecret.Name)
+	}
+	return kubeconfigSecret, nil
 }

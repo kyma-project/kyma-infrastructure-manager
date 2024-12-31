@@ -8,18 +8,20 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	rbacv1 "k8s.io/api/rbac/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Backuper struct {
 	cfg                initialisation.Config
 	isDryRun           bool
 	kubeconfigProvider kubeconfig.Provider
+	kcpClient          client.Client
 }
 
-func NewBackuper(isDryRun bool, kubeconfigProvider kubeconfig.Provider) Backuper {
+func NewBackuper(isDryRun bool, kcpClient client.Client) Backuper {
 	return Backuper{
-		isDryRun:           isDryRun,
-		kubeconfigProvider: kubeconfigProvider,
+		isDryRun:  isDryRun,
+		kcpClient: kcpClient,
 	}
 }
 
@@ -31,9 +33,15 @@ type RuntimeBackup struct {
 }
 
 func (b Backuper) Do(_ context.Context, shoot v1beta1.Shoot) (RuntimeBackup, error) {
+	crbs, err := b.getCRBs(shoot.Labels["kcp.provisioner.kyma-project.io/runtime-id"])
+	if err != nil {
+		return RuntimeBackup{}, err
+	}
+
 	return RuntimeBackup{
-		ShootToRestore: b.getShootToRestore(shoot),
-		OriginalShoot:  shoot,
+		ShootToRestore:      b.getShootToRestore(shoot),
+		OriginalShoot:       shoot,
+		ClusterRoleBindings: crbs,
 	}, nil
 }
 
@@ -83,4 +91,20 @@ func (b Backuper) getShootToRestore(shootFromGardener v1beta1.Shoot) v1beta1.Sho
 			//Tolerations:  shootFromGardener.Spec.Tolerations,
 		},
 	}
+}
+
+func (b Backuper) getCRBs(runtimeID string) ([]rbacv1.ClusterRoleBinding, error) {
+	runtimeClient, err := initialisation.GetRuntimeClient(context.Background(), b.kcpClient, runtimeID)
+	if err != nil {
+		return nil, err
+	}
+
+	var crbList rbacv1.ClusterRoleBindingList
+	err = runtimeClient.List(context.Background(), &crbList)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return crbList.Items, nil
 }
