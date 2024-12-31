@@ -3,6 +3,8 @@ package restore
 import (
 	"fmt"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/backup"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"os"
 	"path"
 	"sigs.k8s.io/yaml"
@@ -18,23 +20,72 @@ func NewRestorer(backupDir string) Restorer {
 	}
 }
 
-func (r Restorer) Do(runtimeID string, shootName string) (v1beta1.Shoot, error) {
-	filePath := path.Join(r.backupDir, fmt.Sprintf("backup/%s/%s-to-restore.yaml", runtimeID, shootName))
+func (r Restorer) Do(runtimeID string, shootName string) (backup.RuntimeBackup, error) {
+	shoot, err := r.getShootToRestore(runtimeID, shootName)
+	if err != nil {
+		return backup.RuntimeBackup{}, err
+	}
 
-	fileBytes, err := os.ReadFile(filePath)
+	crbs, err := r.getCRBsToRestore(runtimeID)
+	if err != nil {
+		return backup.RuntimeBackup{}, err
+	}
+
+	return backup.RuntimeBackup{
+		ShootToRestore:      shoot,
+		ClusterRoleBindings: crbs,
+	}, nil
+}
+
+func (r Restorer) getShootToRestore(runtimeID string, shootName string) (v1beta1.Shoot, error) {
+	shootFilePath := path.Join(r.backupDir, fmt.Sprintf("backup/%s/%s-to-restore.yaml", runtimeID, shootName))
+
+	shoot, err := restoreFromFile[v1beta1.Shoot](shootFilePath)
 	if err != nil {
 		return v1beta1.Shoot{}, err
 	}
-
-	var shoot v1beta1.Shoot
-
-	err = yaml.Unmarshal(fileBytes, &shoot)
-	if err != nil {
-		return v1beta1.Shoot{}, err
-	}
-
 	shoot.Kind = "Shoot"
 	shoot.APIVersion = "core.gardener.cloud/v1beta1"
 
-	return shoot, nil
+	return *shoot, nil
+}
+
+func (r Restorer) getCRBsToRestore(runtimeID string) ([]rbacv1.ClusterRoleBinding, error) {
+	crbsDir := path.Join("%s/%s/crb", r.backupDir, runtimeID)
+	entries, err := os.ReadDir(crbsDir)
+
+	if err != nil {
+		return nil, err
+	}
+
+	crbs := make([]rbacv1.ClusterRoleBinding, 0)
+
+	for _, entry := range entries {
+		crbFilePath := entry.Name()
+
+		crb, err := restoreFromFile[rbacv1.ClusterRoleBinding](crbFilePath)
+		if err != nil {
+			return nil, err
+		}
+
+		crbs = append(crbs, *crb)
+	}
+
+	return crbs, nil
+}
+
+func restoreFromFile[T any](filePath string) (*T, error) {
+	fileBytes, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	var obj T
+
+	err = yaml.Unmarshal(fileBytes, &obj)
+	if err != nil {
+		return nil, err
+	}
+
+	return &obj, nil
 }
