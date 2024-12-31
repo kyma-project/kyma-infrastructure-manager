@@ -38,11 +38,9 @@ func CreateKcpClient(cfg *Config) (client.Client, error) {
 		return nil, err
 	}
 
-	var k8sClient, _ = client.New(restCfg, client.Options{
+	return client.New(restCfg, client.Options{
 		Scheme: scheme,
 	})
-
-	return k8sClient, nil
 }
 
 func SetupKubernetesKubeconfigProvider(kubeconfigPath string, namespace string, expirationTime time.Duration) (kubeconfig.Provider, error) {
