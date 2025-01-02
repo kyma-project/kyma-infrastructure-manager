@@ -19,6 +19,7 @@ import (
 
 const (
 	kubeconfigSecretKey = "config"
+	timeoutK8sOperation = 20 * time.Second
 )
 
 func addToScheme(s *runtime.Scheme) error {
@@ -134,8 +135,10 @@ func getKubeconfigSecret(ctx context.Context, cnt client.Client, runtimeID, name
 
 	var kubeconfigSecret corev1.Secret
 	secretKey := types.NamespacedName{Name: secretName, Namespace: namespace}
+	getCtx, cancel := context.WithTimeout(ctx, timeoutK8sOperation)
+	defer cancel()
 
-	err := cnt.Get(ctx, secretKey, &kubeconfigSecret)
+	err := cnt.Get(getCtx, secretKey, &kubeconfigSecret)
 
 	if err != nil {
 		return corev1.Secret{}, err

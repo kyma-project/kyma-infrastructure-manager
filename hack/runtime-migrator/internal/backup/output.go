@@ -71,7 +71,7 @@ func (ow OutputWriter) Save(runtimeID string, runtimeBackup RuntimeBackup) error
 	}
 
 	for _, oidcConfig := range runtimeBackup.OIDCConfig {
-		err = saveYaml(oidcConfig, fmt.Sprintf("%s/%s.yaml", crbDir, oidcConfig.Name))
+		err = saveYaml(oidcConfig, fmt.Sprintf("%s/%s.yaml", oidcDir, oidcConfig.Name))
 		if err != nil {
 			return err
 		}

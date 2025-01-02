@@ -6,6 +6,7 @@ import (
 	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/initialisation"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
+	"github.com/pkg/errors"
 	rbacv1 "k8s.io/api/rbac/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,20 +33,20 @@ type RuntimeBackup struct {
 	OIDCConfig          []authenticationv1alpha1.OpenIDConnect
 }
 
-func (b Backuper) Do(_ context.Context, shoot v1beta1.Shoot, runtimeID string) (RuntimeBackup, error) {
-	runtimeClient, err := initialisation.GetRuntimeClient(context.Background(), b.kcpClient, runtimeID)
+func (b Backuper) Do(ctx context.Context, shoot v1beta1.Shoot, runtimeID string) (RuntimeBackup, error) {
+	runtimeClient, err := initialisation.GetRuntimeClient(ctx, b.kcpClient, runtimeID)
 	if err != nil {
 		return RuntimeBackup{}, err
 	}
 
 	crbs, err := b.getCRBs(runtimeClient)
 	if err != nil {
-		return RuntimeBackup{}, err
+		return RuntimeBackup{}, errors.Wrap(err, "failed to get Cluster Role Bindings")
 	}
 
 	oidcConfig, err := b.getOIDCConfig(runtimeClient)
 	if err != nil {
-		return RuntimeBackup{}, err
+		return RuntimeBackup{}, errors.Wrap(err, "failed to get OIDC config")
 	}
 
 	return RuntimeBackup{
@@ -98,8 +99,6 @@ func (b Backuper) getShootToRestore(shootFromGardener v1beta1.Shoot) v1beta1.Sho
 			Resources:         shootFromGardener.Spec.Resources,
 			SecretBindingName: shootFromGardener.Spec.SecretBindingName,
 			SeedSelector:      shootFromGardener.Spec.SeedSelector,
-			// Tolerations is not specified in patch
-			//Tolerations:  shootFromGardener.Spec.Tolerations,
 		},
 	}
 }
