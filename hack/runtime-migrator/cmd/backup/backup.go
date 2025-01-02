@@ -94,7 +94,7 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
-		slog.Info("Runtime backup created successfully successfully", "runtimeID", runtimeID)
+		slog.Info("Runtime backup created successfully", "runtimeID", runtimeID)
 		b.results.OperationSucceeded(runtimeID, shootToBackup.Name)
 	}
 

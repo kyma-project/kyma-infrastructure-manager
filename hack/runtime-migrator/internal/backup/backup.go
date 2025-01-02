@@ -106,5 +106,13 @@ func (b Backuper) getCRBs(runtimeID string) ([]rbacv1.ClusterRoleBinding, error)
 		return nil, err
 	}
 
-	return crbList.Items, nil
+	crbsToBackup := make([]rbacv1.ClusterRoleBinding, 0)
+
+	for _, crb := range crbList.Items {
+		if crb.RoleRef.Kind == "ClusterRole" && crb.RoleRef.Name == "cluster-admin" {
+			crbsToBackup = append(crbsToBackup, crb)
+		}
+	}
+
+	return crbsToBackup, nil
 }
