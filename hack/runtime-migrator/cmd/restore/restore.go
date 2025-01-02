@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
+	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/backup"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/initialisation"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/restore"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/shoot"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
+	v12 "k8s.io/api/rbac/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"log/slog"
@@ -24,7 +25,7 @@ const (
 type Restore struct {
 	shootClient           gardener_types.ShootInterface
 	dynamicGardenerClient client.Client
-	kubeconfigProvider    kubeconfig.Provider
+	kcpClient             client.Client
 	outputWriter          restore.OutputWriter
 	results               restore.Results
 	cfg                   initialisation.RestoreConfig
@@ -32,7 +33,7 @@ type Restore struct {
 
 const fieldManagerName = "kim"
 
-func NewRestore(cfg initialisation.RestoreConfig, kubeconfigProvider kubeconfig.Provider, shootClient gardener_types.ShootInterface, dynamicGardenerClient client.Client) (Restore, error) {
+func NewRestore(cfg initialisation.RestoreConfig, kcpClient client.Client, shootClient gardener_types.ShootInterface, dynamicGardenerClient client.Client) (Restore, error) {
 	outputWriter, err := restore.NewOutputWriter(cfg.OutputPath)
 	if err != nil {
 		return Restore{}, err
@@ -41,7 +42,7 @@ func NewRestore(cfg initialisation.RestoreConfig, kubeconfigProvider kubeconfig.
 	return Restore{
 		shootClient:           shootClient,
 		dynamicGardenerClient: dynamicGardenerClient,
-		kubeconfigProvider:    kubeconfigProvider,
+		kcpClient:             kcpClient,
 		outputWriter:          outputWriter,
 		results:               restore.NewRestoreResults(outputWriter.NewResultsDir),
 		cfg:                   cfg,
@@ -77,7 +78,7 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
-		shootToRestore, err := restorer.Do(runtimeID, currentShoot.Name)
+		objectsToRestore, err := restorer.Do(runtimeID, currentShoot.Name)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to restore runtime: %v", err)
 			r.results.ErrorOccurred(runtimeID, currentShoot.Name, errMsg)
@@ -93,7 +94,7 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
-		err = r.applyResources(ctx, shootToRestore)
+		err = r.applyResources(ctx, objectsToRestore, runtimeID)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to restore runtime: %v", err)
 			r.results.ErrorOccurred(runtimeID, currentShoot.Name, errMsg)
@@ -117,12 +118,50 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 	return nil
 }
 
-func (r Restore) applyResources(ctx context.Context, shootToRestore v1beta1.Shoot) error {
+func (r Restore) applyResources(ctx context.Context, objectsToRestore backup.RuntimeBackup, runtimeID string) error {
+	err := r.applyShoot(ctx, objectsToRestore.ShootToRestore)
+	if err != nil {
+		return err
+	}
+
+	clusterClient, err := initialisation.GetRuntimeClient(ctx, r.kcpClient, runtimeID)
+	if err != nil {
+		return err
+	}
+
+	err = r.applyCRBs(ctx, clusterClient, objectsToRestore.ClusterRoleBindings)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r Restore) applyShoot(ctx context.Context, shoot v1beta1.Shoot) error {
 	patchCtx, cancel := context.WithTimeout(ctx, timeoutK8sOperation)
 	defer cancel()
 
-	return r.dynamicGardenerClient.Patch(patchCtx, &shootToRestore, client.Apply, &client.PatchOptions{
+	return r.dynamicGardenerClient.Patch(patchCtx, &shoot, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
+	})
+}
+
+func (r Restore) applyCRBs(ctx context.Context, clusterClient client.Client, crbs []v12.ClusterRoleBinding) error {
+	for _, crb := range crbs {
+		if err := applyCRB(ctx, crb, clusterClient); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func applyCRB(ctx context.Context, object v12.ClusterRoleBinding, clusterClient client.Client) error {
+	ctx, cancel := context.WithTimeout(ctx, timeoutK8sOperation)
+	defer cancel()
+
+	return clusterClient.Update(ctx, &object, &client.UpdateOptions{
+		FieldManager: fieldManagerName,
 	})
 }
