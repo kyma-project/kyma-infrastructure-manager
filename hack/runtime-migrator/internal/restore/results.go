@@ -3,8 +3,10 @@ package restore
 type StatusType string
 
 const (
-	StatusSuccess StatusType = "Success"
-	StatusError   StatusType = "Error"
+	StatusSuccess        StatusType = "Success"
+	StatusError          StatusType = "Error"
+	StatusRestoreSkipped            = "Skipped"
+	StatusUpdateDetected            = "UpdateDetected"
 )
 
 type RuntimeResult struct {
@@ -18,6 +20,8 @@ type Results struct {
 	Results         []RuntimeResult
 	Succeeded       int
 	Failed          int
+	Skipped         int
+	UpdateDetected  int
 	OutputDirectory string
 }
 
@@ -48,5 +52,27 @@ func (br *Results) OperationSucceeded(runtimeID string, shootName string) {
 	}
 
 	br.Succeeded++
+	br.Results = append(br.Results, result)
+}
+
+func (br *Results) OperationSkipped(runtimeID string, shootName string) {
+	result := RuntimeResult{
+		RuntimeID: runtimeID,
+		ShootName: shootName,
+		Status:    StatusRestoreSkipped,
+	}
+
+	br.Skipped++
+	br.Results = append(br.Results, result)
+}
+
+func (br *Results) AutomaticRestoreImpossible(runtimeID string, shootName string) {
+	result := RuntimeResult{
+		RuntimeID: runtimeID,
+		ShootName: shootName,
+		Status:    StatusUpdateDetected,
+	}
+
+	br.UpdateDetected++
 	br.Results = append(br.Results, result)
 }
