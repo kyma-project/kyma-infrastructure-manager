@@ -3,6 +3,7 @@ package restore
 import (
 	"fmt"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/backup"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"os"
@@ -31,9 +32,15 @@ func (r Restorer) Do(runtimeID string, shootName string) (backup.RuntimeBackup, 
 		return backup.RuntimeBackup{}, err
 	}
 
+	oidcConfig, err := r.getOIDCConfigToRestore(runtimeID)
+	if err != nil {
+		return backup.RuntimeBackup{}, err
+	}
+
 	return backup.RuntimeBackup{
 		ShootToRestore:      shoot,
 		ClusterRoleBindings: crbs,
+		OIDCConfig:          oidcConfig,
 	}, nil
 }
 
@@ -64,6 +71,30 @@ func (r Restorer) getCRBsToRestore(runtimeID string) ([]rbacv1.ClusterRoleBindin
 		crbFilePath := entry.Name()
 
 		crb, err := restoreFromFile[rbacv1.ClusterRoleBinding](crbFilePath)
+		if err != nil {
+			return nil, err
+		}
+
+		crbs = append(crbs, *crb)
+	}
+
+	return crbs, nil
+}
+
+func (r Restorer) getOIDCConfigToRestore(runtimeID string) ([]authenticationv1alpha1.OpenIDConnect, error) {
+	crbsDir := path.Join("%s/%s/oidc", r.backupDir, runtimeID)
+	entries, err := os.ReadDir(crbsDir)
+
+	if err != nil {
+		return nil, err
+	}
+
+	crbs := make([]authenticationv1alpha1.OpenIDConnect, 0)
+
+	for _, entry := range entries {
+		crbFilePath := entry.Name()
+
+		crb, err := restoreFromFile[authenticationv1alpha1.OpenIDConnect](crbFilePath)
 		if err != nil {
 			return nil, err
 		}

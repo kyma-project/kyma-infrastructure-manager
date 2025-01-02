@@ -33,7 +33,17 @@ type RuntimeBackup struct {
 }
 
 func (b Backuper) Do(_ context.Context, shoot v1beta1.Shoot, runtimeID string) (RuntimeBackup, error) {
-	crbs, err := b.getCRBs(runtimeID)
+	runtimeClient, err := initialisation.GetRuntimeClient(context.Background(), b.kcpClient, runtimeID)
+	if err != nil {
+		return RuntimeBackup{}, err
+	}
+
+	crbs, err := b.getCRBs(runtimeClient)
+	if err != nil {
+		return RuntimeBackup{}, err
+	}
+
+	oidcConfig, err := b.getOIDCConfig(runtimeClient)
 	if err != nil {
 		return RuntimeBackup{}, err
 	}
@@ -42,6 +52,7 @@ func (b Backuper) Do(_ context.Context, shoot v1beta1.Shoot, runtimeID string) (
 		ShootToRestore:      b.getShootToRestore(shoot),
 		OriginalShoot:       shoot,
 		ClusterRoleBindings: crbs,
+		OIDCConfig:          oidcConfig,
 	}, nil
 }
 
@@ -93,14 +104,9 @@ func (b Backuper) getShootToRestore(shootFromGardener v1beta1.Shoot) v1beta1.Sho
 	}
 }
 
-func (b Backuper) getCRBs(runtimeID string) ([]rbacv1.ClusterRoleBinding, error) {
-	runtimeClient, err := initialisation.GetRuntimeClient(context.Background(), b.kcpClient, runtimeID)
-	if err != nil {
-		return nil, err
-	}
-
+func (b Backuper) getCRBs(runtimeClient client.Client) ([]rbacv1.ClusterRoleBinding, error) {
 	var crbList rbacv1.ClusterRoleBindingList
-	err = runtimeClient.List(context.Background(), &crbList)
+	err := runtimeClient.List(context.Background(), &crbList)
 
 	if err != nil {
 		return nil, err
@@ -115,4 +121,16 @@ func (b Backuper) getCRBs(runtimeID string) ([]rbacv1.ClusterRoleBinding, error)
 	}
 
 	return crbsToBackup, nil
+}
+
+func (b Backuper) getOIDCConfig(runtimeClient client.Client) ([]authenticationv1alpha1.OpenIDConnect, error) {
+	var oidcConfigList authenticationv1alpha1.OpenIDConnectList
+
+	err := runtimeClient.List(context.Background(), &oidcConfigList)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return oidcConfigList.Items, nil
 }

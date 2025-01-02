@@ -64,6 +64,19 @@ func (ow OutputWriter) Save(runtimeID string, runtimeBackup RuntimeBackup) error
 		}
 	}
 
+	oidcDir := fmt.Sprintf("%s/oidc", runtimeDir)
+	err = os.MkdirAll(oidcDir, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	for _, oidcConfig := range runtimeBackup.OIDCConfig {
+		err = saveYaml(oidcConfig, fmt.Sprintf("%s/%s.yaml", crbDir, oidcConfig.Name))
+		if err != nil {
+			return err
+		}
+	}
+
 	return saveYaml(runtimeBackup.OriginalShoot, fmt.Sprintf("%s/%s/%s-original.yaml", ow.BackupDir, runtimeID, runtimeBackup.OriginalShoot.Name))
 }
 
