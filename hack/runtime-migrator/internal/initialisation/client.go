@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
+	gardener_oidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	crdv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
@@ -122,7 +125,25 @@ func GetRuntimeClient(ctx context.Context, kcpClient client.Client, runtimeID st
 		return nil, err
 	}
 
-	shootClientWithAdmin, err := client.New(restConfig, client.Options{})
+	scheme := runtime.NewScheme()
+	err = gardener_oidc.AddToScheme(scheme)
+	if err != nil {
+		return nil, err
+	}
+
+	err = rbacv1.AddToScheme(scheme)
+	if err != nil {
+		return nil, err
+	}
+
+	err = crdv1.AddToScheme(scheme)
+	if err != nil {
+		return nil, err
+	}
+
+	shootClientWithAdmin, err := client.New(restConfig, client.Options{
+		Scheme: scheme,
+	})
 	if err != nil {
 		return nil, err
 	}

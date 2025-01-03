@@ -8,6 +8,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/pkg/errors"
 	rbacv1 "k8s.io/api/rbac/v1"
+	crdv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -123,13 +124,38 @@ func (b Backuper) getCRBs(runtimeClient client.Client) ([]rbacv1.ClusterRoleBind
 }
 
 func (b Backuper) getOIDCConfig(runtimeClient client.Client) ([]authenticationv1alpha1.OpenIDConnect, error) {
-	var oidcConfigList authenticationv1alpha1.OpenIDConnectList
-
-	err := runtimeClient.List(context.Background(), &oidcConfigList)
-
+	found, err := oidcCRDExists(runtimeClient)
 	if err != nil {
 		return nil, err
 	}
 
-	return oidcConfigList.Items, nil
+	if found {
+		var oidcConfigList authenticationv1alpha1.OpenIDConnectList
+
+		err := runtimeClient.List(context.Background(), &oidcConfigList)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return oidcConfigList.Items, nil
+	}
+
+	return []authenticationv1alpha1.OpenIDConnect{}, nil
+}
+
+func oidcCRDExists(runtimeClient client.Client) (bool, error) {
+	var crdsList crdv1.CustomResourceDefinitionList
+	err := runtimeClient.List(context.Background(), &crdsList)
+	if err != nil {
+		return false, err
+	}
+
+	for _, crd := range crdsList.Items {
+		if crd.APIVersion == "authentication.gardener.cloud/v1alpha1" && crd.Kind == "OpenIDConnect" {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
