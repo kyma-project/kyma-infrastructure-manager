@@ -82,7 +82,9 @@ func GetRuntimeIDsFromInputFile(cfg Config) ([]string, error) {
 
 type RestoreConfig struct {
 	Config
-	BackupDir string
+	BackupDir   string
+	RestoreCRB  bool
+	RestoreOIDC bool
 }
 
 func NewRestoreConfig() RestoreConfig {
@@ -96,6 +98,8 @@ func NewRestoreConfig() RestoreConfig {
 	flag.StringVar(&restoreConfig.InputType, "input-type", InputTypeJSON, "Type of input to be used. Possible values: **txt** (see the example hack/runtime-migrator/input/runtimeids_sample.txt), and **json** (see the example hack/runtime-migrator/input/runtimeids_sample.json).")
 	flag.StringVar(&restoreConfig.InputFilePath, "input-file-path", "/path/to/input/file", "Path to the input file containing RuntimeCRs to be migrated.")
 	flag.StringVar(&restoreConfig.BackupDir, "backup-path", "/path/to/backup/dir", "Path to the directory containing backup.")
+	flag.BoolVar(&restoreConfig.RestoreCRB, "restore-crbs", true, "Flag determining whether CRBs should be restored")
+	flag.BoolVar(&restoreConfig.RestoreOIDC, "restore-oidcs", true, "Flag determining whether OIDCs should be restored")
 	flag.Parse()
 
 	return restoreConfig

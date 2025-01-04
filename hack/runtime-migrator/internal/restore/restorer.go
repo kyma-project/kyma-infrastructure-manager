@@ -12,12 +12,16 @@ import (
 )
 
 type Restorer struct {
-	backupDir string
+	backupDir   string
+	restoreCRB  bool
+	restoreOIDC bool
 }
 
-func NewRestorer(backupDir string) Restorer {
+func NewRestorer(backupDir string, restoreCRB, restoreOIDC bool) Restorer {
 	return Restorer{
-		backupDir: backupDir,
+		backupDir:   backupDir,
+		restoreCRB:  restoreCRB,
+		restoreOIDC: restoreOIDC,
 	}
 }
 
@@ -32,16 +36,24 @@ func (r Restorer) Do(runtimeID string, shootName string) (backup.RuntimeBackup, 
 		return backup.RuntimeBackup{}, err
 	}
 
-	crbsDir := path.Join(r.backupDir, fmt.Sprintf("backup/%s/crb", runtimeID))
-	crbs, err := getObjectsFromToRestore[rbacv1.ClusterRoleBinding](crbsDir)
-	if err != nil {
-		return backup.RuntimeBackup{}, err
+	var crbs []rbacv1.ClusterRoleBinding
+
+	if r.restoreCRB {
+		crbsDir := path.Join(r.backupDir, fmt.Sprintf("backup/%s/crb", runtimeID))
+		crbs, err = getObjectsFromToRestore[rbacv1.ClusterRoleBinding](crbsDir)
+		if err != nil {
+			return backup.RuntimeBackup{}, err
+		}
 	}
 
-	oidcDir := path.Join(r.backupDir, fmt.Sprintf("backup/%s/oidc", runtimeID))
-	oidcConfig, err := getObjectsFromToRestore[authenticationv1alpha1.OpenIDConnect](oidcDir)
-	if err != nil {
-		return backup.RuntimeBackup{}, err
+	var oidcConfig []authenticationv1alpha1.OpenIDConnect
+
+	if r.restoreOIDC {
+		oidcDir := path.Join(r.backupDir, fmt.Sprintf("backup/%s/oidc", runtimeID))
+		oidcConfig, err = getObjectsFromToRestore[authenticationv1alpha1.OpenIDConnect](oidcDir)
+		if err != nil {
+			return backup.RuntimeBackup{}, err
+		}
 	}
 
 	return backup.RuntimeBackup{
