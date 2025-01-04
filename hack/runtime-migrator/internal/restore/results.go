@@ -1,5 +1,11 @@
 package restore
 
+import (
+	"fmt"
+	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
+	v12 "k8s.io/api/rbac/v1"
+)
+
 type StatusType string
 
 const (
@@ -10,10 +16,12 @@ const (
 )
 
 type RuntimeResult struct {
-	RuntimeID    string     `json:"runtimeId"`
-	ShootName    string     `json:"shootName"`
-	Status       StatusType `json:"status"`
-	ErrorMessage string     `json:"errorMessage,omitempty"`
+	RuntimeID     string     `json:"runtimeId"`
+	ShootName     string     `json:"shootName"`
+	Status        StatusType `json:"status"`
+	ErrorMessage  string     `json:"errorMessage,omitempty"`
+	RestoredCRBs  []string   `json:"restoredCRBs"`
+	RestoredOIDCs []string   `json:"restoredOIDCs"`
 }
 
 type Results struct {
@@ -32,7 +40,7 @@ func NewRestoreResults(outputDirectory string) Results {
 	}
 }
 
-func (br *Results) ErrorOccurred(runtimeID, shootName string, errorMsg string) {
+func (rr *Results) ErrorOccurred(runtimeID, shootName string, errorMsg string) {
 	result := RuntimeResult{
 		RuntimeID:    runtimeID,
 		ShootName:    shootName,
@@ -40,39 +48,52 @@ func (br *Results) ErrorOccurred(runtimeID, shootName string, errorMsg string) {
 		ErrorMessage: errorMsg,
 	}
 
-	br.Failed++
-	br.Results = append(br.Results, result)
+	rr.Failed++
+	rr.Results = append(rr.Results, result)
 }
 
-func (br *Results) OperationSucceeded(runtimeID string, shootName string) {
-	result := RuntimeResult{
-		RuntimeID: runtimeID,
-		ShootName: shootName,
-		Status:    StatusSuccess,
+func (rr *Results) OperationSucceeded(runtimeID string, shootName string, appliedCRBs []v12.ClusterRoleBinding, appliedOIDCs []authenticationv1alpha1.OpenIDConnect) {
+
+	appliedCRBsString := make([]string, 0)
+	for _, crb := range appliedCRBs {
+		appliedCRBsString = append(appliedCRBsString, fmt.Sprintf("%s:%s", crb.Namespace, crb.Name))
 	}
 
-	br.Succeeded++
-	br.Results = append(br.Results, result)
+	appliedOIDCsString := make([]string, 0)
+	for _, oidc := range appliedOIDCs {
+		appliedOIDCsString = append(appliedOIDCsString, fmt.Sprintf("%s:%s", oidc.Namespace, oidc.Name))
+	}
+
+	result := RuntimeResult{
+		RuntimeID:     runtimeID,
+		ShootName:     shootName,
+		Status:        StatusSuccess,
+		RestoredCRBs:  appliedCRBsString,
+		RestoredOIDCs: appliedOIDCsString,
+	}
+
+	rr.Succeeded++
+	rr.Results = append(rr.Results, result)
 }
 
-func (br *Results) OperationSkipped(runtimeID string, shootName string) {
+func (rr *Results) OperationSkipped(runtimeID string, shootName string) {
 	result := RuntimeResult{
 		RuntimeID: runtimeID,
 		ShootName: shootName,
 		Status:    StatusRestoreSkipped,
 	}
 
-	br.Skipped++
-	br.Results = append(br.Results, result)
+	rr.Skipped++
+	rr.Results = append(rr.Results, result)
 }
 
-func (br *Results) AutomaticRestoreImpossible(runtimeID string, shootName string) {
+func (rr *Results) AutomaticRestoreImpossible(runtimeID string, shootName string) {
 	result := RuntimeResult{
 		RuntimeID: runtimeID,
 		ShootName: shootName,
 		Status:    StatusUpdateDetected,
 	}
 
-	br.UpdateDetected++
-	br.Results = append(br.Results, result)
+	rr.UpdateDetected++
+	rr.Results = append(rr.Results, result)
 }

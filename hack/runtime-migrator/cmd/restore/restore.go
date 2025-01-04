@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
+	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/backup"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/initialisation"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/restore"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/shoot"
 	v12 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"log/slog"
@@ -103,12 +105,12 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 
 		if r.cfg.IsDryRun {
 			slog.Info("Runtime processed successfully (dry-run)", "runtimeID", runtimeID)
-			r.results.OperationSucceeded(runtimeID, currentShoot.Name)
+			r.results.OperationSucceeded(runtimeID, currentShoot.Name, nil, nil)
 
 			continue
 		}
 
-		err = r.applyResources(ctx, objectsToRestore, runtimeID)
+		appliedCRBs, appliedOIDC, err := r.applyResources(ctx, objectsToRestore, runtimeID)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to restore runtime: %v", err)
 			r.results.ErrorOccurred(runtimeID, currentShoot.Name, errMsg)
@@ -118,7 +120,7 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 		}
 
 		slog.Info("Runtime restore performed successfully", "runtimeID", runtimeID)
-		r.results.OperationSucceeded(runtimeID, currentShoot.Name)
+		r.results.OperationSucceeded(runtimeID, currentShoot.Name, appliedCRBs, appliedOIDC)
 	}
 
 	resultsFile, err := r.outputWriter.SaveRestoreResults(r.results)
@@ -132,23 +134,28 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 	return nil
 }
 
-func (r Restore) applyResources(ctx context.Context, objectsToRestore backup.RuntimeBackup, runtimeID string) error {
+func (r Restore) applyResources(ctx context.Context, objectsToRestore backup.RuntimeBackup, runtimeID string) ([]v12.ClusterRoleBinding, []authenticationv1alpha1.OpenIDConnect, error) {
 	err := r.applyShoot(ctx, objectsToRestore.ShootToRestore)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	clusterClient, err := initialisation.GetRuntimeClient(ctx, r.kcpClient, runtimeID)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
-	err = r.applyCRBs(ctx, clusterClient, objectsToRestore.ClusterRoleBindings)
+	appliedCRBs, err := r.applyCRBs(ctx, clusterClient, objectsToRestore.ClusterRoleBindings)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
-	return nil
+	appliedOIDC, err := r.applyOIDC(ctx, clusterClient, objectsToRestore.OIDCConfig)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return appliedCRBs, appliedOIDC, nil
 }
 
 func (r Restore) applyShoot(ctx context.Context, shoot v1beta1.Shoot) error {
@@ -161,21 +168,65 @@ func (r Restore) applyShoot(ctx context.Context, shoot v1beta1.Shoot) error {
 	})
 }
 
-func (r Restore) applyCRBs(ctx context.Context, clusterClient client.Client, crbs []v12.ClusterRoleBinding) error {
+func (r Restore) applyCRBs(ctx context.Context, clusterClient client.Client, crbs []v12.ClusterRoleBinding) ([]v12.ClusterRoleBinding, error) {
+	appliedCRBs := make([]v12.ClusterRoleBinding, 0)
+
 	for _, crb := range crbs {
-		if err := applyCRB(ctx, crb, clusterClient); err != nil {
-			return err
+		key := client.ObjectKey{
+			Name:      crb.Name,
+			Namespace: crb.Namespace,
+		}
+		applied, err := applyIfDoesntExist[*v12.ClusterRoleBinding](ctx, key, &crb, clusterClient)
+		if err != nil {
+			return nil, err
+		}
+
+		if applied {
+			appliedCRBs = append(appliedCRBs, crb)
 		}
 	}
 
-	return nil
+	return appliedCRBs, nil
 }
 
-func applyCRB(ctx context.Context, object v12.ClusterRoleBinding, clusterClient client.Client) error {
-	ctx, cancel := context.WithTimeout(ctx, timeoutK8sOperation)
-	defer cancel()
+func (r Restore) applyOIDC(ctx context.Context, clusterClient client.Client, oidcConfigs []authenticationv1alpha1.OpenIDConnect) ([]authenticationv1alpha1.OpenIDConnect, error) {
+	appliedOIDCs := make([]authenticationv1alpha1.OpenIDConnect, 0)
 
-	return clusterClient.Update(ctx, &object, &client.UpdateOptions{
-		FieldManager: fieldManagerName,
-	})
+	for _, oidc := range oidcConfigs {
+		key := client.ObjectKey{
+			Name:      oidc.Name,
+			Namespace: oidc.Namespace,
+		}
+		applied, err := applyIfDoesntExist[*authenticationv1alpha1.OpenIDConnect](ctx, key, &oidc, clusterClient)
+		if err != nil {
+			return nil, err
+		}
+
+		if applied {
+			appliedOIDCs = append(appliedOIDCs, oidc)
+		}
+	}
+
+	return appliedOIDCs, nil
+}
+
+func applyIfDoesntExist[T client.Object](ctx context.Context, key client.ObjectKey, object T, clusterClient client.Client) (bool, error) {
+	getCtx, cancelGet := context.WithTimeout(ctx, timeoutK8sOperation)
+	defer cancelGet()
+
+	var existentObject T
+
+	err := clusterClient.Get(getCtx, key, existentObject, &client.GetOptions{})
+	if err == nil {
+		return false, nil
+	}
+
+	if err != nil && !errors.IsNotFound(err) {
+		return false, err
+	}
+
+	createCtx, cancelCreate := context.WithTimeout(ctx, timeoutK8sOperation)
+	defer cancelCreate()
+
+	return true, clusterClient.Create(createCtx, object, &client.CreateOptions{})
 }
