@@ -22,30 +22,38 @@ func NewRestorer(backupDir string) Restorer {
 }
 
 func (r Restorer) Do(runtimeID string, shootName string) (backup.RuntimeBackup, error) {
-	shoot, err := r.getShootToRestore(runtimeID, shootName)
+	shootToRestore, err := r.getShootToRestore(runtimeID, fmt.Sprintf("%s-to-restore", shootName))
 	if err != nil {
 		return backup.RuntimeBackup{}, err
 	}
 
-	crbs, err := r.getCRBsToRestore(runtimeID)
+	originalShoot, err := r.getShootToRestore(runtimeID, fmt.Sprintf("%s-original", shootName))
 	if err != nil {
 		return backup.RuntimeBackup{}, err
 	}
 
-	oidcConfig, err := r.getOIDCConfigToRestore(runtimeID)
+	crbsDir := path.Join(r.backupDir, fmt.Sprintf("backup/%s/crb", runtimeID))
+	crbs, err := getObjectsFromToRestore[rbacv1.ClusterRoleBinding](crbsDir)
+	if err != nil {
+		return backup.RuntimeBackup{}, err
+	}
+
+	oidcDir := path.Join(r.backupDir, fmt.Sprintf("backup/%s/oidc", runtimeID))
+	oidcConfig, err := getObjectsFromToRestore[authenticationv1alpha1.OpenIDConnect](oidcDir)
 	if err != nil {
 		return backup.RuntimeBackup{}, err
 	}
 
 	return backup.RuntimeBackup{
-		ShootToRestore:      shoot,
+		ShootToRestore:      shootToRestore,
+		OriginalShoot:       originalShoot,
 		ClusterRoleBindings: crbs,
 		OIDCConfig:          oidcConfig,
 	}, nil
 }
 
 func (r Restorer) getShootToRestore(runtimeID string, shootName string) (v1beta1.Shoot, error) {
-	shootFilePath := path.Join(r.backupDir, fmt.Sprintf("backup/%s/%s-to-restore.yaml", runtimeID, shootName))
+	shootFilePath := path.Join(r.backupDir, fmt.Sprintf("backup/%s/%s.yaml", runtimeID, shootName))
 
 	shoot, err := restoreFromFile[v1beta1.Shoot](shootFilePath)
 	if err != nil {
@@ -57,52 +65,27 @@ func (r Restorer) getShootToRestore(runtimeID string, shootName string) (v1beta1
 	return *shoot, nil
 }
 
-func (r Restorer) getCRBsToRestore(runtimeID string) ([]rbacv1.ClusterRoleBinding, error) {
-	crbsDir := path.Join("%s/%s/crb", r.backupDir, runtimeID)
-	entries, err := os.ReadDir(crbsDir)
+func getObjectsFromToRestore[T any](dir string) ([]T, error) {
+	entries, err := os.ReadDir(dir)
 
 	if err != nil {
 		return nil, err
 	}
 
-	crbs := make([]rbacv1.ClusterRoleBinding, 0)
+	objects := make([]T, 0)
 
 	for _, entry := range entries {
-		crbFilePath := entry.Name()
+		filePath := fmt.Sprintf("%s/%s", dir, entry.Name())
 
-		crb, err := restoreFromFile[rbacv1.ClusterRoleBinding](crbFilePath)
+		object, err := restoreFromFile[T](filePath)
 		if err != nil {
 			return nil, err
 		}
 
-		crbs = append(crbs, *crb)
+		objects = append(objects, *object)
 	}
 
-	return crbs, nil
-}
-
-func (r Restorer) getOIDCConfigToRestore(runtimeID string) ([]authenticationv1alpha1.OpenIDConnect, error) {
-	crbsDir := path.Join("%s/%s/oidc", r.backupDir, runtimeID)
-	entries, err := os.ReadDir(crbsDir)
-
-	if err != nil {
-		return nil, err
-	}
-
-	crbs := make([]authenticationv1alpha1.OpenIDConnect, 0)
-
-	for _, entry := range entries {
-		crbFilePath := entry.Name()
-
-		crb, err := restoreFromFile[authenticationv1alpha1.OpenIDConnect](crbFilePath)
-		if err != nil {
-			return nil, err
-		}
-
-		crbs = append(crbs, *crb)
-	}
-
-	return crbs, nil
+	return objects, nil
 }
 
 func restoreFromFile[T any](filePath string) (*T, error) {

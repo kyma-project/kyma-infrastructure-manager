@@ -152,7 +152,7 @@ func oidcCRDExists(runtimeClient client.Client) (bool, error) {
 	}
 
 	for _, crd := range crdsList.Items {
-		if crd.APIVersion == "authentication.gardener.cloud/v1alpha1" && crd.Kind == "OpenIDConnect" {
+		if crd.Name == "openidconnects.authentication.gardener.cloud" {
 			return true, nil
 		}
 	}
