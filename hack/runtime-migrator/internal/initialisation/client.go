@@ -1,4 +1,4 @@
-package config
+package initialisation
 
 import (
 	"fmt"
@@ -27,8 +27,6 @@ func addToScheme(s *runtime.Scheme) error {
 	return nil
 }
 
-type GetClient = func() (client.Client, error)
-
 func CreateKcpClient(cfg *Config) (client.Client, error) {
 	restCfg, err := clientcmd.BuildConfigFromFlags("", cfg.KcpKubeconfigPath)
 	if err != nil {
@@ -40,11 +38,9 @@ func CreateKcpClient(cfg *Config) (client.Client, error) {
 		return nil, err
 	}
 
-	var k8sClient, _ = client.New(restCfg, client.Options{
+	return client.New(restCfg, client.Options{
 		Scheme: scheme,
 	})
-
-	return k8sClient, nil
 }
 
 func SetupKubernetesKubeconfigProvider(kubeconfigPath string, namespace string, expirationTime time.Duration) (kubeconfig.Provider, error) {
@@ -77,18 +73,32 @@ func SetupKubernetesKubeconfigProvider(kubeconfigPath string, namespace string, 
 		int64(expirationTime.Seconds())), nil
 }
 
-func SetupGardenerShootClient(kubeconfigPath, gardenerNamespace string) (gardener_types.ShootInterface, error) {
+func SetupGardenerShootClients(kubeconfigPath, gardenerNamespace string) (gardener_types.ShootInterface, client.Client, error) {
 	restConfig, err := gardener.NewRestConfigFromFile(kubeconfigPath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	gardenerClientSet, err := gardener_types.NewForConfig(restConfig)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	shootClient := gardenerClientSet.Shoots(gardenerNamespace)
 
-	return shootClient, nil
+	scheme := runtime.NewScheme()
+	if err := addToScheme(scheme); err != nil {
+		return nil, nil, err
+	}
+
+	dynamicClient, err := client.New(restConfig, client.Options{
+		Scheme: scheme,
+	})
+
+	err = v1beta1.AddToScheme(dynamicClient.Scheme())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return shootClient, dynamicClient, err
 }

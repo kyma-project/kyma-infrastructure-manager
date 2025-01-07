@@ -1,8 +1,4 @@
-package backup
-
-import (
-	"fmt"
-)
+package restore
 
 type StatusType string
 
@@ -12,11 +8,10 @@ const (
 )
 
 type RuntimeResult struct {
-	RuntimeID     string     `json:"runtimeId"`
-	ShootName     string     `json:"shootName"`
-	Status        StatusType `json:"status"`
-	ErrorMessage  string     `json:"errorMessage,omitempty"`
-	BackupDirPath string     `json:"backupDirPath,omitempty"`
+	RuntimeID    string     `json:"runtimeId"`
+	ShootName    string     `json:"shootName"`
+	Status       StatusType `json:"status"`
+	ErrorMessage string     `json:"errorMessage,omitempty"`
 }
 
 type Results struct {
@@ -26,7 +21,7 @@ type Results struct {
 	OutputDirectory string
 }
 
-func NewBackupResults(outputDirectory string) Results {
+func NewRestoreResults(outputDirectory string) Results {
 	return Results{
 		Results:         make([]RuntimeResult, 0),
 		OutputDirectory: outputDirectory,
@@ -47,16 +42,11 @@ func (br *Results) ErrorOccurred(runtimeID, shootName string, errorMsg string) {
 
 func (br *Results) OperationSucceeded(runtimeID string, shootName string) {
 	result := RuntimeResult{
-		RuntimeID:     runtimeID,
-		ShootName:     shootName,
-		Status:        StatusSuccess,
-		BackupDirPath: br.getBackupDirPath(runtimeID),
+		RuntimeID: runtimeID,
+		ShootName: shootName,
+		Status:    StatusSuccess,
 	}
 
 	br.Succeeded++
 	br.Results = append(br.Results, result)
-}
-
-func (br *Results) getBackupDirPath(runtimeID string) string {
-	return fmt.Sprintf("%s/%s/%s", br.OutputDirectory, backupFolderName, runtimeID)
 }
