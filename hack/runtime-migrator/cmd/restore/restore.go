@@ -96,12 +96,12 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
-		if currentShoot.Generation > objectsToRestore.OriginalShoot.Generation+1 {
-			slog.Warn("Verify the current state of the system. Restore should be performed manually, as the backup may overwrite more that on change.", "runtimeID", runtimeID)
-			r.results.AutomaticRestoreImpossible(runtimeID, currentShoot.Name)
-
-			continue
-		}
+		//if currentShoot.Generation > objectsToRestore.OriginalShoot.Generation+1 {
+		//	slog.Warn("Verify the current state of the system. Restore should be performed manually, as the backup may overwrite more that on change.", "runtimeID", runtimeID)
+		//	r.results.AutomaticRestoreImpossible(runtimeID, currentShoot.Name)
+		//
+		//	continue
+		//}
 
 		if r.cfg.IsDryRun {
 			slog.Info("Runtime processed successfully (dry-run)", "runtimeID", runtimeID)
@@ -176,7 +176,7 @@ func (r Restore) applyCRBs(ctx context.Context, clusterClient client.Client, crb
 			Name:      crb.Name,
 			Namespace: crb.Namespace,
 		}
-		applied, err := applyIfDoesntExist[*v12.ClusterRoleBinding](ctx, key, &crb, clusterClient)
+		applied, err := applyCRBIfDoesntExist(ctx, key, &crb, clusterClient)
 		if err != nil {
 			return nil, err
 		}
@@ -197,7 +197,7 @@ func (r Restore) applyOIDC(ctx context.Context, clusterClient client.Client, oid
 			Name:      oidc.Name,
 			Namespace: oidc.Namespace,
 		}
-		applied, err := applyIfDoesntExist[*authenticationv1alpha1.OpenIDConnect](ctx, key, &oidc, clusterClient)
+		applied, err := applyOIDCIfDoesntExist(ctx, key, &oidc, clusterClient)
 		if err != nil {
 			return nil, err
 		}
@@ -210,17 +210,38 @@ func (r Restore) applyOIDC(ctx context.Context, clusterClient client.Client, oid
 	return appliedOIDCs, nil
 }
 
-func applyIfDoesntExist[T client.Object](ctx context.Context, key client.ObjectKey, object T, clusterClient client.Client) (bool, error) {
+func applyCRBIfDoesntExist(ctx context.Context, key client.ObjectKey, object *v12.ClusterRoleBinding, clusterClient client.Client) (bool, error) {
 	getCtx, cancelGet := context.WithTimeout(ctx, timeoutK8sOperation)
 	defer cancelGet()
 
-	var existentObject T
+	var existingObject v12.ClusterRoleBinding
 
-	err := clusterClient.Get(getCtx, key, existentObject, &client.GetOptions{})
+	err := clusterClient.Get(getCtx, key, &existingObject, &client.GetOptions{})
 	if err == nil {
 		return false, nil
 	}
 
+	if err != nil && !errors.IsNotFound(err) {
+		return false, err
+	}
+
+	createCtx, cancelCreate := context.WithTimeout(ctx, timeoutK8sOperation)
+	defer cancelCreate()
+
+	return true, clusterClient.Create(createCtx, object, &client.CreateOptions{})
+}
+
+func applyOIDCIfDoesntExist(ctx context.Context, key client.ObjectKey, object *authenticationv1alpha1.OpenIDConnect, clusterClient client.Client) (bool, error) {
+	getCtx, cancelGet := context.WithTimeout(ctx, timeoutK8sOperation)
+	defer cancelGet()
+
+	var existingObject authenticationv1alpha1.OpenIDConnect
+
+	err := clusterClient.Get(getCtx, key, &existingObject, &client.GetOptions{})
+	if err == nil {
+		return false, nil
+	}
+	slog.Error(err.Error())
 	if err != nil && !errors.IsNotFound(err) {
 		return false, err
 	}

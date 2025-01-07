@@ -44,6 +44,11 @@ func (r Restorer) Do(runtimeID string, shootName string) (backup.RuntimeBackup, 
 		if err != nil {
 			return backup.RuntimeBackup{}, err
 		}
+
+		for i := 0; i < len(crbs); i++ {
+			crbs[i].Generation = 0
+			crbs[i].ResourceVersion = ""
+		}
 	}
 
 	var oidcConfig []authenticationv1alpha1.OpenIDConnect
@@ -53,6 +58,11 @@ func (r Restorer) Do(runtimeID string, shootName string) (backup.RuntimeBackup, 
 		oidcConfig, err = getObjectsFromToRestore[authenticationv1alpha1.OpenIDConnect](oidcDir)
 		if err != nil {
 			return backup.RuntimeBackup{}, err
+		}
+
+		for i := 0; i < len(oidcConfig); i++ {
+			oidcConfig[i].Generation = 0
+			oidcConfig[i].ResourceVersion = ""
 		}
 	}
 

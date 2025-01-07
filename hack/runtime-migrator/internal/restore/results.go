@@ -1,7 +1,6 @@
 package restore
 
 import (
-	"fmt"
 	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	v12 "k8s.io/api/rbac/v1"
 )
@@ -56,12 +55,12 @@ func (rr *Results) OperationSucceeded(runtimeID string, shootName string, applie
 
 	appliedCRBsString := make([]string, 0)
 	for _, crb := range appliedCRBs {
-		appliedCRBsString = append(appliedCRBsString, fmt.Sprintf("%s:%s", crb.Namespace, crb.Name))
+		appliedCRBsString = append(appliedCRBsString, crb.Name)
 	}
 
 	appliedOIDCsString := make([]string, 0)
 	for _, oidc := range appliedOIDCs {
-		appliedOIDCsString = append(appliedOIDCsString, fmt.Sprintf("%s:%s", oidc.Namespace, oidc.Name))
+		appliedOIDCsString = append(appliedOIDCsString, oidc.Name)
 	}
 
 	result := RuntimeResult{
