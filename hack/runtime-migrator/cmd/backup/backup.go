@@ -8,8 +8,12 @@ import (
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/config"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
+	"github.com/pkg/errors"
+	rbacv1 "k8s.io/api/rbac/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"log/slog"
+	"slices"
 	"time"
 )
 
@@ -104,5 +108,31 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 	slog.Info(fmt.Sprintf("Backup completed. Successfully stored backups: %d, Failed backups: %d", b.results.Succeeded, b.results.Failed))
 	slog.Info(fmt.Sprintf("Backup results saved in: %s", resultsFile))
 
+	return nil
+}
+
+func filterOnlySupportedTypesOfCRBs(bindings []rbacv1.ClusterRoleBinding) []rbacv1.ClusterRoleBinding {
+	return slices.DeleteFunc(bindings, func(clusterRoleBinding rbacv1.ClusterRoleBinding) bool {
+		if clusterRoleBinding.RoleRef.Kind != "ClusterRole" || clusterRoleBinding.RoleRef.Name != "cluster-admin" {
+			return true
+		}
+		// leave only cluster-admin CRBs where at least one subject is of a user type
+		if slices.ContainsFunc(clusterRoleBinding.Subjects, func(subject rbacv1.Subject) bool { return subject.Kind == rbacv1.UserKind }) {
+			return false
+		}
+		return true
+	})
+}
+
+func labelsCRBsAsDeprecated(ctx context.Context, clientset *kubernetes.Clientset, deprecatedCRBs []rbacv1.ClusterRoleBinding) error {
+	for _, clusterRoleBinding := range deprecatedCRBs {
+		clusterRoleBinding.ObjectMeta.Labels["kyma-project.io/deprecation"] = "to-be-removed-soon"
+		_, err := clientset.RbacV1().ClusterRoleBindings().Update(ctx, &clusterRoleBinding, v1.UpdateOptions{})
+
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("Failed to update ClusterRoleBinding with deprecation label %s", clusterRoleBinding.Name))
+		}
+		slog.Info(fmt.Sprintf("ClusterRoleBinding %s has been labeled as deprecated", clusterRoleBinding.Name))
+	}
 	return nil
 }
