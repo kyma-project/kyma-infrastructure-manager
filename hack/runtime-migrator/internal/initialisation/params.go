@@ -23,7 +23,7 @@ type Config struct {
 const (
 	InputTypeTxt        = "txt"
 	InputTypeJSON       = "json"
-	TimeoutK8sOperation = 20 * time.Second
+	timeoutK8sOperation = 20 * time.Second
 )
 
 func PrintConfig(cfg Config) {

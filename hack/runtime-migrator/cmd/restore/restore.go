@@ -33,7 +33,7 @@ type Restore struct {
 	cfg                   initialisation.RestoreConfig
 }
 
-const fieldManagerName = "kim"
+const fieldManagerName = "kim-restore"
 
 func NewRestore(cfg initialisation.RestoreConfig, kcpClient client.Client, shootClient gardener_types.ShootInterface, dynamicGardenerClient client.Client) (Restore, error) {
 	outputWriter, err := restore.NewOutputWriter(cfg.OutputPath)
@@ -60,7 +60,7 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 		return err
 	}
 
-	restorer := restore.NewRestorer(r.cfg.BackupDir)
+	restorer := restore.NewRestorer(r.cfg.BackupDir, r.cfg.RestoreCRB, r.cfg.RestoreOIDC)
 
 	for _, runtimeID := range runtimeIDs {
 		currentShoot, err := shoot.Fetch(ctx, shootList, r.shootClient, runtimeID)

@@ -16,7 +16,6 @@ import (
 
 const (
 	timeoutK8sOperation = 20 * time.Second
-	expirationTime      = 60 * time.Minute
 )
 
 type Backup struct {
@@ -52,7 +51,7 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 		return err
 	}
 
-	backuper := backup.NewBackuper(b.cfg.IsDryRun, b.kcpClient)
+	backuper := backup.NewBackuper(b.cfg.IsDryRun, b.kcpClient, timeoutK8sOperation)
 
 	for _, runtimeID := range runtimeIDs {
 		shootToBackup, err := shoot.Fetch(ctx, shootList, b.shootClient, runtimeID)

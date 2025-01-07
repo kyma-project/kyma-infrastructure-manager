@@ -22,7 +22,6 @@ import (
 
 const (
 	kubeconfigSecretKey = "config"
-	timeoutK8sOperation = 20 * time.Second
 )
 
 func addToScheme(s *runtime.Scheme) error {
