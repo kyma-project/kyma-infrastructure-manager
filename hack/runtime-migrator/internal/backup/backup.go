@@ -2,14 +2,17 @@ package backup
 
 import (
 	"context"
+	"fmt"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/initialisation"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/pkg/errors"
+	"golang.org/x/exp/slices"
 	rbacv1 "k8s.io/api/rbac/v1"
 	crdv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"log/slog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -40,7 +43,7 @@ func (b Backuper) Do(ctx context.Context, shoot v1beta1.Shoot, runtimeID string)
 		return RuntimeBackup{}, err
 	}
 
-	crbs, err := b.getCRBs(runtimeClient)
+	crbs, err := b.getAllCRBs(runtimeClient)
 	if err != nil {
 		return RuntimeBackup{}, errors.Wrap(err, "failed to get Cluster Role Bindings")
 	}
@@ -104,7 +107,7 @@ func (b Backuper) getShootToRestore(shootFromGardener v1beta1.Shoot) v1beta1.Sho
 	}
 }
 
-func (b Backuper) getCRBs(runtimeClient client.Client) ([]rbacv1.ClusterRoleBinding, error) {
+func (b Backuper) getAllCRBs(runtimeClient client.Client) ([]rbacv1.ClusterRoleBinding, error) {
 	var crbList rbacv1.ClusterRoleBindingList
 	err := runtimeClient.List(context.Background(), &crbList)
 
@@ -158,4 +161,30 @@ func oidcCRDExists(runtimeClient client.Client) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func filterOnlySupportedTypesOfCRBs(bindings []rbacv1.ClusterRoleBinding) []rbacv1.ClusterRoleBinding {
+	return slices.DeleteFunc(bindings, func(clusterRoleBinding rbacv1.ClusterRoleBinding) bool {
+		if clusterRoleBinding.RoleRef.Kind != "ClusterRole" || clusterRoleBinding.RoleRef.Name != "cluster-admin" {
+			return true
+		}
+		// leave only cluster-admin CRBs where at least one subject is of a user type
+		if slices.ContainsFunc(clusterRoleBinding.Subjects, func(subject rbacv1.Subject) bool { return subject.Kind == rbacv1.UserKind }) {
+			return false
+		}
+		return true
+	})
+}
+
+func labelsCRBsAsDeprecated(ctx context.Context, runtimeClient client.Client, deprecatedCRBs []rbacv1.ClusterRoleBinding) error {
+	for _, clusterRoleBinding := range deprecatedCRBs {
+		clusterRoleBinding.ObjectMeta.Labels["kyma-project.io/deprecation"] = "to-be-removed-soon"
+		err := runtimeClient.Patch(ctx, &clusterRoleBinding, client.Apply, &client.PatchOptions{})
+
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("Failed to update ClusterRoleBinding with deprecation label %s", clusterRoleBinding.Name))
+		}
+		slog.Info(fmt.Sprintf("ClusterRoleBinding %s has been labeled as deprecated", clusterRoleBinding.Name))
+	}
+	return nil
 }
