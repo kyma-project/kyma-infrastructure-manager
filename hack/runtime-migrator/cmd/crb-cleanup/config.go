@@ -3,52 +3,29 @@ package main
 import (
 	"flag"
 	"log/slog"
-	"os"
 	"reflect"
 	"strings"
-
-	"github.com/knadh/koanf"
-	"github.com/knadh/koanf/providers/basicflag"
 )
 
-var k = koanf.New("/")
-
 type Config struct {
-	Kubeconfig string `koanf:"kubeconfig"`
-	Pretend    bool   `koanf:"pretend"`
-	Verbose    bool   `koanf:"verbose"`
-	Force      bool   `koanf:"force"`
-	OldLabel   string `koanf:"oldLabel"`
-	NewLabel   string `koanf:"newLabel"`
+	Kubeconfig string
+	Pretend    bool
+	Verbose    bool
+	Force      bool
+	OldLabel   string
+	NewLabel   string
+	Prefix     string
 }
 
 func ParseConfig() Config {
-	fs := flag.NewFlagSet("", flag.ExitOnError)
-	fs.String("kubeconfig", "", "Kubeconfig file path")
-	fs.String("oldLabel", LabelSelectorOld, "Label marking old CRBs")
-	fs.String("newLabel", LabelSelectorNew, "Label marking new CRBs")
-	fs.Bool("pretend", false, "Don't remove CRBs, write what would be removed  to ./removed.json")
-	fs.Bool("verbose", false, "Increase the log level to debug (default: info)")
-	fs.Bool("force", false, "Force remove CRBs without checking migration status")
-
-	if err := fs.Parse(os.Args[1:]); err != nil {
-		slog.Error("Error parsing flags", "error", err)
-		os.Exit(1)
-	}
-
-	if err := k.Load(basicflag.Provider(fs, "/"), nil); err != nil {
-		slog.Error("Error loading config", "error", err)
-		os.Exit(1)
-	}
-
-	cfg := Config{
-		OldLabel: LabelSelectorOld,
-		NewLabel: LabelSelectorNew,
-	}
-	if err := k.Unmarshal("", &cfg); err != nil {
-		slog.Error("Error unmarshalling config", "error", err)
-		os.Exit(1)
-	}
+	cfg := Config{}
+	flag.StringVar(&cfg.Kubeconfig, "kubeconfig", "", "Kubeconfig file path")
+	flag.StringVar(&cfg.OldLabel, "oldLabel", LabelSelectorOld, "Label marking old CRBs")
+	flag.StringVar(&cfg.NewLabel, "newLabel", LabelSelectorNew, "Label marking new CRBs")
+	flag.BoolVar(&cfg.Pretend, "pretend", false, "Don't remove CRBs, write what would be removed  to ./removed.json")
+	flag.BoolVar(&cfg.Verbose, "verbose", false, "Increase the log level to debug (default: info)")
+	flag.BoolVar(&cfg.Force, "force", false, "Force remove CRBs without checking migration status")
+	flag.Parse()
 	slog.Info("Parsed config", Spread(cfg)...)
 	return cfg
 }

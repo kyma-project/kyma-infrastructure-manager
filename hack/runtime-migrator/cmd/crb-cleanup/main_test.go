@@ -45,12 +45,8 @@ var _ = Describe("Envtest", func() {
 
 		By("Processing CRBs")
 		failures, err := ProcessCRBs(fetcher, cleaner, nil, Config{
-			Kubeconfig: "",
-			Pretend:    false,
-			Verbose:    false,
-			Force:      false,
-			OldLabel:   "",
-			NewLabel:   "",
+			Pretend: false,
+			Force:   false,
 		})
 
 		Expect(err).ToNot(HaveOccurred())
@@ -72,12 +68,8 @@ var _ = Describe("Envtest", func() {
 
 		By("Processing CRBs")
 		failures, err := ProcessCRBs(fetcher, cleaner, nil, Config{
-			Kubeconfig: "",
-			Pretend:    false,
-			Verbose:    false,
-			Force:      false,
-			OldLabel:   "",
-			NewLabel:   "",
+			Pretend: false,
+			Force:   false,
 		})
 
 		Expect(err).ToNot(HaveOccurred())
@@ -98,12 +90,8 @@ var _ = Describe("Envtest", func() {
 
 		By("Processing CRBs")
 		failures, err := ProcessCRBs(fetcher, cleaner, nil, Config{
-			Kubeconfig: "",
-			Pretend:    false,
-			Verbose:    false,
-			Force:      true,
-			OldLabel:   "",
-			NewLabel:   "",
+			Pretend: false,
+			Force:   true,
 		})
 
 		Expect(err).ToNot(HaveOccurred())
