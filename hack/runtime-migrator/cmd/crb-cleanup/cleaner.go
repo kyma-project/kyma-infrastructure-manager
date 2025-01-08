@@ -76,8 +76,11 @@ type PretendCleaner struct {
 }
 
 func (p PretendCleaner) Clean(_ context.Context, crbs []v1.ClusterRoleBinding) []Failure {
+	slog.Debug("Removing CRBs", "crbs", crbs)
 	err := json.NewEncoder(p.removed).Encode(crbs)
-	slog.Error("Error saving removed CRBs", "error", err, "crbs", crbs)
+	if err != nil {
+		slog.Error("Error saving removed CRBs", "error", err, "crbs", crbs)
+	}
 	return nil
 }
 

@@ -27,7 +27,7 @@ func ParseConfig() Config {
 	fs.String("kubeconfig", "", "Kubeconfig file path")
 	fs.String("oldLabel", LabelSelectorOld, "Label marking old CRBs")
 	fs.String("newLabel", LabelSelectorNew, "Label marking new CRBs")
-	fs.Bool("pretend", false, "Don't remove CRBs, print what would be removed (you might want to increase log level)")
+	fs.Bool("pretend", false, "Don't remove CRBs, write what would be removed  to ./removed.json")
 	fs.Bool("verbose", false, "Increase the log level to debug (default: info)")
 	fs.Bool("force", false, "Force remove CRBs without checking migration status")
 

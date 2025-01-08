@@ -44,7 +44,7 @@ var _ = Describe("Envtest", func() {
 		}
 
 		By("Processing CRBs")
-		failures, err := ProcessCRBs(fetcher, cleaner, Config{
+		failures, err := ProcessCRBs(fetcher, cleaner, nil, Config{
 			Kubeconfig: "",
 			Pretend:    false,
 			Verbose:    false,
@@ -71,7 +71,7 @@ var _ = Describe("Envtest", func() {
 		}
 
 		By("Processing CRBs")
-		failures, err := ProcessCRBs(fetcher, cleaner, Config{
+		failures, err := ProcessCRBs(fetcher, cleaner, nil, Config{
 			Kubeconfig: "",
 			Pretend:    false,
 			Verbose:    false,
@@ -97,7 +97,7 @@ var _ = Describe("Envtest", func() {
 		}
 
 		By("Processing CRBs")
-		failures, err := ProcessCRBs(fetcher, cleaner, Config{
+		failures, err := ProcessCRBs(fetcher, cleaner, nil, Config{
 			Kubeconfig: "",
 			Pretend:    false,
 			Verbose:    false,
