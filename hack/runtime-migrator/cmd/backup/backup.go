@@ -8,14 +8,19 @@ import (
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/initialisation"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
+	"github.com/pkg/errors"
+	rbacv1 "k8s.io/api/rbac/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"log/slog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"slices"
 	"time"
 )
 
 const (
 	timeoutK8sOperation = 20 * time.Second
+	fieldManagerName    = "kim-backup"
 )
 
 type Backup struct {
@@ -70,7 +75,11 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
-		runtimeBackup, err := backuper.Do(ctx, *shootToBackup, runtimeID)
+		runtimeClient, err := initialisation.GetRuntimeClient(ctx, b.kcpClient, runtimeID)
+		if err != nil {
+			continue
+		}
+		runtimeBackup, err := backuper.Do(ctx, runtimeClient, *shootToBackup)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to backup runtime: %v", err)
 			b.results.ErrorOccurred(runtimeID, shootToBackup.Name, errMsg)
@@ -81,7 +90,7 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 
 		if b.cfg.IsDryRun {
 			slog.Info("Runtime processed successfully (dry-run)", "runtimeID", runtimeID)
-			b.results.OperationSucceeded(runtimeID, shootToBackup.Name)
+			b.results.OperationSucceeded(runtimeID, shootToBackup.Name, nil)
 
 			continue
 		}
@@ -94,8 +103,17 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
+		deprecatedCRBs, err := labelDeprecatedCRBs(ctx, runtimeClient)
+		if err != nil {
+			errMsg := fmt.Sprintf("Failed to deprecate Cluster Role Bindings: %v", err)
+			b.results.ErrorOccurred(runtimeID, shootToBackup.Name, errMsg)
+			slog.Error(errMsg, "runtimeID", runtimeID)
+
+			continue
+		}
+
 		slog.Info("Runtime backup created successfully", "runtimeID", runtimeID)
-		b.results.OperationSucceeded(runtimeID, shootToBackup.Name)
+		b.results.OperationSucceeded(runtimeID, shootToBackup.Name, deprecatedCRBs)
 	}
 
 	resultsFile, err := b.outputWriter.SaveBackupResults(b.results)
@@ -107,4 +125,60 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 	slog.Info(fmt.Sprintf("Backup results saved in: %s", resultsFile))
 
 	return nil
+}
+
+func labelDeprecatedCRBs(ctx context.Context, runtimeClient client.Client) ([]rbacv1.ClusterRoleBinding, error) {
+	var crbList rbacv1.ClusterRoleBindingList
+
+	listCtx, cancel := context.WithTimeout(ctx, timeoutK8sOperation)
+	defer cancel()
+
+	selector, err := labels.Parse("reconciler.kyma-project.io/managed-by=reconciler,app=kyma")
+	if err != nil {
+		return nil, err
+	}
+
+	err = runtimeClient.List(listCtx, &crbList, &client.ListOptions{
+		LabelSelector: selector,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	deprecatedCRBs := slices.DeleteFunc(crbList.Items, func(clusterRoleBinding rbacv1.ClusterRoleBinding) bool {
+		if clusterRoleBinding.RoleRef.Kind != "ClusterRole" || clusterRoleBinding.RoleRef.Name != "cluster-admin" {
+			return true
+		}
+		// leave only cluster-admin CRBs where at least one subject is of a user type
+		if slices.ContainsFunc(clusterRoleBinding.Subjects, func(subject rbacv1.Subject) bool { return subject.Kind == rbacv1.UserKind }) {
+			return false
+		}
+		return true
+	})
+
+	patchCRB := func(clusterRoleBinding rbacv1.ClusterRoleBinding) error {
+		patchCtx, cancelPatch := context.WithTimeout(ctx, timeoutK8sOperation)
+		defer cancelPatch()
+
+		clusterRoleBinding.Kind = "ClusterRoleBinding"
+		clusterRoleBinding.APIVersion = "rbac.authorization.k8s.io/v1"
+		clusterRoleBinding.ManagedFields = nil
+
+		return runtimeClient.Patch(patchCtx, &clusterRoleBinding, client.Apply, &client.PatchOptions{
+			FieldManager: fieldManagerName,
+		})
+	}
+
+	for _, clusterRoleBinding := range deprecatedCRBs {
+		clusterRoleBinding.ObjectMeta.Labels["kyma-project.io/deprecation"] = "to-be-removed-soon"
+		err := patchCRB(clusterRoleBinding)
+		if err != nil {
+			if err != nil {
+				return nil, errors.Wrap(err, fmt.Sprintf("failed to update ClusterRoleBinding with deprecation label %s", clusterRoleBinding.Name))
+			}
+		}
+	}
+
+	return deprecatedCRBs, nil
 }

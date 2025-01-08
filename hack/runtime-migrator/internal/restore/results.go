@@ -18,8 +18,8 @@ type RuntimeResult struct {
 	ShootName     string     `json:"shootName"`
 	Status        StatusType `json:"status"`
 	ErrorMessage  string     `json:"errorMessage,omitempty"`
-	RestoredCRBs  []string   `json:"restoredCRBs"`
-	RestoredOIDCs []string   `json:"restoredOIDCs"`
+	RestoredCRBs  []string   `json:"restoredCRBs,omitempty"`
+	RestoredOIDCs []string   `json:"restoredOIDCs,omitempty"`
 }
 
 type Results struct {
@@ -51,12 +51,12 @@ func (rr *Results) ErrorOccurred(runtimeID, shootName string, errorMsg string) {
 
 func (rr *Results) OperationSucceeded(runtimeID string, shootName string, appliedCRBs []v12.ClusterRoleBinding, appliedOIDCs []authenticationv1alpha1.OpenIDConnect) {
 
-	appliedCRBsString := make([]string, 0)
+	var appliedCRBsString []string
 	for _, crb := range appliedCRBs {
 		appliedCRBsString = append(appliedCRBsString, crb.Name)
 	}
 
-	appliedOIDCsString := make([]string, 0)
+	var appliedOIDCsString []string
 	for _, oidc := range appliedOIDCs {
 		appliedOIDCsString = append(appliedOIDCsString, oidc.Name)
 	}
