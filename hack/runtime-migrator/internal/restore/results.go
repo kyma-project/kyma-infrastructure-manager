@@ -10,7 +10,6 @@ type StatusType string
 const (
 	StatusSuccess        StatusType = "Success"
 	StatusError          StatusType = "Error"
-	StatusRestoreSkipped            = "Skipped"
 	StatusUpdateDetected            = "UpdateDetected"
 )
 
@@ -27,7 +26,6 @@ type Results struct {
 	Results         []RuntimeResult
 	Succeeded       int
 	Failed          int
-	Skipped         int
 	UpdateDetected  int
 	OutputDirectory string
 }
@@ -72,17 +70,6 @@ func (rr *Results) OperationSucceeded(runtimeID string, shootName string, applie
 	}
 
 	rr.Succeeded++
-	rr.Results = append(rr.Results, result)
-}
-
-func (rr *Results) OperationSkipped(runtimeID string, shootName string) {
-	result := RuntimeResult{
-		RuntimeID: runtimeID,
-		ShootName: shootName,
-		Status:    StatusRestoreSkipped,
-	}
-
-	rr.Skipped++
 	rr.Results = append(rr.Results, result)
 }
 

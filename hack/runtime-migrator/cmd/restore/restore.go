@@ -89,15 +89,8 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
-		if currentShoot.Generation == objectsToRestore.OriginalShoot.Generation {
-			slog.Warn("Verify the current state of the system. Shoot was not modified after backup was prepared. Skipping.", "runtimeID", runtimeID)
-			r.results.OperationSkipped(runtimeID, currentShoot.Name)
-
-			continue
-		}
-
 		if currentShoot.Generation > objectsToRestore.OriginalShoot.Generation+1 {
-			slog.Warn("Verify the current state of the system. Restore should be performed manually, as the backup may overwrite more that on change.", "runtimeID", runtimeID)
+			slog.Warn("Verify the current state of the system. Restore should be performed manually, as the backup may overwrite user's changes.", "runtimeID", runtimeID)
 			r.results.AutomaticRestoreImpossible(runtimeID, currentShoot.Name)
 
 			continue
@@ -128,7 +121,7 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 		return err
 	}
 
-	slog.Info(fmt.Sprintf("Restore completed. Successfully restored backups: %d, Failed operations: %d, Skipped backups: %d, ", r.results.Succeeded, r.results.Failed, r.results.Skipped))
+	slog.Info(fmt.Sprintf("Restore completed. Successfully restored backups: %d, Failed operations: %d", r.results.Succeeded, r.results.Failed))
 	slog.Info(fmt.Sprintf("Restore results saved in: %s", resultsFile))
 
 	return nil
