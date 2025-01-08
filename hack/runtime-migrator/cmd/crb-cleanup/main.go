@@ -4,10 +4,11 @@ import (
 	"context"
 	"log/slog"
 	"os"
+
+	"encoding/json"
 )
 
-// const LabelSelectorOld = "kyma-project.io/deprecation=to-be-removed-soon,reconciler.kyma-project.io/managed-by=provisioner"
-const LabelSelectorOld = "reconciler.kyma-project.io/managed-by=infrastructure-manager"
+const LabelSelectorOld = "kyma-project.io/deprecation=to-be-removed-soon,reconciler.kyma-project.io/managed-by=provisioner"
 const LabelSelectorNew = "reconciler.kyma-project.io/managed-by=infrastructure-manager"
 
 func main() {
@@ -21,26 +22,58 @@ func main() {
 
 	client := setupKubectl(cfg.Kubeconfig).RbacV1().ClusterRoleBindings()
 	fetcher := NewCRBFetcher(client, cfg.OldLabel, cfg.NewLabel)
-	cleaner := NewCRBCleaner(client)
 
-	ProcessCRBs(fetcher, cleaner, cfg)
+	var cleaner Cleaner
+	if cfg.Pretend {
+		slog.Info("Running in pretend mode")
+		file, err := os.OpenFile("./removed.json", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+		if err != nil {
+			slog.Error("Error opening file, to save list of removed", "error", err)
+			os.Exit(1)
+		}
+		defer file.Close()
+		cleaner = NewPretendCleaner(file)
+	} else {
+		cleaner = NewCRBCleaner(client)
+	}
+
+	file, err := os.OpenFile("./failures.json", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	if err != nil {
+		slog.Error("Error opening file, to save list of failures", "error", err)
+		os.Exit(1)
+	}
+	defer file.Close()
+	failures, err := ProcessCRBs(fetcher, cleaner, cfg)
+	if err != nil {
+		slog.Error("Error processing CRBs", "error", err)
+		os.Exit(1)
+	}
+	err = json.NewEncoder(file).Encode(failures)
+	if err != nil {
+		slog.Error("Error marshaling list of failures", "error", err, "failures", failures)
+		os.Exit(1)
+	}
 }
 
-func ProcessCRBs(fetcher Fetcher, cleaner Cleaner, cfg Config) []Failure {
+// ProcessCRBs fetches old and new CRBs, compares them and cleans old CRBs
+// It returns error on fetch errors
+// It does nothing, if old CRBs are not found in new CRBs, unless force flag is set
+// It returns list of failures on removal errors
+func ProcessCRBs(fetcher Fetcher, cleaner Cleaner, cfg Config) ([]Failure, error) {
 	ctx := context.Background()
 	oldCRBs, err := fetcher.FetchOld(ctx)
 	if err != nil {
 		slog.Error("Error fetching old CRBs", "error", err)
-		os.Exit(1)
+		return nil, err
 	}
 
 	newCRBs, err := fetcher.FetchNew(ctx)
 	if err != nil {
 		slog.Error("Error fetching new CRBs", "error", err)
-		os.Exit(1)
+		return nil, err
 	}
 
-	compared := cleaner.Compare(ctx, oldCRBs, newCRBs)
+	compared := Compare(ctx, oldCRBs, newCRBs)
 
 	if len(compared.additional) != 0 {
 		slog.Info("New CRBs not found in old CRBs", "crbs", compared.additional)
@@ -49,9 +82,9 @@ func ProcessCRBs(fetcher Fetcher, cleaner Cleaner, cfg Config) []Failure {
 		slog.Warn("Old CRBs not found in new CRBs", "crbs", compared.missing)
 		if !cfg.Force {
 			slog.Info("Use -force to remove old CRBs without match")
-			os.Exit(1)
+			return nil, nil
 		}
 	}
 
-	return cleaner.Clean(ctx, oldCRBs)
+	return cleaner.Clean(ctx, oldCRBs), nil
 }

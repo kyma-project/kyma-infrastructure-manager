@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"io"
+	"log/slog"
 
 	v1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,7 +22,6 @@ type Compared struct {
 }
 
 type Cleaner interface {
-	Compare(ctx context.Context, old []v1.ClusterRoleBinding, new []v1.ClusterRoleBinding) Compared
 	Clean(context.Context, []v1.ClusterRoleBinding) []Failure
 }
 
@@ -32,12 +34,15 @@ type Failure struct {
 	Err error                 `json:"error"`
 }
 
+// Clean deletes CRBs, returning list of deleting errors
 func (c CRBCleaner) Clean(ctx context.Context, crbs []v1.ClusterRoleBinding) []Failure {
 	failures := make([]Failure, 0)
 
 	for _, crb := range crbs {
+		slog.Debug("Removing CRB", "crb", crb.Name)
 		err := c.client.Delete(ctx, crb.Name, metav1.DeleteOptions{})
 		if err != nil {
+			slog.Error("Error removing CRB", "crb", crb.Name)
 			failures = append(failures, Failure{
 				CRB: crb,
 				Err: err,
@@ -48,7 +53,8 @@ func (c CRBCleaner) Clean(ctx context.Context, crbs []v1.ClusterRoleBinding) []F
 	return failures
 }
 
-func (c CRBCleaner) Compare(ctx context.Context, old []v1.ClusterRoleBinding, new []v1.ClusterRoleBinding) Compared {
+// Compare returns missing, additional and original CRBs
+func Compare(ctx context.Context, old []v1.ClusterRoleBinding, new []v1.ClusterRoleBinding) Compared {
 	missing, additional := difference(old, new, CRBEquals)
 
 	return Compared{
@@ -62,5 +68,21 @@ func (c CRBCleaner) Compare(ctx context.Context, old []v1.ClusterRoleBinding, ne
 func NewCRBCleaner(client KubeDeleter) Cleaner {
 	return CRBCleaner{
 		client: client,
+	}
+}
+
+type PretendCleaner struct {
+	removed io.Writer
+}
+
+func (p PretendCleaner) Clean(_ context.Context, crbs []v1.ClusterRoleBinding) []Failure {
+	err := json.NewEncoder(p.removed).Encode(crbs)
+	slog.Error("Error saving removed CRBs", "error", err, "crbs", crbs)
+	return nil
+}
+
+func NewPretendCleaner(removed io.Writer) Cleaner {
+	return PretendCleaner{
+		removed: removed,
 	}
 }

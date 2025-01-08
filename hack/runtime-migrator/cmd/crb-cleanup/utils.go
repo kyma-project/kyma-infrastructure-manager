@@ -49,8 +49,8 @@ func CRBEquals(crbA, crbB *v1.ClusterRoleBinding) bool {
 	return true
 }
 
-
 func setupKubectl(kubeconfig string) *kubernetes.Clientset {
+	slog.Info("Loading kubeconfig", "path", kubeconfig)
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
 		slog.Error("Error building kubeconfig", "error", err)

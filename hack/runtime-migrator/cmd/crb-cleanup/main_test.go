@@ -1,4 +1,4 @@
-package main_test
+package main
 
 import (
 	"context"
@@ -24,6 +24,16 @@ var _ = Describe("Envtest", func() {
 	fetcher := NewCRBFetcher(crbClient, "old=true", "new=true")
 	cleaner := NewCRBCleaner(crbClient)
 
+	BeforeEach(func() {
+		new, err := fetcher.FetchNew(ctx)
+		Expect(err).ToNot(HaveOccurred())
+
+		old, err := fetcher.FetchOld(ctx)
+		Expect(err).ToNot(HaveOccurred())
+
+		cleaner.Clean(ctx, append(new, old...))
+	})
+
 	It("removes old CRBs", func() {
 		By("Generate test data")
 		old, new := generateCRBs(5)
@@ -34,7 +44,7 @@ var _ = Describe("Envtest", func() {
 		}
 
 		By("Processing CRBs")
-		failures := ProcessCRBs(fetcher, cleaner, Config{
+		failures, err := ProcessCRBs(fetcher, cleaner, Config{
 			Kubeconfig: "",
 			Pretend:    false,
 			Verbose:    false,
@@ -43,6 +53,60 @@ var _ = Describe("Envtest", func() {
 			NewLabel:   "",
 		})
 
+		Expect(err).ToNot(HaveOccurred())
+		Expect(failures).To(BeEmpty())
+
+		Eventually(func() ([]rbacv1.ClusterRoleBinding, error) {
+			return fetcher.FetchOld(ctx)
+		}).Should(BeEmpty())
+	})
+
+	It("skips removal when mismatch is found", func() {
+		By("Generate test data")
+		old, new := generateCRBs(5)
+
+		for _, crb := range append(old, new[3:]...) {
+			_, err := crbClient.Create(ctx, crb, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred(), "Failed to create CRB %q", crb.Name)
+		}
+
+		By("Processing CRBs")
+		failures, err := ProcessCRBs(fetcher, cleaner, Config{
+			Kubeconfig: "",
+			Pretend:    false,
+			Verbose:    false,
+			Force:      false,
+			OldLabel:   "",
+			NewLabel:   "",
+		})
+
+		Expect(err).ToNot(HaveOccurred())
+		Expect(failures).To(BeEmpty())
+		Consistently(func() ([]rbacv1.ClusterRoleBinding, error) {
+			return fetcher.FetchOld(ctx)
+		}).Should(HaveLen(5))
+	})
+
+	It("removes despite mismatch, with -force", func() {
+		By("Generate test data")
+		old, new := generateCRBs(5)
+
+		for _, crb := range append(old, new[3:]...) {
+			_, err := crbClient.Create(ctx, crb, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred(), "Failed to create CRB %q", crb.Name)
+		}
+
+		By("Processing CRBs")
+		failures, err := ProcessCRBs(fetcher, cleaner, Config{
+			Kubeconfig: "",
+			Pretend:    false,
+			Verbose:    false,
+			Force:      true,
+			OldLabel:   "",
+			NewLabel:   "",
+		})
+
+		Expect(err).ToNot(HaveOccurred())
 		Expect(failures).To(BeEmpty())
 		Eventually(func() ([]rbacv1.ClusterRoleBinding, error) {
 			return fetcher.FetchOld(ctx)
