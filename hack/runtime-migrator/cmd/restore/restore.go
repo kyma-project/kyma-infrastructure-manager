@@ -96,12 +96,12 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
-		//if currentShoot.Generation > objectsToRestore.OriginalShoot.Generation+1 {
-		//	slog.Warn("Verify the current state of the system. Restore should be performed manually, as the backup may overwrite more that on change.", "runtimeID", runtimeID)
-		//	r.results.AutomaticRestoreImpossible(runtimeID, currentShoot.Name)
-		//
-		//	continue
-		//}
+		if currentShoot.Generation > objectsToRestore.OriginalShoot.Generation+1 {
+			slog.Warn("Verify the current state of the system. Restore should be performed manually, as the backup may overwrite more that on change.", "runtimeID", runtimeID)
+			r.results.AutomaticRestoreImpossible(runtimeID, currentShoot.Name)
+
+			continue
+		}
 
 		if r.cfg.IsDryRun {
 			slog.Info("Runtime processed successfully (dry-run)", "runtimeID", runtimeID)

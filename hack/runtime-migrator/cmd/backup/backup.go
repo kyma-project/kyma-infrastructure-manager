@@ -81,6 +81,7 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 
 		if b.cfg.IsDryRun {
 			slog.Info("Runtime processed successfully (dry-run)", "runtimeID", runtimeID)
+			b.results.OperationSucceeded(runtimeID, shootToBackup.Name)
 
 			continue
 		}
