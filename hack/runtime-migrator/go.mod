@@ -10,7 +10,9 @@ require (
 	github.com/kyma-project/infrastructure-manager/hack/shoot-comparator v0.0.0-20241023155010-55a6abeb1690
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
+	golang.org/x/exp v0.0.0-20241204233417-43b7b7cde48d
 	k8s.io/api v0.31.3
+	k8s.io/apiextensions-apiserver v0.31.3
 	k8s.io/apimachinery v0.31.3
 	k8s.io/client-go v0.31.3
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
@@ -78,7 +80,6 @@ require (
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.31.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240903163716-9e1beecbcb38 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
