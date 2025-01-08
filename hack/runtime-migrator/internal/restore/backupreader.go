@@ -11,27 +11,27 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-type Restorer struct {
+type BackupReader struct {
 	backupDir   string
 	restoreCRB  bool
 	restoreOIDC bool
 }
 
-func NewRestorer(backupDir string, restoreCRB, restoreOIDC bool) Restorer {
-	return Restorer{
+func NewBackupReader(backupDir string, restoreCRB, restoreOIDC bool) BackupReader {
+	return BackupReader{
 		backupDir:   backupDir,
 		restoreCRB:  restoreCRB,
 		restoreOIDC: restoreOIDC,
 	}
 }
 
-func (r Restorer) Do(runtimeID string, shootName string) (backup.RuntimeBackup, error) {
-	shootToRestore, err := r.getShootToRestore(runtimeID, fmt.Sprintf("%s-to-restore", shootName))
+func (r BackupReader) Do(runtimeID string, shootName string) (backup.RuntimeBackup, error) {
+	shootForPatch, err := r.getShoot(runtimeID, fmt.Sprintf("%s-to-restore", shootName))
 	if err != nil {
 		return backup.RuntimeBackup{}, err
 	}
 
-	originalShoot, err := r.getShootToRestore(runtimeID, fmt.Sprintf("%s-original", shootName))
+	originalShoot, err := r.getShoot(runtimeID, fmt.Sprintf("%s-original", shootName))
 	if err != nil {
 		return backup.RuntimeBackup{}, err
 	}
@@ -40,9 +40,14 @@ func (r Restorer) Do(runtimeID string, shootName string) (backup.RuntimeBackup, 
 
 	if r.restoreCRB {
 		crbsDir := path.Join(r.backupDir, fmt.Sprintf("backup/%s/crb", runtimeID))
-		crbs, err = getObjectsFromToRestore[rbacv1.ClusterRoleBinding](crbsDir)
+		crbs, err = getObjectsFromBackup[rbacv1.ClusterRoleBinding](crbsDir)
 		if err != nil {
 			return backup.RuntimeBackup{}, err
+		}
+
+		for i := 0; i < len(crbs); i++ {
+			crbs[i].Generation = 0
+			crbs[i].ResourceVersion = ""
 		}
 	}
 
@@ -50,24 +55,29 @@ func (r Restorer) Do(runtimeID string, shootName string) (backup.RuntimeBackup, 
 
 	if r.restoreOIDC {
 		oidcDir := path.Join(r.backupDir, fmt.Sprintf("backup/%s/oidc", runtimeID))
-		oidcConfig, err = getObjectsFromToRestore[authenticationv1alpha1.OpenIDConnect](oidcDir)
+		oidcConfig, err = getObjectsFromBackup[authenticationv1alpha1.OpenIDConnect](oidcDir)
 		if err != nil {
 			return backup.RuntimeBackup{}, err
+		}
+
+		for i := 0; i < len(oidcConfig); i++ {
+			oidcConfig[i].Generation = 0
+			oidcConfig[i].ResourceVersion = ""
 		}
 	}
 
 	return backup.RuntimeBackup{
-		ShootToRestore:      shootToRestore,
+		ShootForPatch:       shootForPatch,
 		OriginalShoot:       originalShoot,
 		ClusterRoleBindings: crbs,
 		OIDCConfig:          oidcConfig,
 	}, nil
 }
 
-func (r Restorer) getShootToRestore(runtimeID string, shootName string) (v1beta1.Shoot, error) {
+func (r BackupReader) getShoot(runtimeID string, shootName string) (v1beta1.Shoot, error) {
 	shootFilePath := path.Join(r.backupDir, fmt.Sprintf("backup/%s/%s.yaml", runtimeID, shootName))
 
-	shoot, err := restoreFromFile[v1beta1.Shoot](shootFilePath)
+	shoot, err := readFromFile[v1beta1.Shoot](shootFilePath)
 	if err != nil {
 		return v1beta1.Shoot{}, err
 	}
@@ -77,7 +87,7 @@ func (r Restorer) getShootToRestore(runtimeID string, shootName string) (v1beta1
 	return *shoot, nil
 }
 
-func getObjectsFromToRestore[T any](dir string) ([]T, error) {
+func getObjectsFromBackup[T any](dir string) ([]T, error) {
 	entries, err := os.ReadDir(dir)
 
 	if err != nil {
@@ -89,7 +99,7 @@ func getObjectsFromToRestore[T any](dir string) ([]T, error) {
 	for _, entry := range entries {
 		filePath := fmt.Sprintf("%s/%s", dir, entry.Name())
 
-		object, err := restoreFromFile[T](filePath)
+		object, err := readFromFile[T](filePath)
 		if err != nil {
 			return nil, err
 		}
@@ -100,7 +110,7 @@ func getObjectsFromToRestore[T any](dir string) ([]T, error) {
 	return objects, nil
 }
 
-func restoreFromFile[T any](filePath string) (*T, error) {
+func readFromFile[T any](filePath string) (*T, error) {
 	fileBytes, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err

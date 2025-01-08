@@ -14,25 +14,28 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log/slog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"time"
 )
 
 type Backuper struct {
-	cfg                initialisation.Config
-	isDryRun           bool
-	kubeconfigProvider kubeconfig.Provider
-	kcpClient          client.Client
+	cfg                 initialisation.Config
+	isDryRun            bool
+	kubeconfigProvider  kubeconfig.Provider
+	kcpClient           client.Client
+	timeoutK8sOperation time.Duration
 }
 
-func NewBackuper(isDryRun bool, kcpClient client.Client) Backuper {
+func NewBackuper(isDryRun bool, kcpClient client.Client, timeoutK8sOperation time.Duration) Backuper {
 	return Backuper{
-		isDryRun:  isDryRun,
-		kcpClient: kcpClient,
+		isDryRun:            isDryRun,
+		kcpClient:           kcpClient,
+		timeoutK8sOperation: timeoutK8sOperation,
 	}
 }
 
 type RuntimeBackup struct {
 	OriginalShoot       v1beta1.Shoot
-	ShootToRestore      v1beta1.Shoot
+	ShootForPatch       v1beta1.Shoot
 	ClusterRoleBindings []rbacv1.ClusterRoleBinding
 	OIDCConfig          []authenticationv1alpha1.OpenIDConnect
 }
@@ -43,25 +46,25 @@ func (b Backuper) Do(ctx context.Context, shoot v1beta1.Shoot, runtimeID string)
 		return RuntimeBackup{}, err
 	}
 
-	crbs, err := b.getAllCRBs(runtimeClient)
+	crbs, err := b.getCRBs(ctx, runtimeClient)
 	if err != nil {
 		return RuntimeBackup{}, errors.Wrap(err, "failed to get Cluster Role Bindings")
 	}
 
-	oidcConfig, err := b.getOIDCConfig(runtimeClient)
+	oidcConfig, err := b.getOIDCConfig(ctx, runtimeClient)
 	if err != nil {
 		return RuntimeBackup{}, errors.Wrap(err, "failed to get OIDC config")
 	}
 
 	return RuntimeBackup{
-		ShootToRestore:      b.getShootToRestore(shoot),
+		ShootForPatch:       b.getShootForPatch(shoot),
 		OriginalShoot:       shoot,
 		ClusterRoleBindings: crbs,
 		OIDCConfig:          oidcConfig,
 	}, nil
 }
 
-func (b Backuper) getShootToRestore(shootFromGardener v1beta1.Shoot) v1beta1.Shoot {
+func (b Backuper) getShootForPatch(shootFromGardener v1beta1.Shoot) v1beta1.Shoot {
 	return v1beta1.Shoot{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "Shoot",
@@ -82,6 +85,7 @@ func (b Backuper) getShootToRestore(shootFromGardener v1beta1.Shoot) v1beta1.Sho
 			Kubernetes: v1beta1.Kubernetes{
 				EnableStaticTokenKubeconfig: shootFromGardener.Spec.Kubernetes.EnableStaticTokenKubeconfig,
 				KubeAPIServer: &v1beta1.KubeAPIServerConfig{
+					AuditConfig: shootFromGardener.Spec.Kubernetes.KubeAPIServer.AuditConfig,
 					// TODO: consider skipping ClientAuthentication
 					OIDCConfig: shootFromGardener.Spec.Kubernetes.KubeAPIServer.OIDCConfig,
 				},
@@ -107,9 +111,13 @@ func (b Backuper) getShootToRestore(shootFromGardener v1beta1.Shoot) v1beta1.Sho
 	}
 }
 
-func (b Backuper) getAllCRBs(runtimeClient client.Client) ([]rbacv1.ClusterRoleBinding, error) {
+func (b Backuper) getCRBs(ctx context.Context, runtimeClient client.Client) ([]rbacv1.ClusterRoleBinding, error) {
 	var crbList rbacv1.ClusterRoleBindingList
-	err := runtimeClient.List(context.Background(), &crbList)
+
+	listCtx, cancel := context.WithTimeout(ctx, b.timeoutK8sOperation)
+	defer cancel()
+
+	err := runtimeClient.List(listCtx, &crbList)
 
 	if err != nil {
 		return nil, err
@@ -126,8 +134,8 @@ func (b Backuper) getAllCRBs(runtimeClient client.Client) ([]rbacv1.ClusterRoleB
 	return crbsToBackup, nil
 }
 
-func (b Backuper) getOIDCConfig(runtimeClient client.Client) ([]authenticationv1alpha1.OpenIDConnect, error) {
-	found, err := oidcCRDExists(runtimeClient)
+func (b Backuper) getOIDCConfig(ctx context.Context, runtimeClient client.Client) ([]authenticationv1alpha1.OpenIDConnect, error) {
+	found, err := b.oidcCRDExists(ctx, runtimeClient)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +143,10 @@ func (b Backuper) getOIDCConfig(runtimeClient client.Client) ([]authenticationv1
 	if found {
 		var oidcConfigList authenticationv1alpha1.OpenIDConnectList
 
-		err := runtimeClient.List(context.Background(), &oidcConfigList)
+		listCtx, cancel := context.WithTimeout(ctx, b.timeoutK8sOperation)
+		defer cancel()
+
+		err := runtimeClient.List(listCtx, &oidcConfigList)
 
 		if err != nil {
 			return nil, err
@@ -147,9 +158,12 @@ func (b Backuper) getOIDCConfig(runtimeClient client.Client) ([]authenticationv1
 	return []authenticationv1alpha1.OpenIDConnect{}, nil
 }
 
-func oidcCRDExists(runtimeClient client.Client) (bool, error) {
+func (b Backuper) oidcCRDExists(ctx context.Context, runtimeClient client.Client) (bool, error) {
 	var crdsList crdv1.CustomResourceDefinitionList
-	err := runtimeClient.List(context.Background(), &crdsList)
+	listCtx, cancel := context.WithTimeout(ctx, b.timeoutK8sOperation)
+	defer cancel()
+
+	err := runtimeClient.List(listCtx, &crdsList)
 	if err != nil {
 		return false, err
 	}

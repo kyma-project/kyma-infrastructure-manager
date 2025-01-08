@@ -23,7 +23,7 @@ type Config struct {
 const (
 	InputTypeTxt        = "txt"
 	InputTypeJSON       = "json"
-	TimeoutK8sOperation = 20 * time.Second
+	timeoutK8sOperation = 20 * time.Second
 )
 
 func PrintConfig(cfg Config) {
@@ -98,14 +98,16 @@ func NewRestoreConfig() RestoreConfig {
 	flag.StringVar(&restoreConfig.InputType, "input-type", InputTypeJSON, "Type of input to be used. Possible values: **txt** (see the example hack/runtime-migrator/input/runtimeids_sample.txt), and **json** (see the example hack/runtime-migrator/input/runtimeids_sample.json).")
 	flag.StringVar(&restoreConfig.InputFilePath, "input-file-path", "/path/to/input/file", "Path to the input file containing RuntimeCRs to be migrated.")
 	flag.StringVar(&restoreConfig.BackupDir, "backup-path", "/path/to/backup/dir", "Path to the directory containing backup.")
-	flag.BoolVar(&restoreConfig.RestoreCRB, "restore-crbs", true, "Flag determining whether CRBs should be restored")
-	flag.BoolVar(&restoreConfig.RestoreOIDC, "restore-oidcs", true, "Flag determining whether OIDCs should be restored")
+	flag.BoolVar(&restoreConfig.RestoreCRB, "restore-crb", true, "Flag determining whether CRBs should be restored")
+	flag.BoolVar(&restoreConfig.RestoreOIDC, "restore-oidc", true, "Flag determining whether OIDCs should be restored")
 	flag.Parse()
 
 	return restoreConfig
 }
 
 func PrintRestoreConfig(cfg RestoreConfig) {
-	log.Println("backup-path:", cfg.BackupDir)
 	PrintConfig(cfg.Config)
+	log.Println("backup-path:", cfg.BackupDir)
+	log.Println("restore-crb:", cfg.RestoreCRB)
+	log.Println("restore-oidc:", cfg.RestoreOIDC)
 }

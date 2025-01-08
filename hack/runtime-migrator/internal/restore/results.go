@@ -1,7 +1,6 @@
 package restore
 
 import (
-	"fmt"
 	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	v12 "k8s.io/api/rbac/v1"
 )
@@ -11,7 +10,6 @@ type StatusType string
 const (
 	StatusSuccess        StatusType = "Success"
 	StatusError          StatusType = "Error"
-	StatusRestoreSkipped            = "Skipped"
 	StatusUpdateDetected            = "UpdateDetected"
 )
 
@@ -28,7 +26,6 @@ type Results struct {
 	Results         []RuntimeResult
 	Succeeded       int
 	Failed          int
-	Skipped         int
 	UpdateDetected  int
 	OutputDirectory string
 }
@@ -56,12 +53,12 @@ func (rr *Results) OperationSucceeded(runtimeID string, shootName string, applie
 
 	appliedCRBsString := make([]string, 0)
 	for _, crb := range appliedCRBs {
-		appliedCRBsString = append(appliedCRBsString, fmt.Sprintf("%s:%s", crb.Namespace, crb.Name))
+		appliedCRBsString = append(appliedCRBsString, crb.Name)
 	}
 
 	appliedOIDCsString := make([]string, 0)
 	for _, oidc := range appliedOIDCs {
-		appliedOIDCsString = append(appliedOIDCsString, fmt.Sprintf("%s:%s", oidc.Namespace, oidc.Name))
+		appliedOIDCsString = append(appliedOIDCsString, oidc.Name)
 	}
 
 	result := RuntimeResult{
@@ -73,17 +70,6 @@ func (rr *Results) OperationSucceeded(runtimeID string, shootName string, applie
 	}
 
 	rr.Succeeded++
-	rr.Results = append(rr.Results, result)
-}
-
-func (rr *Results) OperationSkipped(runtimeID string, shootName string) {
-	result := RuntimeResult{
-		RuntimeID: runtimeID,
-		ShootName: shootName,
-		Status:    StatusRestoreSkipped,
-	}
-
-	rr.Skipped++
 	rr.Results = append(rr.Results, result)
 }
 
