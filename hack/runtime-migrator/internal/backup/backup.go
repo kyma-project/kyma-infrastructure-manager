@@ -82,6 +82,7 @@ func (b Backuper) getShootToRestore(shootFromGardener v1beta1.Shoot) v1beta1.Sho
 			Kubernetes: v1beta1.Kubernetes{
 				EnableStaticTokenKubeconfig: shootFromGardener.Spec.Kubernetes.EnableStaticTokenKubeconfig,
 				KubeAPIServer: &v1beta1.KubeAPIServerConfig{
+					AuditConfig: shootFromGardener.Spec.Kubernetes.KubeAPIServer.AuditConfig,
 					// TODO: consider skipping ClientAuthentication
 					OIDCConfig: shootFromGardener.Spec.Kubernetes.KubeAPIServer.OIDCConfig,
 				},
