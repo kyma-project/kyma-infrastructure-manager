@@ -46,7 +46,7 @@ func (ow OutputWriter) Save(runtimeID string, runtimeBackup RuntimeBackup) error
 		return err
 	}
 
-	err = saveYaml(runtimeBackup.ShootToRestore, fmt.Sprintf("%s/%s-to-restore.yaml", runtimeDir, runtimeBackup.ShootToRestore.Name))
+	err = saveYaml(runtimeBackup.ShootForPatch, fmt.Sprintf("%s/%s-to-restore.yaml", runtimeDir, runtimeBackup.ShootForPatch.Name))
 	if err != nil {
 		return err
 	}

@@ -11,27 +11,27 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-type Restorer struct {
+type BackupReader struct {
 	backupDir   string
 	restoreCRB  bool
 	restoreOIDC bool
 }
 
-func NewRestorer(backupDir string, restoreCRB, restoreOIDC bool) Restorer {
-	return Restorer{
+func NewBackupReader(backupDir string, restoreCRB, restoreOIDC bool) BackupReader {
+	return BackupReader{
 		backupDir:   backupDir,
 		restoreCRB:  restoreCRB,
 		restoreOIDC: restoreOIDC,
 	}
 }
 
-func (r Restorer) Do(runtimeID string, shootName string) (backup.RuntimeBackup, error) {
-	shootToRestore, err := r.getShootToRestore(runtimeID, fmt.Sprintf("%s-to-restore", shootName))
+func (r BackupReader) Do(runtimeID string, shootName string) (backup.RuntimeBackup, error) {
+	shootForPatch, err := r.getShoot(runtimeID, fmt.Sprintf("%s-to-restore", shootName))
 	if err != nil {
 		return backup.RuntimeBackup{}, err
 	}
 
-	originalShoot, err := r.getShootToRestore(runtimeID, fmt.Sprintf("%s-original", shootName))
+	originalShoot, err := r.getShoot(runtimeID, fmt.Sprintf("%s-original", shootName))
 	if err != nil {
 		return backup.RuntimeBackup{}, err
 	}
@@ -67,14 +67,14 @@ func (r Restorer) Do(runtimeID string, shootName string) (backup.RuntimeBackup, 
 	}
 
 	return backup.RuntimeBackup{
-		ShootToRestore:      shootToRestore,
+		ShootForPatch:       shootForPatch,
 		OriginalShoot:       originalShoot,
 		ClusterRoleBindings: crbs,
 		OIDCConfig:          oidcConfig,
 	}, nil
 }
 
-func (r Restorer) getShootToRestore(runtimeID string, shootName string) (v1beta1.Shoot, error) {
+func (r BackupReader) getShoot(runtimeID string, shootName string) (v1beta1.Shoot, error) {
 	shootFilePath := path.Join(r.backupDir, fmt.Sprintf("backup/%s/%s.yaml", runtimeID, shootName))
 
 	shoot, err := readFromFile[v1beta1.Shoot](shootFilePath)

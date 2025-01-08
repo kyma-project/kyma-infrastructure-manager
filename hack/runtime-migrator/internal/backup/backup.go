@@ -32,7 +32,7 @@ func NewBackuper(isDryRun bool, kcpClient client.Client, timeoutK8sOperation tim
 
 type RuntimeBackup struct {
 	OriginalShoot       v1beta1.Shoot
-	ShootToRestore      v1beta1.Shoot
+	ShootForPatch       v1beta1.Shoot
 	ClusterRoleBindings []rbacv1.ClusterRoleBinding
 	OIDCConfig          []authenticationv1alpha1.OpenIDConnect
 }
@@ -54,14 +54,14 @@ func (b Backuper) Do(ctx context.Context, shoot v1beta1.Shoot, runtimeID string)
 	}
 
 	return RuntimeBackup{
-		ShootToRestore:      b.getShootToRestore(shoot),
+		ShootForPatch:       b.getShootForPatch(shoot),
 		OriginalShoot:       shoot,
 		ClusterRoleBindings: crbs,
 		OIDCConfig:          oidcConfig,
 	}, nil
 }
 
-func (b Backuper) getShootToRestore(shootFromGardener v1beta1.Shoot) v1beta1.Shoot {
+func (b Backuper) getShootForPatch(shootFromGardener v1beta1.Shoot) v1beta1.Shoot {
 	return v1beta1.Shoot{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "Shoot",

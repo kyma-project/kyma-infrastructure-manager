@@ -60,7 +60,7 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 		return err
 	}
 
-	restorer := restore.NewRestorer(r.cfg.BackupDir, r.cfg.RestoreCRB, r.cfg.RestoreOIDC)
+	restorer := restore.NewBackupReader(r.cfg.BackupDir, r.cfg.RestoreCRB, r.cfg.RestoreOIDC)
 
 	for _, runtimeID := range runtimeIDs {
 		currentShoot, err := shoot.Fetch(ctx, shootList, r.shootClient, runtimeID)
@@ -82,7 +82,7 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 
 		objectsToRestore, err := restorer.Do(runtimeID, currentShoot.Name)
 		if err != nil {
-			errMsg := fmt.Sprintf("Failed to restore runtime: %v", err)
+			errMsg := fmt.Sprintf("Failed to read runtime from backup directory: %v", err)
 			r.results.ErrorOccurred(runtimeID, currentShoot.Name, errMsg)
 			slog.Error(errMsg, "runtimeID", runtimeID)
 
@@ -105,7 +105,7 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 
 		appliedCRBs, appliedOIDC, err := r.applyResources(ctx, objectsToRestore, runtimeID)
 		if err != nil {
-			errMsg := fmt.Sprintf("Failed to restore runtime: %v", err)
+			errMsg := fmt.Sprintf("Failed to apply resources: %v", err)
 			r.results.ErrorOccurred(runtimeID, currentShoot.Name, errMsg)
 			slog.Error(errMsg, "runtimeID", runtimeID)
 
@@ -128,7 +128,7 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 }
 
 func (r Restore) applyResources(ctx context.Context, objectsToRestore backup.RuntimeBackup, runtimeID string) ([]v12.ClusterRoleBinding, []authenticationv1alpha1.OpenIDConnect, error) {
-	err := r.applyShoot(ctx, objectsToRestore.ShootToRestore)
+	err := r.applyShoot(ctx, objectsToRestore.ShootForPatch)
 	if err != nil {
 		return nil, nil, err
 	}
