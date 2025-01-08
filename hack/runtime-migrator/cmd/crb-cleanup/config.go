@@ -22,6 +22,7 @@ func ParseConfig() Config {
 	flag.StringVar(&cfg.Kubeconfig, "kubeconfig", "", "Kubeconfig file path")
 	flag.StringVar(&cfg.OldLabel, "oldLabel", LabelSelectorOld, "Label marking old CRBs")
 	flag.StringVar(&cfg.NewLabel, "newLabel", LabelSelectorNew, "Label marking new CRBs")
+	flag.StringVar(&cfg.Prefix, "prefix", "", "Prefix for created files (can be a folder, eg ./foo/)")
 	flag.BoolVar(&cfg.Pretend, "pretend", false, "Don't remove CRBs, write what would be removed  to ./removed.json")
 	flag.BoolVar(&cfg.Verbose, "verbose", false, "Increase the log level to debug (default: info)")
 	flag.BoolVar(&cfg.Force, "force", false, "Force remove CRBs without checking migration status")

@@ -28,7 +28,7 @@ func main() {
 	var cleaner Cleaner
 	if cfg.Pretend {
 		slog.Info("Running in pretend mode")
-		file, err := os.OpenFile("./removed.json", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+		file, err := os.OpenFile(cfg.Prefix+"removed.json", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		if err != nil {
 			slog.Error("Error opening file, to save list of removed", "error", err)
 			os.Exit(1)
@@ -39,14 +39,14 @@ func main() {
 		cleaner = NewCRBCleaner(client)
 	}
 
-	failureFile, err := os.OpenFile("./failures.json", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	failureFile, err := os.OpenFile(cfg.Prefix+"failures.json", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
 		slog.Error("Error opening file, to save list of failures", "error", err)
 		os.Exit(1)
 	}
 	defer failureFile.Close()
 
-	missingFile, err := os.OpenFile("./missing.json", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	missingFile, err := os.OpenFile(cfg.Prefix+"missing.json", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
 		slog.Error("Error opening file, to save list of failures", "error", err)
 		os.Exit(1)
