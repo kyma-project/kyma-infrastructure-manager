@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
+	runtimev1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/backup"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/initialisation"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/shoot"
@@ -12,6 +13,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	"log/slog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"slices"
@@ -29,10 +31,10 @@ type Backup struct {
 	kcpClient          client.Client
 	outputWriter       backup.OutputWriter
 	results            backup.Results
-	cfg                initialisation.Config
+	cfg                initialisation.BackupConfig
 }
 
-func NewBackup(cfg initialisation.Config, kcpClient client.Client, shootClient gardener_types.ShootInterface) (Backup, error) {
+func NewBackup(cfg initialisation.BackupConfig, kcpClient client.Client, shootClient gardener_types.ShootInterface) (Backup, error) {
 	outputWriter, err := backup.NewOutputWriter(cfg.OutputPath)
 	if err != nil {
 		return Backup{}, err
@@ -77,6 +79,10 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 
 		runtimeClient, err := initialisation.GetRuntimeClient(ctx, b.kcpClient, runtimeID)
 		if err != nil {
+			errMsg := fmt.Sprintf("Failed to get kubernetes client for runtime: %v", err)
+			b.results.ErrorOccurred(runtimeID, shootToBackup.Name, errMsg)
+			slog.Error(errMsg, "runtimeID", runtimeID)
+
 			continue
 		}
 		runtimeBackup, err := backuper.Do(ctx, runtimeClient, *shootToBackup)
@@ -90,7 +96,7 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 
 		if b.cfg.IsDryRun {
 			slog.Info("Runtime processed successfully (dry-run)", "runtimeID", runtimeID)
-			b.results.OperationSucceeded(runtimeID, shootToBackup.Name, nil)
+			b.results.OperationSucceeded(runtimeID, shootToBackup.Name, nil, false)
 
 			continue
 		}
@@ -112,8 +118,17 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
+		if b.cfg.SetControlledByKim {
+			err := setControlledByKim(ctx, b.kcpClient, runtimeID)
+			if err != nil {
+				errMsg := fmt.Sprintf("Failed to set the rutnime to be controlled by KIM: %v", err)
+				b.results.ErrorOccurred(runtimeID, shootToBackup.Name, errMsg)
+				slog.Error(errMsg, "runtimeID", runtimeID)
+			}
+		}
+
 		slog.Info("Runtime backup created successfully", "runtimeID", runtimeID)
-		b.results.OperationSucceeded(runtimeID, shootToBackup.Name, deprecatedCRBs)
+		b.results.OperationSucceeded(runtimeID, shootToBackup.Name, deprecatedCRBs, b.cfg.SetControlledByKim)
 	}
 
 	resultsFile, err := b.outputWriter.SaveBackupResults(b.results)
@@ -181,4 +196,29 @@ func labelDeprecatedCRBs(ctx context.Context, runtimeClient client.Client) ([]rb
 	}
 
 	return deprecatedCRBs, nil
+}
+
+func setControlledByKim(ctx context.Context, kcpClient client.Client, runtimeID string) error {
+	getCtx, cancelGet := context.WithTimeout(ctx, timeoutK8sOperation)
+	defer cancelGet()
+
+	key := types.NamespacedName{
+		Name:      runtimeID,
+		Namespace: "kcp-system",
+	}
+	var runtime runtimev1.Runtime
+
+	err := kcpClient.Get(getCtx, key, &runtime, &client.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	runtime.Labels["kyma-project.io/controlled-by-provisioner"] = "false"
+
+	patchCtx, cancelPatch := context.WithTimeout(ctx, timeoutK8sOperation)
+	defer cancelPatch()
+
+	return kcpClient.Patch(patchCtx, &runtime, client.Apply, &client.PatchOptions{
+		FieldManager: fieldManagerName,
+	})
 }

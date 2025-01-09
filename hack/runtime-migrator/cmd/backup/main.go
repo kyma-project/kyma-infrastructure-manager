@@ -12,9 +12,9 @@ import (
 
 func main() {
 	slog.Info("Starting runtime-backuper")
-	cfg := initialisation.NewConfig()
+	cfg := initialisation.NewBackupConfig()
 
-	initialisation.PrintConfig(cfg)
+	initialisation.PrintBackupConfig(cfg)
 
 	opts := zap.Options{
 		Development: true,
@@ -30,7 +30,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	kcpClient, err := initialisation.CreateKcpClient(&cfg)
+	kcpClient, err := initialisation.CreateKcpClient(&cfg.Config)
 	if err != nil {
 		slog.Error("Failed to create kcp client", slog.Any("error", err))
 		os.Exit(1)
@@ -43,7 +43,7 @@ func main() {
 	}
 
 	slog.Info("Reading runtimeIds from input file")
-	runtimeIds, err := initialisation.GetRuntimeIDsFromInputFile(cfg)
+	runtimeIds, err := initialisation.GetRuntimeIDsFromInputFile(cfg.Config)
 	if err != nil {
 		slog.Error("Failed to read runtime Ids from input", slog.Any("error", err))
 		os.Exit(1)
