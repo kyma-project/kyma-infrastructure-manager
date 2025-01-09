@@ -185,12 +185,6 @@ func fixMixtureOfErrors() []gardener.LastError {
 			},
 		},
 		{
-			Description: "New non-retryable error not yet defined in Gardener",
-			Codes: []gardener.ErrorCode{
-				"NEW_NON_RETRYABLE_ERROR",
-			},
-		},
-		{
 			Description: "New retryable error not yet defined in Gardener",
 			Codes: []gardener.ErrorCode{
 				"NEW_RETRYABLE_ERROR",
