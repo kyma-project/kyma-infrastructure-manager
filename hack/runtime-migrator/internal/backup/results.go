@@ -20,11 +20,10 @@ type RuntimeResult struct {
 }
 
 type Results struct {
-	Results            []RuntimeResult
-	Succeeded          int
-	Failed             int
-	DifferenceDetected int
-	OutputDirectory    string
+	Results         []RuntimeResult
+	Succeeded       int
+	Failed          int
+	OutputDirectory string
 }
 
 func NewBackupResults(outputDirectory string) Results {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	migrator "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/config"
+	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/initialisation"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/pkg/errors"
@@ -25,13 +25,13 @@ const (
 )
 
 type Migrator struct {
-	cfg                migrator.Config
+	cfg                initialisation.Config
 	converterConfig    config.ConverterConfig
 	kubeconfigProvider kubeconfig.Provider
 	kcpClient          client.Client
 }
 
-func NewMigrator(cfg migrator.Config, kubeconfigProvider kubeconfig.Provider, kcpClient client.Client) Migrator {
+func NewMigrator(cfg initialisation.Config, kubeconfigProvider kubeconfig.Provider, kcpClient client.Client) Migrator {
 	return Migrator{
 		cfg:                cfg,
 		kubeconfigProvider: kubeconfigProvider,
