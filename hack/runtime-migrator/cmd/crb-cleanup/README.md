@@ -27,9 +27,9 @@ go run ./cmd/crb-cleanup -prefix=./dev/logs/my-cluster/ -kubeconfig=./dev/kubeco
 ```
 
 If there are missing CRBs, the script will print a list of them and exit with a zero status code.
-Missing CRBs can be inspected as JSON in `./dev/logs/my-cluster/missing.json`.
+Missing CRBs can be inspected as JSON in `./dev/logs/my-cluster/missing.json`. No CRBs will be removed.
 
-After inspecting the missing CRBs, you can run the script again with the `-force` flag to delete them.
+After inspecting the missing CRBs, you can re-run the script with the `-force` flag to delete them.
 
 If no CRBs are missing, the script will remove old CRBs.
 Removed CRBs can be inspected as JSON in `./dev/logs/my-cluster/removed.json`.
