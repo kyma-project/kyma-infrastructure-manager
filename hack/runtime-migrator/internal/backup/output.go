@@ -40,14 +40,41 @@ func NewOutputWriter(outputDir string) (OutputWriter, error) {
 }
 
 func (ow OutputWriter) Save(runtimeID string, runtimeBackup RuntimeBackup) error {
-	err := os.MkdirAll(fmt.Sprintf("%s/%s", ow.BackupDir, runtimeID), os.ModePerm)
+	runtimeDir := fmt.Sprintf("%s/%s", ow.BackupDir, runtimeID)
+	err := os.MkdirAll(runtimeDir, os.ModePerm)
 	if err != nil {
 		return err
 	}
 
-	err = saveYaml(runtimeBackup.ShootToRestore, fmt.Sprintf("%s/%s/%s-to-restore.yaml", ow.BackupDir, runtimeID, runtimeBackup.ShootToRestore.Name))
+	err = saveYaml(runtimeBackup.ShootForPatch, fmt.Sprintf("%s/%s-to-restore.yaml", runtimeDir, runtimeBackup.ShootForPatch.Name))
 	if err != nil {
 		return err
+	}
+
+	crbDir := fmt.Sprintf("%s/crb", runtimeDir)
+	err = os.MkdirAll(crbDir, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	for _, crb := range runtimeBackup.ClusterRoleBindings {
+		err = saveYaml(crb, fmt.Sprintf("%s/%s.yaml", crbDir, crb.Name))
+		if err != nil {
+			return err
+		}
+	}
+
+	oidcDir := fmt.Sprintf("%s/oidc", runtimeDir)
+	err = os.MkdirAll(oidcDir, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	for _, oidcConfig := range runtimeBackup.OIDCConfig {
+		err = saveYaml(oidcConfig, fmt.Sprintf("%s/%s.yaml", oidcDir, oidcConfig.Name))
+		if err != nil {
+			return err
+		}
 	}
 
 	return saveYaml(runtimeBackup.OriginalShoot, fmt.Sprintf("%s/%s/%s-original.yaml", ow.BackupDir, runtimeID, runtimeBackup.OriginalShoot.Name))
