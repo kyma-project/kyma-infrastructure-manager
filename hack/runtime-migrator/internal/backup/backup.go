@@ -5,6 +5,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/initialisation"
+	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/pkg/errors"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -93,7 +94,13 @@ func (b Backuper) getShootForPatch(shootFromGardener v1beta1.Shoot) v1beta1.Shoo
 				Services: shootFromGardener.Spec.Networking.Services,
 			},
 			// TODO: consider if we need to do the backup selectively (workers)
-			Provider:          shootFromGardener.Spec.Provider,
+			Provider: v1beta1.Provider{
+				Type:                 shootFromGardener.Spec.Provider.Type,
+				ControlPlaneConfig:   shootFromGardener.Spec.Provider.ControlPlaneConfig,
+				InfrastructureConfig: shootFromGardener.Spec.Provider.InfrastructureConfig,
+				Workers:              shoot.FilterOutFields(shootFromGardener.Spec.Provider.Workers),
+				WorkersSettings:      shootFromGardener.Spec.Provider.WorkersSettings,
+			},
 			Purpose:           shootFromGardener.Spec.Purpose,
 			Region:            shootFromGardener.Spec.Region,
 			Resources:         shootFromGardener.Spec.Resources,
