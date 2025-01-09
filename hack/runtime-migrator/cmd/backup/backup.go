@@ -10,34 +10,35 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log/slog"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 )
 
 const (
 	timeoutK8sOperation = 20 * time.Second
-	expirationTime      = 60 * time.Minute
 )
 
 type Backup struct {
 	shootClient        gardener_types.ShootInterface
 	kubeconfigProvider kubeconfig.Provider
+	kcpClient          client.Client
 	outputWriter       backup.OutputWriter
 	results            backup.Results
 	cfg                initialisation.Config
 }
 
-func NewBackup(cfg initialisation.Config, kubeconfigProvider kubeconfig.Provider, shootClient gardener_types.ShootInterface) (Backup, error) {
+func NewBackup(cfg initialisation.Config, kcpClient client.Client, shootClient gardener_types.ShootInterface) (Backup, error) {
 	outputWriter, err := backup.NewOutputWriter(cfg.OutputPath)
 	if err != nil {
 		return Backup{}, err
 	}
 
 	return Backup{
-		shootClient:        shootClient,
-		kubeconfigProvider: kubeconfigProvider,
-		outputWriter:       outputWriter,
-		results:            backup.NewBackupResults(outputWriter.NewResultsDir),
-		cfg:                cfg,
+		shootClient:  shootClient,
+		kcpClient:    kcpClient,
+		outputWriter: outputWriter,
+		results:      backup.NewBackupResults(outputWriter.NewResultsDir),
+		cfg:          cfg,
 	}, nil
 }
 
@@ -50,7 +51,7 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 		return err
 	}
 
-	backuper := backup.NewBackuper(b.cfg.IsDryRun, b.kubeconfigProvider)
+	backuper := backup.NewBackuper(b.cfg.IsDryRun, b.kcpClient, timeoutK8sOperation)
 
 	for _, runtimeID := range runtimeIDs {
 		shootToBackup, err := shoot.Fetch(ctx, shootList, b.shootClient, runtimeID)
@@ -69,7 +70,7 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
-		runtimeBackup, err := backuper.Do(ctx, *shootToBackup)
+		runtimeBackup, err := backuper.Do(ctx, *shootToBackup, runtimeID)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to backup runtime: %v", err)
 			b.results.ErrorOccurred(runtimeID, shootToBackup.Name, errMsg)
@@ -80,6 +81,7 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 
 		if b.cfg.IsDryRun {
 			slog.Info("Runtime processed successfully (dry-run)", "runtimeID", runtimeID)
+			b.results.OperationSucceeded(runtimeID, shootToBackup.Name)
 
 			continue
 		}
@@ -92,7 +94,7 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
-		slog.Info("Runtime backup created successfully successfully", "runtimeID", runtimeID)
+		slog.Info("Runtime backup created successfully", "runtimeID", runtimeID)
 		b.results.OperationSucceeded(runtimeID, shootToBackup.Name)
 	}
 
