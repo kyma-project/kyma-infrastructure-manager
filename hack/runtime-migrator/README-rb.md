@@ -21,7 +21,7 @@ go build -o ./bin/runtime-backup-and-switch ./cmd/backup
 
 ### Dry run
 ```bash
-cat ./bin/runtime-backup-and-switch \
+./bin/runtime-backup-and-switch \
   -gardener-kubeconfig-path=/Users/myuser/gardener-kubeconfig.yml \
   -gardener-project-name=kyma-dev  \
   -kcp-kubeconfig-path=/Users/myuser/kcp-kubeconfig.yml \
@@ -40,7 +40,7 @@ The above **execution example** will:
 ### Backup and switch Runtime to be controlled by KIM
 
 ```bash
-cat ./bin/runtime-backup-and-switch \
+./bin/runtime-backup-and-switch \
   -gardener-kubeconfig-path=/Users/myuser/gardener-kubeconfig.yml \
   -gardener-project-name=kyma-dev  \
   -kcp-kubeconfig-path=/Users/myuser/kcp-kubeconfig.yml \
@@ -67,7 +67,7 @@ The above **execution example** will:
 2025/01/10 09:27:49 gardener-kubeconfig-path: /Users/myuser/Downloads/kubeconfig-garden-kyma-stage.yaml
 2025/01/10 09:27:49 kcp-kubeconfig-path: /Users/myuser/dev/config/sap
 2025/01/10 09:27:49 gardener-project-name: kyma-stage
-2025/01/10 09:27:49 output-path: backup/results
+2025/01/10 09:27:49 output-path: /Users/myuser/backup/results 
 2025/01/10 09:27:49 dry-run: false
 2025/01/10 09:27:49 input-type: txt
 2025/01/10 09:27:49 input-file-path: /Users/myuser/dev/runtime-ids-oidc.txt
