@@ -124,6 +124,7 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 				errMsg := fmt.Sprintf("Failed to set the rutnime to be controlled by KIM: %v", err)
 				b.results.ErrorOccurred(runtimeID, shootToBackup.Name, errMsg)
 				slog.Error(errMsg, "runtimeID", runtimeID)
+				continue
 			}
 		}
 
@@ -217,6 +218,10 @@ func setControlledByKim(ctx context.Context, kcpClient client.Client, runtimeID 
 
 	patchCtx, cancelPatch := context.WithTimeout(ctx, timeoutK8sOperation)
 	defer cancelPatch()
+
+	runtime.Kind = "Runtime"
+	runtime.APIVersion = "infrastructuremanager.kyma-project.io/v1"
+	runtime.ManagedFields = nil
 
 	return kcpClient.Patch(patchCtx, &runtime, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,

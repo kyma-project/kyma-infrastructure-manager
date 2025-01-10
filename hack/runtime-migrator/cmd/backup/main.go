@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/initialisation"
+	"log"
 	"log/slog"
 	"os"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -15,6 +16,7 @@ func main() {
 	cfg := initialisation.NewBackupConfig()
 
 	initialisation.PrintBackupConfig(cfg)
+	log.Println("")
 
 	opts := zap.Options{
 		Development: true,
