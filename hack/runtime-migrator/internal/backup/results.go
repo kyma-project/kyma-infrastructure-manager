@@ -2,6 +2,7 @@ package backup
 
 import (
 	"fmt"
+	v12 "k8s.io/api/rbac/v1"
 )
 
 type StatusType string
@@ -12,11 +13,13 @@ const (
 )
 
 type RuntimeResult struct {
-	RuntimeID     string     `json:"runtimeId"`
-	ShootName     string     `json:"shootName"`
-	Status        StatusType `json:"status"`
-	ErrorMessage  string     `json:"errorMessage,omitempty"`
-	BackupDirPath string     `json:"backupDirPath,omitempty"`
+	RuntimeID          string     `json:"runtimeId"`
+	ShootName          string     `json:"shootName"`
+	Status             StatusType `json:"status"`
+	ErrorMessage       string     `json:"errorMessage,omitempty"`
+	BackupDirPath      string     `json:"backupDirPath,omitempty"`
+	DeprecatedCRBs     []string   `json:"deprecatedCRBs,omitempty"`
+	SetControlledByKIM bool       `json:"setControlledByKIM"`
 }
 
 type Results struct {
@@ -45,12 +48,20 @@ func (br *Results) ErrorOccurred(runtimeID, shootName string, errorMsg string) {
 	br.Results = append(br.Results, result)
 }
 
-func (br *Results) OperationSucceeded(runtimeID string, shootName string) {
+func (br *Results) OperationSucceeded(runtimeID string, shootName string, deprecatedCRBs []v12.ClusterRoleBinding, setControlledByKIM bool) {
+
+	var deprecatedCRBsString []string
+	for _, crb := range deprecatedCRBs {
+		deprecatedCRBsString = append(deprecatedCRBsString, crb.Name)
+	}
+
 	result := RuntimeResult{
-		RuntimeID:     runtimeID,
-		ShootName:     shootName,
-		Status:        StatusSuccess,
-		BackupDirPath: br.getBackupDirPath(runtimeID),
+		RuntimeID:          runtimeID,
+		ShootName:          shootName,
+		Status:             StatusSuccess,
+		BackupDirPath:      br.getBackupDirPath(runtimeID),
+		DeprecatedCRBs:     deprecatedCRBsString,
+		SetControlledByKIM: setControlledByKIM,
 	}
 
 	br.Succeeded++

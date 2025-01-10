@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/shoot"
 	"log/slog"
+	"time"
 
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	runtimev1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -26,6 +27,10 @@ type Migration struct {
 	isDryRun        bool
 }
 
+const (
+	timeoutK8sOperation = 20 * time.Second
+)
+
 func NewMigration(migratorConfig initialisation.Config, converterConfig config.ConverterConfig, auditLogConfig auditlogs.Configuration, kubeconfigProvider kubeconfig.Provider, kcpClient client.Client, shootClient gardener_types.ShootInterface) (Migration, error) {
 
 	outputWriter, err := migration.NewOutputWriter(migratorConfig.OutputPath)
@@ -44,7 +49,7 @@ func NewMigration(migratorConfig initialisation.Config, converterConfig config.C
 }
 
 func (m Migration) Do(ctx context.Context, runtimeIDs []string) error {
-	listCtx, cancel := context.WithTimeout(ctx, initialisation.TimeoutK8sOperation)
+	listCtx, cancel := context.WithTimeout(ctx, timeoutK8sOperation)
 	defer cancel()
 
 	shootList, err := m.shootClient.List(listCtx, v1.ListOptions{})
@@ -92,7 +97,7 @@ func (m Migration) Do(ctx context.Context, runtimeIDs []string) error {
 			return
 		}
 
-		migrationCtx, cancel := context.WithTimeout(ctx, initialisation.TimeoutK8sOperation)
+		migrationCtx, cancel := context.WithTimeout(ctx, timeoutK8sOperation)
 		defer cancel()
 
 		runtime, err := m.runtimeMigrator.Do(migrationCtx, *shootToMigrate)

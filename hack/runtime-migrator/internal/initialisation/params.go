@@ -80,6 +80,33 @@ func GetRuntimeIDsFromInputFile(cfg Config) ([]string, error) {
 	return runtimeIDs, err
 }
 
+type BackupConfig struct {
+	Config
+	SetControlledByKim bool
+}
+
+func NewBackupConfig() BackupConfig {
+	backupConfig := BackupConfig{}
+
+	flag.StringVar(&backupConfig.KcpKubeconfigPath, "kcp-kubeconfig-path", "/path/to/kcp/kubeconfig", "Path to the Kubeconfig file of KCP cluster.")
+	flag.StringVar(&backupConfig.GardenerKubeconfigPath, "gardener-kubeconfig-path", "/path/to/gardener/kubeconfig", "Kubeconfig file for Gardener cluster.")
+	flag.StringVar(&backupConfig.GardenerProjectName, "gardener-project-name", "gardener-project-name", "Name of the Gardener project.")
+	flag.StringVar(&backupConfig.OutputPath, "output-path", "/tmp/", "Path where generated yamls will be saved. Directory has to exist.")
+	flag.BoolVar(&backupConfig.IsDryRun, "dry-run", true, "Dry-run flag. Has to be set to 'false' otherwise it will not apply the Custom Resources on the KCP cluster.")
+	flag.StringVar(&backupConfig.InputType, "input-type", InputTypeJSON, "Type of input to be used. Possible values: **txt** (see the example hack/runtime-migrator/input/runtimeids_sample.txt), and **json** (see the example hack/runtime-migrator/input/runtimeids_sample.json).")
+	flag.StringVar(&backupConfig.InputFilePath, "input-file-path", "/path/to/input/file", "Path to the input file containing RuntimeCRs to be migrated.")
+	flag.BoolVar(&backupConfig.SetControlledByKim, "set-controlled-by-kim", false, "Flag determining whether Runtime CR should be modified to be controlled by KIM.")
+
+	flag.Parse()
+
+	return backupConfig
+}
+
+func PrintBackupConfig(cfg BackupConfig) {
+	PrintConfig(cfg.Config)
+	log.Println("set-controlled-by-kim:", cfg.SetControlledByKim)
+}
+
 type RestoreConfig struct {
 	Config
 	BackupDir   string
