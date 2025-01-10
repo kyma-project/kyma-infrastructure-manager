@@ -12,18 +12,48 @@ import (
 type ErrReason string
 
 func IsRetryable(lastErrors []gardener.LastError) bool {
-	if len(lastErrors) > 0 &&
-		!gardenerhelper.HasNonRetryableErrorCode(lastErrors...) ||
-		HasErrorInfraRateLimitsExceeded(lastErrors...) {
+	if len(lastErrors) == 0 {
+		return false
+	}
+
+	// we can't retry those
+	if hasOneOfGardenerNonRetryableErrorCode(lastErrors...) {
+		return false
+	}
+
+	// we can retry those
+	if hasOneOfKnownRetryableGardenerErrorCode(lastErrors...) {
 		return true
+	}
+
+	// adds resiliency for any possible new retryable error codes
+	if !gardenerhelper.HasNonRetryableErrorCode(lastErrors...) {
+		return true
+	}
+
+	return false
+}
+
+func hasOneOfGardenerNonRetryableErrorCode(lastErrors ...gardener.LastError) bool {
+	for _, lastError := range lastErrors {
+		for _, code := range lastError.Codes {
+			if code == gardener.ErrorInfraUnauthenticated ||
+				code == gardener.ErrorInfraUnauthorized ||
+				code == gardener.ErrorConfigurationProblem {
+				return true
+			}
+		}
 	}
 	return false
 }
 
-func HasErrorInfraRateLimitsExceeded(lastErrors ...gardener.LastError) bool {
+func hasOneOfKnownRetryableGardenerErrorCode(lastErrors ...gardener.LastError) bool {
 	for _, lastError := range lastErrors {
 		for _, code := range lastError.Codes {
-			if code == gardener.ErrorInfraRateLimitsExceeded {
+			if code == gardener.ErrorInfraRateLimitsExceeded ||
+				code == gardener.ErrorInfraQuotaExceeded ||
+				code == gardener.ErrorInfraDependencies ||
+				code == gardener.ErrorProblematicWebhook {
 				return true
 			}
 		}

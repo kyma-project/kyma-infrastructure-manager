@@ -37,6 +37,18 @@ func TestGardenerErrorHandler(t *testing.T) {
 			expectedRetryable: true,
 		},
 		{
+			name: "Should return true for retryable error not yet defined in Gardener",
+			lastErrors: []gardener.LastError{
+				{
+					Description: "New retryable error not yet defined in Gardener",
+					Codes: []gardener.ErrorCode{
+						"NEW_RETRYABLE_ERROR",
+					},
+				},
+			},
+			expectedRetryable: true,
+		},
+		{
 			name:              "Should return false for retryable gardener errors",
 			lastErrors:        fixNonRetryableErrors(),
 			expectedRetryable: false,
@@ -67,21 +79,45 @@ func TestGardenerErrorHandler(t *testing.T) {
 func fixRetryableErrors() []gardener.LastError {
 	return []gardener.LastError{
 		{
-			Description: "First description - retryable",
+			Description: "ErrorRetryableConfigurationProblem - retryable",
 			Codes: []gardener.ErrorCode{
 				gardener.ErrorRetryableConfigurationProblem,
 			},
 		},
 		{
-			Description: "Second description - retryable",
+			Description: "ErrorRetryableInfraDependencies - retryable",
 			Codes: []gardener.ErrorCode{
 				gardener.ErrorRetryableInfraDependencies,
 			},
 		},
 		{
-			Description: "Third description - non-retryable error according to gardener API which we deliberately consider as retryable",
+			Description: "ErrorInfraRateLimitsExceeded - non-retryable error according to gardener API which we deliberately consider as retryable",
 			Codes: []gardener.ErrorCode{
 				gardener.ErrorInfraRateLimitsExceeded,
+			},
+		},
+		{
+			Description: "ErrorInfraQuotaExceeded - non-retryable error according to gardener API which we deliberately consider as retryable",
+			Codes: []gardener.ErrorCode{
+				gardener.ErrorInfraQuotaExceeded,
+			},
+		},
+		{
+			Description: "ErrorProblematicWebhook - non-retryable error according to gardener API which we deliberately consider as retryable",
+			Codes: []gardener.ErrorCode{
+				gardener.ErrorProblematicWebhook,
+			},
+		},
+		{
+			Description: "ErrorInfraDependencies - non-retryable error according to gardener API which we deliberately consider as retryable as it can occur during deletion",
+			Codes: []gardener.ErrorCode{
+				gardener.ErrorInfraDependencies,
+			},
+		},
+		{
+			Description: "New retryable error not yet defined in Gardener",
+			Codes: []gardener.ErrorCode{
+				"NEW_RETRYABLE_ERROR",
 			},
 		},
 	}
@@ -90,39 +126,21 @@ func fixRetryableErrors() []gardener.LastError {
 func fixNonRetryableErrors() []gardener.LastError {
 	return []gardener.LastError{
 		{
-			Description: "First description - non-retryable",
-			Codes: []gardener.ErrorCode{
-				gardener.ErrorInfraDependencies,
-			},
-		},
-		{
-			Description: "Second description - non-retryable",
-			Codes: []gardener.ErrorCode{
-				gardener.ErrorInfraQuotaExceeded,
-			},
-		},
-		{
-			Description: "Third description - non-retryable",
+			Description: "ErrorInfraUnauthenticated - non-retryable",
 			Codes: []gardener.ErrorCode{
 				gardener.ErrorInfraUnauthenticated,
 			},
 		},
 		{
-			Description: "Fourth description - non-retryable",
+			Description: "ErrorInfraUnauthorized - non-retryable",
 			Codes: []gardener.ErrorCode{
 				gardener.ErrorInfraUnauthorized,
 			},
 		},
 		{
-			Description: "Fifth description - non-retryable",
+			Description: "ErrorConfigurationProblem - non-retryable",
 			Codes: []gardener.ErrorCode{
 				gardener.ErrorConfigurationProblem,
-			},
-		},
-		{
-			Description: "Sixth description - non-retryable",
-			Codes: []gardener.ErrorCode{
-				gardener.ErrorProblematicWebhook,
 			},
 		},
 	}
@@ -131,21 +149,45 @@ func fixNonRetryableErrors() []gardener.LastError {
 func fixMixtureOfErrors() []gardener.LastError {
 	return []gardener.LastError{
 		{
-			Description: "First description - non-retryable",
+			Description: "ErrorInfraDependencies - non-retryable error according to gardener API which we deliberately consider as retryable as it can occur during deletion",
 			Codes: []gardener.ErrorCode{
 				gardener.ErrorInfraDependencies,
 			},
 		},
 		{
-			Description: "Second description - retryable",
+			Description: "ErrorRetryableConfigurationProblem - retryable",
 			Codes: []gardener.ErrorCode{
 				gardener.ErrorRetryableConfigurationProblem,
 			},
 		},
 		{
-			Description: "Third description - non-retryable",
+			Description: "ErrorInfraDependencies - non-retryable",
+			Codes: []gardener.ErrorCode{
+				gardener.ErrorInfraDependencies,
+			},
+		},
+		{
+			Description: "ErrorInfraUnauthenticated - non-retryable",
+			Codes: []gardener.ErrorCode{
+				gardener.ErrorInfraUnauthenticated,
+			},
+		},
+		{
+			Description: "ErrorInfraQuotaExceeded - non-retryable error according to gardener API which we deliberately consider as retryable",
 			Codes: []gardener.ErrorCode{
 				gardener.ErrorInfraQuotaExceeded,
+			},
+		},
+		{
+			Description: "ErrorProblematicWebhook - non-retryable error according to gardener API which we deliberately consider as retryable",
+			Codes: []gardener.ErrorCode{
+				gardener.ErrorProblematicWebhook,
+			},
+		},
+		{
+			Description: "New retryable error not yet defined in Gardener",
+			Codes: []gardener.ErrorCode{
+				"NEW_RETRYABLE_ERROR",
 			},
 		},
 	}
