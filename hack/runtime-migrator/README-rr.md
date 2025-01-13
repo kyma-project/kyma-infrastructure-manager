@@ -4,10 +4,10 @@ The `runtime-restore` application
 1. connects to a Gardener project, and KCP cluster
 2. retrieves all existing shoot specifications
 3. for each runtime on input list:
-   a) gets shoot, Cluster Role Bindings and OpenIDConnect resources from the backup
-   b) patches shoot if needed 
-   c) applies Cluster Role Bindings from backup provided the objects don't exist on the runtime
-   d) applies OpenIDConnect from backup provided the objects don't exist on the runtime
+  - a) gets shoot, Cluster Role Bindings and OpenIDConnect resources from the backup
+  - b) patches shoot if needed 
+  - c) applies Cluster Role Bindings from backup provided the objects don't exist on the runtime
+  - d) applies OpenIDConnect from backup provided the objects don't exist on the runtime
 
 ## Build
 
