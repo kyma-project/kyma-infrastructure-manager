@@ -75,6 +75,7 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/protobuf v1.35.2 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
+	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -88,4 +89,5 @@ replace (
 	github.com/kyma-project/infrastructure-manager => ../../
 	github.com/kyma-project/infrastructure-manager/hack/shoot-comparator => ../shoot-comparator
 	golang.org/x/net => golang.org/x/net v0.34.0
+	gopkg.in/square/go-jose.v2 => github.com/go-jose/go-jose v2.6.3+incompatible
 )
