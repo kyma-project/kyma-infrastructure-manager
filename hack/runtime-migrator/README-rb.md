@@ -1,4 +1,4 @@
-# Runtime Backuper
+# Runtime backup and switch
 
 The `runtime-backup-and-switch` application
 1. connects to a Gardener project, and KCP cluster
