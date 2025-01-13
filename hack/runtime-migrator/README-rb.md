@@ -14,7 +14,7 @@ The `runtime-backup-and-switch` application
 In order to build the app, run the following command:
 
 ```bash
-go build -o ./bin/runtime-backup-and-switch ./cmd/backup
+go build -o ./bin/runtime-backup-and-switch-and-switch ./cmd/backup-and-switch
 ``` 
 
 ## Usage
@@ -35,7 +35,7 @@ The above **execution example** will:
 1. take the input from the `input/runtimeIds.txt` file (each raw contains single `RuntimeID`)
 1. proceed only with fetching Shoot, Cluster Role Bindings and OpenIDConnect resources
 1. save output files in the `/tmp/<generated name>` directory. The output directory contains the following:
-    - `backup-results.json` - the output file with the backup results
+    - `backup-and-switch-results.json` - the output file with the backup results
     - `backup` - the directory with the backup files
    
 ### Backup and switch Runtime to be controlled by KIM
@@ -56,7 +56,7 @@ The above **execution example** will:
 1. take the input from the `input/runtimeIds.txt` file (each raw contains single RuntimeID)
 1. proceed with fetching Shoot, Cluster Role Bindings and OpenIDConnect resource
 1. save output files in the `/tmp/<generated name>` directory. The output directory contains the following:
-    - `backup-results.json` - the output file with the backup results
+    - `backup-and-switch-results.json` - the output file with the backup results
     - `backup` - the directory with the backup files
 1. label Cluster Role Bindings that were created by the Provisioner
 1. switch Runtime to be controlled by KIM
@@ -79,12 +79,12 @@ The above **execution example** will:
 2025/01/10 09:27:54 INFO Runtime backup created successfully runtimeID=a774bae2-ed8b-464e-85cc-ab8acd4461d5
 2025/01/10 09:27:54 ERROR Failed to fetch shoot: shoot was deleted or the runtimeID is incorrect runtimeID=exxe4b14-7bc2-4947-931c-f8673793b02f
 2025/01/10 09:27:54 INFO Backup completed. Successfully stored backups: 1, Failed backups: 1
-2025/01/10 09:27:54 INFO Backup results saved in: backup/results/backup-2025-01-10T09:27:49+01:00/backup-results.json
+2025/01/10 09:27:54 INFO Backup results saved in: backup/results/backup-2025-01-10T09:27:49+01:00/backup-and-switch-results.json
 ```
 
-The backup results are saved in the `backup/results/backup-2025-01-10T09:27:49+01:00/backup-results.json` file.
+The backup results are saved in the `backup/results/backup-2025-01-10T09:27:49+01:00/backup-and-switch-results.json` file.
 
-The `backup-results.json` file contains the following content:
+The `backup-and-switch-results.json` file contains the following content:
 ```json
 [
   {
