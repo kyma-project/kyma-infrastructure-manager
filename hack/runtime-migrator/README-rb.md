@@ -4,17 +4,17 @@ The `runtime-backup-and-switch` application
 1. connects to a Gardener project, and KCP cluster
 2. retrieves all existing shoot specifications
 3. for each runtime on input list:
-  a) gets shoot, Cluster Role Bindings and OpenIDConnect resources 
-  b) saves the backup on a disk
-  c) marks Cluster Role Bindings that were created by the Provisioner with `kyma-project.io/deprecation` label
-  d) sets `kyma-project.io/controlled-by-provisioner` label with `false` value in order to make sure KIM will control the runtime
+  - a) gets shoot, Cluster Role Bindings and OpenIDConnect resources 
+  - b) saves the backup on a disk
+  - c) marks Cluster Role Bindings that were created by the Provisioner with `kyma-project.io/deprecation` label
+  - d) sets `kyma-project.io/controlled-by-provisioner` label with `false` value in order to make sure KIM will control the runtime
 
 ## Build
 
 In order to build the app, run the following command:
 
 ```bash
-go build -o ./bin/runtime-backup-and-switch-and-switch ./cmd/backup-and-switch
+go build -o ./bin/runtime-backup-and-switch ./cmd/backup-and-switch
 ``` 
 
 ## Usage
@@ -64,7 +64,7 @@ The above **execution example** will:
 ### Output example
 
 ```
-2025/01/10 09:27:49 INFO Starting runtime-backuper
+2025/01/10 09:27:49 INFO Starting runtime backup and switch
 2025/01/10 09:27:49 gardener-kubeconfig-path: /Users/myuser/Downloads/kubeconfig-garden-kyma-stage.yaml
 2025/01/10 09:27:49 kcp-kubeconfig-path: /Users/myuser/dev/config/sap
 2025/01/10 09:27:49 gardener-project-name: kyma-stage
@@ -118,7 +118,7 @@ The `backup/results/backup-2025-01-10T09:27:49+01:00/backup/a774bae2-ed8b-464e-8
 - `oidc` folder
 
 The `c-35a9898-original.yaml` file contains the shoot fetched from the Gardener. The `c-35a9898-to-restore.yaml` file contains the shoot that will be used by restore operation for patching. 
-The `crb` directory contains the yaml files with Cluster Role Bindings that refer to `cluster-admin` role. The `oidc` folder contains yaml files with OpenIDConnect resources
+The `crb` directory contains the yaml files with Cluster Role Bindings that refer to `cluster-admin` role. The `oidc` folder contains yaml files with OpenIDConnect resources.
 
 ## Configurable Parameters
 

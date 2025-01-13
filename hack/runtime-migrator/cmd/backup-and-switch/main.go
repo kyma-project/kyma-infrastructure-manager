@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	slog.Info("Starting runtime-backuper")
+	slog.Info("Starting runtime backup and switch")
 	cfg := initialisation.NewBackupConfig()
 
 	initialisation.PrintBackupConfig(cfg)

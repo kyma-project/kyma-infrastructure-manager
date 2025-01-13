@@ -234,7 +234,7 @@ func applyOIDCIfDoesntExist(ctx context.Context, key client.ObjectKey, object *a
 	if err == nil {
 		return false, nil
 	}
-	slog.Error(err.Error())
+
 	if err != nil && !errors.IsNotFound(err) {
 		return false, err
 	}
