@@ -3,7 +3,7 @@ module github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app
 go 1.23.1
 
 require (
-	github.com/gardener/gardener v1.110.1
+	github.com/gardener/gardener v1.110.2
 	github.com/gardener/oidc-webhook-authenticator v0.33.0
 	github.com/go-playground/validator/v10 v10.23.0
 	github.com/kyma-project/infrastructure-manager v0.0.0-20241023155010-55a6abeb1690
@@ -28,9 +28,9 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
-	github.com/gardener/gardener-extension-provider-aws v1.58.3 // indirect
-	github.com/gardener/gardener-extension-provider-gcp v1.40.1 // indirect
-	github.com/gardener/gardener-extension-provider-openstack v1.43.0 // indirect
+	github.com/gardener/gardener-extension-provider-aws v1.59.2 // indirect
+	github.com/gardener/gardener-extension-provider-gcp v1.41.1 // indirect
+	github.com/gardener/gardener-extension-provider-openstack v1.44.1 // indirect
 	github.com/gardener/gardener-extension-shoot-dns-service v1.53.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
