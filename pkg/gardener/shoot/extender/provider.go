@@ -20,6 +20,12 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 		provider.Type = rt.Spec.Shoot.Provider.Type
 		provider.Workers = rt.Spec.Shoot.Provider.Workers
 
+		if rt.Spec.Shoot.Provider.AdditionalWorkers != nil {
+			for _, v := range *rt.Spec.Shoot.Provider.AdditionalWorkers {
+				provider.Workers = append(provider.Workers, v)
+			}
+		}
+
 		var err error
 		var controlPlaneConf, infraConfig *runtime.RawExtension
 		zones := getZones(rt.Spec.Shoot.Provider.Workers)
