@@ -33,7 +33,7 @@ cat ./bin/runtime-restore \
 ```
 
 The above **execution example** will:
-1. take the input from the `input/runtimeIds.txt` file (each raw contains single `RuntimeID`)
+1. take the input from the `input/runtimeIds.txt` file (each row contains single `RuntimeID`)
 1. proceed only with fetching `Shoot`, `Cluster Role Bindings` and `OpenIDConnect` resources from the backup directory
 1. save output files in the `/tmp/<generated name>` directory. The output directory contains the following:
    - `restore-results.json` - the output file with the restore results
@@ -53,7 +53,7 @@ The above **execution example** will:
 ```
 
 The above **execution example** will:
-1. take the input from the `input/runtimeIds.txt` file (each raw contains single `RuntimeID`)
+1. take the input from the `input/runtimeIds.txt` file (each row contains single `RuntimeID`)
 1. proceed with fetching `Shoot`, `Cluster Role Bindings` and `OpenIDConnect` resources from the backup directory
 1. patch shoot with file from backup
 1. create Cluster Role Bindings that don't exist on the runtime
