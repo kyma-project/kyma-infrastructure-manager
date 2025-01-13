@@ -129,7 +129,7 @@ The following problems were detected in the above example:
 - The runtime with the `99a38a99-e8d7-4b98-a6f2-5a54ed389c4d` identifier may cause an unwanted update in the Gardener. The comparison results are saved in the `/tmp/migration-2024-11-22T17:05:33+01:00/comparison-results/99a38a99-e8d7-4b98-a6f2-5a54ed389c4d` directory.
 
 
-The `/tmp/migration-2024-11-21T14:53:24+01:00/comparison-results/99a38a99-e8d7-4b98-a6f2-5a54ed389c4d"` directory contains the following files:
+The `/tmp/migration-2024-11-21T14:53:24+01:00/comparison-results/99a38a99-e8d7-4b98-a6f2-5a54ed389c4d` directory contains the following files:
 - `c-71da0f2.diff`
 - `converted-shoot.yaml`
 - `original-shoot.yaml` 
