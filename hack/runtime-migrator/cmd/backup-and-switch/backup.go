@@ -14,6 +14,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"log/slog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"slices"
@@ -225,5 +226,6 @@ func setControlledByKim(ctx context.Context, kcpClient client.Client, runtimeID 
 
 	return kcpClient.Patch(patchCtx, &runtime, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,
+		Force:        ptr.To(true),
 	})
 }
