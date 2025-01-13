@@ -21,9 +21,7 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 		provider.Workers = rt.Spec.Shoot.Provider.Workers
 
 		if rt.Spec.Shoot.Provider.AdditionalWorkers != nil {
-			for _, v := range *rt.Spec.Shoot.Provider.AdditionalWorkers {
-				provider.Workers = append(provider.Workers, v)
-			}
+			provider.Workers = append(provider.Workers, *rt.Spec.Shoot.Provider.AdditionalWorkers...)
 		}
 
 		var err error
