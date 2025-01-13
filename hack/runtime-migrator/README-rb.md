@@ -4,10 +4,10 @@ The `runtime-backup-and-switch` application
 1. connects to a Gardener project, and KCP cluster
 2. retrieves all existing shoot specifications
 3. for each runtime on input list:
-  - a) gets shoot, Cluster Role Bindings and OpenIDConnect resources 
-  - b) saves the backup on a disk
-  - c) marks Cluster Role Bindings that were created by the Provisioner with `kyma-project.io/deprecation` label
-  - d) sets `kyma-project.io/controlled-by-provisioner` label with `false` value in order to make sure KIM will control the runtime
+   1. gets shoot, Cluster Role Bindings and OpenIDConnect resources 
+   2. saves the backup on a disk
+   3. marks Cluster Role Bindings that were created by the Provisioner with `kyma-project.io/deprecation` label
+   4. sets `kyma-project.io/controlled-by-provisioner` label with `false` value in order to make sure KIM will control the runtime
 
 ## Build
 
