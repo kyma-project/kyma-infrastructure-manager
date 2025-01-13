@@ -1,4 +1,4 @@
-# Runtime Restorer
+# Runtime Restore
 
 The `runtime-restore` application
 1. connects to a Gardener project, and KCP cluster
