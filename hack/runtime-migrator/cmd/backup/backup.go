@@ -94,17 +94,17 @@ func (b Backup) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
-		if b.cfg.IsDryRun {
-			slog.Info("Runtime processed successfully (dry-run)", "runtimeID", runtimeID)
-			b.results.OperationSucceeded(runtimeID, shootToBackup.Name, nil, false)
-
-			continue
-		}
-
 		if err := b.outputWriter.Save(runtimeID, runtimeBackup); err != nil {
 			errMsg := fmt.Sprintf("Failed to store backup: %v", err)
 			b.results.ErrorOccurred(runtimeID, shootToBackup.Name, errMsg)
 			slog.Error(errMsg, "runtimeID", runtimeID)
+
+			continue
+		}
+
+		if b.cfg.IsDryRun {
+			slog.Info("Runtime processed successfully (dry-run)", "runtimeID", runtimeID)
+			b.results.OperationSucceeded(runtimeID, shootToBackup.Name, nil, false)
 
 			continue
 		}

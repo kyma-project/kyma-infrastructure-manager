@@ -1,13 +1,13 @@
 # Runtime Backuper
 
 The `runtime-backup-and-switch` application
-1. connects to a Gardener project
+1. connects to a Gardener project, and KCP cluster
 2. retrieves all existing shoot specifications
 3. for each runtime on input list:
   a) gets shoot, Cluster Role Bindings and OpenIDConnect resources 
   b) saves the backup on a disk
   c) marks Cluster Role Bindings that were created by the Provisioner with `kyma-project.io/deprecation` label
-  d) switches the runtime to be controlled by KIM by setting `kyma-project.io/controlled-by-provisioner` label with `false` value
+  d) sets `kyma-project.io/controlled-by-provisioner` label with `false` value in order to make sure KIM will control the runtime
 
 ## Build
 
@@ -33,10 +33,11 @@ go build -o ./bin/runtime-backup-and-switch ./cmd/backup
 
 The above **execution example** will:
 1. take the input from the `input/runtimeIds.txt` file (each raw contains single `RuntimeID`)
-1. proceed only with fetching `Shoot`, `Cluster Role Bindings` and `OpenIDConnect` resources
+1. proceed only with fetching Shoot, Cluster Role Bindings and OpenIDConnect resources
 1. save output files in the `/tmp/<generated name>` directory. The output directory contains the following:
     - `backup-results.json` - the output file with the backup results
-
+    - `backup` - the directory with the backup files
+   
 ### Backup and switch Runtime to be controlled by KIM
 
 ```bash
@@ -52,8 +53,8 @@ The above **execution example** will:
 ```
 
 The above **execution example** will:
-1. take the input from the `input/runtimeIds.txt` file (each raw contains single `RuntimeID`)
-1. proceed with fetching `Shoot`, `Cluster Role Bindings` and `OpenIDConnect` resource
+1. take the input from the `input/runtimeIds.txt` file (each raw contains single RuntimeID)
+1. proceed with fetching Shoot, Cluster Role Bindings and OpenIDConnect resource
 1. save output files in the `/tmp/<generated name>` directory. The output directory contains the following:
     - `backup-results.json` - the output file with the backup results
     - `backup` - the directory with the backup files
@@ -70,7 +71,7 @@ The above **execution example** will:
 2025/01/10 09:27:49 output-path: /Users/myuser/backup/results 
 2025/01/10 09:27:49 dry-run: false
 2025/01/10 09:27:49 input-type: txt
-2025/01/10 09:27:49 input-file-path: /Users/myuser/dev/runtime-ids-oidc.txt
+2025/01/10 09:27:49 input-file-path: /Users/myuser/dev/runtime-ids.txt
 2025/01/10 09:27:49 set-controlled-by-kim: true
 2025/01/10 09:27:49
 2025/01/10 09:27:49
@@ -106,7 +107,9 @@ The `backup-results.json` file contains the following content:
 ]
 
 ```
-The above example The runtime with the `exxe4b14-7bc2-4947-931c-f8673793b02f` identifier was not found ; the identifier may be incorrect, or the corresponding shoot was deleted for some reason.
+In the above example the runtime with the `exxe4b14-7bc2-4947-931c-f8673793b02f` identifier was not found ; it may be incorrect, or the corresponding shoot was deleted for some reason. 
+
+The runtime with the `a774bae2-ed8b-464e-85cc-ab8acd4461d5` was successfully processed and the backup was stored in the `backup/results/backup-2025-01-10T09:27:49+01:00/backup/a774bae2-ed8b-464e-85cc-ab8acd4461d5` folder. The `admin-cw4mz` Cluster Role Binding was marked as deprecated, and will be cleaned up at some point.
 
 The `backup/results/backup-2025-01-10T09:27:49+01:00/backup/a774bae2-ed8b-464e-85cc-ab8acd4461d5` directory contains the following:
 - `c-35a9898-original.yaml` file
@@ -114,8 +117,8 @@ The `backup/results/backup-2025-01-10T09:27:49+01:00/backup/a774bae2-ed8b-464e-8
 - `crb` folder
 - `oidc` folder
 
-The `c-35a9898-original.yaml` file contains the differences between the original shoot and the shoot that will be created based on the new Runtime CR. The `c-35a9898-to-restore.yaml` file contains the shoot that will be created based on the new Runtime CR. The `original-shoot.yaml` file contains the shoot fetched from the Gardener.
-The `crb` directory contains the yaml files with Cluster Role Bindings that refer to `cluster-admin` role. The `oidc` folder contains yaml files with `OpenIDConnect` resources
+The `c-35a9898-original.yaml` file contains the shoot fetched from the Gardener. The `c-35a9898-to-restore.yaml` file contains the shoot that will be used by restore operation for patching. 
+The `crb` directory contains the yaml files with Cluster Role Bindings that refer to `cluster-admin` role. The `oidc` folder contains yaml files with OpenIDConnect resources
 
 ## Configurable Parameters
 
