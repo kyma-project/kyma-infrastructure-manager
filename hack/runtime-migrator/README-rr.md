@@ -111,7 +111,9 @@ The `restore-results.json` file contains the following content:
 ]
 ```
 
-In the above example the runtime with the `exxe4b14-7bc2-4947-931c-f8673793b02f` identifier was not found ; it may be incorrect, or the corresponding shoot was deleted for some reason.
+In the above example the runtime with the `exxe4b14-7bc2-4947-931c-f8673793b02f` identifier was not found. In such a case verify whether:
+- identifier is correct
+- the corresponding shoot exists, and has `kcp.provisioner.kyma-project.io/runtime-id` label set
 
 The runtime with the `a774bae2-ed8b-464e-85cc-ab8acd4461d5` was successfully restored. The shoot spec was patched, and the following resources recreated:
 - `admin-cw4mz` of type Cluster Role Binding

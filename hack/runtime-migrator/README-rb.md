@@ -107,7 +107,9 @@ The `backup-and-switch-results.json` file contains the following content:
 ]
 
 ```
-In the above example the runtime with the `exxe4b14-7bc2-4947-931c-f8673793b02f` identifier was not found ; it may be incorrect, or the corresponding shoot was deleted for some reason. 
+In the above example the runtime with the `exxe4b14-7bc2-4947-931c-f8673793b02f` identifier was not found. In such a case verify whether:
+- identifier is correct
+- the corresponding shoot exists, and has `kcp.provisioner.kyma-project.io/runtime-id` label set
 
 The runtime with the `a774bae2-ed8b-464e-85cc-ab8acd4461d5` was successfully processed and the backup was stored in the `backup/results/backup-2025-01-10T09:27:49+01:00/backup/a774bae2-ed8b-464e-85cc-ab8acd4461d5` folder. The `admin-cw4mz` Cluster Role Binding was marked as deprecated, and will be cleaned up at some point.
 
