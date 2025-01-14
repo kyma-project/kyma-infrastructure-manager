@@ -3,7 +3,7 @@
 The `runtime-backup-and-switch` application
 1. connects to a Gardener project, and KCP cluster
 2. retrieves all existing shoot specifications
-3. for each runtime on input list:
+3. for each runtime on input list that was created by provisioner (shoot is labelled with `kcp.provisioner.kyma-project.io/runtime-id`):
    1. gets shoot, Cluster Role Bindings and OpenIDConnect resources 
    2. saves the backup on a disk
    3. marks Cluster Role Bindings that were created by the Provisioner with `kyma-project.io/deprecation` label
