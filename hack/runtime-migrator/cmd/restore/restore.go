@@ -103,6 +103,14 @@ func (r Restore) Do(ctx context.Context, runtimeIDs []string) error {
 			continue
 		}
 
+		err = shoot.SetControlledByProvisioner(ctx, r.kcpClient, runtimeID, fieldManagerName)
+		if err != nil {
+			errMsg := fmt.Sprintf("Failed to set the runtime to be controlled by KIM: %v", err)
+			r.results.ErrorOccurred(runtimeID, currentShoot.Name, errMsg)
+			slog.Error(errMsg, "runtimeID", runtimeID)
+			continue
+		}
+
 		appliedCRBs, appliedOIDC, err := r.applyResources(ctx, objectsToRestore, runtimeID)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to apply resources: %v", err)
