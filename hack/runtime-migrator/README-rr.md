@@ -22,7 +22,7 @@ go build -o ./bin/runtime-restore ./cmd/restore
 
 ### Dry run
 ```bash
-cat ./bin/runtime-restore \
+./bin/runtime-restore \
   -gardener-kubeconfig-path=/Users/myuser/gardener-kubeconfig.yml \
   -gardener-project-name=kyma-dev  \
   -kcp-kubeconfig-path=/Users/myuser/kcp-kubeconfig.yml \

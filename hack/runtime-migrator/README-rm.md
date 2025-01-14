@@ -20,7 +20,7 @@ go build -o ./bin/runtime-migrator ./cmd/migration
 ## Usage
 
 ```bash
-cat ./runtime-migrator \
+./runtime-migrator \
   -gardener-kubeconfig-path=/Users/myuser/gardener-kubeconfig.yml \
   -gardener-project-name=kyma-dev  \
   -kcp-kubeconfig-path=/Users/myuser/kcp-kubeconfig.yml \
@@ -41,7 +41,7 @@ The above **execution example** will:
 
 The input can be also provided in the form of a text file:
 ```bash
-cat ./runtime-migrator \
+./runtime-migrator \
   -gardener-kubeconfig-path=/Users/myuser/gardener-kubeconfig.yml \
   -gardener-project-name=kyma-stage  \
   -kcp-kubeconfig-path=/Users/myuser/kcp-kubeconfig.yml \
