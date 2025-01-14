@@ -10,6 +10,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+const ForceReconcileAnnotation = "infrastructuremanager.kyma-project.io/force-reconcile"
+
 func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Select shoot processing state")
 
@@ -54,6 +56,11 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 }
 
 func shouldPatchShoot(runtime *imv1.Runtime, shoot *gardener.Shoot) (bool, error) {
+	_, found := runtime.GetAnnotations()[ForceReconcileAnnotation]
+	if found == true {
+		return true, nil
+	}
+
 	runtimeGeneration := runtime.GetGeneration()
 	appliedGenerationString, found := shoot.GetAnnotations()[extender.ShootRuntimeGenerationAnnotation]
 
