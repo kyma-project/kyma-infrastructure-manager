@@ -1,17 +1,17 @@
-# Runtime backup and switch
+# Runtime Backup and Switch
 
-The `runtime-backup-and-switch` application
-1. connects to a Gardener project, and KCP cluster
-2. retrieves all existing shoot specifications
-3. for each runtime on input list that was created by provisioner (shoot is labelled with `kcp.provisioner.kyma-project.io/runtime-id`):
-   1. gets shoot, Cluster Role Bindings and OpenIDConnect resources 
-   2. saves the backup on a disk
-   3. marks Cluster Role Bindings that were created by the Provisioner with `kyma-project.io/deprecation` label
-   4. sets `kyma-project.io/controlled-by-provisioner` label with `false` value in order to make sure KIM will control the runtime
+The `runtime-backup-and-switch` application has the following tasks:
+1. Connect to a Gardener project and KCP cluster.
+2. Retrieve all existing shoot specifications.
+3. For each runtime on the input list that was created by the provisioner (shoot is labelled with `kcp.provisioner.kyma-project.io/runtime-id`):
+   1. Get the `Shoot`, `ClusterRoleBinding`, and `OpenIDConnect` resources.
+   2. Save the backup on a disk.
+   3. Mark the ClusterRoleBindings that were created by the Provisioner with the `kyma-project.io/deprecation` label.
+   4. To make sure KIM controls the runtime, set the `kyma-project.io/controlled-by-provisioner` label to `false`.
 
 ## Build
 
-In order to build the app, run the following command:
+To build the `runtime-backup-and-switch` application, run:
 
 ```bash
 go build -o ./bin/runtime-backup-and-switch ./cmd/backup-and-switch
@@ -19,7 +19,7 @@ go build -o ./bin/runtime-backup-and-switch ./cmd/backup-and-switch
 
 ## Usage
 
-### Dry run
+### Dry Run
 ```bash
 ./bin/runtime-backup-and-switch \
   -gardener-kubeconfig-path=/Users/myuser/gardener-kubeconfig.yml \
@@ -32,13 +32,13 @@ go build -o ./bin/runtime-backup-and-switch ./cmd/backup-and-switch
 ```
 
 The above **execution example** will:
-1. take the input from the `input/runtimeIds.txt` file (each raw contains single `RuntimeID`)
+1. Take the input from the `input/runtimeIds.txt` file (each raw contains a single `RuntimeID`).
 1. proceed only with fetching Shoot, Cluster Role Bindings and OpenIDConnect resources
-1. save output files in the `/tmp/<generated name>` directory. The output directory contains the following:
+1. Save the output files in the `/tmp/<generated name>` directory. The output directory contains the following:
     - `backup-and-switch-results.json` - the output file with the backup results
     - `backup` - the directory with the backup files
    
-### Backup and switch Runtime to be controlled by KIM
+### Backup and Switch Runtime to Be Controlled by KIM
 
 ```bash
 ./bin/runtime-backup-and-switch \
@@ -52,14 +52,14 @@ The above **execution example** will:
   -input-type=txt
 ```
 
-The above **execution example** will:
-1. take the input from the `input/runtimeIds.txt` file (each raw contains single RuntimeID)
-1. proceed with fetching Shoot, Cluster Role Bindings and OpenIDConnect resource
-1. save output files in the `/tmp/<generated name>` directory. The output directory contains the following:
+This execution example does the following:
+1. Take the input from the `input/runtimeIds.txt` file (each raw contains single RuntimeID).
+1. Proceed with fetching the `Shoot`, `ClusterRoleBinding`, and `OpenIDConnect` resources.
+1. Save the output files in the `/tmp/<generated name>` directory. The output directory contains the following:
     - `backup-and-switch-results.json` - the output file with the backup results
     - `backup` - the directory with the backup files
-1. label Cluster Role Bindings that were created by the Provisioner
-1. switch Runtime to be controlled by KIM
+1. Label the ClusterRoleBindings that were created by the Provisioner.
+1. Switch the runtime to be controlled by KIM.
 
 ### Output example
 
@@ -107,11 +107,11 @@ The `backup-and-switch-results.json` file contains the following content:
 ]
 
 ```
-In the above example the runtime with the `exxe4b14-7bc2-4947-931c-f8673793b02f` identifier was not found. In such a case verify whether:
-- identifier is correct
-- the corresponding shoot exists, and has `kcp.provisioner.kyma-project.io/runtime-id` label set
+In the above example, the runtime with the `exxe4b14-7bc2-4947-931c-f8673793b02f` identifier was not found. In such a case, verify the following:
+- Is the identifier correct?
+- Does the corresponding shoot exist, and does it have the `kcp.provisioner.kyma-project.io/runtime-id` label set?
 
-The runtime with the `a774bae2-ed8b-464e-85cc-ab8acd4461d5` was successfully processed and the backup was stored in the `backup/results/backup-2025-01-10T09:27:49+01:00/backup/a774bae2-ed8b-464e-85cc-ab8acd4461d5` folder. The `admin-cw4mz` Cluster Role Binding was marked as deprecated, and will be cleaned up at some point.
+The runtime with the `a774bae2-ed8b-464e-85cc-ab8acd4461d5` was successfully processed and the backup was stored in the `backup/results/backup-2025-01-10T09:27:49+01:00/backup/a774bae2-ed8b-464e-85cc-ab8acd4461d5` folder. The `admin-cw4mz` ClusterRoleBinding was marked as deprecated, and will be cleaned up at some point.
 
 The `backup/results/backup-2025-01-10T09:27:49+01:00/backup/a774bae2-ed8b-464e-85cc-ab8acd4461d5` directory contains the following:
 - `c-35a9898-original.yaml` file
@@ -119,21 +119,21 @@ The `backup/results/backup-2025-01-10T09:27:49+01:00/backup/a774bae2-ed8b-464e-8
 - `crb` folder
 - `oidc` folder
 
-The `c-35a9898-original.yaml` file contains the shoot fetched from the Gardener. The `c-35a9898-to-restore.yaml` file contains the shoot that will be used by restore operation for patching. 
-The `crb` directory contains the yaml files with Cluster Role Bindings that refer to `cluster-admin` role. The `oidc` folder contains yaml files with OpenIDConnect resources.
+The `c-35a9898-original.yaml` file contains the shoot fetched from Gardener. The `c-35a9898-to-restore.yaml` file contains the shoot that will be used by the restore operation for patching. 
+The `crb` directory contains the yaml files with ClusterRoleBindings that refer to the `cluster-admin` role. The `oidc` folder contains yaml files with OpenIDConnect resources.
 
 ## Configurable Parameters
 
-This table lists the configurable parameters, their descriptions, and default values:
+The following table lists the configurable parameters, their descriptions, and default values:
 
 | Parameter | Description                                                                                                                                                                                                                                                                         | Default value                  |
 |------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------|
-| **kcp-kubeconfig-path** | Path to the Kubeconfig file of KCP cluster.                                                                                                                                                                                                                                         | `/path/to/kcp/kubeconfig`      |
-| **gardener-kubeconfig-path** | Path to the Kubeconfig file of Gardener cluster.                                                                                                                                                                                                                                    | `/path/to/gardener/kubeconfig` |
+| **kcp-kubeconfig-path** | Path to the Kubeconfig file of the KCP cluster.                                                                                                                                                                                                                                         | `/path/to/kcp/kubeconfig`      |
+| **gardener-kubeconfig-path** | Path to the Kubeconfig file of the Gardener cluster.                                                                                                                                                                                                                                    | `/path/to/gardener/kubeconfig` |
 | **gardener-project-name** | Name of the Gardener project.                                                                                                                                                                                                                                                       | `gardener-project-name`        |
-| **output-path** | Path where generated report, and yamls will be saved. Directory has to exist.                                                                                                                                                                                                       | `/tmp/`                        |
-| **dry-run** | Dry-run flag. Has to be set to **false**, otherwise migrator will not apply the CRs on the KCP cluster.                                                                                                                                                                             | `true`                         |
-| **input-type** | Type of input to be used. Possible values: **txt** (will expect text file with one runtime identifier per line, [see the example](input/runtimeids_sample.txt)), and **json** (will expect `json` array with runtime identifiers, [see the example](input/runtimeids_sample.json)). | `json`                         |
-| **input-file-path** | Path to the file containing Runtimes to be migrated.                                                                                                                                                                                                                                | `/path/to/input/file`          |
-| **set-controlled-by-kim** | Flag determining whether Runtime CR should be modified to be controlled by KIM                                                                                                                                                                                                      | `false`                        |
+| **output-path** | Path where the generated report, and the yaml files are saved. This directory must exist.                                                                                                                                                                                                       | `/tmp/`                        |
+| **dry-run** | Dry-run flag. Must be set to **false**, otherwise the migrator does not apply the CRs on the KCP cluster.                                                                                                                                                                             | `true`                         |
+| **input-type** | Type of input to be used. Possible values: **txt** (expects a text file with one runtime identifier per line, [see the example](input/runtimeids_sample.txt)), and a **json** (will expect `json` array with runtime identifiers, [see the example](input/runtimeids_sample.json)). | `json`                         |
+| **input-file-path** | Path to the file containing the runtimes to be migrated.                                                                                                                                                                                                                                | `/path/to/input/file`          |
+| **set-controlled-by-kim** | Flag determining whether the runtime CR is modified to be controlled by KIM.                                                                                                                                                                                                      | `false`                        |
 
