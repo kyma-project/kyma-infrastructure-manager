@@ -1,18 +1,18 @@
 # Runtime Restore
 
-The `runtime-restore` application
-1. connects to a Gardener project, and KCP cluster
-2. retrieves all existing shoot specifications
-3. for each runtime on input list:
-   1. gets Shoot, Cluster Role Bindings and OpenIDConnect resources from the backup
-   2. updates the Runtime CR to label the runtime as controlled by Provisioner to prevent KIM from modifying the shoot and the runtime resources
-   3. patches shoot with Shoot spec read from backup 
-   4. applies Cluster Role Bindings from backup provided the objects don't exist on the runtime
-   5. applies OpenIDConnect from backup provided the objects don't exist on the runtime
+The `runtime-restore` application has the following tasks:
+1. Connect to a Gardener project, and a KCP cluster.
+2. Retrieve all existing shoot specifications.
+3. For each runtime on the input list:
+   1. Gets the Shoot, Cluster Role Bindings and OpenIDConnect resources from the backup.
+   2.  To prevent KIM from modifying the shoot and the runtime resources, update the Runtime CR to label the runtime as controlled by Provisioner.
+   3. Patch the shoot with the Shoot spec read from the backup.
+   4. Apply the ClusterRoleBindings from the backup if the objects don't exist on the runtime.
+   5. Apply OpenIDConnect from the backup if the objects don't exist on the runtime.
 
 ## Build
 
-In order to build the app, run the following command:
+To build the `runtime-restore` application, run:
 
 ```bash
 go build -o ./bin/runtime-restore ./cmd/restore
@@ -20,7 +20,7 @@ go build -o ./bin/runtime-restore ./cmd/restore
 
 ## Usage
 
-### Dry run
+### Dry Run
 ```bash
 ./bin/runtime-restore \
   -gardener-kubeconfig-path=/Users/myuser/gardener-kubeconfig.yml \
@@ -33,13 +33,13 @@ go build -o ./bin/runtime-restore ./cmd/restore
   -backup-path=/Users/myuser/backup/results/backup-2025-01-10T09:27:49+01:00
 ```
 
-The above **execution example** will:
-1. take the input from the `input/runtimeIds.txt` file (each row contains single `RuntimeID`)
+This execution example does the following:
+1. Take the input from the `input/runtimeIds.txt` file (each row contains single `RuntimeID`).
 1. proceed only with fetching `Shoot`, `Cluster Role Bindings` and `OpenIDConnect` resources from the backup directory
-1. save output files in the `/tmp/<generated name>` directory. The output directory contains the following:
+1. Save the output files in the `/tmp/<generated name>` directory. The output directory contains the following:
    - `restore-results.json` - the output file with the restore results
 
-### Backup and switch Runtime to be controlled by KIM
+### Backup and Switch Runtime to Be Controlled by KIM
 
 ```bash
 ./bin/runtime-restore \
@@ -53,13 +53,13 @@ The above **execution example** will:
   -backup-path=/Users/myuser/backup/results/backup-2025-01-10T09:27:49+01:00
 ```
 
-The above **execution example** will:
-1. take the input from the `input/runtimeIds.txt` file (each row contains single `RuntimeID`)
-1. proceed with fetching `Shoot`, `Cluster Role Bindings` and `OpenIDConnect` resources from the backup directory
-1. patch shoot with file from backup
-1. create Cluster Role Bindings that don't exist on the runtime
-1. create `OpenIDConnect` resources that don't exist on runtime. 
-1. save output files in the `/tmp/<generated name>` directory. The output directory contains the following:
+This execution example does the following:
+1. Take the input from the `input/runtimeIds.txt` file (each row contains single `RuntimeID`).
+1. Proceed with fetching the `Shoot`, `Cluster Role Binding`, and `OpenIDConnect` resources from the backup directory.
+1. Patch shoot with the file from backup.
+1. Create ClusterRoleBindings that don't exist on the runtime.
+1. Create the `OpenIDConnect` resources that don't exist on runtime. 
+1. Save the output files in the `/tmp/<generated name>` directory. The output directory contains the following:
    - `restore-results.json` - the output file with the backup results
 
 ### Output example
@@ -111,12 +111,12 @@ The `restore-results.json` file contains the following content:
 ]
 ```
 
-In the above example the runtime with the `exxe4b14-7bc2-4947-931c-f8673793b02f` identifier was not found. In such a case verify whether:
-- identifier is correct
-- the corresponding shoot exists, and has `kcp.provisioner.kyma-project.io/runtime-id` label set
+In the above example, the runtime with the `exxe4b14-7bc2-4947-931c-f8673793b02f` identifier was not found. In such a case, verify the following:
+- Is the identifier correct?
+- Does the corresponding shoot exist, and does it has `kcp.provisioner.kyma-project.io/runtime-id` label set?
 
 The runtime with the `a774bae2-ed8b-464e-85cc-ab8acd4461d5` was successfully restored. The shoot spec was patched, and the following resources recreated:
-- `admin-cw4mz` of type Cluster Role Binding
+- `admin-cw4mz` of type ClusterRoleBinding
 - `kyma-oidc-0` of type OpenIDConnect 
 
 #### Runtime must be restored manually
@@ -158,21 +158,21 @@ The `restore-results.json` file contains the following content:
 ]
 ```
 
-The runtime with the `a774bae2-ed8b-464e-85cc-ab8acd4461d5` cannot be automatically restored as there were several updates to the shoot. The runtime must be fixed manually, as there is a risk some updates performed by the user will be overwritten.
+The runtime with the `a774bae2-ed8b-464e-85cc-ab8acd4461d5` cannot be automatically restored, because there were several updates to the shoot. The runtime must be fixed manually, because there is a risk that some updates performed by the user will be overwritten.
 
 ## Configurable Parameters
 
-This table lists the configurable parameters, their descriptions, and default values:
+The following table lists the configurable parameters, their descriptions, and default values:
 
-| Parameter | Description                                                                                                                                                                                                                                                                         | Default value          |
+| Parameter | Description                                                                                                                                                                                                                                                                         | Default Value          |
 |------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------|
-| **kcp-kubeconfig-path** | Path to the Kubeconfig file of KCP cluster.                                                                                                                                                                                                                                         | `/path/to/kcp/kubeconfig` |
-| **gardener-kubeconfig-path** | Path to the Kubeconfig file of Gardener cluster.                                                                                                                                                                                                                                    | `/path/to/gardener/kubeconfig` |
+| **kcp-kubeconfig-path** | Path to the Kubeconfig file of the KCP cluster.                                                                                                                                                                                                                                         | `/path/to/kcp/kubeconfig` |
+| **gardener-kubeconfig-path** | Path to the Kubeconfig file of the Gardener cluster.                                                                                                                                                                                                                                    | `/path/to/gardener/kubeconfig` |
 | **gardener-project-name** | Name of the Gardener project.                                                                                                                                                                                                                                                       | `gardener-project-name` |
-| **output-path** | Path where generated report, and yamls will be saved. Directory has to exist.                                                                                                                                                                                                       | `/tmp/`                |
-| **dry-run** | Dry-run flag. Has to be set to **false**, otherwise migrator will not apply the CRs on the KCP cluster.                                                                                                                                                                             | `true`                 |
-| **input-type** | Type of input to be used. Possible values: **txt** (will expect text file with one runtime identifier per line, [see the example](input/runtimeids_sample.txt)), and **json** (will expect `json` array with runtime identifiers, [see the example](input/runtimeids_sample.json)). | `json`                 |
-| **input-file-path** | Path to the file containing Runtimes to be migrated.                                                                                                                                                                                                                                | `/path/to/input/file`  |
-| **backup-path** | Path to the directory containing backup files                                                                                                                                                                                                                                       | `/path/to/input/file`  |
-| **restore-crb** | Flag determining whether Cluster Role Bindings should be restored                                                                                                                                                                                                                   | `/path/to/backup/dir`                       |
-| **restore-oidc** | Flag determining whether OPenIDConnect resources should be restored                                                                                                                                                                                                                 | `/path/to/backup/dir`                       |
+| **output-path** | Path where the generated report, and the yaml files are saved. This directory must exist.                                                                                                                                                                                                       | `/tmp/`                |
+| **dry-run** | Dry-run flag. Must be set to **false**, otherwise the migrator does not apply the CRs on the KCP cluster.                                                                                                                                                                             | `true`                 |
+| **input-type** | Type of input to be used. Possible values: **txt** (expects a text file with one runtime identifier per line, [see the example](input/runtimeids_sample.txt)), and **json** (expects a `json` array with runtime identifiers, [see the example](input/runtimeids_sample.json)). | `json`                 |
+| **input-file-path** | Path to the file containing the runtimes to be migrated.                                                                                                                                                                                                                                | `/path/to/input/file`  |
+| **backup-path** | Path to the directory containing backup files.                                                                                                                                                                                                                                       | `/path/to/input/file`  |
+| **restore-crb** | Flag determining whether ClusterRoleBindings are restored.                                                                                                                                                                                                                   | `/path/to/backup/dir`                       |
+| **restore-oidc** | Flag determining whether OPenIDConnect resources are restored.                                                                                                                                                                                                                 | `/path/to/backup/dir`                       |
