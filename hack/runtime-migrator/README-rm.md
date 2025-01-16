@@ -1,13 +1,13 @@
 # Runtime Migrator
 The `runtime-migrator` application has the following tasks:
-1. Connect to a Gardener project
-2. Retrieve all existing shoot specifications
-3. Migrate the shoot specs to the new Runtime custom resource (Runtime CRs created with this migrator have the `operator.kyma-project.io/created-by-migrator=true` label)
-4. Saves the new Runtime CR to files
-5. Check if the new Runtime CR won't cause an update on Gardener
-6. Saves the results of the comparison between the original shoot and the shoot KIM produces based on the new Runtime CR
-7. Apply the new Runtime CRs to the designated KCP cluster
-8. Save the migration results in the output json file
+1. Connect to a Gardener project.
+2. Retrieve all existing shoot specifications.
+3. Migrate the shoot specs to the new Runtime custom resource (Runtime CRs created with this migrator have the `operator.kyma-project.io/created-by-migrator=true` label).
+4. Saves the new Runtime CR to files.
+5. Check if the new Runtime CR won't cause an update on Gardener.
+6. Save the results of the comparison between the original shoot and the shoot KIM produces based on the new Runtime CR.
+7. Apply the new Runtime CRs to the designated KCP cluster.
+8. Save the migration results in the output json file.
 
 ## Build
 

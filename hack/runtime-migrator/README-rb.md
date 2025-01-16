@@ -20,7 +20,7 @@ go build -o ./bin/runtime-backup-and-switch ./cmd/backup-and-switch
 ## Usage
 
 ### Dry Run
-This execution does the following:
+This execution example does the following:
 1. Take the input from the `input/runtimeIds.txt` file (each raw contains a single `RuntimeID`).
 1. proceed only with fetching Shoot, Cluster Role Bindings and OpenIDConnect resources
 1. Save the output files in the `/tmp/<generated name>` directory. The output directory contains the following:
