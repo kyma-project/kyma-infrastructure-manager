@@ -35,7 +35,7 @@ go build -o ./bin/runtime-restore ./cmd/restore
 
 This execution example does the following:
 1. Take the input from the `input/runtimeIds.txt` file (each row contains single `RuntimeID`).
-1. proceed only with fetching `Shoot`, `Cluster Role Bindings` and `OpenIDConnect` resources from the backup directory
+1. Proceed only with fetching the `Shoot`, `Cluster Role Binding`, and `OpenIDConnect` resources from the backup directory.
 1. Save the output files in the `/tmp/<generated name>` directory. The output directory contains the following:
    - `restore-results.json` - the output file with the restore results
 
