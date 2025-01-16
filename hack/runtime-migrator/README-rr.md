@@ -21,6 +21,12 @@ go build -o ./bin/runtime-restore ./cmd/restore
 ## Usage
 
 ### Dry Run
+This execution example does the following:
+1. Take the input from the `input/runtimeIds.txt` file (each row contains single `RuntimeID`).
+1. Proceed only with fetching the `Shoot`, `Cluster Role Binding`, and `OpenIDConnect` resources from the backup directory.
+1. Save the output files in the `/tmp/<generated name>` directory. The output directory contains the following:
+   - `restore-results.json` - the output file with the restore results
+
 ```bash
 ./bin/runtime-restore \
   -gardener-kubeconfig-path=/Users/myuser/gardener-kubeconfig.yml \
@@ -33,13 +39,15 @@ go build -o ./bin/runtime-restore ./cmd/restore
   -backup-path=/Users/myuser/backup/results/backup-2025-01-10T09:27:49+01:00
 ```
 
+### Backup and Switch Runtime to Be Controlled by KIM
 This execution example does the following:
 1. Take the input from the `input/runtimeIds.txt` file (each row contains single `RuntimeID`).
-1. Proceed only with fetching the `Shoot`, `Cluster Role Binding`, and `OpenIDConnect` resources from the backup directory.
+1. Proceed with fetching the `Shoot`, `Cluster Role Binding`, and `OpenIDConnect` resources from the backup directory.
+1. Patch shoot with the file from backup.
+1. Create ClusterRoleBindings that don't exist on the runtime.
+1. Create the `OpenIDConnect` resources that don't exist on runtime.
 1. Save the output files in the `/tmp/<generated name>` directory. The output directory contains the following:
-   - `restore-results.json` - the output file with the restore results
-
-### Backup and Switch Runtime to Be Controlled by KIM
+   - `restore-results.json` - the output file with the backup results
 
 ```bash
 ./bin/runtime-restore \
@@ -52,15 +60,6 @@ This execution example does the following:
   -input-type=txt \
   -backup-path=/Users/myuser/backup/results/backup-2025-01-10T09:27:49+01:00
 ```
-
-This execution example does the following:
-1. Take the input from the `input/runtimeIds.txt` file (each row contains single `RuntimeID`).
-1. Proceed with fetching the `Shoot`, `Cluster Role Binding`, and `OpenIDConnect` resources from the backup directory.
-1. Patch shoot with the file from backup.
-1. Create ClusterRoleBindings that don't exist on the runtime.
-1. Create the `OpenIDConnect` resources that don't exist on runtime. 
-1. Save the output files in the `/tmp/<generated name>` directory. The output directory contains the following:
-   - `restore-results.json` - the output file with the backup results
 
 ### Output example
 
