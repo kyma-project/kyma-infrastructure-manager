@@ -20,6 +20,13 @@ go build -o ./bin/runtime-backup-and-switch ./cmd/backup-and-switch
 ## Usage
 
 ### Dry Run
+This execution does the following:
+1. Take the input from the `input/runtimeIds.txt` file (each raw contains a single `RuntimeID`).
+1. proceed only with fetching Shoot, Cluster Role Bindings and OpenIDConnect resources
+1. Save the output files in the `/tmp/<generated name>` directory. The output directory contains the following:
+   - `backup-and-switch-results.json` - the output file with the backup results
+   - `backup` - the directory with the backup files
+
 ```bash
 ./bin/runtime-backup-and-switch \
   -gardener-kubeconfig-path=/Users/myuser/gardener-kubeconfig.yml \
@@ -31,12 +38,7 @@ go build -o ./bin/runtime-backup-and-switch ./cmd/backup-and-switch
   -input-type=txt
 ```
 
-The above **execution example** will:
-1. Take the input from the `input/runtimeIds.txt` file (each raw contains a single `RuntimeID`).
-1. proceed only with fetching Shoot, Cluster Role Bindings and OpenIDConnect resources
-1. Save the output files in the `/tmp/<generated name>` directory. The output directory contains the following:
-    - `backup-and-switch-results.json` - the output file with the backup results
-    - `backup` - the directory with the backup files
+
    
 ### Backup and Switch Runtime to Be Controlled by KIM
 
