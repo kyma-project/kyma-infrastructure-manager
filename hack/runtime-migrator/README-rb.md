@@ -41,6 +41,14 @@ This execution does the following:
 
    
 ### Backup and Switch Runtime to Be Controlled by KIM
+This execution example does the following:
+1. Take the input from the `input/runtimeIds.txt` file (each raw contains single RuntimeID).
+1. Proceed with fetching the `Shoot`, `ClusterRoleBinding`, and `OpenIDConnect` resources.
+1. Save the output files in the `/tmp/<generated name>` directory. The output directory contains the following:
+   - `backup-and-switch-results.json` - the output file with the backup results
+   - `backup` - the directory with the backup files
+1. Label the ClusterRoleBindings that were created by the Provisioner.
+1. Switch the runtime to be controlled by KIM.
 
 ```bash
 ./bin/runtime-backup-and-switch \
@@ -53,15 +61,6 @@ This execution does the following:
   -set-controlled-by-kim=true \
   -input-type=txt
 ```
-
-This execution example does the following:
-1. Take the input from the `input/runtimeIds.txt` file (each raw contains single RuntimeID).
-1. Proceed with fetching the `Shoot`, `ClusterRoleBinding`, and `OpenIDConnect` resources.
-1. Save the output files in the `/tmp/<generated name>` directory. The output directory contains the following:
-    - `backup-and-switch-results.json` - the output file with the backup results
-    - `backup` - the directory with the backup files
-1. Label the ClusterRoleBindings that were created by the Provisioner.
-1. Switch the runtime to be controlled by KIM.
 
 ### Output example
 
