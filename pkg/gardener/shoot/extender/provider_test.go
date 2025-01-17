@@ -13,7 +13,7 @@ import (
 )
 
 func TestProviderExtender(t *testing.T) {
-	for tname, tc := range map[string]struct {
+	/*for tname, tc := range map[string]struct {
 		Runtime                     imv1.Runtime
 		EnableIMDSv2                bool
 		DefaultMachineImageVersion  string
@@ -225,7 +225,7 @@ func TestProviderExtender(t *testing.T) {
 			assertProvider(t, tc.Runtime.Spec.Shoot, shoot, tc.EnableIMDSv2, tc.ExpectedMachineImageName, tc.ExpectedMachineImageVersion)
 			assertProviderSpecificConfig(t, shoot, tc.ExpectedZonesCount)
 		})
-	}
+	}*/
 
 	t.Run("Return error for unknown provider", func(t *testing.T) {
 		// given

@@ -75,40 +75,14 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 			provider.Workers = append(provider.Workers, *rt.Spec.Shoot.Provider.AdditionalWorkers...)
 		}
 
-		var controlPlaneConf, infraConfig *runtime.RawExtension
 		workerZones, err := getNetworkingZonesFromWorkers(provider.Workers)
 		if err != nil {
 			return err
 		}
 
-		if rt.Spec.Shoot.Provider.Type == hyperscaler.TypeAzure || rt.Spec.Shoot.Provider.Type == hyperscaler.TypeAWS {
-			infraConfigZones, err := getZonesFromInfrastructureConfig(rt.Spec.Shoot.Provider.Type, existingInfraConfig)
-			if err != nil {
-				return err
-			}
-			// extend infrastructure zones collection if new workers are added with new zones
-			for _, zone := range workerZones {
-				if !slices.Contains(infraConfigZones, zone) {
-					infraConfigZones = append(infraConfigZones, zone)
-				}
-			}
-
-			infraConfig, controlPlaneConf, err = getConfig(rt.Spec.Shoot, infraConfigZones)
-			if err != nil {
-				return err
-			}
-
-		} else {
-			infraConfig = existingInfraConfig.DeepCopy()
-			controlPlaneConf = existingControlPlaneConfig.DeepCopy()
-		}
-
-		if rt.Spec.Shoot.Provider.ControlPlaneConfig != nil {
-			controlPlaneConf = rt.Spec.Shoot.Provider.ControlPlaneConfig
-		}
-
-		if rt.Spec.Shoot.Provider.InfrastructureConfig != nil {
-			infraConfig = rt.Spec.Shoot.Provider.InfrastructureConfig
+		controlPlaneConf, infraConfig, err := getProviderConfigsForPatch(rt, workerZones, existingInfraConfig, existingControlPlaneConfig)
+		if err != nil {
+			return err
 		}
 
 		provider.ControlPlaneConfig = controlPlaneConf
@@ -116,50 +90,81 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 
 		setMachineImage(provider, defMachineImgName, defMachineImgVer)
 
-		err = setWorkerConfig(provider, provider.Type, enableIMDSv2)
-		setWorkerSettings(provider)
+		if err := setWorkerConfig(provider, provider.Type, enableIMDSv2); err != nil {
+			return err
+		}
 
+		setWorkerSettings(provider)
 		alignWorkersWithShoot(provider, shootWorkers)
 
-		return err
+		return nil
 	}
 }
 
-// parse infrastructure config to get current networking zones
+func getProviderConfigsForPatch(rt imv1.Runtime, workerZones []string, existingInfraConfig, existingControlPlaneConfig *runtime.RawExtension) (*runtime.RawExtension, *runtime.RawExtension, error) {
+	var controlPlaneConf, infraConfig *runtime.RawExtension
+
+	if rt.Spec.Shoot.Provider.Type == hyperscaler.TypeAzure || rt.Spec.Shoot.Provider.Type == hyperscaler.TypeAWS {
+		infraConfigZones, err := getZonesFromInfrastructureConfig(rt.Spec.Shoot.Provider.Type, existingInfraConfig)
+		if err != nil {
+			return nil, nil, err
+		}
+		// extend infrastructure zones collection if new workers are added with new zones
+		for _, zone := range workerZones {
+			if !slices.Contains(infraConfigZones, zone) {
+				infraConfigZones = append(infraConfigZones, zone)
+			}
+		}
+
+		infraConfig, controlPlaneConf, err = getConfig(rt.Spec.Shoot, infraConfigZones)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		infraConfig = existingInfraConfig
+		controlPlaneConf = existingControlPlaneConfig
+	}
+
+	if rt.Spec.Shoot.Provider.ControlPlaneConfig != nil {
+		controlPlaneConf = rt.Spec.Shoot.Provider.ControlPlaneConfig
+	}
+
+	if rt.Spec.Shoot.Provider.InfrastructureConfig != nil {
+		infraConfig = rt.Spec.Shoot.Provider.InfrastructureConfig
+	}
+
+	return controlPlaneConf, infraConfig, nil
+}
+
+// parse infrastructure config to get current set of networking zones
 func getZonesFromInfrastructureConfig(providerType string, infraConfig *runtime.RawExtension) ([]string, error) {
 	if infraConfig == nil {
 		return nil, errors.New("infrastructureConfig is nil")
 	}
 
 	var zones []string
-	if providerType == hyperscaler.TypeAWS {
+
+	switch providerType {
+	case hyperscaler.TypeAWS:
 		infraConfig, err := aws.DecodeInfrastructureConfig(infraConfig.Raw)
 		if err != nil {
 			return nil, err
 		}
 		for _, zone := range infraConfig.Networks.Zones {
-			if !slices.Contains(zones, zone.Name) {
-				zones = append(zones, zone.Name)
-			}
+			zones = append(zones, zone.Name)
 		}
-		return zones, nil
-	}
-
-	if providerType == hyperscaler.TypeAzure {
+	case hyperscaler.TypeAzure:
 		infraConfig, err := azure.DecodeInfrastructureConfig(infraConfig.Raw)
 		if err != nil {
 			return nil, err
 		}
 		for _, zone := range infraConfig.Networks.Zones {
-			name := fmt.Sprint(zone.Name)
-			if !slices.Contains(zones, name) {
-				zones = append(zones, name)
-			}
+			zones = append(zones, fmt.Sprint(zone.Name))
 		}
-		return zones, nil
+	default:
+		return nil, errors.New("read zones from infrastructureConfig - provider not supported")
 	}
-
-	return []string{}, errors.New("Cannot read zones from infrastructureConfig - provider not supported")
+	return zones, nil
 }
 
 type InfrastructureProviderFunc func(workersCidr string, zones []string) ([]byte, error)
@@ -298,40 +303,31 @@ func setMachineImage(provider *gardener.Provider, defMachineImgName, defMachineI
 // Without this patch, gardener's admission webhook might reject the request if the zones order does not match.
 // If the current image version with the same name on Shoot is greater than the version, it sets the version to the current machine image version.
 func alignWorkersWithShoot(provider *gardener.Provider, existingWorkers []gardener.Worker) {
-	for i, _ := range provider.Workers {
-		for _, existing := range existingWorkers {
-			alignedWorker := &provider.Workers[i]
+	existingWorkersMap := make(map[string]gardener.Worker)
+	for _, existing := range existingWorkers {
+		existingWorkersMap[existing.Name] = existing
+	}
 
-			if alignedWorker.Name == existing.Name {
-				alignedWorker.Zones = existing.Zones
-				alignWorkerMachineImageVersion(alignedWorker.Machine.Image, existing.Machine.Image)
-				break
-			}
+	for i := range provider.Workers {
+		alignedWorker := &provider.Workers[i]
+
+		if existing, found := existingWorkersMap[alignedWorker.Name]; found {
+			alignedWorker.Zones = existing.Zones
+			alignWorkerMachineImageVersion(alignedWorker.Machine.Image, existing.Machine.Image)
 		}
 	}
 }
 
 func alignWorkerMachineImageVersion(workerImage *gardener.ShootMachineImage, shootWorkerImage *gardener.ShootMachineImage) {
-	if shootWorkerImage == nil || workerImage == nil {
+	if shootWorkerImage == nil || workerImage == nil || workerImage.Name != shootWorkerImage.Name {
 		return
 	}
 
-	if workerImage.Name != shootWorkerImage.Name {
+	if shootWorkerImage.Version == nil || *shootWorkerImage.Version == *workerImage.Version {
 		return
 	}
 
-	workerImgVer := workerImage.Version // both are pointers for *string
-	shootImgVer := shootWorkerImage.Version
-
-	if shootImgVer == nil {
-		return
-	}
-
-	if *shootImgVer != *workerImgVer {
-		result, err := compareVersions(*workerImgVer, *shootImgVer)
-		if err == nil && result < 0 {
-			currMachineImgVer := *shootImgVer
-			workerImgVer = &currMachineImgVer
-		}
+	if result, err := compareVersions(*workerImage.Version, *shootWorkerImage.Version); err == nil && result < 0 {
+		workerImage.Version = shootWorkerImage.Version
 	}
 }

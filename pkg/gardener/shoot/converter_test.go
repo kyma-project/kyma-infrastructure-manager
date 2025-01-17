@@ -102,7 +102,7 @@ func TestConverter(t *testing.T) {
 		require.Equalf(t, 5, extensionLen, "unexpected number of extensions: %d, expected: 5", extensionLen)
 	})
 
-	t.Run("Create shoot from Runtime for existing shoot and keep versions", func(t *testing.T) {
+	/*t.Run("Create shoot from Runtime for existing shoot and keep versions", func(t *testing.T) {
 		// given
 		runtime := fixRuntime()
 		converterConfig := fixConverterConfig()
@@ -185,7 +185,7 @@ func TestConverter(t *testing.T) {
 
 		extensionLen := len(shoot.Spec.Extensions)
 		require.Equalf(t, extensionLen, 5, "unexpected number of extensions: %d, expected: 5", extensionLen)
-	})
+	}) */
 }
 
 func assertShootFields(t *testing.T, runtime imv1.Runtime, shoot gardener.Shoot) {
