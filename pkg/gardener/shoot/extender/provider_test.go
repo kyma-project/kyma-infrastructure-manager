@@ -212,7 +212,7 @@ func TestProviderExtender(t *testing.T) {
 
 			var err error
 			if tc.TestForPatch {
-				extender := NewProviderExtenderPatchOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion, tc.CurrentMachineImageName, tc.CurrentMachineImageVersion, tc.CurrentZonesConfig)
+				extender := NewProviderExtenderPatchOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
 				err = extender(tc.Runtime, &shoot)
 			} else {
 				extender := NewProviderExtenderForCreateOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
@@ -295,6 +295,7 @@ func fixAWSProviderWithMultipleWorkers() imv1.Provider {
 				Maximum: 3,
 				Zones: []string{
 					"eu-central-1a",
+					"eu-central-1b",
 					"eu-central-1c",
 				},
 			},
@@ -309,6 +310,7 @@ func fixAWSProviderWithMultipleWorkers() imv1.Provider {
 				Zones: []string{
 					"eu-central-1a",
 					"eu-central-1b",
+					"eu-central-1c",
 				},
 			},
 			{
@@ -319,11 +321,92 @@ func fixAWSProviderWithMultipleWorkers() imv1.Provider {
 				Minimum: 1,
 				Maximum: 3,
 				Zones: []string{
+					"eu-central-1a",
 					"eu-central-1b",
 					"eu-central-1c",
 				},
 			},
 		},
+	}
+}
+
+func TestGetAllWorkersZones(t *testing.T) {
+	tests := []struct {
+		name     string
+		workers  []gardener.Worker
+		expected []string
+		wantErr  bool
+	}{
+		{
+			name: "Single worker with zones",
+			workers: []gardener.Worker{
+				{
+					Name:  "worker1",
+					Zones: []string{"zone1", "zone2"},
+				},
+			},
+			expected: []string{"zone1", "zone2"},
+			wantErr:  false,
+		},
+		{
+			name: "Multiple workers with same zones",
+			workers: []gardener.Worker{
+				{
+					Name:  "worker1",
+					Zones: []string{"zone1", "zone2"},
+				},
+				{
+					Name:  "worker2",
+					Zones: []string{"zone1", "zone2"},
+				},
+			},
+			expected: []string{"zone1", "zone2"},
+			wantErr:  false,
+		},
+		{
+			name: "Multiple workers with different zones",
+			workers: []gardener.Worker{
+				{
+					Name:  "worker1",
+					Zones: []string{"zone1", "zone2"},
+				},
+				{
+					Name:  "worker2",
+					Zones: []string{"zone1", "zone3"},
+				},
+			},
+			expected: nil,
+			wantErr:  true,
+		},
+		{
+			name:     "No workers provided",
+			workers:  []gardener.Worker{},
+			expected: nil,
+			wantErr:  true,
+		},
+		{
+			name: "Duplicate zones in a single worker",
+			workers: []gardener.Worker{
+				{
+					Name:  "worker1",
+					Zones: []string{"zone1", "zone1"},
+				},
+			},
+			expected: nil,
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			zones, err := getNetworkingZonesFromWorkers(tt.workers)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expected, zones)
+			}
+		})
 	}
 }
 

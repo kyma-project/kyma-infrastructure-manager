@@ -27,6 +27,15 @@ func NewControlPlaneConfig() *ControlPlaneConfig {
 	}
 }
 
+func DecodeInfrastructureConfig(data []byte) (*InfrastructureConfig, error) {
+	infrastructureConfig := &InfrastructureConfig{}
+	err := json.Unmarshal(data, infrastructureConfig)
+	if err != nil {
+		return nil, err
+	}
+	return infrastructureConfig, nil
+}
+
 func NewInfrastructureConfig(workerCIDR string, zones []string) InfrastructureConfig {
 	// All Azure shoots are zoned.
 	// No zones - the shoot configuration is invalid.

@@ -3,8 +3,6 @@ package fsm
 import (
 	"context"
 	"fmt"
-	"slices"
-
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
@@ -36,17 +34,15 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			msgFailedToConfigureAuditlogs)
 	}
 
-	imgName, imgVersion := getImageNameAndVersion(s.shoot.Spec.Provider.Workers)
-
 	updatedShoot, err := convertPatch(&s.instance, gardener_shoot.PatchOpts{
-		ConverterConfig:   m.ConverterConfig,
-		AuditLogData:      data,
-		Zones:             getZones(s.shoot.Spec.Provider.Workers),
-		ShootK8SVersion:   s.shoot.Spec.Kubernetes.Version,
-		ShootImageName:    imgName,
-		ShootImageVersion: imgVersion,
-		Extensions:        s.shoot.Spec.Extensions,
-		Resources:         s.shoot.Spec.Resources,
+		ConverterConfig:      m.ConverterConfig,
+		AuditLogData:         data,
+		Workers:              s.shoot.Spec.Provider.Workers,
+		ShootK8SVersion:      s.shoot.Spec.Kubernetes.Version,
+		Extensions:           s.shoot.Spec.Extensions,
+		Resources:            s.shoot.Spec.Resources,
+		InfrastructureConfig: s.shoot.Spec.Provider.InfrastructureConfig,
+		ControlPlaneConfig:   s.shoot.Spec.Provider.ControlPlaneConfig,
 	})
 
 	if err != nil {
@@ -88,36 +84,6 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	)
 
 	return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
-}
-
-func getZones(workers []gardener.Worker) []string {
-	var zones []string
-
-	for _, worker := range workers {
-		for _, zone := range worker.Zones {
-			if !slices.Contains(zones, zone) {
-				zones = append(zones, zone)
-			}
-		}
-	}
-
-	return zones
-}
-
-func getImageNameAndVersion(workers []gardener.Worker) (string, string) {
-	var imageName, imageVersion string
-
-	for _, worker := range workers {
-		if worker.Machine.Image != nil {
-			imageName = worker.Machine.Image.Name
-			if worker.Machine.Image.Version != nil {
-				imageVersion = *worker.Machine.Image.Version
-			}
-			break
-		}
-	}
-
-	return imageName, imageVersion
 }
 
 func convertPatch(instance *imv1.Runtime, opts gardener_shoot.PatchOpts) (gardener.Shoot, error) {

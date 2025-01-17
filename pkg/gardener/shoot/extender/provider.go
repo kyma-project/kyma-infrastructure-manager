@@ -1,6 +1,7 @@
 package extender
 
 import (
+	"fmt"
 	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -26,7 +27,12 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 
 		var err error
 		var controlPlaneConf, infraConfig *runtime.RawExtension
-		zones := getZones(rt.Spec.Shoot.Provider.Workers)
+		zones, err := getNetworkingZonesFromWorkers(provider.Workers)
+
+		if err != nil {
+			return err
+		}
+
 		infraConfig, controlPlaneConf, err = getConfig(rt.Spec.Shoot, zones)
 		if err != nil {
 			return err
@@ -43,7 +49,7 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 		provider.ControlPlaneConfig = controlPlaneConf
 		provider.InfrastructureConfig = infraConfig
 
-		setMachineImage(provider, defMachineImgName, defMachineImgVer, "", "")
+		setMachineImage(provider, defMachineImgName, defMachineImgVer)
 		err = setWorkerConfig(provider, provider.Type, enableIMDSv2)
 		setWorkerSettings(provider)
 
@@ -51,18 +57,50 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 	}
 }
 
-func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, defMachineImgVer, currMachineImgName, currMachineImgVer string, zones []string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+// Zones for patching workes are taken from existing shoot workers
+//
+// Zones for patching infrastructureConfig are processed as follows:
+// For Azure and AWS zones are stored in InfrastructureConfig and can be possibly updated if new workers with new zones are added
+// For GCP single zone (one from defined in workers) is stored in ControlPlaneConfig and its value is immutable.
+// For Openstack no zone information is stored neither in InfrastructureConfig nor in ControlPlaneConfig
+// So only for Azure and AWS zone setup can be changed in InfrastructureConfig scope.
+// For other providers we use existing data for patching the shoot
+func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, defMachineImgVer string, shootWorkers []gardener.Worker, existingInfraConfig *runtime.RawExtension, existingControlPlaneConfig *runtime.RawExtension) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
-		var err error
 		provider := &shoot.Spec.Provider
 		provider.Type = rt.Spec.Shoot.Provider.Type
 		provider.Workers = rt.Spec.Shoot.Provider.Workers
 
-		var controlPlaneConf, infraConfig *runtime.RawExtension
+		if rt.Spec.Shoot.Provider.AdditionalWorkers != nil {
+			provider.Workers = append(provider.Workers, *rt.Spec.Shoot.Provider.AdditionalWorkers...)
+		}
 
-		infraConfig, controlPlaneConf, err = getConfig(rt.Spec.Shoot, zones)
+		var controlPlaneConf, infraConfig *runtime.RawExtension
+		workerZones, err := getNetworkingZonesFromWorkers(provider.Workers)
 		if err != nil {
 			return err
+		}
+
+		if rt.Spec.Shoot.Provider.Type == hyperscaler.TypeAzure || rt.Spec.Shoot.Provider.Type == hyperscaler.TypeAWS {
+			infraConfigZones, err := getZonesFromInfrastructureConfig(rt.Spec.Shoot.Provider.Type, existingInfraConfig)
+			if err != nil {
+				return err
+			}
+			// extend infrastructure zones collection if new workers are added with new zones
+			for _, zone := range workerZones {
+				if !slices.Contains(infraConfigZones, zone) {
+					infraConfigZones = append(infraConfigZones, zone)
+				}
+			}
+
+			infraConfig, controlPlaneConf, err = getConfig(rt.Spec.Shoot, infraConfigZones)
+			if err != nil {
+				return err
+			}
+
+		} else {
+			infraConfig = existingInfraConfig.DeepCopy()
+			controlPlaneConf = existingControlPlaneConfig.DeepCopy()
 		}
 
 		if rt.Spec.Shoot.Provider.ControlPlaneConfig != nil {
@@ -76,14 +114,52 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 		provider.ControlPlaneConfig = controlPlaneConf
 		provider.InfrastructureConfig = infraConfig
 
-		setMachineImage(provider, defMachineImgName, defMachineImgVer, currMachineImgName, currMachineImgVer)
+		setMachineImage(provider, defMachineImgName, defMachineImgVer)
+
 		err = setWorkerConfig(provider, provider.Type, enableIMDSv2)
 		setWorkerSettings(provider)
 
-		alignWithExistingShoot(provider, zones)
+		alignWorkersWithShoot(provider, shootWorkers)
 
 		return err
 	}
+}
+
+// parse infrastructure config to get current networking zones
+func getZonesFromInfrastructureConfig(providerType string, infraConfig *runtime.RawExtension) ([]string, error) {
+	if infraConfig == nil {
+		return nil, errors.New("infrastructureConfig is nil")
+	}
+
+	var zones []string
+	if providerType == hyperscaler.TypeAWS {
+		infraConfig, err := aws.DecodeInfrastructureConfig(infraConfig.Raw)
+		if err != nil {
+			return nil, err
+		}
+		for _, zone := range infraConfig.Networks.Zones {
+			if !slices.Contains(zones, zone.Name) {
+				zones = append(zones, zone.Name)
+			}
+		}
+		return zones, nil
+	}
+
+	if providerType == hyperscaler.TypeAzure {
+		infraConfig, err := azure.DecodeInfrastructureConfig(infraConfig.Raw)
+		if err != nil {
+			return nil, err
+		}
+		for _, zone := range infraConfig.Networks.Zones {
+			name := fmt.Sprint(zone.Name)
+			if !slices.Contains(zones, name) {
+				zones = append(zones, name)
+			}
+		}
+		return zones, nil
+	}
+
+	return []string{}, errors.New("Cannot read zones from infrastructureConfig - provider not supported")
 }
 
 type InfrastructureProviderFunc func(workersCidr string, zones []string) ([]byte, error)
@@ -136,18 +212,39 @@ func getAWSWorkerConfig() (*runtime.RawExtension, error) {
 	return &runtime.RawExtension{Raw: workerConfigBytes}, nil
 }
 
-func getZones(workers []gardener.Worker) []string {
+// Get set of zones from first worker.
+// All other workers should have the same zones provided in the same order.
+// Otherwise fail
+func getNetworkingZonesFromWorkers(workers []gardener.Worker) ([]string, error) {
 	var zones []string
 
-	for _, worker := range workers {
-		for _, zone := range worker.Zones {
-			if !slices.Contains(zones, zone) {
-				zones = append(zones, zone)
-			}
+	if len(workers) == 0 {
+		return nil, errors.New("no workers provided")
+	}
+
+	for _, zone := range workers[0].Zones {
+		if !slices.Contains(zones, zone) {
+			zones = append(zones, zone)
+		} else {
+			return nil, fmt.Errorf("duplicate zone name detected for worker %s", workers[0].Name)
 		}
 	}
 
-	return zones
+	if len(zones) == 0 {
+		return nil, fmt.Errorf("no networking zones provided for worker %s", workers[0].Name)
+	}
+
+	if len(workers) == 1 {
+		return zones, nil
+	}
+
+	for _, worker := range workers {
+		if !slices.Equal(worker.Zones, zones) {
+			return nil, errors.New("workers have specified different zones set, or zones are in different order")
+		}
+	}
+
+	return zones, nil
 }
 
 func setWorkerConfig(provider *gardener.Provider, providerType string, enableIMDSv2 bool) error {
@@ -177,8 +274,7 @@ func setWorkerSettings(provider *gardener.Provider) {
 
 // It sets the machine image name and version to the values specified in the Runtime worker configuration.
 // If any value is not specified in the Runtime, it sets it as `machineImage.defaultVersion` or `machineImage.defaultName`, set in `converter_config.json`.
-// If the current image version with the same name on Shoot is greater than the version determined above, it sets the version to the current machine image version.
-func setMachineImage(provider *gardener.Provider, defMachineImgName, defMachineImgVer, currMachineImgName, currMachineImgVer string) {
+func setMachineImage(provider *gardener.Provider, defMachineImgName, defMachineImgVer string) {
 	for i := 0; i < len(provider.Workers); i++ {
 		worker := &provider.Workers[i]
 
@@ -188,31 +284,54 @@ func setMachineImage(provider *gardener.Provider, defMachineImgName, defMachineI
 				Version: &defMachineImgVer,
 			}
 		}
-		machineImageVersion := worker.Machine.Image.Version
-		if machineImageVersion == nil || *machineImageVersion == "" {
-			machineImageVersion = &defMachineImgVer
+		if worker.Machine.Image.Version == nil || *worker.Machine.Image.Version == "" {
+			worker.Machine.Image.Version = &defMachineImgVer
 		}
 
 		if worker.Machine.Image.Name == "" {
 			worker.Machine.Image.Name = defMachineImgName
 		}
-
-		// use current image version from shoot when it is greater than determined above - autoupdate case
-		if currMachineImgName == worker.Machine.Image.Name && currMachineImgVer != "" && currMachineImgVer != *machineImageVersion {
-			result, err := compareVersions(*machineImageVersion, currMachineImgVer)
-			if err == nil && result < 0 {
-				machineImageVersion = &currMachineImgVer
-			}
-		}
-
-		worker.Machine.Image.Version = machineImageVersion
 	}
 }
 
 // We can't predict what will be the order of zones stored by Gardener.
 // Without this patch, gardener's admission webhook might reject the request if the zones order does not match.
-func alignWithExistingShoot(provider *gardener.Provider, zones []string) {
-	for i := range provider.Workers {
-		provider.Workers[i].Zones = zones
+// If the current image version with the same name on Shoot is greater than the version, it sets the version to the current machine image version.
+func alignWorkersWithShoot(provider *gardener.Provider, existingWorkers []gardener.Worker) {
+	for i, _ := range provider.Workers {
+		for _, existing := range existingWorkers {
+			alignedWorker := &provider.Workers[i]
+
+			if alignedWorker.Name == existing.Name {
+				alignedWorker.Zones = existing.Zones
+				alignWorkerMachineImageVersion(alignedWorker.Machine.Image, existing.Machine.Image)
+				break
+			}
+		}
+	}
+}
+
+func alignWorkerMachineImageVersion(workerImage *gardener.ShootMachineImage, shootWorkerImage *gardener.ShootMachineImage) {
+	if shootWorkerImage == nil || workerImage == nil {
+		return
+	}
+
+	if workerImage.Name != shootWorkerImage.Name {
+		return
+	}
+
+	workerImgVer := workerImage.Version // both are pointers for *string
+	shootImgVer := shootWorkerImage.Version
+
+	if shootImgVer == nil {
+		return
+	}
+
+	if *shootImgVer != *workerImgVer {
+		result, err := compareVersions(*workerImgVer, *shootImgVer)
+		if err == nil && result < 0 {
+			currMachineImgVer := *shootImgVer
+			workerImgVer = &currMachineImgVer
+		}
 	}
 }
