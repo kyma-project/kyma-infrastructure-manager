@@ -2,6 +2,8 @@ package extender
 
 import (
 	"encoding/json"
+	"github.com/gardener/gardener-extension-provider-gcp/pkg/apis/gcp"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/azure"
 	"testing"
 
 	"github.com/gardener/gardener-extension-provider-aws/pkg/apis/aws/v1alpha1"
@@ -13,7 +15,6 @@ import (
 )
 
 func TestProviderExtenderForCreateAWS(t *testing.T) {
-
 	// tests of ProviderExtenderForCreateOperation for AWS provider
 	for tname, tc := range map[string]struct {
 		Runtime                     imv1.Runtime
@@ -29,7 +30,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
-						Provider: fixAWSProvider("gardenlinux", "1312.2.0", []string{"eu-central-1a"}),
+						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a"}),
 					},
 				},
 			},
@@ -43,7 +44,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
-						Provider: fixAWSProvider("gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b"}),
+						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b"}),
 					},
 				},
 			},
@@ -57,7 +58,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
-						Provider: fixAWSProvider("gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 					},
 				},
 			},
@@ -71,7 +72,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
-						Provider: fixAWSProvider("", "", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+						Provider: fixProvider(hyperscaler.TypeAWS, "", "", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 					},
 				},
 			},
@@ -84,7 +85,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
-						Provider: fixAWSProviderWithMultipleWorkers(),
+						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAWS, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 					},
 				},
 			},
@@ -107,7 +108,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 			require.NoError(t, err)
 
 			assertProvider(t, tc.Runtime.Spec.Shoot, shoot, tc.EnableIMDSv2, tc.ExpectedMachineImageName, tc.ExpectedMachineImageVersion)
-			assertProviderSpecificConfig(t, shoot, tc.ExpectedZonesCount)
+			assertProviderSpecificConfigAWS(t, shoot, tc.ExpectedZonesCount)
 		})
 	}
 
@@ -128,7 +129,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
-						Provider: fixAWSProvider("gardenlinux", "1312.2.0"),
+						Provider: fixProvider("gardenlinux", "1312.2.0"),
 					},
 				},
 			},
@@ -143,7 +144,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
-						Provider: fixAWSProvider("", ""),
+						Provider: fixProvider("", ""),
 					},
 				},
 			},
@@ -171,7 +172,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
-						Provider: fixAWSProvider("gardenlinux", "1312.2.0"),
+						Provider: fixProvider("gardenlinux", "1312.2.0"),
 					},
 				},
 			},
@@ -190,7 +191,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
-						Provider: fixAWSProvider("gardenlinux", "1312.2.0"),
+						Provider: fixProvider("gardenlinux", "1312.2.0"),
 					},
 				},
 			},
@@ -209,7 +210,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
-						Provider: fixAWSProvider("", ""),
+						Provider: fixProvider("", ""),
 					},
 				},
 			},
@@ -228,7 +229,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
-						Provider: fixAWSProvider("gardenlinux", "1312.2.0"),
+						Provider: fixProvider("gardenlinux", "1312.2.0"),
 					},
 				},
 			},
@@ -247,7 +248,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
-						Provider: fixAWSProvider("", ""),
+						Provider: fixProvider("", ""),
 					},
 				},
 			},
@@ -266,7 +267,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
-						Provider: fixAWSProvider("gardenlinux", "1312.2.0"),
+						Provider: fixProvider("gardenlinux", "1312.2.0"),
 					},
 				},
 			},
@@ -285,7 +286,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
-						Provider: fixAWSProvider("gardenlinux", "1312.2.0"),
+						Provider: fixProvider("gardenlinux", "1312.2.0"),
 					},
 				},
 			},
@@ -347,9 +348,117 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 	})
 }
 
-func fixAWSProvider(machineImageName, machineImageVersion string, zones []string) imv1.Provider {
+func TestProviderExtenderForCreateAzure(t *testing.T) {
+	// tests of ProviderExtenderForCreateOperation for Azure provider
+	for tname, tc := range map[string]struct {
+		Runtime                     imv1.Runtime
+		DefaultMachineImageVersion  string
+		ExpectedMachineImageVersion string
+		DefaultMachineImageName     string
+		ExpectedMachineImageName    string
+		CurrentZonesConfig          []string
+		ExpectedZonesCount          int
+	}{
+		"Create provider specific config for Azure without worker config and one zone": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProvider(hyperscaler.TypeAzure, "ubuntu", "18.04", []string{"1"}),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			DefaultMachineImageVersion:  "18.04-LTS",
+			ExpectedMachineImageVersion: "18.04",
+			ExpectedMachineImageName:    "ubuntu",
+			ExpectedZonesCount:          1,
+		},
+		"Create provider specific config for Azure without worker config and two zones": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProvider(hyperscaler.TypeAzure, "ubuntu", "18.04", []string{"1", "2"}),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			DefaultMachineImageVersion:  "18.04-LTS",
+			ExpectedMachineImageVersion: "18.04",
+			ExpectedMachineImageName:    "ubuntu",
+			ExpectedZonesCount:          2,
+		},
+		"Create provider specific config for Azure without worker config and three zones": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProvider(hyperscaler.TypeAzure, "ubuntu", "18.04", []string{"1", "2", "3"}),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			DefaultMachineImageVersion:  "18.04-LTS",
+			ExpectedMachineImageVersion: "18.04",
+			ExpectedMachineImageName:    "ubuntu",
+			ExpectedZonesCount:          3,
+		},
+		"Create provider specific config for Azure with worker config and three zones": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProvider(hyperscaler.TypeAzure, "", "", []string{"1", "2", "3"}),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			DefaultMachineImageVersion:  "18.04-LTS",
+			ExpectedMachineImageVersion: "18.04-LTS",
+			ExpectedZonesCount:          3,
+		},
+		"Create provider specific config for Azure with multiple workers - create option": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAzure, []string{"1", "2", "3"}),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			DefaultMachineImageVersion:  "18.04-LTS",
+			ExpectedMachineImageVersion: "18.04-LTS",
+			ExpectedZonesCount:          3,
+		},
+	} {
+		t.Run(tname, func(t *testing.T) {
+			// given
+			shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
+
+			// when
+
+			extender := NewProviderExtenderForCreateOperation(false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
+			err := extender(tc.Runtime, &shoot)
+
+			// then
+			require.NoError(t, err)
+
+			assertProvider(t, tc.Runtime.Spec.Shoot, shoot, false, tc.ExpectedMachineImageName, tc.ExpectedMachineImageVersion)
+			assertProviderSpecificConfigAzure(t, shoot, tc.ExpectedZonesCount)
+		})
+	}
+}
+
+func fixProvider(providerType string, machineImageName, machineImageVersion string, zones []string) imv1.Provider {
 	return imv1.Provider{
-		Type: hyperscaler.TypeAWS,
+		Type: providerType,
 		Workers: []gardener.Worker{
 			{
 				Name: "worker",
@@ -376,9 +485,9 @@ func fixMachineImage(machineImageName, machineImageVersion string) *gardener.Sho
 	return &gardener.ShootMachineImage{}
 }
 
-func fixAWSProviderWithMultipleWorkers() imv1.Provider {
+func fixProviderWithMultipleWorkers(providerType string, zones []string) imv1.Provider {
 	return imv1.Provider{
-		Type: hyperscaler.TypeAWS,
+		Type: providerType,
 		Workers: []gardener.Worker{
 			{
 				Name: "worker",
@@ -387,11 +496,7 @@ func fixAWSProviderWithMultipleWorkers() imv1.Provider {
 				},
 				Minimum: 1,
 				Maximum: 3,
-				Zones: []string{
-					"eu-central-1a",
-					"eu-central-1b",
-					"eu-central-1c",
-				},
+				Zones:   zones,
 			},
 			{
 				Name: "worker",
@@ -401,11 +506,7 @@ func fixAWSProviderWithMultipleWorkers() imv1.Provider {
 				},
 				Minimum: 1,
 				Maximum: 3,
-				Zones: []string{
-					"eu-central-1a",
-					"eu-central-1b",
-					"eu-central-1c",
-				},
+				Zones:   zones,
 			},
 			{
 				Name: "worker",
@@ -414,11 +515,7 @@ func fixAWSProviderWithMultipleWorkers() imv1.Provider {
 				},
 				Minimum: 1,
 				Maximum: 3,
-				Zones: []string{
-					"eu-central-1a",
-					"eu-central-1b",
-					"eu-central-1c",
-				},
+				Zones:   zones,
 			},
 		},
 	}
@@ -525,11 +622,29 @@ func assertProvider(t *testing.T, runtimeShoot imv1.RuntimeShoot, shoot gardener
 	}
 }
 
-func assertProviderSpecificConfig(t *testing.T, shoot gardener.Shoot, expectedZonesCount int) {
+func assertProviderSpecificConfigAWS(t *testing.T, shoot gardener.Shoot, expectedZonesCount int) {
 	var infrastructureConfig v1alpha1.InfrastructureConfig
 
 	err := json.Unmarshal(shoot.Spec.Provider.InfrastructureConfig.Raw, &infrastructureConfig)
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedZonesCount, len(infrastructureConfig.Networks.Zones))
+}
+
+func assertProviderSpecificConfigAzure(t *testing.T, shoot gardener.Shoot, expectedZonesCount int) {
+	var infrastructureConfig azure.InfrastructureConfig
+
+	err := json.Unmarshal(shoot.Spec.Provider.InfrastructureConfig.Raw, &infrastructureConfig)
+	require.NoError(t, err)
+
+	assert.Equal(t, expectedZonesCount, len(infrastructureConfig.Networks.Zones))
+}
+
+func assertProviderSpecificConfigGCP(t *testing.T, shoot gardener.Shoot, expectedZonesCount int) {
+	var infrastructureConfig gcp.InfrastructureConfig
+
+	err := json.Unmarshal(shoot.Spec.Provider.InfrastructureConfig.Raw, &infrastructureConfig)
+	require.NoError(t, err)
+
+	// validate the networking cidr here
 }
