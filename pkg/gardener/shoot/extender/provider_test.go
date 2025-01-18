@@ -12,7 +12,105 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestProviderExtender(t *testing.T) {
+func TestProviderExtenderForCreateAWS(t *testing.T) {
+
+	// tests of ProviderExtenderForCreateOperation for AWS provider
+	for tname, tc := range map[string]struct {
+		Runtime                     imv1.Runtime
+		EnableIMDSv2                bool
+		DefaultMachineImageVersion  string
+		ExpectedMachineImageVersion string
+		DefaultMachineImageName     string
+		ExpectedMachineImageName    string
+		CurrentZonesConfig          []string
+		ExpectedZonesCount          int
+	}{
+		"Create provider specific config for AWS without worker config and one zone": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixAWSProvider("gardenlinux", "1312.2.0", []string{"eu-central-1a"}),
+					},
+				},
+			},
+			EnableIMDSv2:                false,
+			DefaultMachineImageVersion:  "1312.3.0",
+			ExpectedMachineImageVersion: "1312.2.0",
+			ExpectedMachineImageName:    "gardenlinux",
+			ExpectedZonesCount:          1,
+		},
+		"Create provider specific config for AWS without worker config and two zones": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixAWSProvider("gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b"}),
+					},
+				},
+			},
+			EnableIMDSv2:                false,
+			DefaultMachineImageVersion:  "1312.3.0",
+			ExpectedMachineImageVersion: "1312.2.0",
+			ExpectedMachineImageName:    "gardenlinux",
+			ExpectedZonesCount:          2,
+		},
+		"Create provider specific config for AWS without worker config and three zones": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixAWSProvider("gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+					},
+				},
+			},
+			EnableIMDSv2:                false,
+			DefaultMachineImageVersion:  "1312.3.0",
+			ExpectedMachineImageVersion: "1312.2.0",
+			ExpectedMachineImageName:    "gardenlinux",
+			ExpectedZonesCount:          3,
+		},
+		"Create provider specific config for AWS with worker config and three zones": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixAWSProvider("", "", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+					},
+				},
+			},
+			EnableIMDSv2:                true,
+			DefaultMachineImageVersion:  "1312.3.0",
+			ExpectedMachineImageVersion: "1312.3.0",
+			ExpectedZonesCount:          3,
+		},
+		"Create provider specific config for AWS with multiple workers - create option": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixAWSProviderWithMultipleWorkers(),
+					},
+				},
+			},
+			EnableIMDSv2:                false,
+			DefaultMachineImageVersion:  "1312.3.0",
+			ExpectedMachineImageVersion: "1312.3.0",
+			ExpectedZonesCount:          3,
+		},
+	} {
+		t.Run(tname, func(t *testing.T) {
+			// given
+			shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
+
+			// when
+
+			extender := NewProviderExtenderForCreateOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
+			err := extender(tc.Runtime, &shoot)
+
+			// then
+			require.NoError(t, err)
+
+			assertProvider(t, tc.Runtime.Spec.Shoot, shoot, tc.EnableIMDSv2, tc.ExpectedMachineImageName, tc.ExpectedMachineImageVersion)
+			assertProviderSpecificConfig(t, shoot, tc.ExpectedZonesCount)
+		})
+	}
+
 	/*for tname, tc := range map[string]struct {
 		Runtime                     imv1.Runtime
 		EnableIMDSv2                bool
@@ -249,7 +347,7 @@ func TestProviderExtender(t *testing.T) {
 	})
 }
 
-func fixAWSProvider(machineImageName, machineImageVersion string) imv1.Provider {
+func fixAWSProvider(machineImageName, machineImageVersion string, zones []string) imv1.Provider {
 	return imv1.Provider{
 		Type: hyperscaler.TypeAWS,
 		Workers: []gardener.Worker{
@@ -261,11 +359,7 @@ func fixAWSProvider(machineImageName, machineImageVersion string) imv1.Provider 
 				},
 				Minimum: 1,
 				Maximum: 3,
-				Zones: []string{
-					"eu-central-1a",
-					"eu-central-1b",
-					"eu-central-1c",
-				},
+				Zones:   zones,
 			},
 		},
 	}
