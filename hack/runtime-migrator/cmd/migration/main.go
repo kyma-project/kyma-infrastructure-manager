@@ -29,7 +29,7 @@ func main() {
 	slog.Info("Starting runtime-migrator")
 	cfg := initialisation.NewConfig()
 
-	initialisation.PrintConfig(cfg)
+	initialisation.PrintConfig(cfg, true)
 
 	opts := zap.Options{
 		Development: true,

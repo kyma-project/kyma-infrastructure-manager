@@ -26,7 +26,7 @@ const (
 	timeoutK8sOperation = 20 * time.Second
 )
 
-func PrintConfig(cfg Config) {
+func PrintConfig(cfg Config, includeNewLine bool) {
 	log.Println("gardener-kubeconfig-path:", cfg.GardenerKubeconfigPath)
 	log.Println("kcp-kubeconfig-path:", cfg.KcpKubeconfigPath)
 	log.Println("gardener-project-name:", cfg.GardenerProjectName)
@@ -34,7 +34,10 @@ func PrintConfig(cfg Config) {
 	log.Println("dry-run:", cfg.IsDryRun)
 	log.Println("input-type:", cfg.InputType)
 	log.Println("input-file-path:", cfg.InputFilePath)
-	log.Println("")
+
+	if includeNewLine {
+		log.Println("")
+	}
 }
 
 // newConfig - creates new application configuration base on passed flags
@@ -103,8 +106,9 @@ func NewBackupConfig() BackupConfig {
 }
 
 func PrintBackupConfig(cfg BackupConfig) {
-	PrintConfig(cfg.Config)
+	PrintConfig(cfg.Config, false)
 	log.Println("set-controlled-by-kim:", cfg.SetControlledByKim)
+	log.Println("")
 }
 
 type RestoreConfig struct {
@@ -133,8 +137,10 @@ func NewRestoreConfig() RestoreConfig {
 }
 
 func PrintRestoreConfig(cfg RestoreConfig) {
-	PrintConfig(cfg.Config)
+	PrintConfig(cfg.Config, false)
 	log.Println("backup-path:", cfg.BackupDir)
 	log.Println("restore-crb:", cfg.RestoreCRB)
 	log.Println("restore-oidc:", cfg.RestoreOIDC)
+
+	log.Println("")
 }
