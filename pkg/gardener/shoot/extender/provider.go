@@ -227,27 +227,27 @@ func getNetworkingZonesFromWorkers(workers []gardener.Worker) ([]string, error) 
 		return nil, errors.New("no workers provided")
 	}
 
-	for _, zone := range workers[0].Zones {
-		if !slices.Contains(zones, zone) {
-			zones = append(zones, zone)
-		} else {
-			return nil, fmt.Errorf("duplicate zone name detected for worker %s", workers[0].Name)
+	for _, worker := range workers {
+		for _, zone := range worker.Zones {
+			if !slices.Contains(zones, zone) {
+				zones = append(zones, zone)
+			}
 		}
 	}
 
 	if len(zones) == 0 {
-		return nil, fmt.Errorf("no networking zones provided for worker %s", workers[0].Name)
+		return nil, fmt.Errorf("no networking zones detected for Runtime provider workers")
 	}
 
-	if len(workers) == 1 {
-		return zones, nil
-	}
+	//if len(workers) == 1 {
+	//	return zones, nil
+	//}
 
-	for _, worker := range workers {
-		if !slices.Equal(worker.Zones, zones) {
-			return nil, errors.New("workers have specified different zones set, or zones are in different order")
-		}
-	}
+	//for _, worker := range workers {
+	//	if !slices.Equal(worker.Zones, zones) {
+	//		return nil, errors.New("workers have specified different zones set, or zones are in different order")
+	//	}
+	//}
 
 	return zones, nil
 }
