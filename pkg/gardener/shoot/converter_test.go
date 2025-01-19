@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/aws"
 	"io"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
@@ -102,7 +103,7 @@ func TestConverter(t *testing.T) {
 		require.Equalf(t, 5, extensionLen, "unexpected number of extensions: %d, expected: 5", extensionLen)
 	})
 
-	/*t.Run("Create shoot from Runtime for existing shoot and keep versions", func(t *testing.T) {
+	t.Run("Create shoot from Runtime for existing shoot and keep versions if Shoot has bigger versions then Runtime", func(t *testing.T) {
 		// given
 		runtime := fixRuntime()
 		converterConfig := fixConverterConfig()
@@ -114,13 +115,13 @@ func TestConverter(t *testing.T) {
 		}
 
 		converter := NewConverterPatch(PatchOpts{
-			ConverterConfig:   converterConfig,
-			Zones:             fixReversedZones(),
-			ShootK8SVersion:   "1.30",
-			ShootImageName:    "gardenlinux",
-			ShootImageVersion: "1592.2.0",
-			Extensions:        fixAllExtensionsOnTheShoot(),
-			AuditLogData:      auditLogData,
+			ConverterConfig:      converterConfig,
+			Workers:              fixWorkersWithReversedZones("gardenlinux", "1592.2.0"),
+			ShootK8SVersion:      "1.30",
+			Extensions:           fixAllExtensionsOnTheShoot(),
+			AuditLogData:         auditLogData,
+			InfrastructureConfig: fixAWSInfrastructureConfig("10.250.0.0/16", []string{"eu-central-1c", "eu-central-1b", "eu-central-1a"}),
+			ControlPlaneConfig:   fixAWSControlPlaneConfig(),
 		})
 
 		// when
@@ -145,7 +146,7 @@ func TestConverter(t *testing.T) {
 		require.Equalf(t, extensionLen, 5, "unexpected number of extensions: %d, expected: 5", extensionLen)
 	})
 
-	t.Run("Create shoot from Runtime for existing shoot and update versions", func(t *testing.T) {
+	t.Run("Create shoot from Runtime for existing shoot and update versions if Shoot has lesser versions then Runtime", func(t *testing.T) {
 		// given
 		runtime := fixRuntime()
 		converterConfig := fixConverterConfig()
@@ -156,13 +157,13 @@ func TestConverter(t *testing.T) {
 		}
 
 		converter := NewConverterPatch(PatchOpts{
-			ConverterConfig:   converterConfig,
-			Zones:             fixReversedZones(),
-			ShootK8SVersion:   "1.27",
-			ShootImageName:    "gardenlinux",
-			ShootImageVersion: "1591.0.0",
-			Extensions:        fixAllExtensionsOnTheShoot(),
-			AuditLogData:      auditLogData,
+			ConverterConfig:      converterConfig,
+			Workers:              fixWorkersWithReversedZones("gardenlinux", "1591.0.0"),
+			ShootK8SVersion:      "1.27",
+			Extensions:           fixAllExtensionsOnTheShoot(),
+			AuditLogData:         auditLogData,
+			InfrastructureConfig: fixAWSInfrastructureConfig("10.250.0.0/16", []string{"eu-central-1c", "eu-central-1b", "eu-central-1a"}),
+			ControlPlaneConfig:   fixAWSControlPlaneConfig(),
 		})
 
 		// when
@@ -185,7 +186,7 @@ func TestConverter(t *testing.T) {
 
 		extensionLen := len(shoot.Spec.Extensions)
 		require.Equalf(t, extensionLen, 5, "unexpected number of extensions: %d, expected: 5", extensionLen)
-	}) */
+	})
 }
 
 func assertShootFields(t *testing.T, runtime imv1.Runtime, shoot gardener.Shoot) {
@@ -200,11 +201,25 @@ func assertShootFields(t *testing.T, runtime imv1.Runtime, shoot gardener.Shoot)
 	assert.Equal(t, "core.gardener.cloud/v1beta1", shoot.TypeMeta.APIVersion)
 }
 
-func fixReversedZones() []string {
-	return []string{
-		"eu-central-1c",
-		"eu-central-1b",
-		"eu-central-1a",
+func fixWorkersWithReversedZones(machineImageName, machineImageVersion string) []gardener.Worker {
+	return []gardener.Worker{
+		{
+			Name: "worker",
+			Machine: gardener.Machine{
+				Type: "m6i.large",
+				Image: &gardener.ShootMachineImage{
+					Name:    machineImageName,
+					Version: &machineImageVersion,
+				},
+			},
+			Minimum: 1,
+			Maximum: 3,
+			Zones: []string{
+				"eu-central-1c",
+				"eu-central-1b",
+				"eu-central-1a",
+			},
+		},
 	}
 }
 
@@ -261,6 +276,16 @@ func fixAllExtensionsOnTheShoot() []gardener.Extension {
 			Disabled: ptr.To(false),
 		},
 	}
+}
+
+func fixAWSInfrastructureConfig(workersCIDR string, zones []string) *runtime.RawExtension {
+	infraConfig, _ := aws.GetInfrastructureConfig(workersCIDR, zones)
+	return &runtime.RawExtension{Raw: infraConfig}
+}
+
+func fixAWSControlPlaneConfig() *runtime.RawExtension {
+	controlPlaneConfig, _ := aws.GetControlPlaneConfig([]string{})
+	return &runtime.RawExtension{Raw: controlPlaneConfig}
 }
 
 func fixRuntime() imv1.Runtime {

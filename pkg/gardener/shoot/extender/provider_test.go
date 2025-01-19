@@ -3,7 +3,10 @@ package extender
 import (
 	"encoding/json"
 	"github.com/gardener/gardener-extension-provider-gcp/pkg/apis/gcp"
+	aws "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/aws"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/azure"
+	"k8s.io/apimachinery/pkg/runtime"
+
 	"testing"
 
 	"github.com/gardener/gardener-extension-provider-aws/pkg/apis/aws/v1alpha1"
@@ -112,220 +115,6 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 		})
 	}
 
-	/*for tname, tc := range map[string]struct {
-		Runtime                     imv1.Runtime
-		EnableIMDSv2                bool
-		DefaultMachineImageVersion  string
-		CurrentMachineImageVersion  string
-		ExpectedMachineImageVersion string
-		DefaultMachineImageName     string
-		CurrentMachineImageName     string
-		ExpectedMachineImageName    string
-		CurrentZonesConfig          []string
-		ExpectedZonesCount          int
-		TestForPatch                bool
-	}{
-		"Create provider specific config for AWS without worker config - create option": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{
-						Provider: fixProvider("gardenlinux", "1312.2.0"),
-					},
-				},
-			},
-			EnableIMDSv2:                false,
-			DefaultMachineImageVersion:  "1312.3.0",
-			ExpectedMachineImageVersion: "1312.2.0",
-			ExpectedMachineImageName:    "gardenlinux",
-			ExpectedZonesCount:          3,
-			TestForPatch:                false,
-		},
-		"Create provider specific config for AWS with worker config - create option": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{
-						Provider: fixProvider("", ""),
-					},
-				},
-			},
-			EnableIMDSv2:                true,
-			DefaultMachineImageVersion:  "1312.3.0",
-			ExpectedMachineImageVersion: "1312.3.0",
-			ExpectedZonesCount:          3,
-			TestForPatch:                false,
-		},
-		"Create provider specific config for AWS with multiple workers - create option": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{
-						Provider: fixAWSProviderWithMultipleWorkers(),
-					},
-				},
-			},
-			EnableIMDSv2:                false,
-			DefaultMachineImageVersion:  "1312.3.0",
-			ExpectedMachineImageVersion: "1312.3.0",
-			ExpectedZonesCount:          3,
-			TestForPatch:                false,
-		},
-		"Patch option same image name - use bigger current shoot machine image version as image version": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{
-						Provider: fixProvider("gardenlinux", "1312.2.0"),
-					},
-				},
-			},
-			EnableIMDSv2:                false,
-			DefaultMachineImageName:     "gardenlinux",
-			DefaultMachineImageVersion:  "1312.3.0",
-			CurrentMachineImageName:     "gardenlinux",
-			CurrentMachineImageVersion:  "1312.4.0",
-			ExpectedMachineImageVersion: "1312.4.0",
-			ExpectedZonesCount:          3,
-			ExpectedMachineImageName:    "gardenlinux",
-			CurrentZonesConfig:          []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"},
-			TestForPatch:                true,
-		},
-		"Patch option same image name - override current shoot machine image version with new bigger version from RuntimeCR": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{
-						Provider: fixProvider("gardenlinux", "1312.2.0"),
-					},
-				},
-			},
-			EnableIMDSv2:                false,
-			DefaultMachineImageName:     "gardenlinux",
-			DefaultMachineImageVersion:  "1312.3.0",
-			CurrentMachineImageName:     "gardenlinux",
-			CurrentMachineImageVersion:  "1312.1.0",
-			ExpectedMachineImageVersion: "1312.2.0",
-			ExpectedZonesCount:          3,
-			ExpectedMachineImageName:    "gardenlinux",
-			CurrentZonesConfig:          []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"},
-			TestForPatch:                true,
-		},
-		"Patch option same image name - override current shoot machine image version with default version": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{
-						Provider: fixProvider("", ""),
-					},
-				},
-			},
-			EnableIMDSv2:                false,
-			DefaultMachineImageName:     "gardenlinux",
-			DefaultMachineImageVersion:  "1312.3.0",
-			CurrentMachineImageName:     "gardenlinux",
-			CurrentMachineImageVersion:  "1312.1.0",
-			ExpectedMachineImageVersion: "1312.3.0",
-			ExpectedZonesCount:          3,
-			ExpectedMachineImageName:    "gardenlinux",
-			CurrentZonesConfig:          []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"},
-			TestForPatch:                true,
-		},
-		"Patch option different image name - override current shoot machine image and version with new data from RuntimeCR": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{
-						Provider: fixProvider("gardenlinux", "1312.2.0"),
-					},
-				},
-			},
-			EnableIMDSv2:                false,
-			DefaultMachineImageName:     "gardenlinux",
-			DefaultMachineImageVersion:  "1312.3.0",
-			CurrentMachineImageName:     "ubuntu",
-			CurrentMachineImageVersion:  "1312.4.0",
-			ExpectedMachineImageVersion: "1312.2.0",
-			ExpectedZonesCount:          3,
-			ExpectedMachineImageName:    "gardenlinux",
-			CurrentZonesConfig:          []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"},
-			TestForPatch:                true,
-		},
-		"Patch option different image name - override current shoot machine image and version with default data": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{
-						Provider: fixProvider("", ""),
-					},
-				},
-			},
-			EnableIMDSv2:                false,
-			DefaultMachineImageName:     "gardenlinux",
-			DefaultMachineImageVersion:  "1312.3.0",
-			CurrentMachineImageName:     "ubuntu",
-			CurrentMachineImageVersion:  "1312.4.0",
-			ExpectedMachineImageVersion: "1312.3.0",
-			ExpectedZonesCount:          3,
-			ExpectedMachineImageName:    "gardenlinux",
-			CurrentZonesConfig:          []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"},
-			TestForPatch:                true,
-		},
-		"Patch option wrong current image name - use data from RuntimeCR": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{
-						Provider: fixProvider("gardenlinux", "1312.2.0"),
-					},
-				},
-			},
-			EnableIMDSv2:                false,
-			DefaultMachineImageName:     "gardenlinux",
-			DefaultMachineImageVersion:  "1312.3.0",
-			CurrentMachineImageName:     "",
-			CurrentMachineImageVersion:  "1312.4.0",
-			ExpectedMachineImageVersion: "1312.2.0",
-			ExpectedZonesCount:          3,
-			ExpectedMachineImageName:    "gardenlinux",
-			CurrentZonesConfig:          []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"},
-			TestForPatch:                true,
-		},
-		"Patch option wrong current image version - use data from RuntimeCR": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{
-						Provider: fixProvider("gardenlinux", "1312.2.0"),
-					},
-				},
-			},
-			EnableIMDSv2:                false,
-			DefaultMachineImageName:     "gardenlinux",
-			DefaultMachineImageVersion:  "1312.3.0",
-			CurrentMachineImageName:     "gardenlinux",
-			CurrentMachineImageVersion:  "",
-			ExpectedMachineImageVersion: "1312.2.0",
-			ExpectedZonesCount:          3,
-			ExpectedMachineImageName:    "gardenlinux",
-			CurrentZonesConfig:          []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"},
-			TestForPatch:                true,
-		},
-		// "Patch option different image name - override image name and version with current image name and version": {},
-	} {
-		t.Run(tname, func(t *testing.T) {
-			// given
-			shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
-
-			// when
-
-			var err error
-			if tc.TestForPatch {
-				extender := NewProviderExtenderPatchOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
-				err = extender(tc.Runtime, &shoot)
-			} else {
-				extender := NewProviderExtenderForCreateOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
-				err = extender(tc.Runtime, &shoot)
-			}
-
-			// then
-			require.NoError(t, err)
-
-			assertProvider(t, tc.Runtime.Spec.Shoot, shoot, tc.EnableIMDSv2, tc.ExpectedMachineImageName, tc.ExpectedMachineImageVersion)
-			assertProviderSpecificConfig(t, shoot, tc.ExpectedZonesCount)
-		})
-	}*/
-
 	t.Run("Return error for unknown provider", func(t *testing.T) {
 		// given
 		shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
@@ -346,6 +135,168 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 		// then
 		require.Error(t, err)
 	})
+}
+
+func TestProviderExtenderForPatchAWS(t *testing.T) {
+	// tests of NewProviderExtenderPatchOperation for AWS only for provider image version patching
+	for tname, tc := range map[string]struct {
+		Runtime                     imv1.Runtime
+		EnableIMDSv2                bool
+		DefaultMachineImageVersion  string
+		ExpectedMachineImageVersion string
+		DefaultMachineImageName     string
+		ExpectedMachineImageName    string
+		CurrentShootWorkers         []gardener.Worker
+		ExistingInfraConfig         *runtime.RawExtension
+		ExistingControlPlaneConfig  *runtime.RawExtension
+		ExpectedShootWorkersCount   int
+		ExpectedZonesCount          int
+	}{
+		"Same image name - use bigger current shoot machine image version as image version": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			EnableIMDSv2:                false,
+			DefaultMachineImageName:     "gardenlinux",
+			DefaultMachineImageVersion:  "1312.3.0",
+			ExpectedMachineImageVersion: "1312.4.0",
+			ExpectedZonesCount:          3,
+			ExpectedMachineImageName:    "gardenlinux",
+			CurrentShootWorkers:         fixWorkers("m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingInfraConfig:         fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingControlPlaneConfig:  fixAWSControlPlaneConfig(),
+		},
+		"Same image name - override current shoot machine image version with new bigger version from RuntimeCR": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+					},
+				},
+			},
+			EnableIMDSv2:                false,
+			DefaultMachineImageName:     "gardenlinux",
+			DefaultMachineImageVersion:  "1312.3.0",
+			CurrentShootWorkers:         fixWorkers("m6i.large", "gardenlinux", "1312.1.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExpectedMachineImageVersion: "1312.2.0",
+			ExpectedZonesCount:          3,
+			ExpectedMachineImageName:    "gardenlinux",
+			ExistingInfraConfig:         fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingControlPlaneConfig:  fixAWSControlPlaneConfig(),
+		},
+		"Same image name - no version is provided override current shoot machine image version with default version": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProvider(hyperscaler.TypeAWS, "", "", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+					},
+				},
+			},
+			EnableIMDSv2:                false,
+			DefaultMachineImageName:     "gardenlinux",
+			DefaultMachineImageVersion:  "1312.3.0",
+			CurrentShootWorkers:         fixWorkers("m6i.large", "gardenlinux", "1312.1.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExpectedMachineImageVersion: "1312.3.0",
+			ExpectedZonesCount:          3,
+			ExpectedMachineImageName:    "gardenlinux",
+			ExistingInfraConfig:         fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingControlPlaneConfig:  fixAWSControlPlaneConfig(),
+		},
+		"Different image name - override current shoot machine image and version with new data from RuntimeCR": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+					},
+				},
+			},
+			EnableIMDSv2:                false,
+			DefaultMachineImageName:     "gardenlinux",
+			DefaultMachineImageVersion:  "1312.3.0",
+			CurrentShootWorkers:         fixWorkers("m6i.large", "ubuntu", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExpectedZonesCount:          3,
+			ExpectedMachineImageName:    "gardenlinux",
+			ExpectedMachineImageVersion: "1312.2.0",
+			ExistingInfraConfig:         fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingControlPlaneConfig:  fixAWSControlPlaneConfig(),
+		},
+		"Different image name - no data is provided override current shoot machine image and version with default data": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProvider(hyperscaler.TypeAWS, "", "", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+					},
+				},
+			},
+			EnableIMDSv2:                false,
+			DefaultMachineImageName:     "gardenlinux",
+			DefaultMachineImageVersion:  "1312.3.0",
+			CurrentShootWorkers:         fixWorkers("m6i.large", "ubuntu", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExpectedMachineImageVersion: "1312.3.0",
+			ExpectedZonesCount:          3,
+			ExpectedMachineImageName:    "gardenlinux",
+			ExistingInfraConfig:         fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingControlPlaneConfig:  fixAWSControlPlaneConfig(),
+		},
+		"Wrong current image name - use data from RuntimeCR": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+					},
+				},
+			},
+			EnableIMDSv2:                false,
+			DefaultMachineImageName:     "gardenlinux",
+			DefaultMachineImageVersion:  "1312.3.0",
+			CurrentShootWorkers:         fixWorkers("m6i.large", "", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExpectedMachineImageVersion: "1312.2.0",
+			ExpectedZonesCount:          3,
+			ExpectedMachineImageName:    "gardenlinux",
+			ExistingInfraConfig:         fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingControlPlaneConfig:  fixAWSControlPlaneConfig(),
+		},
+		"Wrong current image version - use data from RuntimeCR": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+					},
+				},
+			},
+			EnableIMDSv2:                false,
+			DefaultMachineImageName:     "gardenlinux",
+			DefaultMachineImageVersion:  "1312.3.0",
+			CurrentShootWorkers:         fixWorkers("m6i.large", "gardenlinux", "", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExpectedMachineImageVersion: "1312.2.0",
+			ExpectedZonesCount:          3,
+			ExpectedMachineImageName:    "gardenlinux",
+			ExistingInfraConfig:         fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingControlPlaneConfig:  fixAWSControlPlaneConfig(),
+		},
+	} {
+		t.Run(tname, func(t *testing.T) {
+			// given
+			shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
+
+			// when
+			extender := NewProviderExtenderPatchOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion, tc.CurrentShootWorkers, tc.ExistingControlPlaneConfig, tc.ExistingInfraConfig)
+			err := extender(tc.Runtime, &shoot)
+
+			// then
+			require.NoError(t, err)
+
+			assertProvider(t, tc.Runtime.Spec.Shoot, shoot, tc.EnableIMDSv2, tc.ExpectedMachineImageName, tc.ExpectedMachineImageVersion)
+			assertProviderSpecificConfigAWS(t, shoot, tc.ExpectedZonesCount)
+		})
+	}
 }
 
 func TestProviderExtenderForCreateAzure(t *testing.T) {
@@ -456,6 +407,14 @@ func TestProviderExtenderForCreateAzure(t *testing.T) {
 	}
 }
 
+/*func TestProviderExtenderForCreateGCP(t *testing.T) {
+
+}
+
+func TestProviderExtenderForCreateOpenStack(t *testing.T) {
+
+}*/
+
 func fixProvider(providerType string, machineImageName, machineImageVersion string, zones []string) imv1.Provider {
 	return imv1.Provider{
 		Type: providerType,
@@ -472,6 +431,68 @@ func fixProvider(providerType string, machineImageName, machineImageVersion stri
 			},
 		},
 	}
+}
+
+func fixWorkers(machineType, machineImageName, machineImageVersion string, min, max int32, zones []string) []gardener.Worker {
+	return []gardener.Worker{
+		{
+			Name: "worker",
+			Machine: gardener.Machine{
+				Type: machineType,
+				Image: &gardener.ShootMachineImage{
+					Name:    machineImageName,
+					Version: &machineImageVersion,
+				},
+			},
+			Minimum: min,
+			Maximum: max,
+			Zones:   zones,
+		},
+	}
+}
+
+func fixProviderWithInfrastructureConfig(providerType string, machineImageName, machineImageVersion string, zones []string) imv1.Provider {
+	var infraConfigBytes []byte
+	switch providerType {
+	case hyperscaler.TypeAWS:
+		infraConfigBytes, _ = aws.GetInfrastructureConfig("10.250.0.0/22", zones)
+	case hyperscaler.TypeAzure:
+		infraConfigBytes, _ = azure.GetInfrastructureConfig("10.250.0.0/22", zones)
+	default:
+		panic("unknown provider type")
+	}
+
+	return imv1.Provider{
+		Type: providerType,
+		Workers: []gardener.Worker{
+			{
+				Name: "worker",
+				Machine: gardener.Machine{
+					Type:  "m6i.large",
+					Image: fixMachineImage(machineImageName, machineImageVersion),
+				},
+				Minimum: 1,
+				Maximum: 3,
+				Zones:   zones,
+			},
+		},
+		InfrastructureConfig: &runtime.RawExtension{Raw: infraConfigBytes},
+	}
+}
+
+func fixAWSInfrastructureConfig(workersCIDR string, zones []string) *runtime.RawExtension {
+	infraConfig, _ := aws.GetInfrastructureConfig(workersCIDR, zones)
+	return &runtime.RawExtension{Raw: infraConfig}
+}
+
+func fixAWSControlPlaneConfig() *runtime.RawExtension {
+	controlPlaneConfig, _ := aws.GetControlPlaneConfig([]string{})
+	return &runtime.RawExtension{Raw: controlPlaneConfig}
+}
+
+func fixAzureInfrastructureConfig(workersCIDR string, zones []string) *runtime.RawExtension {
+	infraConfig, _ := azure.GetInfrastructureConfig(workersCIDR, zones)
+	return &runtime.RawExtension{Raw: infraConfig}
 }
 
 func fixMachineImage(machineImageName, machineImageVersion string) *gardener.ShootMachineImage {
