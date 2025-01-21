@@ -26,27 +26,27 @@ func main() {
 	fetcher := NewCRBFetcher(client, cfg.OldLabel, cfg.NewLabel)
 
 	var cleaner Cleaner
-	if cfg.Pretend {
-		slog.Info("Running in pretend mode")
-		file, err := os.OpenFile(cfg.Prefix+"removed.json", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	if cfg.DryRun {
+		slog.Info("Running in dry-run mode")
+		file, err := os.OpenFile(cfg.Output+"removed.json", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		if err != nil {
 			slog.Error("Error opening file, to save list of removed", "error", err)
 			os.Exit(1)
 		}
 		defer file.Close()
-		cleaner = NewPretendCleaner(file)
+		cleaner = NewDryCleaner(file)
 	} else {
 		cleaner = NewCRBCleaner(client)
 	}
 
-	failureFile, err := os.OpenFile(cfg.Prefix+"failures.json", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	failureFile, err := os.OpenFile(cfg.Output+"failures.json", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
 		slog.Error("Error opening file, to save list of failures", "error", err)
 		os.Exit(1)
 	}
 	defer failureFile.Close()
 
-	missingFile, err := os.OpenFile(cfg.Prefix+"missing.json", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	missingFile, err := os.OpenFile(cfg.Output+"missing.json", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
 		slog.Error("Error opening file, to save list of failures", "error", err)
 		os.Exit(1)

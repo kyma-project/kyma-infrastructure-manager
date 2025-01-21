@@ -13,17 +13,21 @@ The cleanup script is run locally, with kubeconfig pointing to the cluster.
 | `-kubeconfig` | Path to the kubeconfig file                         | in-cluster config                                                                                  |
 | `-oldLabel`   | Label selector for old CRBs                         | `kyma-project.io/deprecation=to-be-removed-soon,reconciler.kyma-project.io/managed-by=provisioner` |
 | `-newLabel`   | Label selector for new CRBs                         | `reconciler.kyma-project.io/managed-by=infrastructure-manager`                                     |
-| `-prefix`     | Prefix for created logs                             | _empty_                                                                                            |
-| `-pretend`    | Don't perform any destructive actions               | `false`                                                                                            |
+| `-output`     | Output dir for created logs.     | _empty_ (acts like `./ `)                                                                                    |
+| `-dry-run`    | Don't perform any destructive actions               | `false`                                                                                            |
 | `-verbose`    | Print detailed logs                                 | `false`                                                                                            |
 | `-force`      | Delete old CRBs even if they have no new equivalent | `false`                                                                                            |
+
+> [!NOTE]
+> if `-output` doesn't end with `/`, the name of the files will be prefixed with last segment.
+> eg. `-output=./dev/log/cluster_a-` will create files like `./dev/log/cluster_a-missing.json`, `./dev/log/cluster_a-removed.json`, etc.
 
 ## Usage
 
 To run cleanup script, execute:
 
 ```bash
-go run ./cmd/crb-cleanup -prefix=./dev/logs/my-cluster/ -kubeconfig=./dev/kubeconfig
+go run ./cmd/crb-cleanup -output=./dev/logs/my-cluster/ -kubeconfig=./dev/kubeconfig
 ```
 
 If there are missing CRBs, the script will print a list of them and exit with a zero status code.
@@ -38,7 +42,7 @@ If any errors occured during deletion (eg. permission error), the CRBs that fail
 
 All of the log files will be created either way.
 
-### `-pretend` mode
+### `-dry-run` mode
 
-When running the script with `-pretend` flag, CRBs that _would_ be removed will be listed as JSON in `./dev/logs/my-cluster/removed.json`.
+When running the script with `-dry-run` flag, CRBs that _would_ be removed will be listed as JSON in `./dev/logs/my-cluster/removed.json`.
 No destructive actions will be performed.

@@ -45,8 +45,8 @@ var _ = Describe("Envtest", func() {
 
 		By("Processing CRBs")
 		failures, err := ProcessCRBs(fetcher, cleaner, nil, Config{
-			Pretend: false,
-			Force:   false,
+			DryRun: false,
+			Force:  false,
 		})
 
 		Expect(err).ToNot(HaveOccurred())
@@ -68,8 +68,8 @@ var _ = Describe("Envtest", func() {
 
 		By("Processing CRBs")
 		failures, err := ProcessCRBs(fetcher, cleaner, nil, Config{
-			Pretend: false,
-			Force:   false,
+			DryRun: false,
+			Force:  false,
 		})
 
 		Expect(err).ToNot(HaveOccurred())
@@ -90,8 +90,8 @@ var _ = Describe("Envtest", func() {
 
 		By("Processing CRBs")
 		failures, err := ProcessCRBs(fetcher, cleaner, nil, Config{
-			Pretend: false,
-			Force:   true,
+			DryRun: false,
+			Force:  true,
 		})
 
 		Expect(err).ToNot(HaveOccurred())

@@ -71,11 +71,11 @@ func NewCRBCleaner(client KubeDeleter) Cleaner {
 	}
 }
 
-type PretendCleaner struct {
+type DryCleaner struct {
 	removed io.Writer
 }
 
-func (p PretendCleaner) Clean(_ context.Context, crbs []v1.ClusterRoleBinding) []Failure {
+func (p DryCleaner) Clean(_ context.Context, crbs []v1.ClusterRoleBinding) []Failure {
 	slog.Debug("Removing CRBs", "crbs", crbs)
 	err := json.NewEncoder(p.removed).Encode(crbs)
 	if err != nil {
@@ -84,8 +84,8 @@ func (p PretendCleaner) Clean(_ context.Context, crbs []v1.ClusterRoleBinding) [
 	return nil
 }
 
-func NewPretendCleaner(removed io.Writer) Cleaner {
-	return PretendCleaner{
+func NewDryCleaner(removed io.Writer) Cleaner {
+	return DryCleaner{
 		removed: removed,
 	}
 }
