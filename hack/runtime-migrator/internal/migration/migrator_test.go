@@ -1,4 +1,4 @@
-package runtime
+package migration
 
 import (
 	"github.com/stretchr/testify/require"

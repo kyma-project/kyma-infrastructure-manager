@@ -1,11 +1,12 @@
-package runtime
+package migration
 
 import (
 	"context"
 	"fmt"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	migrator "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/config"
+	"github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/initialisation"
+	shootutil "github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app/internal/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/pkg/errors"
@@ -25,13 +26,13 @@ const (
 )
 
 type Migrator struct {
-	cfg                migrator.Config
+	cfg                initialisation.Config
 	converterConfig    config.ConverterConfig
 	kubeconfigProvider kubeconfig.Provider
 	kcpClient          client.Client
 }
 
-func NewMigrator(cfg migrator.Config, kubeconfigProvider kubeconfig.Provider, kcpClient client.Client) Migrator {
+func NewMigrator(cfg initialisation.Config, kubeconfigProvider kubeconfig.Provider, kcpClient client.Client) Migrator {
 	return Migrator{
 		cfg:                cfg,
 		kubeconfigProvider: kubeconfigProvider,
@@ -60,16 +61,9 @@ func (m Migrator) Do(ctx context.Context, shoot v1beta1.Shoot) (v1.Runtime, erro
 			APIVersion: "infrastructuremanager.kyma-project.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:                       labels["kyma-project.io/runtime-id"],
-			GenerateName:               shoot.GenerateName,
-			Namespace:                  "kcp-system",
-			DeletionTimestamp:          shoot.DeletionTimestamp,
-			DeletionGracePeriodSeconds: shoot.DeletionGracePeriodSeconds,
-			Labels:                     labels,
-			Annotations:                shoot.Annotations,
-			OwnerReferences:            nil, // deliberately left empty, as without that we will not be able to delete Runtime CRs
-			Finalizers:                 nil, // deliberately left empty, as without that we will not be able to delete Runtime CRs
-			ManagedFields:              nil, // deliberately left empty "This is mostly for migrator housekeeping, and users typically shouldn't need to set or understand this field."
+			Name:      labels["kyma-project.io/runtime-id"],
+			Namespace: "kcp-system",
+			Labels:    labels,
 		},
 		Spec: v1.RuntimeSpec{
 			Shoot: v1.RuntimeShoot{
@@ -87,7 +81,7 @@ func (m Migrator) Do(ctx context.Context, shoot v1beta1.Shoot) (v1.Runtime, erro
 				},
 				Provider: v1.Provider{
 					Type:                 shoot.Spec.Provider.Type,
-					Workers:              shoot.Spec.Provider.Workers,
+					Workers:              shootutil.FilterOutFields(shoot.Spec.Provider.Workers),
 					ControlPlaneConfig:   shoot.Spec.Provider.ControlPlaneConfig,
 					InfrastructureConfig: shoot.Spec.Provider.InfrastructureConfig,
 				},
@@ -111,10 +105,6 @@ func (m Migrator) Do(ctx context.Context, shoot v1beta1.Shoot) (v1.Runtime, erro
 					},
 				},
 			},
-		},
-		Status: v1.RuntimeStatus{
-			State:      "",  // deliberately left empty by our migrator to show that controller has not picked it yet
-			Conditions: nil, // deliberately left nil by our migrator to show that controller has not picked it yet
 		},
 	}
 
