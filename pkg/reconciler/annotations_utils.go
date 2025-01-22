@@ -1,8 +1,8 @@
 package reconciler
 
 const (
-	ForceReconcileAnnotation = "operator.kyma-project.io/force-shoot-reconciliation"
-	SuspendReconcileAnnotation = "operator.kyma-project.io/suspend-shoot-reconciliation"
+	ForceReconcileAnnotation = "operator.kyma-project.io/force-patch-reconciliation"
+	SuspendReconcileAnnotation = "operator.kyma-project.io/suspend-patch-reconciliation"
 )
 
 func ShouldSuspendReconciliation(annotations map[string]string) bool {

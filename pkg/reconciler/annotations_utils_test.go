@@ -13,17 +13,17 @@ func TestShouldForceReconciliation(t *testing.T) {
 		expectedResult bool
 	}{
 		{
-			name:            "Should force reconciliation for `operator.kyma-project.io/force-shoot-reconciliation` set to `true",
-			annotations:     map[string]string{"operator.kyma-project.io/force-shoot-reconciliation": "true"},
+			name:            "Should force reconciliation for `operator.kyma-project.io/force-patch-reconciliation` set to `true",
+			annotations:     map[string]string{"operator.kyma-project.io/force-patch-reconciliation": "true"},
 			expectedResult:  true,
 		},
 		{
-			name:            "Should force reconciliation for `operator.kyma-project.io/force-shoot-reconciliation` set to `kaloryfer",
-			annotations:     map[string]string{"operator.kyma-project.io/force-shoot-reconciliation": "kaloryfer"},
+			name:            "Should not force reconciliation for `operator.kyma-project.io/force-patch-reconciliation` set to `kaloryfer",
+			annotations:     map[string]string{"operator.kyma-project.io/force-patch-reconciliation": "kaloryfer"},
 			expectedResult:  false,
 		},
 		{
-			name:            "Should not force reconciliation for  annotations",
+			name:            "Should not force reconciliation for nil annotations",
 			annotations:     nil,
 			expectedResult:  false,
 		},
@@ -47,13 +47,13 @@ func TestShouldSuspendReconciliation(t *testing.T) {
 		expectedResult bool
 	}{
 		{
-			name:            "Should suspend reconciliation for `operator.kyma-project.io/suspend-shoot-reconciliation` set to `true",
-			annotations:     map[string]string{"operator.kyma-project.io/suspend-shoot-reconciliation": "true"},
+			name:            "Should suspend reconciliation for `operator.kyma-project.io/suspend-patch-reconciliation` set to `true",
+			annotations:     map[string]string{"operator.kyma-project.io/suspend-patch-reconciliation": "true"},
 			expectedResult:  true,
 		},
 		{
-			name:            "Should suspend reconciliation for `operator.kyma-project.io/suspend-shoot-reconciliation` set to `kaloryfer",
-			annotations:     map[string]string{"operator.kyma-project.io/suspend-shoot-reconciliation": "kaloryfer"},
+			name:            "Should not suspend reconciliation for `operator.kyma-project.io/suspend-patch-reconciliation` set to `kaloryfer",
+			annotations:     map[string]string{"operator.kyma-project.io/suspend-patch-reconciliation": "kaloryfer"},
 			expectedResult:  false,
 		},
 		{

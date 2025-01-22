@@ -3,7 +3,6 @@ package fsm
 import (
 	"context"
 	"fmt"
-	"github.com/go-logr/logr"
 	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -21,7 +20,10 @@ const fieldManagerName = "kim"
 func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Patch shoot state")
 
-	handleForceReconciliationAnnotation(s.shoot, m.log)
+	err := handleForceReconciliationAnnotation(&s.instance, m, ctx)
+	if err != nil {
+		m.log.Error(err, "could not handle force reconciliation annotation")
+	}
 
 	data, err := m.AuditLogging.GetAuditLogData(
 		s.instance.Spec.Shoot.Provider.Type,
@@ -94,11 +96,20 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
 }
 
-func handleForceReconciliationAnnotation(shoot *gardener.Shoot, log logr.Logger) {
-	if reconciler.ShouldForceReconciliation(shoot.Annotations) {
-		log.Info("Force reconciliation annotation found, removing the annotation and forcing the reconciliation")
-		// TODO: remove annotation
+func handleForceReconciliationAnnotation(runtime *imv1.Runtime, fsm *fsm, ctx context.Context, ) error {
+	annotations := runtime.Annotations
+	if reconciler.ShouldForceReconciliation(annotations) {
+		fsm.log.Info("Force reconciliation annotation found, removing the annotation and continuing the reconciliation")
+		delete(annotations, reconciler.ForceReconcileAnnotation)
+		runtime.SetAnnotations(annotations)
+
+		err := fsm.Update(ctx, runtime)
+		if err != nil {
+			return err
+		}
+
 	}
+	return nil
 }
 
 func getZones(workers []gardener.Worker) []string {
