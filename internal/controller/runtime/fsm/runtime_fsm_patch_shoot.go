@@ -3,11 +3,13 @@ package fsm
 import (
 	"context"
 	"fmt"
+	"github.com/go-logr/logr"
 	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
+	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -18,6 +20,8 @@ const fieldManagerName = "kim"
 
 func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Patch shoot state")
+
+	handleForceReconciliationAnnotation(s.shoot, m.log)
 
 	data, err := m.AuditLogging.GetAuditLogData(
 		s.instance.Spec.Shoot.Provider.Type,
@@ -88,6 +92,13 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	)
 
 	return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+}
+
+func handleForceReconciliationAnnotation(shoot *gardener.Shoot, log logr.Logger) {
+	if reconciler.ShouldForceReconciliation(shoot.Annotations) {
+		log.Info("Force reconciliation annotation found, removing the annotation and forcing the reconciliation")
+		// TODO: remove annotation
+	}
 }
 
 func getZones(workers []gardener.Worker) []string {

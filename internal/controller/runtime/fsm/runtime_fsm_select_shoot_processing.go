@@ -7,10 +7,9 @@ import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	reconciler "github.com/kyma-project/infrastructure-manager/pkg/reconciler"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
-
-const ForceReconcileAnnotation = "infrastructuremanager.kyma-project.io/force-reconcile"
 
 func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Select shoot processing state")
@@ -56,8 +55,11 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 }
 
 func shouldPatchShoot(runtime *imv1.Runtime, shoot *gardener.Shoot) (bool, error) {
-	_, found := runtime.GetAnnotations()[ForceReconcileAnnotation]
-	if found == true {
+	if reconciler.ShouldSuspendReconciliation(runtime.Annotations) {
+		return false, nil
+	}
+
+	if reconciler.ShouldForceReconciliation(runtime.Annotations) {
 		return true, nil
 	}
 
