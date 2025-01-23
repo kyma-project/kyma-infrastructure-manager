@@ -22,7 +22,8 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	err := handleForceReconciliationAnnotation(&s.instance, m, ctx)
 	if err != nil {
-		m.log.Error(err, "could not handle force reconciliation annotation")
+		m.log.Error(err, "could not handle force reconciliation annotation. Scheduling for retry.")
+		return requeue()
 	}
 
 	data, err := m.AuditLogging.GetAuditLogData(
