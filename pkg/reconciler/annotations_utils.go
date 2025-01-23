@@ -7,7 +7,7 @@ const (
 
 func ShouldSuspendReconciliation(annotations map[string]string) bool {
 	suspendValue, found := annotations[SuspendReconcileAnnotation]
-	if found == true && suspendValue == "true" {
+	if found && suspendValue == "true" {
 		return true
 	}
 	return false
@@ -15,7 +15,7 @@ func ShouldSuspendReconciliation(annotations map[string]string) bool {
 
 func ShouldForceReconciliation(annotations map[string]string) bool {
 	forceReconciliation, found := annotations[ForceReconcileAnnotation]
-	if found == true && forceReconciliation == "true" {
+	if found && forceReconciliation == "true" {
 		return true
 	}
 	return false
