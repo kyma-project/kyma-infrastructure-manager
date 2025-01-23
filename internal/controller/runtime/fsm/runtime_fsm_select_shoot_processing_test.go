@@ -31,8 +31,6 @@ var _ = Describe("KIM sFnSelectShootProcessing", func() {
 	inputRtWithForceAnnotation := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/force-patch-reconciliation": "true"})
 	inputRtWithSuspendAnnotation := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/suspend-patch-reconciliation": "true"})
 
-
-	// input
 	testShoot := gardener.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-instance",
@@ -52,13 +50,10 @@ var _ = Describe("KIM sFnSelectShootProcessing", func() {
 
 	testFunction := buildTestFunction(sFnSelectShootProcessing)
 
-	// WHEN/THAN
-
 	DescribeTable(
 		"transition graph validation for sFnSelectShootProcessing",
 		testFunction,
 		Entry(
-			// and set Runtime state to Pending with condition type ConditionTypeRuntimeKubeconfigReady and reason ConditionReasonGardenerCRCreated
 			"should switch to sFnPatchExistingShoot due to force reconciliation annotation",
 			testCtx,
 			must(newFakeFSM, withTestFinalizer, withTestSchemeAndObjects()),
@@ -69,7 +64,6 @@ var _ = Describe("KIM sFnSelectShootProcessing", func() {
 			},
 		),
 		Entry(
-			// and set Runtime state to Pending with condition type ConditionTypeRuntimeKubeconfigReady and reason ConditionReasonGardenerCRCreated
 			"should stop due to suspend annotation",
 			testCtx,
 			must(newFakeFSM, withTestFinalizer, withTestSchemeAndObjects()),
