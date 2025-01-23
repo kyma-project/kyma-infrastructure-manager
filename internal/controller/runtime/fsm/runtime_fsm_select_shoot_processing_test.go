@@ -1,179 +1,93 @@
 package fsm
 
-/*
 import (
 	"context"
 	"time"
 
-	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
+	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	util "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("KIM sFnInitialise", func() {
-
+var _ = Describe("KIM sFnSelectShootProcessing", func() {
 	testCtx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	testFunction := buildTestFunction(sFnPrepareCluster)
+	// GIVEN
+	testScheme := runtime.NewScheme()
+	util.Must(imv1.AddToScheme(testScheme))
+	withTestSchemeAndObjects := func(objs ...client.Object) fakeFSMOpt {
+		return func(fsm *fsm) error {
+			return withFakedK8sClient(testScheme, objs...)(fsm)
+		}
+	}
+
+	inputRtWithForceAnnotation := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/force-patch-reconciliation": "true"})
+	inputRtWithSuspendAnnotation := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/suspend-patch-reconciliation": "true"})
+
+
+	// input
+	testShoot := gardener.Shoot{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-instance",
+			Namespace: "default",
+		},
+		Spec: gardener.ShootSpec{
+			DNS: &gardener.DNS{
+				Domain: ptr.To("test-domain"),
+			},
+		},
+		Status: gardener.ShootStatus{
+			LastOperation: &gardener.LastOperation{
+				State:          gardener.LastOperationStateSucceeded,
+			},
+		},
+	}
+
+	testFunction := buildTestFunction(sFnSelectShootProcessing)
+
+	// WHEN/THAN
 
 	DescribeTable(
-		"transition graph validation",
+		"transition graph validation for sFnSelectShootProcessing",
 		testFunction,
-		//		Entry(
-		//			"validate missing shoot",
-		//			testCtx,
-		//			must(newFakeFSM),
-		//			&systemState{},
-		//			testOpts{
-		//				MatchExpectedErr: HaveOccurred(),
-		//				MatchNextFnState: BeNil(),
-		//			},
-		//		),
 		Entry(
-			"validate missing DNS",
+			// and set Runtime state to Pending with condition type ConditionTypeRuntimeKubeconfigReady and reason ConditionReasonGardenerCRCreated
+			"should switch to sFnPatchExistingShoot due to force reconciliation annotation",
 			testCtx,
-			must(newFakeFSM),
-			&systemState{
-				shoot: &testing.ShootNoDNS,
-			},
+			must(newFakeFSM, withTestFinalizer, withTestSchemeAndObjects()),
+			&systemState{instance: *inputRtWithForceAnnotation, shoot: &testShoot},
 			testOpts{
 				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnUpdateStatus"),
+				MatchNextFnState: haveName("sFnPatchExistingShoot"),
 			},
 		),
 		Entry(
-			"retry when last operation on shoot is unknown",
+			// and set Runtime state to Pending with condition type ConditionTypeRuntimeKubeconfigReady and reason ConditionReasonGardenerCRCreated
+			"should stop due to suspend annotation",
 			testCtx,
-			must(newFakeFSM),
-			&systemState{
-				shoot: &testing.ShootNoDNS,
-			},
+			must(newFakeFSM, withTestFinalizer, withTestSchemeAndObjects()),
+			&systemState{instance: *inputRtWithSuspendAnnotation, shoot: &testShoot},
 			testOpts{
 				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnUpdateStatus"),
-			},
-		),
-		Entry(
-			"validate missing DNS domain",
-			testCtx,
-			must(newFakeFSM),
-			&systemState{
-				shoot: &testing.ShootNoDNSDomain,
-			},
-			testOpts{
-				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnUpdateStatus"),
-			},
-		),
-		Entry(
-			"validate missing last operation",
-			testCtx,
-			must(newFakeFSM),
-			&systemState{
-				shoot: &testing.ShootMissingLastOperation,
-			},
-			testOpts{
-				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnUpdateStatus"),
-			},
-		),
-		Entry(
-			"last operation processing",
-			testCtx,
-			must(newFakeFSM),
-			&systemState{
-				shoot: &testing.ShootLastOperationProcessing,
-			},
-			testOpts{
-				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnUpdateStatus"),
-			},
-		),
-		Entry(
-			"last operation create pending",
-			testCtx,
-			must(newFakeFSM),
-			&systemState{
-				shoot: &testing.ShootLastOperationPending,
-			},
-			testOpts{
-				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnUpdateStatus"),
-			},
-		),
-		Entry(
-			"last operation create succeeded",
-			testCtx,
-			must(newFakeFSM),
-			&systemState{
-				shoot: &testing.ShootLastOperationSucceeded,
-			},
-			testOpts{
-				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnUpdateStatus"),
-			},
-		),
-		Entry(
-			"last operation create failed",
-			testCtx,
-			must(newFakeFSM),
-			&systemState{
-				shoot: &testing.ShootLastOperationFailed,
-			},
-			testOpts{
-				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnUpdateStatus"),
-			},
-		),
-		Entry(
-			"last operation reconcile processing",
-			testCtx,
-			must(newFakeFSM),
-			&systemState{
-				shoot: &testing.ShootLastOperationReconcileProcessing,
-			},
-			testOpts{
-				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnUpdateStatus"),
-			},
-		),
-		Entry(
-			"last operation reconcile pending",
-			testCtx,
-			must(newFakeFSM),
-			&systemState{
-				shoot: &testing.ShootLastOperationReconcilePending,
-			},
-			testOpts{
-				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnUpdateStatus"),
-			},
-		),
-		Entry(
-			"last operation reconcile succeeded",
-			testCtx,
-			must(newFakeFSM),
-			&systemState{
-				shoot: &testing.ShootLastOperationReconcileSucceeded,
-			},
-			testOpts{
-				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnUpdateStatus"),
-			},
-		),
-		Entry(
-			"last operation reconcile failed",
-			testCtx,
-			must(newFakeFSM),
-			&systemState{
-				shoot: &testing.ShootLastOperationReconcileFailed,
-			},
-			testOpts{
-				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnUpdateStatus"),
+				MatchNextFnState: BeNil(),
 			},
 		),
 	)
 })
-*/
+
+func makeInputRuntimeWithAnnotation(annotations map[string]string) *imv1.Runtime {
+	return &imv1.Runtime{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-instance",
+			Namespace: "default",
+			Annotations: annotations,
+		},
+	}
+}
