@@ -105,18 +105,31 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 
 func checkWorkerZonesMatchProviderConfig(providerType string, workerZones []string, ctrlPlaneConfig *runtime.RawExtension, infraConfig *runtime.RawExtension) error {
 	if providerType == hyperscaler.TypeAzure || providerType == hyperscaler.TypeAWS {
-		infraConfigZones, err := getZonesFromInfrastructureConfig(providerType, infraConfig)
+		infraConfigZones, err := getZonesFromProviderConfig(providerType, infraConfig)
 		if err != nil {
 			return err
 		}
 
 		for _, zone := range workerZones {
 			if !slices.Contains(infraConfigZones, zone) {
-				return fmt.Errorf("one of workers is using zone not specified in the infrastructureConfig: %s", zone)
+				return fmt.Errorf("one of workers is using networking zone not specified in the %s infrastructureConfig: %s", providerType, zone)
 			}
 		}
 	}
-	//if providerType == hyperscaler.TypeGCP {
+	if providerType == hyperscaler.TypeGCP {
+		ctrlPlaneZones, err := getZonesFromProviderConfig(providerType, ctrlPlaneConfig)
+		if err != nil {
+			return err
+		}
+
+		if len(ctrlPlaneZones) == 0 {
+			return fmt.Errorf("cannot validate workers zones against GCP controlPlaneConfig, cannot read current networking zone")
+		}
+
+		if !slices.Contains(workerZones, ctrlPlaneZones[0]) {
+			return fmt.Errorf("none of workers is using networking zone specified in the controlPlaneConfig: %s", ctrlPlaneZones[0])
+		}
+	}
 
 	return nil
 }
@@ -134,9 +147,9 @@ func getConfigOrDefault(config, defaultConfig *runtime.RawExtension) *runtime.Ra
 	return defaultConfig
 }
 
-// parse infrastructure config to get current set of networking zones
-func getZonesFromInfrastructureConfig(providerType string, infraConfig *runtime.RawExtension) ([]string, error) {
-	if infraConfig == nil {
+// parse infrastructureConfig or controlPlaneConfig to get current set of networking zones
+func getZonesFromProviderConfig(providerType string, extensionConfig *runtime.RawExtension) ([]string, error) {
+	if extensionConfig == nil {
 		return nil, errors.New("infrastructureConfig is nil")
 	}
 
@@ -144,7 +157,7 @@ func getZonesFromInfrastructureConfig(providerType string, infraConfig *runtime.
 
 	switch providerType {
 	case hyperscaler.TypeAWS:
-		infraConfig, err := aws.DecodeInfrastructureConfig(infraConfig.Raw)
+		infraConfig, err := aws.DecodeInfrastructureConfig(extensionConfig.Raw)
 		if err != nil {
 			return nil, err
 		}
@@ -152,12 +165,20 @@ func getZonesFromInfrastructureConfig(providerType string, infraConfig *runtime.
 			zones = append(zones, zone.Name)
 		}
 	case hyperscaler.TypeAzure:
-		infraConfig, err := azure.DecodeInfrastructureConfig(infraConfig.Raw)
+		infraConfig, err := azure.DecodeInfrastructureConfig(extensionConfig.Raw)
 		if err != nil {
 			return nil, err
 		}
 		for _, zone := range infraConfig.Networks.Zones {
 			zones = append(zones, fmt.Sprint(zone.Name))
+		}
+	case hyperscaler.TypeGCP:
+		{
+			ctrlPlaneConfig, err := gcp.DecodeControlPlaneConfig(extensionConfig.Raw)
+			if err != nil {
+				return nil, err
+			}
+			zones = append(zones, ctrlPlaneConfig.Zone)
 		}
 	default:
 		return nil, errors.New("read zones from infrastructureConfig - provider not supported")
