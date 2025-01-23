@@ -86,10 +86,10 @@ func ProcessCRBs(fetcher Fetcher, cleaner Cleaner, unmatched io.Writer, cfg Conf
 	compared := Compare(ctx, oldCRBs, newCRBs)
 
 	if len(compared.additional) != 0 {
-		slog.Info("New CRBs not found in old CRBs", "crbs", compared.additional)
+		slog.Info("New CRBs not found in old CRBs", CRBNames(compared.additional))
 	}
 	if len(compared.missing) != 0 {
-		slog.Warn("Old CRBs not found in new CRBs", "crbs", compared.missing)
+		slog.Warn("Old CRBs not found in new CRBs", CRBNames(compared.missing))
 		if unmatched != nil {
 			err := json.NewEncoder(unmatched).Encode(compared.missing)
 			if err != nil {

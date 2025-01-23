@@ -3,6 +3,7 @@ package main
 import (
 	"log/slog"
 	"os"
+	"strconv"
 
 	v1 "k8s.io/api/rbac/v1"
 	"k8s.io/client-go/kubernetes"
@@ -64,4 +65,13 @@ func setupKubectl(kubeconfig string) *kubernetes.Clientset {
 	}
 
 	return clientset
+}
+
+func CRBNames(crbs []v1.ClusterRoleBinding) slog.Attr {
+	names := make([]any, len(crbs))
+	for i := range crbs {
+		names[i] = slog.String(strconv.Itoa(i), crbs[i].Name)
+	}
+
+	return slog.Group("crbs", names...)
 }
