@@ -20,12 +20,6 @@ const fieldManagerName = "kim"
 func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Patch shoot state")
 
-	err := handleForceReconciliationAnnotation(&s.instance, m, ctx)
-	if err != nil {
-		m.log.Error(err, "could not handle force reconciliation annotation. Scheduling for retry.")
-		return requeue()
-	}
-
 	data, err := m.AuditLogging.GetAuditLogData(
 		s.instance.Spec.Shoot.Provider.Type,
 		s.instance.Spec.Shoot.Region)
@@ -78,6 +72,12 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		m.log.Error(err, "Failed to patch shoot object, exiting with no retry")
 		m.Metrics.IncRuntimeFSMStopCounter()
 		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("Gardener API shoot patch error: %v", err))
+	}
+
+	err = handleForceReconciliationAnnotation(&s.instance, m, ctx)
+	if err != nil {
+		m.log.Error(err, "could not handle force reconciliation annotation. Scheduling for retry.")
+		return requeue()
 	}
 
 	if updatedShoot.Generation == s.shoot.Generation {
