@@ -45,6 +45,16 @@ If any errors occured during deletion (eg. permission error), the CRBs that fail
 
 All of the log files will be created either way.
 
+### prefixing logs based on env
+
+Create a script:
+```bash
+#!/bin/bash
+crb-cleanup -output=./logs/${RUNTIME_NAME}_ -dry-run=true
+```
+
+When run, the script will create files like `./logs/some_runtime_missing.json`
+
 ### `-dry-run` mode
 
 When running the script without `-dry-run=false` flag, CRBs that _would_ be removed will be listed as JSON in `./dev/logs/my-cluster/removed.json`.

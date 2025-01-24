@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"io"
 	"log/slog"
 
 	v1 "k8s.io/api/rbac/v1"
@@ -72,20 +70,20 @@ func NewCRBCleaner(client KubeDeleter) Cleaner {
 }
 
 type DryCleaner struct {
-	removed io.Writer
+	filer Filer
 }
 
 func (p DryCleaner) Clean(_ context.Context, crbs []v1.ClusterRoleBinding) []Failure {
 	slog.Debug("Removing CRBs", "crbs", crbs)
-	err := json.NewEncoder(p.removed).Encode(crbs)
+	err := p.filer.Removed(crbs)
 	if err != nil {
-		slog.Error("Error saving removed CRBs", "error", err, "crbs", crbs)
+		slog.Error("Error saving removed CRBs", "error", err, "crbs", CRBNames(crbs))
 	}
 	return nil
 }
 
-func NewDryCleaner(removed io.Writer) Cleaner {
+func NewDryCleaner(filer Filer) Cleaner {
 	return DryCleaner{
-		removed: removed,
+		filer: filer,
 	}
 }

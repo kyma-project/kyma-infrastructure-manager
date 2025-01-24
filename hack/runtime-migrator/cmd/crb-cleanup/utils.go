@@ -1,8 +1,11 @@
 package main
 
 import (
+	"encoding/json"
+	"io"
 	"log/slog"
 	"os"
+	"path"
 	"strconv"
 
 	v1 "k8s.io/api/rbac/v1"
@@ -74,4 +77,106 @@ func CRBNames(crbs []v1.ClusterRoleBinding) slog.Attr {
 	}
 
 	return slog.Group("crbs", names...)
+}
+
+type Filer interface {
+	Missing(crbs []v1.ClusterRoleBinding) error
+	Removed(crbs []v1.ClusterRoleBinding) error
+	Failures(failures []Failure) error
+}
+
+type nopFiler struct{}
+
+func (n nopFiler) Failures(failures []Failure) error {
+	return nil
+}
+
+func (n nopFiler) Missing(crbs []v1.ClusterRoleBinding) error {
+	return nil
+}
+
+func (n nopFiler) Removed(crbs []v1.ClusterRoleBinding) error {
+	return nil
+}
+
+func NewNopFiler() Filer {
+	return nopFiler{}
+}
+
+type JSONFiler struct {
+	prefix   string
+	missing  io.Writer
+	removed  io.Writer
+	failures io.Writer
+}
+
+// Failures implements Filer.
+func (j JSONFiler) Failures(failures []Failure) error {
+	if failures == nil || len(failures) <= 0 {
+		return nil
+	}
+	path := j.prefix + "failures.json"
+	err := j.ensure(path)
+	if err != nil {
+		return err
+	}
+	if j.failures == nil {
+		j.failures, err = os.Create(path)
+		if err != nil {
+			return err
+		}
+	}
+	return json.NewEncoder(j.failures).Encode(failures)
+}
+
+// Missing implements Filer.
+func (j JSONFiler) Missing(crbs []v1.ClusterRoleBinding) error {
+	if crbs == nil || len(crbs) <= 0 {
+		return nil
+	}
+	path := j.prefix + "missing.json"
+	err := j.ensure(path)
+	if err != nil {
+		return err
+	}
+	if j.missing == nil {
+		j.missing, err = os.Create(path)
+		if err != nil {
+			return err
+		}
+	}
+	return json.NewEncoder(j.missing).Encode(crbs)
+}
+
+// Removed implements Filer.
+func (j JSONFiler) Removed(crbs []v1.ClusterRoleBinding) error {
+	if crbs == nil || len(crbs) <= 0 {
+		return nil
+	}
+	path := j.prefix + "removed.json"
+	err := j.ensure(path)
+	if err != nil {
+		return err
+	}
+	if j.removed == nil {
+		j.removed, err = os.Create(path)
+		if err != nil {
+			return err
+		}
+	}
+	return json.NewEncoder(j.removed).Encode(crbs)
+}
+
+func (j JSONFiler) ensure(file string) error {
+	dir := path.Dir(file)
+	return os.MkdirAll(dir, os.ModePerm)
+}
+
+func NewJSONFiler(prefix string) Filer {
+	return JSONFiler{
+		prefix:   prefix,
+		missing:  nil,
+		removed:  nil,
+		failures: nil,
+	}
 }
