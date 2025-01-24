@@ -45,9 +45,10 @@ If any errors occured during deletion (eg. permission error), the CRBs that fail
 
 All of the log files will be created either way.
 
-### prefixing logs based on env
+### prefixing logs in `kcp taskrun`
 
 Create a script:
+
 ```bash
 #!/bin/bash
 crb-cleanup -output=./logs/${RUNTIME_NAME}_ -dry-run=true
