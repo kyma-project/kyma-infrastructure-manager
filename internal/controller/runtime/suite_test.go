@@ -30,12 +30,12 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
+	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
 	v1 "k8s.io/api/autoscaling/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -43,7 +43,6 @@ import (
 	//nolint:revive
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	clienttesting "k8s.io/client-go/testing"
@@ -194,19 +193,8 @@ func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot) {
 	customTracker = NewCustomTracker(tracker, shoots)
 	gardenerTestClient = fake.NewClientBuilder().WithScheme(clientScheme).WithObjectTracker(customTracker).
 		WithInterceptorFuncs(interceptor.Funcs{
-			Patch: func(ctx context.Context, clnt client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
-				// Apply patches are supposed to upsert, but fake client fails if the object doesn't exist,
-				// Update the generation to simulate the object being updated using interceptor function.
-				if patch.Type() != types.ApplyPatchType {
-					return clnt.Patch(ctx, obj, patch, opts...)
-				}
-				shoot, ok := obj.(*gardener_api.Shoot)
-				if !ok {
-					return errors.New("failed to cast object to shoot")
-				}
-				shoot.Generation++
-				return nil
-			}}).Build()
+			Patch: fsm_testing.GetFakePatchInterceptorFn(),
+			}).Build()
 	runtimeReconciler.ShootClient = gardenerTestClient
 }
 
