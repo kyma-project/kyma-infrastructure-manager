@@ -1,22 +1,22 @@
 # CRB Cleanup script
 
-This script is used to clean up old ClusterRoleBindings (CRBs) after migration.
-It looks for old and new CRBs, compares them,
-and if all old ones have a new equivalent - it removes the old ones.
+This script is used to clean up provisioner's ClusterRoleBindings (CRBs) after migration.
+It looks for provisioner and kim CRBs, compares them,
+and if all of provisioner's CRBs have a KIM equivalent - it removes the provisioner's ones.
 
 The cleanup script is run locally, with kubeconfig pointing to the cluster.
 
 ## Configuration
 
-| flag          | description                                         | default                                                                                            |
-| ------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `-kubeconfig` | Path to the kubeconfig file                         | in-cluster config                                                                                  |
-| `-oldLabel`   | Label selector for old CRBs                         | `kyma-project.io/deprecation=to-be-removed-soon,reconciler.kyma-project.io/managed-by=provisioner` |
-| `-newLabel`   | Label selector for new CRBs                         | `reconciler.kyma-project.io/managed-by=infrastructure-manager`                                     |
-| `-output`     | Output dir for created logs.                        | _empty_ (acts like `./ `)                                                                          |
-| `-dry-run`    | Don't perform any destructive actions               | `true`                                                                                             |
-| `-verbose`    | Print detailed logs                                 | `false`                                                                                            |
-| `-force`      | Delete old CRBs even if they have no new equivalent | `false`                                                                                            |
+| flag                | description                                                 | default                                                                                            |
+| ------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `-kubeconfig`       | Path to the kubeconfig file                                 | in-cluster config                                                                                  |
+| `-provisionerLabel` | Label selector for provisioner CRBs                         | `kyma-project.io/deprecation=to-be-removed-soon,reconciler.kyma-project.io/managed-by=provisioner` |
+| `-kimLabel`         | Label selector for kim CRBs                                 | `reconciler.kyma-project.io/managed-by=infrastructure-manager`                                     |
+| `-output`           | Output dir for created logs.                                | _empty_ (acts like `./ `)                                                                          |
+| `-dry-run`          | Don't perform any destructive actions                       | `true`                                                                                             |
+| `-verbose`          | Print detailed logs                                         | `false`                                                                                            |
+| `-force`            | Delete provisioner CRBs even if they have no kim equivalent | `false`                                                                                            |
 
 > [!NOTE]
 > if `-output` doesn't end with `/`, the name of the files will be prefixed with last segment.
@@ -38,7 +38,7 @@ Missing CRBs can be inspected as JSON in `./dev/logs/my-cluster/missing.json`. N
 
 After inspecting the missing CRBs, you can re-run the script with the `-force` flag to delete them.
 
-If no CRBs are missing, the script will remove old CRBs.
+If no CRBs are missing, the script will remove provisioner CRBs.
 Removed CRBs can be inspected as JSON in `./dev/logs/my-cluster/removed.json`.
 
 If any errors occured during deletion (eg. permission error), the CRBs that failed will be listed in `./dev/logs/my-cluster/failures.json`.

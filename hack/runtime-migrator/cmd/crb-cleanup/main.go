@@ -6,8 +6,8 @@ import (
 	"os"
 )
 
-const LabelSelectorOld = "kyma-project.io/deprecation=to-be-removed-soon,reconciler.kyma-project.io/managed-by=provisioner"
-const LabelSelectorNew = "reconciler.kyma-project.io/managed-by=infrastructure-manager"
+const LabelSelectorProvisioner = "kyma-project.io/deprecation=to-be-removed-soon,reconciler.kyma-project.io/managed-by=provisioner"
+const LabelSelectorKim = "reconciler.kyma-project.io/managed-by=infrastructure-manager"
 
 func main() {
 	cfg := ParseConfig()
@@ -20,7 +20,7 @@ func main() {
 
 	kubectl := setupKubectl(cfg.Kubeconfig)
 	client := kubectl.RbacV1().ClusterRoleBindings()
-	fetcher := NewCRBFetcher(client, cfg.OldLabel, cfg.NewLabel)
+	fetcher := NewCRBFetcher(client, cfg.ProvisionerLabel, cfg.KimLabel)
 
 	filer := NewJSONFiler(cfg.Output)
 
@@ -45,28 +45,28 @@ func main() {
 	slog.Info("Completed without errors")
 }
 
-// ProcessCRBs fetches old and new CRBs, compares them and cleans old CRBs
+// ProcessCRBs fetches provisioner's and kim's CRBs, compares them and cleans provisioner's CRBs
 // It returns error on fetch errors
-// It does nothing, if old CRBs are not found in new CRBs, unless force flag is set
+// It does nothing, if provisioner's CRBs are not found in kim's CRBs, unless force flag is set
 // It returns list of failures on removal errors
 func ProcessCRBs(fetcher Fetcher, cleaner Cleaner, filer Filer, cfg Config) ([]Failure, error) {
 	ctx := context.Background()
-	oldCRBs, err := fetcher.FetchOld(ctx)
+	provisionerCRBs, err := fetcher.FetchProvisioner(ctx)
 	if err != nil {
-		slog.Error("Error fetching old CRBs", "error", err)
+		slog.Error("Error fetching provisioner CRBs", "error", err)
 		return nil, err
 	}
 
-	newCRBs, err := fetcher.FetchNew(ctx)
+	kimCRBs, err := fetcher.FetchKim(ctx)
 	if err != nil {
-		slog.Error("Error fetching new CRBs", "error", err)
+		slog.Error("Error fetching kim CRBs", "error", err)
 		return nil, err
 	}
 
-	compared := Compare(ctx, oldCRBs, newCRBs)
+	compared := Compare(ctx, provisionerCRBs, kimCRBs)
 
 	if len(compared.missing) != 0 {
-		slog.Warn("Old CRBs not found in new CRBs", CRBNames(compared.missing))
+		slog.Warn("Provisioner CRBs not found in kim CRBs", CRBNames(compared.missing))
 		if filer != nil {
 			err := filer.Missing(compared.missing)
 			if err != nil {
@@ -74,10 +74,10 @@ func ProcessCRBs(fetcher Fetcher, cleaner Cleaner, filer Filer, cfg Config) ([]F
 			}
 		}
 		if !cfg.Force {
-			slog.Info("Use -force to remove old CRBs without match")
+			slog.Info("Use -force to remove provisioner CRBs without match")
 			return nil, nil
 		}
 	}
 
-	return cleaner.Clean(ctx, oldCRBs), nil
+	return cleaner.Clean(ctx, provisionerCRBs), nil
 }

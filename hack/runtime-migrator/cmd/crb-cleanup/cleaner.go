@@ -13,10 +13,10 @@ type KubeDeleter interface {
 }
 
 type Compared struct {
-	old        []v1.ClusterRoleBinding
-	new        []v1.ClusterRoleBinding
-	missing    []v1.ClusterRoleBinding
-	additional []v1.ClusterRoleBinding
+	provisioner []v1.ClusterRoleBinding
+	kim         []v1.ClusterRoleBinding
+	missing     []v1.ClusterRoleBinding
+	additional  []v1.ClusterRoleBinding
 }
 
 type Cleaner interface {
@@ -52,14 +52,14 @@ func (c CRBCleaner) Clean(ctx context.Context, crbs []v1.ClusterRoleBinding) []F
 }
 
 // Compare returns missing, additional and original CRBs
-func Compare(ctx context.Context, old []v1.ClusterRoleBinding, new []v1.ClusterRoleBinding) Compared {
-	missing, additional := difference(old, new, CRBEquals)
+func Compare(ctx context.Context, provisioner []v1.ClusterRoleBinding, kim []v1.ClusterRoleBinding) Compared {
+	missing, additional := difference(provisioner, kim, CRBEquals)
 
 	return Compared{
-		old:        old,
-		new:        new,
-		missing:    missing,
-		additional: additional,
+		provisioner: provisioner,
+		kim:         kim,
+		missing:     missing,
+		additional:  additional,
 	}
 }
 

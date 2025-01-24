@@ -25,10 +25,10 @@ var _ = Describe("Envtest", func() {
 	cleaner := NewCRBCleaner(crbClient)
 
 	BeforeEach(func() {
-		new, err := fetcher.FetchNew(ctx)
+		new, err := fetcher.FetchKim(ctx)
 		Expect(err).ToNot(HaveOccurred())
 
-		old, err := fetcher.FetchOld(ctx)
+		old, err := fetcher.FetchProvisioner(ctx)
 		Expect(err).ToNot(HaveOccurred())
 
 		cleaner.Clean(ctx, append(new, old...))
@@ -53,7 +53,7 @@ var _ = Describe("Envtest", func() {
 		Expect(failures).To(BeEmpty())
 
 		Eventually(func() ([]rbacv1.ClusterRoleBinding, error) {
-			return fetcher.FetchOld(ctx)
+			return fetcher.FetchProvisioner(ctx)
 		}).Should(BeEmpty())
 	})
 
@@ -75,7 +75,7 @@ var _ = Describe("Envtest", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(failures).To(BeEmpty())
 		Consistently(func() ([]rbacv1.ClusterRoleBinding, error) {
-			return fetcher.FetchOld(ctx)
+			return fetcher.FetchProvisioner(ctx)
 		}).Should(HaveLen(5))
 	})
 
@@ -97,7 +97,7 @@ var _ = Describe("Envtest", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(failures).To(BeEmpty())
 		Eventually(func() ([]rbacv1.ClusterRoleBinding, error) {
-			return fetcher.FetchOld(ctx)
+			return fetcher.FetchProvisioner(ctx)
 		}).Should(BeEmpty())
 	})
 })

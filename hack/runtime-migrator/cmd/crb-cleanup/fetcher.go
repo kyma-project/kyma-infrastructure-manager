@@ -8,8 +8,8 @@ import (
 )
 
 type Fetcher interface {
-	FetchNew(context.Context) ([]v1.ClusterRoleBinding, error)
-	FetchOld(context.Context) ([]v1.ClusterRoleBinding, error)
+	FetchKim(context.Context) ([]v1.ClusterRoleBinding, error)
+	FetchProvisioner(context.Context) ([]v1.ClusterRoleBinding, error)
 }
 
 type KubeLister interface {
@@ -17,9 +17,9 @@ type KubeLister interface {
 }
 
 type CRBFetcher struct {
-	labelNew string
-	labelOld string
-	client   KubeLister
+	labelKim         string
+	labelProvisioner string
+	client           KubeLister
 }
 
 func (f CRBFetcher) fetch(ctx context.Context, label string) ([]v1.ClusterRoleBinding, error) {
@@ -34,18 +34,18 @@ func (f CRBFetcher) fetch(ctx context.Context, label string) ([]v1.ClusterRoleBi
 	return list.Items, nil
 }
 
-func (f CRBFetcher) FetchNew(ctx context.Context) ([]v1.ClusterRoleBinding, error) {
-	return f.fetch(ctx, f.labelNew)
+func (f CRBFetcher) FetchKim(ctx context.Context) ([]v1.ClusterRoleBinding, error) {
+	return f.fetch(ctx, f.labelKim)
 }
 
-func (f CRBFetcher) FetchOld(ctx context.Context) ([]v1.ClusterRoleBinding, error) {
-	return f.fetch(ctx, f.labelOld)
+func (f CRBFetcher) FetchProvisioner(ctx context.Context) ([]v1.ClusterRoleBinding, error) {
+	return f.fetch(ctx, f.labelProvisioner)
 }
 
-func NewCRBFetcher(client KubeLister, labelOld, labelNew string) Fetcher {
+func NewCRBFetcher(client KubeLister, labelProvisioner, labelKim string) Fetcher {
 	return CRBFetcher{
-		labelNew: labelNew,
-		labelOld: labelOld,
-		client:   client,
+		labelKim:         labelKim,
+		labelProvisioner: labelProvisioner,
+		client:           client,
 	}
 }

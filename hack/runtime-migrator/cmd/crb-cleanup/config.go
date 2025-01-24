@@ -9,20 +9,20 @@ import (
 )
 
 type Config struct {
-	Kubeconfig string
-	DryRun     bool
-	Verbose    bool
-	Force      bool
-	OldLabel   string
-	NewLabel   string
-	Output     string
+	Kubeconfig       string
+	DryRun           bool
+	Verbose          bool
+	Force            bool
+	ProvisionerLabel string
+	KimLabel         string
+	Output           string
 }
 
 func ParseConfig() Config {
 	cfg := Config{}
 	flag.StringVar(&cfg.Kubeconfig, "kubeconfig", "", "Kubeconfig file path")
-	flag.StringVar(&cfg.OldLabel, "oldLabel", LabelSelectorOld, "Label marking old CRBs")
-	flag.StringVar(&cfg.NewLabel, "newLabel", LabelSelectorNew, "Label marking new CRBs")
+	flag.StringVar(&cfg.ProvisionerLabel, "provisionerLabel", LabelSelectorProvisioner, "Label marking provisioner's CRBs")
+	flag.StringVar(&cfg.KimLabel, "kimLabel", LabelSelectorKim, "Label marking kim's CRBs")
 	flag.StringVar(&cfg.Output, "output", "", "Output folder for created files. Can also contain file prefix, if it doesn't end with `/` (can be a folder, eg ./foo/)")
 	flag.BoolVar(&cfg.DryRun, "dry-run", true, "Don't remove CRBs, write what would be removed  to ./removed.json")
 	flag.BoolVar(&cfg.Verbose, "verbose", false, "Increase the log level to debug (default: info)")
