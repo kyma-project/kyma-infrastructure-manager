@@ -1,14 +1,13 @@
 # Runtime Migrator
-The `runtime-migrator` application
-1. connects to a Gardener project
-2. retrieves all existing shoot specifications
-3. migrates the shoot specs to the new Runtime custom resource (Runtime CRs created with this migrator have the `operator.kyma-project.io/created-by-migrator=true` label)
-4. marks Cluster Role Bindings that were created by the Provisioner with `kyma-project.io/deprecation` label
-5. saves the new Runtime custom resources to files
-6. checks if the new Runtime custom resource will not cause update on the Gardener
-7. saves the results of the comparison between the original shoot and the shoot KIM produces based on the new Runtime CR
-8. applies the new Runtime CRs to the designated KCP cluster
-9. saves the migration results in the output json file
+The `runtime-migrator` application has the following tasks:
+1. Connect to a Gardener project.
+2. Retrieve all existing shoot specifications.
+3. Migrate the shoot specs to the new Runtime custom resource (Runtime CRs created with this migrator have the `operator.kyma-project.io/created-by-migrator=true` label).
+4. Saves the new Runtime CR to files.
+5. Check if the new Runtime CR won't cause an update on Gardener.
+6. Save the results of the comparison between the original shoot and the shoot KIM produces based on the new Runtime CR.
+7. Apply the new Runtime CRs to the designated KCP cluster.
+8. Save the migration results in the output json file.
 
 ## Build
 
@@ -21,7 +20,7 @@ go build -o ./bin/runtime-migrator ./cmd/migration
 ## Usage
 
 ```bash
-cat ./runtime-migrator \
+./runtime-migrator \
   -gardener-kubeconfig-path=/Users/myuser/gardener-kubeconfig.yml \
   -gardener-project-name=kyma-dev  \
   -kcp-kubeconfig-path=/Users/myuser/kcp-kubeconfig.yml \
@@ -42,7 +41,7 @@ The above **execution example** will:
 
 The input can be also provided in the form of a text file:
 ```bash
-cat ./runtime-migrator \
+./runtime-migrator \
   -gardener-kubeconfig-path=/Users/myuser/gardener-kubeconfig.yml \
   -gardener-project-name=kyma-stage  \
   -kcp-kubeconfig-path=/Users/myuser/kcp-kubeconfig.yml \
@@ -130,7 +129,7 @@ The following problems were detected in the above example:
 - The runtime with the `99a38a99-e8d7-4b98-a6f2-5a54ed389c4d` identifier may cause an unwanted update in the Gardener. The comparison results are saved in the `/tmp/migration-2024-11-22T17:05:33+01:00/comparison-results/99a38a99-e8d7-4b98-a6f2-5a54ed389c4d` directory.
 
 
-The `/tmp/migration-2024-11-21T14:53:24+01:00/comparison-results/99a38a99-e8d7-4b98-a6f2-5a54ed389c4d"` directory contains the following files:
+The `/tmp/migration-2024-11-21T14:53:24+01:00/comparison-results/99a38a99-e8d7-4b98-a6f2-5a54ed389c4d` directory contains the following files:
 - `c-71da0f2.diff`
 - `converted-shoot.yaml`
 - `original-shoot.yaml` 

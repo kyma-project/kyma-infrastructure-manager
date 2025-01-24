@@ -86,7 +86,7 @@ func (ow OutputWriter) SaveBackupResults(results Results) (string, error) {
 		return "", err
 	}
 
-	fileName := fmt.Sprintf("%s/backup-results.json", ow.NewResultsDir)
+	fileName := fmt.Sprintf("%s/backup-and-switch-results.json", ow.NewResultsDir)
 	return fileName, writeFile(fileName, resultFile)
 }
 
