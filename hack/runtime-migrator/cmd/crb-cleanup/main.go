@@ -42,6 +42,7 @@ func main() {
 		slog.Error("Error marshaling list of failures", "error", err, "failures", failures)
 		os.Exit(1)
 	}
+	slog.Info("Completed without errors")
 }
 
 // ProcessCRBs fetches old and new CRBs, compares them and cleans old CRBs
@@ -64,9 +65,6 @@ func ProcessCRBs(fetcher Fetcher, cleaner Cleaner, filer Filer, cfg Config) ([]F
 
 	compared := Compare(ctx, oldCRBs, newCRBs)
 
-	if len(compared.additional) != 0 {
-		slog.Info("New CRBs not found in old CRBs", CRBNames(compared.additional))
-	}
 	if len(compared.missing) != 0 {
 		slog.Warn("Old CRBs not found in new CRBs", CRBNames(compared.missing))
 		if filer != nil {
