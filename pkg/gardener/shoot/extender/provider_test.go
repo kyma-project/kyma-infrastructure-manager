@@ -5,12 +5,14 @@ import (
 	aws "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/aws"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/azure"
 	gcp "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/gcp"
+	ops "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/openstack"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"testing"
 
 	awsext "github.com/gardener/gardener-extension-provider-aws/pkg/apis/aws/v1alpha1"
 	gcpext "github.com/gardener/gardener-extension-provider-gcp/pkg/apis/gcp/v1alpha1"
+	ostext "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
@@ -122,7 +124,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 	t.Run("Return error for unknown provider", func(t *testing.T) {
 		// given
 		shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
-		runtime := imv1.Runtime{
+		rt := imv1.Runtime{
 			Spec: imv1.RuntimeSpec{
 				Shoot: imv1.RuntimeShoot{
 					Provider: imv1.Provider{
@@ -134,7 +136,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 
 		// when
 		extender := NewProviderExtenderForCreateOperation(false, "", "")
-		err := extender(runtime, &shoot)
+		err := extender(rt, &shoot)
 
 		// then
 		require.Error(t, err)
@@ -895,6 +897,32 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 			ExistingInfraConfig:        fixAzureInfrastructureConfig("10.250.0.0/22", []string{"1", "2", "3"}),
 			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
 		},
+		"Modify infrastructure config with value provided externally with 3 zones": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeAzure, fixMultipleWorkers([]workerConfig{
+							{"main-worker", "azure.large", "gardenlinux", "1313.4.0", 1, 3, []string{"1"}},
+							{"additional", "azure.large", "gardenlinux", "1313.2.0", 1, 3, []string{"1", "2"}},
+						}), fixAzureInfrastructureConfig("10.250.0.0/22", []string{"1", "2", "3"}), fixAWSControlPlaneConfig()),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			DefaultMachineImageName:    "gardenlinux",
+			DefaultMachineImageVersion: "1312.3.0",
+			CurrentShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "azure.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1"}},
+				{"additional", "azure.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2"}}}),
+			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "azure.large", "gardenlinux", "1313.4.0", 1, 3, []string{"1"}},
+				{"additional", "azure.large", "gardenlinux", "1313.2.0", 1, 3, []string{"1", "2"}}}),
+			ExpectedZonesCount:         3,
+			ExistingInfraConfig:        fixAzureInfrastructureConfig("10.250.0.0/22", []string{"1", "2", "3"}),
+			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
+		},
 	} {
 		t.Run(tname, func(t *testing.T) {
 			// given
@@ -1070,7 +1098,7 @@ func TestProviderExtenderForPatchWorkersUpdateGCP(t *testing.T) {
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "n2-standard-2", "gardenlinux", "1312.4.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-c"}},
 				{"next-worker", "n2-standard-2", "gardenlinux", "1312.2.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-c"}}}),
-			ExistingInfraConfig:        fixGCPInfrastructureConfig("10.250.0.0/22", []string{"us-central1-a", "us-central1-b", "us-central1-c"}),
+			ExistingInfraConfig:        fixGCPInfrastructureConfig("10.250.0.0/22"),
 			ExistingControlPlaneConfig: fixGCPControlPlaneConfig([]string{"us-central1-a", "us-central1-b", "us-central1-c"}),
 		},
 		// NOTE: uncomment this unit test after the issue of extending the existing infrastructure config with additional zones is implemented
@@ -1120,7 +1148,7 @@ func TestProviderExtenderForPatchWorkersUpdateGCP(t *testing.T) {
 				{"next-worker", "n2-standard-2", "gardenlinux", "1312.2.0", 2, 4, []string{"us-central1-a", "us-central1-b", "us-central1-c"}}}),
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "n2-standard-2", "gardenlinux", "1312.4.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-c"}}}),
-			ExistingInfraConfig:        fixGCPInfrastructureConfig("10.250.0.0/22", []string{"us-central1-a", "us-central1-b", "us-central1-c"}),
+			ExistingInfraConfig:        fixGCPInfrastructureConfig("10.250.0.0/22"),
 			ExistingControlPlaneConfig: fixGCPControlPlaneConfig([]string{"us-central1-a", "us-central1-b", "us-central1-c"}),
 		},
 		"Update machine type and image name and version in multiple workers separately": {
@@ -1145,7 +1173,7 @@ func TestProviderExtenderForPatchWorkersUpdateGCP(t *testing.T) {
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "n2-standard-4", "gardenlinux", "1313.4.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-c"}},
 				{"additional", "n2-standard-4", "gardenlinux", "1313.2.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-c"}}}),
-			ExistingInfraConfig:        fixGCPInfrastructureConfig("10.250.0.0/22", []string{"us-central1-a", "us-central1-b", "us-central1-c"}),
+			ExistingInfraConfig:        fixGCPInfrastructureConfig("10.250.0.0/22"),
 			ExistingControlPlaneConfig: fixGCPControlPlaneConfig([]string{"us-central1-a", "us-central1-b", "us-central1-c"}),
 		},
 		"Remove worker from existing set of workers networking zones set in infrastructureConfig should not change": {
@@ -1168,7 +1196,32 @@ func TestProviderExtenderForPatchWorkersUpdateGCP(t *testing.T) {
 				{"additional", "n2-standard-2", "gardenlinux", "1312.2.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-c"}}}),
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "n2-standard-2", "gardenlinux", "1313.4.0", 1, 3, []string{"us-central1-a"}}}),
-			ExistingInfraConfig:        fixGCPInfrastructureConfig("10.250.0.0/22", []string{"us-central1-a", "us-central1-b", "us-central1-c"}),
+			ExistingInfraConfig:        fixGCPInfrastructureConfig("10.250.0.0/22"),
+			ExistingControlPlaneConfig: fixGCPControlPlaneConfig([]string{"us-central1-a", "us-central1-b", "us-central1-c"}),
+		},
+		"Modify infrastructure config with value provided externally with 3 zones": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeGCP, fixMultipleWorkers([]workerConfig{
+							{"main-worker", "n2-standard-2", "gardenlinux", "1313.4.0", 1, 3, []string{"us-central1-a"}},
+							{"next-worker", "n2-standard-3", "gardenlinux", "1313.2.0", 1, 3, []string{"us-central1-a", "us-central1-b"}},
+						}), fixGCPInfrastructureConfig("10.250.0.0/22"), fixGCPControlPlaneConfig([]string{"us-central1-a", "us-central1-b", "us-central1-c"})),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			DefaultMachineImageName:    "gardenlinux",
+			DefaultMachineImageVersion: "1312.3.0",
+			CurrentShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "n2-standard-2", "gardenlinux", "1312.4.0", 1, 3, []string{"us-central1-a"}},
+				{"next-worker", "n2-standard-3", "gardenlinux", "1312.2.0", 1, 3, []string{"us-central1-a", "us-central1-b"}}}),
+			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "n2-standard-2", "gardenlinux", "1313.4.0", 1, 3, []string{"us-central1-a"}},
+				{"next-worker", "n2-standard-3", "gardenlinux", "1313.2.0", 1, 3, []string{"us-central1-a", "us-central1-b"}}}),
+			ExistingInfraConfig:        fixGCPInfrastructureConfig("10.250.0.0/22"),
 			ExistingControlPlaneConfig: fixGCPControlPlaneConfig([]string{"us-central1-a", "us-central1-b", "us-central1-c"}),
 		},
 	} {
@@ -1199,7 +1252,7 @@ func TestProviderExtenderForCreateOpenstack(t *testing.T) {
 		ExistingInfraConfig        *runtime.RawExtension
 		ExistingControlPlaneConfig *runtime.RawExtension
 		ExpectedShootWorkers       []gardener.Worker
-		ExpectedZonesCount         int
+		ExpectedInfraConfigCIDR    string
 	}{
 		"Create single Openstack worker": {
 			Runtime: imv1.Runtime{
@@ -1219,6 +1272,7 @@ func TestProviderExtenderForCreateOpenstack(t *testing.T) {
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "openstack.large", "gardenlinux", "1310.4.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}},
 			}),
+			ExpectedInfraConfigCIDR: "10.250.0.0/22",
 		},
 		"Create multiple Openstack workers": {
 			Runtime: imv1.Runtime{
@@ -1237,6 +1291,30 @@ func TestProviderExtenderForCreateOpenstack(t *testing.T) {
 			},
 			DefaultMachineImageName:    "gardenlinux",
 			DefaultMachineImageVersion: "1312.3.0",
+			ExpectedInfraConfigCIDR:    "10.250.0.0/22",
+			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "openstack.small", "gardenlinux", "1310.4.0", 1, 3, []string{"eu-de-1a"}},
+				{"additional", "openstack.big", "gardenlinux", "1311.2.0", 2, 4, []string{"eu-de-1b", "eu-de-1c"}},
+				{"another", "openstack.large", "gardenlinux", "1312.2.0", 3, 5, []string{"eu-de-1c"}}}),
+		},
+		"Create multiple Openstack workers with custom CIDR Infrastructure Config": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeOpenStack, fixMultipleWorkers([]workerConfig{
+							{"main-worker", "openstack.small", "gardenlinux", "1310.4.0", 1, 3, []string{"eu-de-1a"}},
+							{"additional", "openstack.big", "gardenlinux", "1311.2.0", 2, 4, []string{"eu-de-1b", "eu-de-1c"}},
+							{"another", "openstack.large", "gardenlinux", "1312.2.0", 3, 5, []string{"eu-de-1c"}},
+						}), fixOpenstackInfrastructureConfig("10.250.0.0/16"), fixOpenstackControlPlaneConfig()),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			DefaultMachineImageName:    "gardenlinux",
+			DefaultMachineImageVersion: "1312.3.0",
+			ExpectedInfraConfigCIDR:    "10.250.0.0/16",
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "openstack.small", "gardenlinux", "1310.4.0", 1, 3, []string{"eu-de-1a"}},
 				{"additional", "openstack.big", "gardenlinux", "1311.2.0", 2, 4, []string{"eu-de-1b", "eu-de-1c"}},
@@ -1255,13 +1333,190 @@ func TestProviderExtenderForCreateOpenstack(t *testing.T) {
 			require.NoError(t, err)
 
 			assertProviderMultipleWorkers(t, tc.Runtime.Spec.Shoot, shoot, false, tc.ExpectedShootWorkers)
-			assertProviderSpecificConfigOpenstack(t, shoot)
+			assertProviderSpecificConfigOpenstack(t, shoot, tc.ExpectedInfraConfigCIDR)
 		})
 	}
 }
 
 func TestProviderExtenderForPatchWorkersUpdateOpenstack(t *testing.T) {
-	// TBD
+	// tests of NewProviderExtenderPatch for workers update operation for Openstack provider
+	for tname, tc := range map[string]struct {
+		Runtime                    imv1.Runtime
+		DefaultMachineImageVersion string
+		DefaultMachineImageName    string
+		CurrentShootWorkers        []gardener.Worker
+		ExistingInfraConfig        *runtime.RawExtension
+		ExistingControlPlaneConfig *runtime.RawExtension
+		ExpectedShootWorkers       []gardener.Worker
+		ExpectedInfraConfigCIDR    string
+	}{
+		"Add additional worker": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeOpenStack, fixMultipleWorkers([]workerConfig{
+							{"main-worker", "openstack.small", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}},
+							{"next-worker", "openstack.big", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}},
+						})),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			DefaultMachineImageName:    "gardenlinux",
+			DefaultMachineImageVersion: "1312.3.0",
+			CurrentShootWorkers:        fixWorkers("main-worker", "openstack.small", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}),
+			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "openstack.small", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}},
+				{"next-worker", "openstack.big", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}}}),
+			ExistingInfraConfig:        fixOpenstackInfrastructureConfig("10.250.0.0/22"),
+			ExistingControlPlaneConfig: fixOpenstackControlPlaneConfig(),
+			ExpectedInfraConfigCIDR:    "10.250.0.0/22",
+		},
+		// NOTE: uncomment this unit test after the issue of extending the existing infrastructure config with additional zones is implemented
+		/*"Add additional worker - extend existing additional worker from non HA setup to HA setup by adding more zones, infrastructureConfig already has three zones": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeOpenStack, fixMultipleWorkers([]workerConfig{
+							{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}},
+							{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a"}},
+						})),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			EnableIMDSv2:               false,
+			DefaultMachineImageName:    "gardenlinux",
+			DefaultMachineImageVersion: "1312.3.0",
+			ExpectedZonesCount:         3,
+			CurrentShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}},
+				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a"}}}),
+			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}},
+				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}}}),
+			ExistingInfraConfig:        fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingControlPlaneConfig: fixAWSControlPlaneConfig(),
+		},*/
+		"Remove additional worker from existing set of workers": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeOpenStack, fixMultipleWorkers([]workerConfig{
+							{"main-worker", "openstack.small", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}}})),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			DefaultMachineImageName:    "gardenlinux",
+			DefaultMachineImageVersion: "1312.3.0",
+			CurrentShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "openstack.small", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}},
+				{"next-worker", "openstack.large", "gardenlinux", "1312.2.0", 2, 4, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}}}),
+			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "openstack.small", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}}}),
+			ExistingInfraConfig:        fixOpenstackInfrastructureConfig("10.250.0.0/22"),
+			ExistingControlPlaneConfig: fixOpenstackControlPlaneConfig(),
+			ExpectedInfraConfigCIDR:    "10.250.0.0/22",
+		},
+		"Update machine type and image name and version in multiple workers separately": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeOpenStack, fixMultipleWorkers([]workerConfig{
+							{"main-worker", "openstack.small", "gardenlinux", "1313.4.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}},
+							{"next-worker", "openstack.large", "gardenlinux", "1313.2.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}},
+						})),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			DefaultMachineImageName:    "gardenlinux",
+			DefaultMachineImageVersion: "1312.3.0",
+			CurrentShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "openstack.small", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}},
+				{"next-worker", "openstack.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}}}),
+			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "openstack.small", "gardenlinux", "1313.4.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}},
+				{"next-worker", "openstack.large", "gardenlinux", "1313.2.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}}}),
+			ExistingInfraConfig:        fixOpenstackInfrastructureConfig("10.250.0.0/22"),
+			ExistingControlPlaneConfig: fixOpenstackControlPlaneConfig(),
+			ExpectedInfraConfigCIDR:    "10.250.0.0/22",
+		},
+		"Remove worker from existing set of workers networking zones set in infrastructureConfig should not change": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeOpenStack, fixMultipleWorkers([]workerConfig{
+							{"main-worker", "openstack.small", "gardenlinux", "1313.4.0", 1, 3, []string{"eu-de-1a"}},
+						})),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			DefaultMachineImageName:    "gardenlinux",
+			DefaultMachineImageVersion: "1312.3.0",
+			CurrentShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "openstack.small", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-de-1a"}},
+				{"additional", "openstack.small", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}}}),
+			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "openstack.small", "gardenlinux", "1313.4.0", 1, 3, []string{"eu-de-1a"}}}),
+			ExistingInfraConfig:        fixOpenstackInfrastructureConfig("10.250.0.0/22"),
+			ExistingControlPlaneConfig: fixOpenstackControlPlaneConfig(),
+			ExpectedInfraConfigCIDR:    "10.250.0.0/22",
+		},
+		"Modify infrastructure config with value provided externally with own CIDR": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeOpenStack, fixMultipleWorkers([]workerConfig{
+							{"main-worker", "openstack.small", "gardenlinux", "1313.4.0", 1, 3, []string{"eu-de-1a"}},
+							{"next-worker", "openstack.big", "gardenlinux", "1313.2.0", 1, 3, []string{"eu-de-1a", "eu-de-1b"}},
+						}), fixOpenstackInfrastructureConfig("10.250.0.0/16"), fixOpenstackControlPlaneConfig()),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			DefaultMachineImageName:    "gardenlinux",
+			DefaultMachineImageVersion: "1312.3.0",
+			CurrentShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "openstack.small", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-de-1a"}},
+				{"next-worker", "openstack.big", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-de-1a", "eu-de-1b"}}}),
+			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "openstack.small", "gardenlinux", "1313.4.0", 1, 3, []string{"eu-de-1a"}},
+				{"next-worker", "openstack.big", "gardenlinux", "1313.2.0", 1, 3, []string{"eu-de-1a", "eu-de-1b"}}}),
+			ExistingInfraConfig:        fixOpenstackInfrastructureConfig("10.250.0.0/22"),
+			ExistingControlPlaneConfig: fixOpenstackControlPlaneConfig(),
+			ExpectedInfraConfigCIDR:    "10.250.0.0/16",
+		},
+	} {
+		t.Run(tname, func(t *testing.T) {
+			// given
+			shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
+
+			// when
+			extender := NewProviderExtenderPatchOperation(false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion, tc.CurrentShootWorkers, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig)
+			err := extender(tc.Runtime, &shoot)
+
+			// then
+			require.NoError(t, err)
+
+			assertProviderMultipleWorkers(t, tc.Runtime.Spec.Shoot, shoot, false, tc.ExpectedShootWorkers)
+			assertProviderSpecificConfigOpenstack(t, shoot, tc.ExpectedInfraConfigCIDR)
+		})
+	}
 }
 
 func fixProvider(providerType string, machineImageName, machineImageVersion string, zones []string) imv1.Provider {
@@ -1385,13 +1640,23 @@ func fixAzureControlPlaneConfig() *runtime.RawExtension {
 	return &runtime.RawExtension{Raw: infraConfig}
 }
 
-func fixGCPInfrastructureConfig(workersCIDR string, zones []string) *runtime.RawExtension {
-	infraConfig, _ := gcp.GetInfrastructureConfig(workersCIDR, zones)
+func fixGCPInfrastructureConfig(workersCIDR string) *runtime.RawExtension {
+	infraConfig, _ := gcp.GetInfrastructureConfig(workersCIDR, []string{})
 	return &runtime.RawExtension{Raw: infraConfig}
 }
 
 func fixGCPControlPlaneConfig(zones []string) *runtime.RawExtension {
 	controlPlaneConfig, _ := gcp.GetControlPlaneConfig(zones)
+	return &runtime.RawExtension{Raw: controlPlaneConfig}
+}
+
+func fixOpenstackInfrastructureConfig(workersCIDR string) *runtime.RawExtension {
+	infraConfig, _ := ops.GetInfrastructureConfig(workersCIDR, []string{})
+	return &runtime.RawExtension{Raw: infraConfig}
+}
+
+func fixOpenstackControlPlaneConfig() *runtime.RawExtension {
+	controlPlaneConfig, _ := ops.GetControlPlaneConfig([]string{})
 	return &runtime.RawExtension{Raw: controlPlaneConfig}
 }
 
@@ -1569,10 +1834,15 @@ func assertProviderSpecificConfigGCP(t *testing.T, shoot gardener.Shoot) {
 	assert.NotEmpty(t, ctrlPlaneConfig.Zone)
 }
 
-func assertProviderSpecificConfigOpenstack(t *testing.T, shoot gardener.Shoot) {
-	//var ctrlPlaneConfig gcpext.ControlPlaneConfig
+func assertProviderSpecificConfigOpenstack(t *testing.T, shoot gardener.Shoot, expectedWorkersCIDR string) {
+	var ctrlPlaneConfig ostext.ControlPlaneConfig
+	var infraConfig ostext.InfrastructureConfig
 	//
-	//err := json.Unmarshal(shoot.Spec.Provider.ControlPlaneConfig.Raw, &ctrlPlaneConfig)
-	//require.NoError(t, err)
-	//assert.NotEmpty(t, ctrlPlaneConfig.Zone)
+	err := json.Unmarshal(shoot.Spec.Provider.ControlPlaneConfig.Raw, &ctrlPlaneConfig)
+	require.NoError(t, err)
+	assert.Equal(t, ctrlPlaneConfig.LoadBalancerProvider, "f5")
+
+	err = json.Unmarshal(shoot.Spec.Provider.InfrastructureConfig.Raw, &infraConfig)
+	require.NoError(t, err)
+	assert.Equal(t, infraConfig.Networks.Workers, expectedWorkersCIDR)
 }
