@@ -15,6 +15,28 @@ const msgFailedToConfigureAuditlogs = "Failed to configure audit logs"
 func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Create shoot state")
 
+	seedAvailable, err := seedForRegionAvailable(m.ShootClient, s.instance.Spec.Shoot.Region)
+	if err != nil {
+		m.log.Error(err, "Failed to verify whether seed for the region exists")
+		s.instance.UpdateStatePending(
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonGardenerError,
+			"False",
+			fmt.Sprintf("Failed to create new gardener Shoot %v", err),
+		)
+		return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
+	}
+
+	if !seedAvailable {
+		m.log.Error(err, "Failed to verify whether seed for the region exists")
+		m.Metrics.IncRuntimeFSMStopCounter()
+		return updateStatePendingWithErrorAndStop(
+			&s.instance,
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonGardenerError,
+			"Failed to verify whether seed for the region exists")
+	}
+
 	data, err := m.AuditLogging.GetAuditLogData(
 		s.instance.Spec.Shoot.Provider.Type,
 		s.instance.Spec.Shoot.Region)
