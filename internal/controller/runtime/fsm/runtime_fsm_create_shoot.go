@@ -17,24 +17,26 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 
 	seedAvailable, err := seedForRegionAvailable(m.ShootClient, s.instance.Spec.Shoot.Region)
 	if err != nil {
-		m.log.Error(err, "Failed to verify whether seed for the region exists")
+		msg := "Failed to verify whether seed for the region exists"
+		m.log.Error(err, msg)
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonGardenerError,
 			"False",
-			fmt.Sprintf("Failed to create new gardener Shoot %v", err),
+			msg,
 		)
 		return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
 	}
 
 	if !seedAvailable {
-		m.log.Error(err, "Failed to verify whether seed for the region exists")
+		msg := "Seed for the region doesn't exist"
+		m.log.Error(nil, msg)
 		m.Metrics.IncRuntimeFSMStopCounter()
 		return updateStatePendingWithErrorAndStop(
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonGardenerError,
-			"Failed to verify whether seed for the region exists")
+			msg)
 	}
 
 	data, err := m.AuditLogging.GetAuditLogData(
