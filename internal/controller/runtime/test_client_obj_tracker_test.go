@@ -155,3 +155,49 @@ func TestCustomTracker_Delete(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestCustomTracker_ListSeed(t *testing.T) {
+	seedSequence := []*gardener_api.SeedList{
+		{
+			Items: []gardener_api.Seed{},
+		},
+	}
+
+	t.Run("should return shoot object", func(t *testing.T) {
+		// given
+		tracker := NewCustomTracker(nil, nil, seedSequence)
+		gvr := schema.GroupVersionResource{
+			Resource: "seeds",
+		}
+
+		gvk := schema.GroupVersionKind{}
+
+		// when
+		obj, err := tracker.List(gvr, gvk, "")
+
+		// then
+		require.NoError(t, err)
+		require.NotNil(t, obj)
+		require.Equal(t, seedSequence[0], obj)
+	})
+
+	t.Run("should return not found error", func(t *testing.T) {
+		// given
+		tracker := NewCustomTracker(nil, nil, seedSequence)
+		gvr := schema.GroupVersionResource{
+			Resource: "shoots",
+		}
+
+		gvk := schema.GroupVersionKind{}
+
+		// when
+		obj, err := tracker.List(gvr, gvk, "")
+		objOutOfRange, errOutOfRange := tracker.List(gvr, gvk, "")
+
+		// then
+		require.NoError(t, err)
+		require.NotNil(t, obj)
+		require.Error(t, errOutOfRange)
+		require.Nil(t, objOutOfRange)
+	})
+}
