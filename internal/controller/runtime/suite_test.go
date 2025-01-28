@@ -111,7 +111,7 @@ var _ = BeforeSuite(func() {
 
 	// tracker will be updated with different shoot sequence for each test case
 	tracker := clienttesting.NewObjectTracker(clientScheme, serializer.NewCodecFactory(clientScheme).UniversalDecoder())
-	customTracker = NewCustomTracker(tracker, []*gardener_api.Shoot{})
+	customTracker = NewCustomTracker(tracker, []*gardener_api.Shoot{}, []*gardener_api.SeedList{})
 	gardenerTestClient = fake.NewClientBuilder().WithScheme(clientScheme).WithObjectTracker(customTracker).Build()
 
 	convConfig := fixConverterConfigForTests()
@@ -171,27 +171,29 @@ var _ = AfterSuite(func() {
 func setupGardenerTestClientForProvisioning() {
 	baseShoot := getBaseShootForTestingSequence()
 	shoots := fixShootsSequenceForProvisioning(&baseShoot)
-	setupGardenerClientWithSequence(shoots)
+	seeds := fixSeedSequenceForProvisioning()
+
+	setupGardenerClientWithSequence(shoots, seeds)
 }
 
 func setupGardenerTestClientForUpdate() {
 	baseShoot := getBaseShootForTestingSequence()
 	shoots := fixShootsSequenceForUpdate(&baseShoot)
-	setupGardenerClientWithSequence(shoots)
+	setupGardenerClientWithSequence(shoots, nil)
 }
 
 func setupGardenerTestClientForDelete() {
 	baseShoot := getBaseShootForTestingSequence()
 	shoots := fixShootsSequenceForDelete(&baseShoot)
-	setupGardenerClientWithSequence(shoots)
+	setupGardenerClientWithSequence(shoots, nil)
 }
 
-func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot) {
+func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot, seeds []*gardener_api.SeedList) {
 	clientScheme := runtime.NewScheme()
 	_ = gardener_api.AddToScheme(clientScheme)
 
 	tracker := clienttesting.NewObjectTracker(clientScheme, serializer.NewCodecFactory(clientScheme).UniversalDecoder())
-	customTracker = NewCustomTracker(tracker, shoots)
+	customTracker = NewCustomTracker(tracker, shoots, seeds)
 	gardenerTestClient = fake.NewClientBuilder().WithScheme(clientScheme).WithObjectTracker(customTracker).
 		WithInterceptorFuncs(interceptor.Funcs{
 			Patch: func(ctx context.Context, clnt client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
@@ -252,6 +254,28 @@ func fixShootsSequenceForProvisioning(shoot *gardener_api.Shoot) []*gardener_api
 	// processedShoot := processingShoot.DeepCopy() // will add specific data later
 
 	return []*gardener_api.Shoot{missingShoot, missingShoot, missingShoot, initialisedShoot, dnsShoot, pendingShoot, processingShoot, readyShoot, readyShoot, readyShoot, readyShoot}
+}
+
+func fixSeedSequenceForProvisioning() []*gardener_api.SeedList {
+	return []*gardener_api.SeedList{
+		{
+			Items: []gardener_api.Seed{
+				getSeedForRegion("us-west-1"),
+				getSeedForRegion("eu-central-1"),
+				getSeedForRegion("us-east-1"),
+			},
+		},
+	}
+}
+
+func getSeedForRegion(region string) gardener_api.Seed {
+	return gardener_api.Seed{
+		Spec: gardener_api.SeedSpec{
+			Provider: gardener_api.SeedProvider{
+				Region: region,
+			},
+		},
+	}
 }
 
 func fixShootsSequenceForUpdate(shoot *gardener_api.Shoot) []*gardener_api.Shoot {

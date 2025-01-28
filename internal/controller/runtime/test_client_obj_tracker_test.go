@@ -19,7 +19,7 @@ func TestCustomTracker_Get(t *testing.T) {
 
 	t.Run("should return shoot object", func(t *testing.T) {
 		// given
-		tracker := NewCustomTracker(nil, shootSequence)
+		tracker := NewCustomTracker(nil, shootSequence, nil)
 		gvr := schema.GroupVersionResource{
 			Resource: "shoots",
 		}
@@ -35,7 +35,7 @@ func TestCustomTracker_Get(t *testing.T) {
 
 	t.Run("should return not found error", func(t *testing.T) {
 		// given
-		tracker := NewCustomTracker(nil, shootSequence)
+		tracker := NewCustomTracker(nil, shootSequence, nil)
 		gvr := schema.GroupVersionResource{
 			Resource: "shoots",
 		}
@@ -61,7 +61,7 @@ func TestCustomTracker_Update(t *testing.T) {
 				Namespace: "test",
 			},
 		}}
-		tracker := NewCustomTracker(nil, shootSequence)
+		tracker := NewCustomTracker(nil, shootSequence, nil)
 		gvr := schema.GroupVersionResource{
 			Resource: "shoots",
 		}
@@ -91,7 +91,7 @@ func TestCustomTracker_Update(t *testing.T) {
 				Namespace: "test",
 			},
 		}}
-		tracker := NewCustomTracker(nil, shootSequence)
+		tracker := NewCustomTracker(nil, shootSequence, nil)
 		gvr := schema.GroupVersionResource{
 			Resource: "shoots",
 		}
@@ -122,7 +122,7 @@ func TestCustomTracker_Delete(t *testing.T) {
 				Namespace: "test",
 			},
 		}}
-		tracker := NewCustomTracker(nil, shootSequence)
+		tracker := NewCustomTracker(nil, shootSequence, nil)
 		gvr := schema.GroupVersionResource{
 			Resource: "shoots",
 		}
@@ -143,7 +143,7 @@ func TestCustomTracker_Delete(t *testing.T) {
 				Namespace: "test",
 			},
 		}}
-		tracker := NewCustomTracker(nil, shootSequence)
+		tracker := NewCustomTracker(nil, shootSequence, nil)
 		gvr := schema.GroupVersionResource{
 			Resource: "shoots",
 		}
