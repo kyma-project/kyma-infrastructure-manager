@@ -1,6 +1,6 @@
 module github.com/kyma-project/infrastructure-manager/hack/performance
 
-go 1.23.1
+go 1.23.5
 
 require (
 	github.com/kyma-project/infrastructure-manager v0.0.0-20241010165136-c9d296aadebd
