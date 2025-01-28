@@ -22,6 +22,7 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 		provider.Type = rt.Spec.Shoot.Provider.Type
 		provider.Workers = rt.Spec.Shoot.Provider.Workers
 
+		//NOTE: we can have this code moved to validation webhook later on
 		if len(rt.Spec.Shoot.Provider.Workers) != 1 {
 			return errors.New("single main worker is required")
 		}
@@ -250,18 +251,6 @@ func getNetworkingZonesFromWorkers(workers []gardener.Worker) ([]string, error) 
 			}
 		}
 	}
-
-	// uncomment if we decide to require to validate to have all same zones in all workers
-	//
-	//if len(workers) == 1 {
-	//	return zones, nil
-	//}
-	//
-	//for _, worker := range workers {
-	//	if !slices.Equal(worker.Zones, zones) {
-	//		return nil, errors.New("workers have specified different zones set, or zones are in different order")
-	//	}
-	//}
 
 	return zones, nil
 }

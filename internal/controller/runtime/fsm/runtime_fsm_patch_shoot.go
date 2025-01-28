@@ -34,6 +34,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			msgFailedToConfigureAuditlogs)
 	}
 
+	// NOTE: In the future we want to pass the whole shoot object here
 	updatedShoot, err := convertPatch(&s.instance, gardener_shoot.PatchOpts{
 		ConverterConfig:      m.ConverterConfig,
 		AuditLogData:         data,
