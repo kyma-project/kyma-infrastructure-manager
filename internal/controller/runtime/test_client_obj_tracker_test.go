@@ -185,7 +185,7 @@ func TestCustomTracker_ListSeed(t *testing.T) {
 		// given
 		tracker := NewCustomTracker(nil, nil, seedSequence)
 		gvr := schema.GroupVersionResource{
-			Resource: "shoots",
+			Resource: "seeds",
 		}
 
 		gvk := schema.GroupVersionKind{}
