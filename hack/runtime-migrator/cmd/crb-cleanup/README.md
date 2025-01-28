@@ -1,8 +1,8 @@
 # CRB Cleanup script
 
 This script is used to clean up provisioner's ClusterRoleBindings (CRBs) after migration.
-It looks for provisioner and kim CRBs, compares them,
-and if all of provisioner's CRBs have a KIM equivalent - it removes the provisioner's ones.
+It looks for provisioner and KIM CRBs, compares them,
+and if all of the provisioner's CRBs have a KIM equivalent, it removes the provisioner's ones.
 
 The cleanup script is run locally, with kubeconfig pointing to the cluster.
 
@@ -12,7 +12,7 @@ The cleanup script is run locally, with kubeconfig pointing to the cluster.
 | ------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | `-kubeconfig`       | Path to the kubeconfig file                                 | in-cluster config                                                                                  |
 | `-provisionerLabel` | Label selector for provisioner CRBs                         | `kyma-project.io/deprecation=to-be-removed-soon,reconciler.kyma-project.io/managed-by=provisioner` |
-| `-kimLabel`         | Label selector for kim CRBs                                 | `reconciler.kyma-project.io/managed-by=infrastructure-manager`                                     |
+| `-kimLabel`         | Label selector for KIM CRBs                                 | `reconciler.kyma-project.io/managed-by=infrastructure-manager`                                     |
 | `-output`           | Output dir for created logs.                                | _empty_ (acts like `./ `)                                                                          |
 | `-dry-run`          | Don't perform any destructive actions                       | `true`                                                                                             |
 | `-verbose`          | Print detailed logs                                         | `false`                                                                                            |
