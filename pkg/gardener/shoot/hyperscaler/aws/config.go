@@ -27,6 +27,15 @@ func GetWorkerConfig() ([]byte, error) {
 	return json.Marshal(NewWorkerConfig())
 }
 
+func DecodeInfrastructureConfig(data []byte) (*v1alpha1.InfrastructureConfig, error) {
+	infrastructureConfig := &v1alpha1.InfrastructureConfig{}
+	err := json.Unmarshal(data, infrastructureConfig)
+	if err != nil {
+		return nil, err
+	}
+	return infrastructureConfig, nil
+}
+
 func NewInfrastructureConfig(workersCidr string, zones []string) v1alpha1.InfrastructureConfig {
 	return v1alpha1.InfrastructureConfig{
 		TypeMeta: metav1.TypeMeta{

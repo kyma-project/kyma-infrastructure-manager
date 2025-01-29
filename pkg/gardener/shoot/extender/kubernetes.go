@@ -35,13 +35,13 @@ func NewKubernetesExtender(defaultKubernetesVersion, currentKubernetesVersion st
 	}
 }
 
-func compareVersions(version1, version2 string) (int, error) {
-	v1, err := semver.NewVersion(version1)
+func compareVersions(prevVersion, currVersion string) (int, error) {
+	v1, err := semver.NewVersion(prevVersion)
 	if err != nil {
 		return 0, err
 	}
 
-	v2, err := semver.NewVersion(version2)
+	v2, err := semver.NewVersion(currVersion)
 	if err != nil {
 		return 0, err
 	}

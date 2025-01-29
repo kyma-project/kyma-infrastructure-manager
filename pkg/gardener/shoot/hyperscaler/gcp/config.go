@@ -50,3 +50,12 @@ func NewControlPlaneConfig(zones []string) *v1alpha1.ControlPlaneConfig {
 		Zone: zones[0],
 	}
 }
+
+func DecodeControlPlaneConfig(data []byte) (*v1alpha1.ControlPlaneConfig, error) {
+	controlPlaneConfig := &v1alpha1.ControlPlaneConfig{}
+	err := json.Unmarshal(data, controlPlaneConfig)
+	if err != nil {
+		return nil, err
+	}
+	return controlPlaneConfig, nil
+}
