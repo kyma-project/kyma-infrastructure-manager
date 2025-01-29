@@ -15,28 +15,30 @@ const msgFailedToConfigureAuditlogs = "Failed to configure audit logs"
 func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.Info("Create shoot state")
 
-	seedAvailable, err := seedForRegionAvailable(m.ShootClient, s.instance.Spec.Shoot.Region)
-	if err != nil {
-		msg := fmt.Sprintf("Failed to verify whether seed for region %s exists", s.instance.Spec.Shoot.Region)
-		m.log.Error(err, msg)
-		s.instance.UpdateStatePending(
-			imv1.ConditionTypeRuntimeProvisioned,
-			imv1.ConditionReasonGardenerError,
-			"False",
-			msg,
-		)
-		return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
-	}
+	if s.instance.Spec.Shoot.EnforceSeedLocation != nil && *s.instance.Spec.Shoot.EnforceSeedLocation {
+		seedAvailable, err := seedForRegionAvailable(m.ShootClient, s.instance.Spec.Shoot.Region)
+		if err != nil {
+			msg := fmt.Sprintf("Failed to verify whether seed for region %s exists", s.instance.Spec.Shoot.Region)
+			m.log.Error(err, msg)
+			s.instance.UpdateStatePending(
+				imv1.ConditionTypeRuntimeProvisioned,
+				imv1.ConditionReasonGardenerError,
+				"False",
+				msg,
+			)
+			return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
+		}
 
-	if !seedAvailable {
-		msg := fmt.Sprintf("Seed for region %s doesn't exist", s.instance.Spec.Shoot.Region)
-		m.log.Error(nil, msg)
-		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(
-			&s.instance,
-			imv1.ConditionTypeRuntimeProvisioned,
-			imv1.ConditionReasonGardenerError,
-			msg)
+		if !seedAvailable {
+			msg := fmt.Sprintf("Seed for region %s doesn't exist", s.instance.Spec.Shoot.Region)
+			m.log.Error(nil, msg)
+			m.Metrics.IncRuntimeFSMStopCounter()
+			return updateStatePendingWithErrorAndStop(
+				&s.instance,
+				imv1.ConditionTypeRuntimeProvisioned,
+				imv1.ConditionReasonGardenerError,
+				msg)
+		}
 	}
 
 	data, err := m.AuditLogging.GetAuditLogData(
