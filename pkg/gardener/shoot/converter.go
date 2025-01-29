@@ -2,6 +2,7 @@ package shoot
 
 import (
 	"fmt"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -43,15 +44,20 @@ type CreateOpts struct {
 	auditlogs.AuditLogData
 }
 
+type WorkerZones struct {
+	Zones      []string
+	WorkerName string
+}
+
 type PatchOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
-	Zones             []string
-	ShootK8SVersion   string
-	ShootImageName    string
-	ShootImageVersion string
-	Extensions        []gardener.Extension
-	Resources         []gardener.NamedResourceReference
+	ShootK8SVersion      string
+	Workers              []gardener.Worker
+	Extensions           []gardener.Extension
+	Resources            []gardener.NamedResourceReference
+	InfrastructureConfig *runtime.RawExtension
+	ControlPlaneConfig   *runtime.RawExtension
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {
@@ -90,9 +96,9 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
-			opts.ShootImageName,
-			opts.ShootImageVersion,
-			opts.Zones))
+			opts.Workers,
+			opts.InfrastructureConfig,
+			opts.ControlPlaneConfig))
 
 	extendersForPatch = append(extendersForPatch,
 		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.Extensions),
