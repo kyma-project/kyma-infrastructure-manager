@@ -1,6 +1,6 @@
 module github.com/kyma-project/infrastructure-manager/hack/shoot-comparator
 
-go 1.23.0
+go 1.23.5
 
 require (
 	github.com/gardener/gardener v1.105.0

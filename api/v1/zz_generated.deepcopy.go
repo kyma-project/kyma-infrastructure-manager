@@ -285,6 +285,17 @@ func (in *Provider) DeepCopyInto(out *Provider) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.AdditionalWorkers != nil {
+		in, out := &in.AdditionalWorkers, &out.AdditionalWorkers
+		*out = new([]v1beta1.Worker)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]v1beta1.Worker, len(*in))
+			for i := range *in {
+				(*in)[i].DeepCopyInto(&(*out)[i])
+			}
+		}
+	}
 	if in.ControlPlaneConfig != nil {
 		in, out := &in.ControlPlaneConfig, &out.ControlPlaneConfig
 		*out = new(runtime.RawExtension)
