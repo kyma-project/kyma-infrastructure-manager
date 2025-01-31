@@ -6,19 +6,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func seedForRegionAvailable(client client.Client, region string) (bool, error) {
+func seedForRegionAvailable(client client.Client, region string) (bool, []string, error) {
 	var seedList gardener_types.SeedList
+	var regionsWithSeeds []string
 
 	err := client.List(context.TODO(), &seedList)
 	if err != nil {
-		return false, err
+		return false, nil, err
+	}
+
+	for _, seed := range seedList.Items {
+		regionsWithSeeds = append(regionsWithSeeds, seed.Spec.Provider.Region)
 	}
 
 	for _, seed := range seedList.Items {
 		if seed.Spec.Provider.Region == region {
-			return true, nil
+			return true, regionsWithSeeds, nil
 		}
 	}
 
-	return false, nil
+	return false, regionsWithSeeds, nil
 }
