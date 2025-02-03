@@ -218,26 +218,6 @@ var _ = Describe("KIM sFnInitialise", func() {
 			},
 		),
 		Entry(
-			"should return sFnCreateShootDryRun and no error when exists Provisioning Condition and shoot is missing",
-			testCtx,
-			must(newFakeFSM, withTestFinalizer, withMockedMetrics(), withDefaultReconcileDuration()),
-			&systemState{instance: testDryRunRtWithFinalizerAndProvisioningCondition},
-			testOpts{
-				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnCreateShootDryRun"),
-			},
-		),
-		Entry(
-			"should stop when sFnCreateShootDryRun was already executed",
-			testCtx,
-			must(newFakeFSM, withTestFinalizer, withMockedMetrics(), withDefaultReconcileDuration()),
-			&systemState{instance: testDryRunRtWithFinalizerAndProvisioningReadyCondition},
-			testOpts{
-				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("stopWithMetrics"),
-			},
-		),
-		Entry(
 			"should return sFnSelectShootProcessing and no error when exists Provisioning Condition and shoot exists",
 			testCtx,
 			must(newFakeFSM, withTestFinalizer, withMockedMetrics(), withDefaultReconcileDuration()),

@@ -32,7 +32,6 @@ type RCCfg struct {
 	RequeueDurationShootReconcile time.Duration
 	ControlPlaneRequeueDuration   time.Duration
 	Finalizer                     string
-	PVCPath                       string
 	ShootNamesapace               string
 	AuditLogMandatory             bool
 	Metrics                       metrics.Metrics
@@ -105,10 +104,9 @@ loop:
 
 func NewFsm(log logr.Logger, cfg RCCfg, k8s K8s) Fsm {
 	return &fsm{
-		fn:             sFnTakeSnapshot,
-		writerProvider: getWriterForFilesystem,
-		RCCfg:          cfg,
-		log:            log,
-		K8s:            k8s,
+		fn:    sFnTakeSnapshot,
+		RCCfg: cfg,
+		log:   log,
+		K8s:   k8s,
 	}
 }

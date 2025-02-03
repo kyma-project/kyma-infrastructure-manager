@@ -53,12 +53,8 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 	}
 
 	if shootNeedsToBeCreated() {
-		if !dryRunMode {
-			return switchState(sFnCreateShoot)
-		}
-
 		m.log.Info("Gardener shoot does not exist, creating new one")
-		return switchState(sFnCreateShootDryRun)
+		return switchState(sFnCreateShoot)
 	}
 
 	if instanceIsNotBeingDeleted && !dryRunMode {
