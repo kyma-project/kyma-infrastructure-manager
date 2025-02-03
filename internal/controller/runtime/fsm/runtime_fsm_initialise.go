@@ -17,25 +17,16 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 	instanceIsNotBeingDeleted := s.instance.GetDeletionTimestamp().IsZero()
 	instanceHasFinalizer := controllerutil.ContainsFinalizer(&s.instance, m.Finalizer)
 	provisioningCondition := meta.FindStatusCondition(s.instance.Status.Conditions, string(imv1.ConditionTypeRuntimeProvisioned))
-	dryRunProvisioningCondition := meta.FindStatusCondition(s.instance.Status.Conditions, string(imv1.ConditionTypeRuntimeProvisionedDryRun))
-	dryRunMode := s.instance.IsControlledByProvisioner()
 
 	if instanceIsNotBeingDeleted && !instanceHasFinalizer {
 		return addFinalizerAndRequeue(ctx, m, s)
 	}
 
-	if instanceIsNotBeingDeleted && s.shoot == nil && provisioningCondition == nil && dryRunProvisioningCondition == nil {
+	if instanceIsNotBeingDeleted && s.shoot == nil && provisioningCondition == nil {
 		m.log.Info("Update Runtime state to Pending - initialised")
 
-		getConditionType := func() imv1.RuntimeConditionType {
-			if dryRunMode {
-				return imv1.ConditionTypeRuntimeProvisionedDryRun
-			}
-			return imv1.ConditionTypeRuntimeProvisioned
-		}
-
 		s.instance.UpdateStatePending(
-			getConditionType(),
+			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonInitialized,
 			"Unknown",
 			"Runtime initialized",
@@ -43,28 +34,19 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 		return updateStatusAndRequeue()
 	}
 
-	shootNeedsToBeCreated := func() bool {
-		if dryRunMode {
-			return instanceIsNotBeingDeleted && dryRunProvisioningCondition != nil &&
-				dryRunProvisioningCondition.Status != "True"
-		}
-
-		return instanceIsNotBeingDeleted && s.shoot == nil
-	}
-
-	if shootNeedsToBeCreated() {
+	if instanceIsNotBeingDeleted && s.shoot == nil {
 		m.log.Info("Gardener shoot does not exist, creating new one")
 		return switchState(sFnCreateShoot)
 	}
 
-	if instanceIsNotBeingDeleted && !dryRunMode {
+	if instanceIsNotBeingDeleted {
 		m.log.Info("Gardener shoot exists, processing")
 		return switchState(sFnSelectShootProcessing)
 	}
 
 	// instance is being deleted
 	if !instanceIsNotBeingDeleted && instanceHasFinalizer {
-		if s.shoot != nil && !dryRunMode {
+		if s.shoot != nil {
 			m.log.Info("Delete instance resources")
 			return switchState(sFnDeleteKubeconfig)
 		}
