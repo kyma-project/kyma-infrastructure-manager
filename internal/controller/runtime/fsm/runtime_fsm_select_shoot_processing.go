@@ -37,7 +37,7 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 	if patchShoot {
 		m.log.Info("Gardener shoot already exists, updating")
 		return switchState(sFnPatchExistingShoot)
-	} else if (reconciler.ShouldSuspendReconciliation(s.instance.Annotations)) {
+	} else if reconciler.ShouldSuspendReconciliation(s.instance.Annotations) {
 		m.log.Info("Reconciliation is suspended. Remove `operator.kyma-project.io/suspend-shoot-reconciliation` annotation to resume reconciliation")
 	}
 
