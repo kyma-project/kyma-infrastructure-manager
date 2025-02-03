@@ -28,16 +28,16 @@ See [manager_gardener_secret_patch.yaml](../config/default/manager_gardener_secr
 
 ## Troubleshooting
 
-### Runtime CRs configuration
-Some runtime behavior can be controlled by the following annotations:
+### Runtime Custom Resources Configuration
+The following annotations can control runtime behavior:
 
 | Annotation  | Description                                                                                                                                                                                                                                                                                                                         |
 | ------------- |-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| operator.kyma-project.io/force-patch-reconciliation  | `true` value indicated that the next reconciliation loop will enter the patch state regardless of the `runtime-generation` number. This annotation is removed automatically after attempting the patch operation. Might produce [object has been modified] error in the RuntimeController logs until the state will be reconcilled. |
-| operator.kyma-project.io/suspend-patch-reconciliation  | `true` value will indicate that controller should not patch the shoot. It has to be manually removed to resume normal operation.                                                                                                                                                                                                    |
+| operator.kyma-project.io/force-patch-reconciliation  | If set to `true`, the next reconciliation loop enters the patch state regardless of the `runtime-generation` number. This annotation is removed automatically after attempting the patch operation. Might produce the `object has been modified` error in the RuntimeController logs until the state is reconciled. |
+| operator.kyma-project.io/suspend-patch-reconciliation  | If set to`true`, the controller does not patch the shoot. It has to be manually removed to resume normal operation.                                                                                                                                                                                                    |
 
 
-### Switching between the `provisioner` and `kim`.
+### Switching Between `provisioner` and `kim`.
 
 The `kyma-project.io/controlled-by-provisioner` label provides fine-grained control over the `Runtime` CR. Only if the label value is set to `false`, the resource is considered managed and will be controlled by `kyma-application-manager`.
 
