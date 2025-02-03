@@ -2,8 +2,10 @@ package fsm
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
+	"github.com/gardener/gardener-extension-provider-gcp/pkg/apis/gcp/v1alpha1"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
@@ -101,8 +103,64 @@ func makeInputRuntimeWithAnnotation(annotations map[string]string) *imv1.Runtime
 			Shoot: imv1.RuntimeShoot{
 				Name:     "test-shoot",
 				Region:   "region",
-				Provider: imv1.Provider{Type: "aws"},
+				Provider: imv1.Provider{
+					Type:                 "gcp",
+					Workers:              fixWorkers("test-worker", "m5.xlarge", "garden-linux", "1.19.8", 1, 1, []string{"europe-west1-d"}),
+					InfrastructureConfig: fixGCPInfrastructureConfig(),
+					ControlPlaneConfig: fixGCPControlPlaneConfig(),
+				},
 			},
 		},
+	}
+}
+
+func fixWorkers(name, machineType, machineImageName, machineImageVersion string, min, max int32, zones []string) []gardener.Worker {
+	return []gardener.Worker{
+		{
+			Name: name,
+			Machine: gardener.Machine{
+				Type: machineType,
+				Image: &gardener.ShootMachineImage{
+					Name:    machineImageName,
+					Version: &machineImageVersion,
+				},
+			},
+			Minimum: min,
+			Maximum: max,
+			Zones:   zones,
+		},
+	}
+}
+
+func fixGCPInfrastructureConfig() *runtime.RawExtension {
+	infraConfig, _ := json.Marshal(NewGCPInfrastructureConfig())
+	return &runtime.RawExtension{Raw: infraConfig}
+}
+
+func NewGCPInfrastructureConfig() v1alpha1.InfrastructureConfig {
+	return v1alpha1.InfrastructureConfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "infrastructureConfig",
+			APIVersion: "gcp.provider.extensions.gardener.cloud/v1alpha1",
+		},
+		Networks: v1alpha1.NetworkConfig{
+			Worker: "10.180.0.0/16",
+			Workers: "10.180.0.0/16",
+		},
+	}
+}
+
+func fixGCPControlPlaneConfig() *runtime.RawExtension {
+	controlPlaneConfig, _ := json.Marshal(NewGCPControlPlaneConfig())
+	return &runtime.RawExtension{Raw: controlPlaneConfig}
+}
+
+func NewGCPControlPlaneConfig() v1alpha1.ControlPlaneConfig {
+	return v1alpha1.ControlPlaneConfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ControlPlaneConfig",
+			APIVersion: "gcp.provider.extensions.gardener.cloud/v1alpha1",
+		},
+		Zone: "europe-west1-d",
 	}
 }

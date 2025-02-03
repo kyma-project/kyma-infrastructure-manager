@@ -62,7 +62,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			"should update status after succesful patching and remove force patch annotation",
 			testCtx,
 			must(newFakeFSM, withMockedMetrics(), withTestFinalizer,  withFakedK8sClient(testScheme, inputRtWithForceAnnotation), withFakeEventRecorder(1)),
-			&	systemState{instance: *inputRtWithForceAnnotation, shoot: &testShoot},
+			&systemState{instance: *inputRtWithForceAnnotation, shoot: &testShoot},
 			haveName("sFnUpdateStatus"),
 			nil,
 		),
