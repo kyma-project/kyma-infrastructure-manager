@@ -10,7 +10,7 @@ Run `make test` to see if all tests are passing.
 
 ## Configuration
 
-### Deployment arguments configuration
+### Deployment Arguments Configuration
 1. `gardener-kubeconfig-path` - defines the path to the Gardener project kubeconfig used during API calls
 2. `gardener-project-name` - the name of the Gardener project where the infrastructure operations are performed
 3. `minimal-rotation-time` - the ratio determines what is the minimal time that needs to pass to rotate the certificate
