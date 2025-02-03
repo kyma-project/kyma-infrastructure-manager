@@ -3,7 +3,7 @@ module github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app
 go 1.23.5
 
 require (
-	github.com/gardener/gardener v1.111.0
+	github.com/gardener/gardener v1.111.1
 	github.com/gardener/oidc-webhook-authenticator v0.33.0
 	github.com/go-playground/validator/v10 v10.23.0
 	github.com/kyma-project/infrastructure-manager v0.0.0-20241023155010-55a6abeb1690
@@ -30,9 +30,9 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
-	github.com/gardener/gardener-extension-provider-aws v1.58.3 // indirect
-	github.com/gardener/gardener-extension-provider-gcp v1.40.1 // indirect
-	github.com/gardener/gardener-extension-provider-openstack v1.43.0 // indirect
+	github.com/gardener/gardener-extension-provider-aws v1.60.0 // indirect
+	github.com/gardener/gardener-extension-provider-gcp v1.42.1 // indirect
+	github.com/gardener/gardener-extension-provider-openstack v1.46.0 // indirect
 	github.com/gardener/gardener-extension-shoot-dns-service v1.53.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
@@ -86,7 +86,7 @@ require (
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20241127205056-99599406b04f // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.4.3 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.5.0 // indirect
 )
 
 replace (
