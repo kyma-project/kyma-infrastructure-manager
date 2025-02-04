@@ -171,7 +171,7 @@ var _ = AfterSuite(func() {
 func setupGardenerTestClientForProvisioning() {
 	baseShoot := getBaseShootForTestingSequence()
 	shoots := fixShootsSequenceForProvisioning(&baseShoot)
-	seeds := fixSeedSequenceForProvisioning()
+	seeds := fixSeedSequenceForProvisioning("aws")
 
 	setupGardenerClientWithSequence(shoots, seeds)
 }
@@ -256,22 +256,23 @@ func fixShootsSequenceForProvisioning(shoot *gardener_api.Shoot) []*gardener_api
 	return []*gardener_api.Shoot{missingShoot, missingShoot, missingShoot, initialisedShoot, dnsShoot, pendingShoot, processingShoot, readyShoot, readyShoot, readyShoot, readyShoot}
 }
 
-func fixSeedSequenceForProvisioning() []*gardener_api.SeedList {
+func fixSeedSequenceForProvisioning(providerType string) []*gardener_api.SeedList {
 	return []*gardener_api.SeedList{
 		{
 			Items: []gardener_api.Seed{
-				getSeedForRegion("us-west-1"),
-				getSeedForRegion("eu-central-1"),
-				getSeedForRegion("us-east-1"),
+				getSeedForRegion(providerType, "us-west-1"),
+				getSeedForRegion(providerType, "eu-central-1"),
+				getSeedForRegion(providerType, "us-east-1"),
 			},
 		},
 	}
 }
 
-func getSeedForRegion(region string) gardener_api.Seed {
+func getSeedForRegion(providerType, region string) gardener_api.Seed {
 	return gardener_api.Seed{
 		Spec: gardener_api.SeedSpec{
 			Provider: gardener_api.SeedProvider{
+				Type:   providerType,
 				Region: region,
 			},
 		},
