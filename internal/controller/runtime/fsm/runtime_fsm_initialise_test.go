@@ -74,28 +74,6 @@ var _ = Describe("KIM sFnInitialise", func() {
 		},
 	}
 
-	testDryRunRtWithFinalizerAndProvisioningCondition := imv1.Runtime{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-instance",
-			Namespace:  "default",
-			Finalizers: []string{"test-me-plz"},
-			Labels: map[string]string{
-				imv1.LabelControlledByProvisioner: "true",
-			},
-		},
-	}
-
-	testDryRunRtWithFinalizerAndProvisioningReadyCondition := imv1.Runtime{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-instance",
-			Namespace:  "default",
-			Finalizers: []string{"test-me-plz"},
-			Labels: map[string]string{
-				imv1.LabelControlledByProvisioner: "true",
-			},
-		},
-	}
-
 	provisioningCondition := metav1.Condition{
 		Type:               string(imv1.ConditionTypeRuntimeProvisioned),
 		Status:             metav1.ConditionUnknown,
@@ -104,24 +82,6 @@ var _ = Describe("KIM sFnInitialise", func() {
 		Message:            "Test message",
 	}
 	meta.SetStatusCondition(&testRtWithFinalizerAndProvisioningCondition.Status.Conditions, provisioningCondition)
-
-	provisioningDryRunCondition := metav1.Condition{
-		Type:               string(imv1.ConditionTypeRuntimeProvisionedDryRun),
-		Status:             metav1.ConditionUnknown,
-		LastTransitionTime: now,
-		Reason:             "Test reason",
-		Message:            "Test message",
-	}
-	meta.SetStatusCondition(&testDryRunRtWithFinalizerAndProvisioningCondition.Status.Conditions, provisioningDryRunCondition)
-
-	provisioningDryRunConditionReady := metav1.Condition{
-		Type:               string(imv1.ConditionTypeRuntimeProvisionedDryRun),
-		Status:             metav1.ConditionTrue,
-		LastTransitionTime: now,
-		Reason:             "Test reason",
-		Message:            "Test message",
-	}
-	meta.SetStatusCondition(&testDryRunRtWithFinalizerAndProvisioningReadyCondition.Status.Conditions, provisioningDryRunConditionReady)
 
 	testRtWithDeletionTimestamp := imv1.Runtime{
 		ObjectMeta: metav1.ObjectMeta{
