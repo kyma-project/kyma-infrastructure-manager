@@ -271,9 +271,27 @@ func fixSeedSequenceForProvisioning(providerType string) []*gardener_api.SeedLis
 func getSeedForRegion(providerType, region string) gardener_api.Seed {
 	return gardener_api.Seed{
 		Spec: gardener_api.SeedSpec{
+			Settings: &gardener_api.SeedSettings{
+				Scheduling: &gardener_api.SeedSettingScheduling{
+					Visible: true,
+				},
+			},
 			Provider: gardener_api.SeedProvider{
 				Type:   providerType,
 				Region: region,
+			},
+		},
+		Status: gardener_api.SeedStatus{
+			LastOperation: &gardener_api.LastOperation{},
+			Conditions: []gardener_api.Condition{
+				{
+					Type:   gardener_api.SeedGardenletReady,
+					Status: gardener_api.ConditionTrue,
+				},
+				{
+					Type:   gardener_api.SeedBackupBucketsReady,
+					Status: gardener_api.ConditionTrue,
+				},
 			},
 		},
 	}

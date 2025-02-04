@@ -18,7 +18,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	if s.instance.Spec.Shoot.EnforceSeedLocation != nil && *s.instance.Spec.Shoot.EnforceSeedLocation {
 		seedAvailable, regionsWithSeeds, err := seedForRegionAvailable(ctx, m.ShootClient, s.instance.Spec.Shoot.Provider.Type, s.instance.Spec.Shoot.Region)
 		if err != nil {
-			msg := fmt.Sprintf("Failed to verify whether seed for region %s exists.", s.instance.Spec.Shoot.Region)
+			msg := fmt.Sprintf("Failed to verify whether seed is available for the region %s.", s.instance.Spec.Shoot.Region)
 			m.log.Error(err, msg)
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRuntimeProvisioned,
@@ -30,7 +30,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		}
 
 		if !seedAvailable {
-			msg := fmt.Sprintf("Seed for region %s doesn't exist. The followig regions have seeds assigned: %v.", s.instance.Spec.Shoot.Region, regionsWithSeeds)
+			msg := fmt.Sprintf("Cannot find available seed for the region %s. The followig regions have seeds ready: %v.", s.instance.Spec.Shoot.Region, regionsWithSeeds)
 			m.log.Error(nil, msg)
 			m.Metrics.IncRuntimeFSMStopCounter()
 			return updateStatePendingWithErrorAndStop(
