@@ -303,8 +303,3 @@ func (k *Runtime) ValidateRequiredLabels() error {
 	}
 	return nil
 }
-
-func (k *Runtime) IsControlledByProvisioner() bool {
-	value, found := k.Labels[LabelControlledByProvisioner]
-	return !found || value != "false"
-}
