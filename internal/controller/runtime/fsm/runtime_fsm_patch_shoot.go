@@ -6,6 +6,7 @@ import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
+	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -70,6 +71,12 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("Gardener API shoot patch error: %v", err))
 	}
 
+	err = handleForceReconciliationAnnotation(&s.instance, m, ctx)
+	if err != nil {
+		m.log.Error(err, "could not handle force reconciliation annotation. Scheduling for retry.")
+		return requeue()
+	}
+
 	if updatedShoot.Generation == s.shoot.Generation {
 		m.log.Info("Gardener shoot for runtime did not change after patch, moving to processing", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
 		return switchState(sFnHandleKubeconfig)
@@ -85,6 +92,22 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	)
 
 	return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+}
+
+func handleForceReconciliationAnnotation(runtime *imv1.Runtime, fsm *fsm, ctx context.Context) error {
+	annotations := runtime.Annotations
+	if reconciler.ShouldForceReconciliation(annotations) {
+		fsm.log.Info("Force reconciliation annotation found, removing the annotation and continuing the reconciliation")
+		delete(annotations, reconciler.ForceReconcileAnnotation)
+		runtime.SetAnnotations(annotations)
+
+		err := fsm.Update(ctx, runtime)
+		if err != nil {
+			return err
+		}
+
+	}
+	return nil
 }
 
 func convertPatch(instance *imv1.Runtime, opts gardener_shoot.PatchOpts) (gardener.Shoot, error) {
