@@ -57,9 +57,6 @@ var _ = Describe("KIM sFnInitialise", func() {
 			Name:       "test-instance",
 			Namespace:  "default",
 			Finalizers: []string{"test-me-plz"},
-			Labels: map[string]string{
-				imv1.LabelControlledByProvisioner: "false",
-			},
 		},
 	}
 
@@ -68,9 +65,6 @@ var _ = Describe("KIM sFnInitialise", func() {
 			Name:       "test-instance",
 			Namespace:  "default",
 			Finalizers: []string{"test-me-plz"},
-			Labels: map[string]string{
-				imv1.LabelControlledByProvisioner: "false",
-			},
 		},
 	}
 
@@ -86,9 +80,6 @@ var _ = Describe("KIM sFnInitialise", func() {
 	testRtWithDeletionTimestamp := imv1.Runtime{
 		ObjectMeta: metav1.ObjectMeta{
 			DeletionTimestamp: &now,
-			Labels: map[string]string{
-				imv1.LabelControlledByProvisioner: "false",
-			},
 		},
 	}
 
@@ -96,9 +87,6 @@ var _ = Describe("KIM sFnInitialise", func() {
 		ObjectMeta: metav1.ObjectMeta{
 			DeletionTimestamp: &now,
 			Finalizers:        []string{"test-me-plz"},
-			Labels: map[string]string{
-				imv1.LabelControlledByProvisioner: "false",
-			},
 		},
 	}
 

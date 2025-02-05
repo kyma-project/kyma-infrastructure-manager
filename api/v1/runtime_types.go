@@ -34,7 +34,6 @@ import (
 const (
 	Finalizer                              = "runtime-controller.infrastructure-manager.kyma-project.io/deletion-hook"
 	AnnotationGardenerCloudDelConfirmation = "confirmation.gardener.cloud/deletion"
-	LabelControlledByProvisioner           = "kyma-project.io/controlled-by-provisioner"
 )
 
 const (
