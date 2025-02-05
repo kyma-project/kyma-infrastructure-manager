@@ -94,7 +94,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
 }
 
-func handleForceReconciliationAnnotation(runtime *imv1.Runtime, fsm *fsm, ctx context.Context, ) error {
+func handleForceReconciliationAnnotation(runtime *imv1.Runtime, fsm *fsm, ctx context.Context) error {
 	annotations := runtime.Annotations
 	if reconciler.ShouldForceReconciliation(annotations) {
 		fsm.log.Info("Force reconciliation annotation found, removing the annotation and continuing the reconciliation")

@@ -2,9 +2,11 @@ package fsm
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/go-logr/logr"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	reconciler "github.com/kyma-project/infrastructure-manager/pkg/reconciler"
@@ -27,7 +29,7 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 		return requeueAfter(m.RCCfg.GardenerRequeueDuration)
 	}
 
-	patchShoot, err := shouldPatchShoot(&s.instance, s.shoot)
+	patchShoot, err := shouldPatchShoot(&s.instance, s.shoot, &m.log)
 	if err != nil {
 		m.log.Error(err, "Failed to get applied generation for shoot", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
 		m.Metrics.SetRuntimeStates(s.instance)
@@ -37,8 +39,6 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 	if patchShoot {
 		m.log.Info("Gardener shoot already exists, updating")
 		return switchState(sFnPatchExistingShoot)
-	} else if reconciler.ShouldSuspendReconciliation(s.instance.Annotations) {
-		m.log.Info("Reconciliation is suspended. Remove `operator.kyma-project.io/suspend-shoot-reconciliation` annotation to resume reconciliation")
 	}
 
 	if s.instance.Status.State == imv1.RuntimeStatePending || s.instance.Status.State == "" {
@@ -56,8 +56,10 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 	return stop()
 }
 
-func shouldPatchShoot(runtime *imv1.Runtime, shoot *gardener.Shoot) (bool, error) {
+func shouldPatchShoot(runtime *imv1.Runtime, shoot *gardener.Shoot, logger *logr.Logger) (bool, error) {
 	if reconciler.ShouldSuspendReconciliation(runtime.Annotations) {
+		msg := fmt.Sprintf(`Reconciliation is suspended. Remove "%s" annotation to resume reconciliation`, reconciler.SuspendReconcileAnnotation)
+		logger.Info(msg)
 		return false, nil
 	}
 

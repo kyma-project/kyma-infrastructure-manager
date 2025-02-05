@@ -45,7 +45,7 @@ var _ = Describe("KIM sFnSelectShootProcessing", func() {
 		},
 		Status: gardener.ShootStatus{
 			LastOperation: &gardener.LastOperation{
-				State:          gardener.LastOperationStateSucceeded,
+				State: gardener.LastOperationStateSucceeded,
 			},
 		},
 	}
@@ -101,13 +101,13 @@ func makeInputRuntimeWithAnnotation(annotations map[string]string) *imv1.Runtime
 		},
 		Spec: imv1.RuntimeSpec{
 			Shoot: imv1.RuntimeShoot{
-				Name:     "test-shoot",
-				Region:   "region",
+				Name:   "test-shoot",
+				Region: "region",
 				Provider: imv1.Provider{
 					Type:                 "gcp",
 					Workers:              fixWorkers("test-worker", "m5.xlarge", "garden-linux", "1.19.8", 1, 1, []string{"europe-west1-d"}),
 					InfrastructureConfig: fixGCPInfrastructureConfig(),
-					ControlPlaneConfig: fixGCPControlPlaneConfig(),
+					ControlPlaneConfig:   fixGCPControlPlaneConfig(),
 				},
 			},
 		},
@@ -144,7 +144,7 @@ func NewGCPInfrastructureConfig() v1alpha1.InfrastructureConfig {
 			APIVersion: "gcp.provider.extensions.gardener.cloud/v1alpha1",
 		},
 		Networks: v1alpha1.NetworkConfig{
-			Worker: "10.180.0.0/16",
+			Worker:  "10.180.0.0/16",
 			Workers: "10.180.0.0/16",
 		},
 	}

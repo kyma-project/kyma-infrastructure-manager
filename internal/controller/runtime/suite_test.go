@@ -194,7 +194,7 @@ func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot) {
 	gardenerTestClient = fake.NewClientBuilder().WithScheme(clientScheme).WithObjectTracker(customTracker).
 		WithInterceptorFuncs(interceptor.Funcs{
 			Patch: fsm_testing.GetFakePatchInterceptorFn(),
-			}).Build()
+		}).Build()
 	runtimeReconciler.ShootClient = gardenerTestClient
 }
 

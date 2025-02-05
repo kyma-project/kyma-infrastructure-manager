@@ -48,12 +48,14 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 		},
 		Status: gardener.ShootStatus{
 			LastOperation: &gardener.LastOperation{
-				State:          gardener.LastOperationStateSucceeded,
+				State: gardener.LastOperationStateSucceeded,
 			},
 		},
 	}
 
 	testFunction := buildPatchTestFunction(sFnPatchExistingShoot)
+
+	var expectedAnnotations map[string]string
 
 	DescribeTable(
 		"transition graph validation for sFnPatchExistingShoot",
@@ -61,10 +63,10 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 		Entry(
 			"should update status after succesful patching and remove force patch annotation",
 			testCtx,
-			must(newFakeFSM, withMockedMetrics(), withTestFinalizer,  withFakedK8sClient(testScheme, inputRtWithForceAnnotation), withFakeEventRecorder(1)),
+			must(newFakeFSM, withMockedMetrics(), withTestFinalizer, withFakedK8sClient(testScheme, inputRtWithForceAnnotation), withFakeEventRecorder(1)),
 			&systemState{instance: *inputRtWithForceAnnotation, shoot: &testShoot},
 			haveName("sFnUpdateStatus"),
-			nil,
+			expectedAnnotations,
 		),
 	)
 })

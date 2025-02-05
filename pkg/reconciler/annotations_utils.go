@@ -1,7 +1,7 @@
 package reconciler
 
 const (
-	ForceReconcileAnnotation = "operator.kyma-project.io/force-patch-reconciliation"
+	ForceReconcileAnnotation   = "operator.kyma-project.io/force-patch-reconciliation"
 	SuspendReconcileAnnotation = "operator.kyma-project.io/suspend-patch-reconciliation"
 )
 
