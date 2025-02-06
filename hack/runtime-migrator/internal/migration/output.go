@@ -66,53 +66,6 @@ func (ow OutputWriter) SaveRuntimeCR(runtime v1.Runtime) error {
 	return saveYaml(runtime, fmt.Sprintf("%s/%s.yaml", ow.RuntimeDir, runtime.Name))
 }
 
-func (ow OutputWriter) SaveComparisonResult(comparisonResult ShootComparisonResult) error {
-	comparisonResultsForRuntimeDir := path.Join(ow.ComparisonResultsDir, comparisonResult.RuntimeID)
-	err := os.MkdirAll(comparisonResultsForRuntimeDir, os.ModePerm)
-	if err != nil {
-		return err
-	}
-
-	if comparisonResult.Diff != nil {
-		err = writeResultsToDiffFile(comparisonResult.OriginalShoot.Name, comparisonResult.Diff, comparisonResultsForRuntimeDir)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = saveYaml(comparisonResult.OriginalShoot, path.Join(comparisonResultsForRuntimeDir, "original-shoot.yaml"))
-	if err != nil {
-		return err
-	}
-
-	return saveYaml(comparisonResult.ConvertedShoot, path.Join(comparisonResultsForRuntimeDir, "converted-shoot.yaml"))
-}
-
-func writeResultsToDiffFile(shootName string, difference *Difference, resultsDir string) error {
-	writeAndCloseFunc := func(filePath string, text string) error {
-		file, err := os.Create(filePath)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			if file != nil {
-				err := file.Close()
-				if err != nil {
-					fmt.Printf("failed to close file: %v", err)
-				}
-			}
-		}()
-
-		_, err = file.Write([]byte(text))
-
-		return err
-	}
-
-	diffFile := path.Join(resultsDir, fmt.Sprintf("%s.diff", shootName))
-
-	return writeAndCloseFunc(diffFile, string(*difference))
-}
-
 func saveYaml[T any](object T, path string) error {
 	yamlBytes, err := yaml.Marshal(object)
 	if err != nil {
