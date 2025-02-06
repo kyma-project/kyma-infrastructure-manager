@@ -3,11 +3,9 @@ package fsm
 import (
 	"context"
 	"fmt"
-	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
-	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
