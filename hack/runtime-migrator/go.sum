@@ -47,8 +47,6 @@ github.com/gardener/gardener-extension-provider-gcp v1.40.1 h1:ErTgztMj/6zLSN8sF
 github.com/gardener/gardener-extension-provider-gcp v1.40.1/go.mod h1:7Ra8FdadX+y2xcSwJ1Y4gLOYoS5dcY28lIbNamafVqA=
 github.com/gardener/gardener-extension-provider-openstack v1.43.0 h1:7/kLqL/Gkg3lavr9bgTbeJGeLz+aXuQwnZIcFZzR7ps=
 github.com/gardener/gardener-extension-provider-openstack v1.43.0/go.mod h1:RjJEGmZhFv9Ps4d7BuDhl63SwPCDX4cFKfs/qAF1daA=
-github.com/gardener/gardener-extension-shoot-dns-service v1.53.0 h1:WXSjw6y2bLCxScwu0LnH4+1Zf2VKNCwlbPKAjECCeBg=
-github.com/gardener/gardener-extension-shoot-dns-service v1.53.0/go.mod h1:HG9iWR/XszjmH0mmTHIKmX2Egwo8+giSCF8pjqlIPfM=
 github.com/gardener/machine-controller-manager v0.55.1 h1:d6mTnuYko+jWeIi7tAFWgWnL1nR5hGcI6pRCDcH0TGY=
 github.com/gardener/machine-controller-manager v0.55.1/go.mod h1:eCng7De6OE15rndmMm6Q1fwMQI39esASCd3WKZ/lLmY=
 github.com/gardener/oidc-webhook-authenticator v0.33.0 h1:2qMM9dol/S3Paz1GUxFb6ZXqWEKK/dfy/XFrbjNXZGk=
@@ -120,6 +118,8 @@ github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0 h1:nHHjmvjitIiyP
 github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0/go.mod h1:YBCo4DoEeDndqvAn6eeu0vWM7QdXmHEeI9cFWplmBys=
 github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0SNc=
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
+github.com/kyma-project/infrastructure-manager/hack/shoot-comparator v0.0.0-20241023155010-55a6abeb1690 h1:OxOvbNmewE4ZZXFhEGC8UqlVgJvAEYWB/FYaPY7R7Q8=
+github.com/kyma-project/infrastructure-manager/hack/shoot-comparator v0.0.0-20241023155010-55a6abeb1690/go.mod h1:4bf+z9t4M8+5incqcRpmoq6lv4+tRJC8reLtP1pYO+c=
 github.com/leodido/go-urn v1.4.0 h1:WT9HwE9SGECu3lg4d/dIA+jxlljEa1/ffXKmRjqdmIQ=
 github.com/leodido/go-urn v1.4.0/go.mod h1:bvxc+MVxLKB4z00jd1z+Dvzr47oO32F/QSNjSBOlFxI=
 github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=

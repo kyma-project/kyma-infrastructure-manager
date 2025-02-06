@@ -1,6 +1,0 @@
-apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
-floatingPoolName: FloatingIP-external-kyma-01
-kind: InfrastructureConfig
-networks:
-  worker: ''
-  workers: 10.250.0.0/22

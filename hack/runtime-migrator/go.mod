@@ -7,7 +7,6 @@ require (
 	github.com/gardener/oidc-webhook-authenticator v0.33.0
 	github.com/go-playground/validator/v10 v10.23.0
 	github.com/kyma-project/infrastructure-manager v0.0.0-20241023155010-55a6abeb1690
-	github.com/kyma-project/infrastructure-manager/hack/shoot-comparator v0.0.0-20241023155010-55a6abeb1690
 	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2
 	github.com/pkg/errors v0.9.1
@@ -33,7 +32,6 @@ require (
 	github.com/gardener/gardener-extension-provider-aws v1.58.3 // indirect
 	github.com/gardener/gardener-extension-provider-gcp v1.40.1 // indirect
 	github.com/gardener/gardener-extension-provider-openstack v1.43.0 // indirect
-	github.com/gardener/gardener-extension-shoot-dns-service v1.53.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
@@ -91,7 +89,6 @@ require (
 
 replace (
 	github.com/kyma-project/infrastructure-manager => ../../
-	github.com/kyma-project/infrastructure-manager/hack/shoot-comparator => ../shoot-comparator
 	golang.org/x/net => golang.org/x/net v0.34.0
 	gopkg.in/square/go-jose.v2 => github.com/go-jose/go-jose v2.6.3+incompatible
 )
