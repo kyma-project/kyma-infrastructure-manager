@@ -3,6 +3,7 @@ package fsm
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -46,7 +47,9 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 			"Runtime conversion error")
 	}
 
-	err = m.ShootClient.Create(ctx, &shoot)
+	err = m.ShootClient.Create(ctx, &shoot, &client.CreateOptions{
+		FieldManager: fieldManagerName,
+	})
 	if err != nil {
 		m.log.Error(err, "Failed to create new gardener Shoot")
 		s.instance.UpdateStatePending(
