@@ -1,0 +1,170 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+metadata:
+  labels:
+    extensions.extensions.gardener.cloud/shoot-cert-service: "true"
+    extensions.extensions.gardener.cloud/shoot-dns-service: "true"
+    extensions.extensions.gardener.cloud/shoot-lakom-service: "true"
+    extensions.extensions.gardener.cloud/shoot-networking-filter: "true"
+    extensions.extensions.gardener.cloud/shoot-networking-problemdetector: "true"
+    networking.extensions.gardener.cloud/calico: "true"
+    operatingsystemconfig.extensions.gardener.cloud/gardenlinux: "true"
+    provider.extensions.gardener.cloud/aws: "true"
+    seed.gardener.cloud/aws-ha-eu1: "true"
+    shoot.gardener.cloud/status: healthy
+  name: testme
+  namespace: garden-kyma-dev
+spec:
+  addons:
+    kubernetesDashboard:
+      authenticationMode: token
+      enabled: false
+    nginxIngress:
+      enabled: false
+      externalTrafficPolicy: Cluster
+  cloudProfile:
+    kind: CloudProfile
+    name: aws
+  cloudProfileName: aws
+  dns:
+    domain: testme.kyma-dev.shoot.canary.k8s-hana.ondemand.com
+  extensions:
+  - providerConfig:
+      apiVersion: service.dns.extensions.gardener.cloud/v1alpha1
+      kind: DNSConfig
+      syncProvidersFromShootSpecDNS: true
+    type: shoot-dns-service
+  hibernation:
+    enabled: false
+    schedules:
+    - location: Europe/Warsaw
+      start: 00 17 * * 1,2,3,4,5
+  kubernetes:
+    enableStaticTokenKubeconfig: false
+    kubeAPIServer:
+      defaultNotReadyTolerationSeconds: 300
+      defaultUnreachableTolerationSeconds: 300
+      enableAnonymousAuthentication: false
+      eventTTL: 1h0m0s
+      logging:
+        verbosity: 2
+      oidcConfig:
+        clientID: 9bd05ed7-a930-44e6-8c79-e6defeb7dec9
+        groupsClaim: groups
+        issuerURL: https://kymatest.accounts400.ondemand.com
+        signingAlgs:
+        - RS256
+        usernameClaim: sub
+        usernamePrefix: '-'
+      requests:
+        maxMutatingInflight: 200
+        maxNonMutatingInflight: 400
+    kubeControllerManager:
+      nodeCIDRMaskSize: 24
+      nodeMonitorGracePeriod: 40s
+    kubeProxy:
+      enabled: true
+      mode: IPTables
+    kubeScheduler:
+      profile: balanced
+    kubelet:
+      failSwapOn: true
+      imageGCHighThresholdPercent: 50
+      imageGCLowThresholdPercent: 40
+      kubeReserved:
+        cpu: 80m
+        memory: 1Gi
+        pid: 20k
+      serializeImagePulls: true
+    version: 1.31.4
+    verticalPodAutoscaler:
+      cpuHistogramDecayHalfLife: 24h0m0s
+      enabled: true
+      evictAfterOOMThreshold: 10m0s
+      evictionRateBurst: 1
+      evictionRateLimit: -1
+      evictionTolerance: 0.5
+      memoryHistogramDecayHalfLife: 24h0m0s
+      recommendationLowerBoundCPUPercentile: 0.5
+      recommendationLowerBoundMemoryPercentile: 0.5
+      recommendationMarginFraction: 0.15
+      recommendationUpperBoundCPUPercentile: 0.95
+      recommendationUpperBoundMemoryPercentile: 0.95
+      recommenderInterval: 1m0s
+      targetCPUPercentile: 0.9
+      targetMemoryPercentile: 0.9
+      updaterInterval: 1m0s
+  maintenance:
+    autoUpdate:
+      kubernetesVersion: true
+      machineImageVersion: true
+    timeWindow:
+      begin: 030000+0100
+      end: 040000+0100
+  networking:
+    ipFamilies:
+    - IPv4
+    nodes: 10.180.0.0/16
+    pods: 100.64.0.0/12
+    providerConfig:
+      overlay:
+        enabled: false
+    services: 100.104.0.0/13
+    type: calico
+  provider:
+    controlPlaneConfig:
+      apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1
+      cloudControllerManager:
+        useCustomRouteController: true
+      kind: ControlPlaneConfig
+      storage:
+        managedDefaultClass: true
+    infrastructureConfig:
+      apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1
+      kind: InfrastructureConfig
+      networks:
+        vpc:
+          cidr: 10.180.0.0/16
+        zones:
+        - internal: 10.180.48.0/20
+          name: eu-west-1a
+          public: 10.180.32.0/20
+          workers: 10.180.0.0/19
+    type: aws
+    workers:
+    - cri:
+        name: containerd
+      machine:
+        architecture: amd64
+        image:
+          name: gardenlinux
+          version: 1592.4.0
+        type: m5.large
+      maxSurge: 1
+      maxUnavailable: 0
+      maximum: 3
+      minimum: 1
+      name: worker-1
+      systemComponents:
+        allow: true
+      volume:
+        size: 50Gi
+        type: gp3
+      zones:
+      - eu-west-1a
+    workersSettings:
+      sshAccess:
+        enabled: true
+  purpose: evaluation
+  region: eu-west-1
+  schedulerName: default-scheduler
+  secretBindingName: aws-skr-dev-trial-00001
+  seedName: aws-ha-eu1
+  systemComponents:
+    coreDNS:
+      autoscaling:
+        mode: horizontal
+    nodeLocalDNS:
+      enabled: true
+      forceTCPToUpstreamDNS: false
+
