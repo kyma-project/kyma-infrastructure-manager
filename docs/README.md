@@ -25,15 +25,3 @@ You can configure the Infrastructure Manager deployment with the following argum
 
 
 See [manager_gardener_secret_patch.yaml](../config/default/manager_gardener_secret_patch.yaml) for default values.
-
-## Troubleshooting
-
-1. Switching between the `provisioner` and `kim`.
-
-The `kyma-project.io/controlled-by-provisioner` label provides fine-grained control over the `Runtime` CR. Only if the label value is set to `false`, the resource is considered managed and will be controlled by `kyma-application-manager`.
-
-> TBD: List potential issues and provide tips on how to avoid or solve them. To structure the content, use the following sections:
->
-> - **Symptom**
-> - **Cause**
-> - **Remedy**
