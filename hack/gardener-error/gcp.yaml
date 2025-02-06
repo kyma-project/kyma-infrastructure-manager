@@ -27,9 +27,6 @@ spec:
     kubernetesDashboard:
       authenticationMode: token
       enabled: false
-  cloudProfile:
-    kind: CloudProfile
-    name: gcp
   cloudProfileName: gcp
   controlPlane:
     highAvailability:
@@ -230,10 +227,6 @@ spec:
       name: aws-route53-secret-dev
   schedulerName: default-scheduler
   secretBindingName: gcp-skr-dev-cust-00002-kyma-integration
-  seedName: gcp-ha-eu1
-  seedSelector:
-    matchLabels:
-      seed.gardener.cloud/region: europe-west1
   systemComponents:
     coreDNS:
       autoscaling:
