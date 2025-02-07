@@ -55,6 +55,28 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	m.log.Info("Shoot converted successfully", "Name", updatedShoot.Name, "Namespace", updatedShoot.Namespace)
 
+	err = m.ShootClient.Update(ctx, &gardener.Shoot{
+		ObjectMeta: updatedShoot.ObjectMeta,
+		Spec: gardener.ShootSpec{
+			Provider: gardener.Provider{
+				Workers: updatedShoot.Spec.Provider.Workers,
+			},
+		},
+	}, &client.UpdateOptions{
+		FieldManager: fieldManagerName,
+	})
+
+	if err != nil {
+		if k8serrors.IsConflict(err) {
+			m.log.Info("Gardener shoot for runtime is outdated, retrying", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
+			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+		}
+
+		m.log.Error(err, "Failed to update shoot worker list, exiting with no retry")
+		m.Metrics.IncRuntimeFSMStopCounter()
+		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("Gardener API shoot patch error: %v", err))
+	}
+
 	err = m.ShootClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
