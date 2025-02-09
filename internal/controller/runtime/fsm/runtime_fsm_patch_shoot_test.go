@@ -65,7 +65,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			testCtx,
 			must(newFakeFSM, withMockedMetrics(), withTestFinalizer, withFakedK8sClient(testScheme, inputRtWithForceAnnotation), withFakeEventRecorder(1)),
 			&systemState{instance: *inputRtWithForceAnnotation, shoot: &testShoot},
-			haveName("sFnUpdateStatus"),
+			haveName("sFnHandleKubeconfig"),
 			expectedAnnotations,
 		),
 	)

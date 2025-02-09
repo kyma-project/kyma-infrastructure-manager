@@ -8,7 +8,6 @@ import (
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -78,21 +77,21 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("Gardener API shoot patch error: %v", err))
 	}
 
-	err = m.ShootClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
-		FieldManager: fieldManagerName,
-		Force:        ptr.To(true),
-	})
-
-	if err != nil {
-		if k8serrors.IsConflict(err) {
-			m.log.Info("Gardener shoot for runtime is outdated, retrying", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
-			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
-		}
-
-		m.log.Error(err, "Failed to patch shoot object, exiting with no retry")
-		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("Gardener API shoot patch error: %v", err))
-	}
+	//err = m.ShootClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
+	//	FieldManager: fieldManagerName,
+	//	Force:        ptr.To(true),
+	//})
+	//
+	//if err != nil {
+	//	if k8serrors.IsConflict(err) {
+	//		m.log.Info("Gardener shoot for runtime is outdated, retrying", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
+	//		return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+	//	}
+	//
+	//	m.log.Error(err, "Failed to patch shoot object, exiting with no retry")
+	//	m.Metrics.IncRuntimeFSMStopCounter()
+	//	return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("Gardener API shoot patch error: %v", err))
+	//}
 
 	err = handleForceReconciliationAnnotation(&s.instance, m, ctx)
 	if err != nil {
