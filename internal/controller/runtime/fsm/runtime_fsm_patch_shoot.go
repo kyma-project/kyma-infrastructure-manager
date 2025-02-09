@@ -56,6 +56,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	m.log.Info("Shoot converted successfully", "Name", updatedShoot.Name, "Namespace", updatedShoot.Namespace)
 
 	err = m.ShootClient.Update(ctx, &gardener.Shoot{
+		TypeMeta:   updatedShoot.TypeMeta,
 		ObjectMeta: updatedShoot.ObjectMeta,
 		Spec: gardener.ShootSpec{
 			Provider: gardener.Provider{

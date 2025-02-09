@@ -23,3 +23,15 @@ func GetFakePatchInterceptorFn() func(ctx context.Context, client client.WithWat
 		return nil
 	}
 }
+
+func GetFakeUpdateInterceptorFn() func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+	return func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+		shoot, ok := obj.(*gardener_api.Shoot)
+		if !ok {
+			return client.Update(ctx, obj, opts...)
+		}
+		// Update the generation to simulate shoot object being updated using interceptor function.
+		shoot.Generation++
+		return nil
+	}
+}
