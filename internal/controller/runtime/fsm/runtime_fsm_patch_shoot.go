@@ -54,17 +54,13 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	m.log.Info("Shoot converted successfully", "Name", updatedShoot.Name, "Namespace", updatedShoot.Namespace)
 
-	err = m.ShootClient.Update(ctx, &gardener.Shoot{
-		TypeMeta:   updatedShoot.TypeMeta,
-		ObjectMeta: updatedShoot.ObjectMeta,
-		Spec: gardener.ShootSpec{
-			Provider: gardener.Provider{
-				Workers: updatedShoot.Spec.Provider.Workers,
-			},
-		},
-	}, &client.UpdateOptions{
-		FieldManager: fieldManagerName,
-	})
+	copyShoot := s.shoot.DeepCopy()
+	copyShoot.Spec.Provider.Workers = updatedShoot.Spec.Provider.Workers
+
+	err = m.ShootClient.Update(ctx, copyShoot,
+		&client.UpdateOptions{
+			FieldManager: fieldManagerName,
+		})
 
 	if err != nil {
 		if k8serrors.IsConflict(err) {
