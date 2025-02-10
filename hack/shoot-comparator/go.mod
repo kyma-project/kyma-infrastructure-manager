@@ -1,6 +1,6 @@
 module github.com/kyma-project/infrastructure-manager/hack/shoot-comparator
 
-go 1.23.5
+go 1.23.6
 
 require (
 	github.com/gardener/gardener v1.105.0
@@ -31,7 +31,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/exp v0.0.0-20240909161429-701f63a606c0 // indirect
 	golang.org/x/net v0.29.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/tools v0.25.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
@@ -43,4 +43,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )
 
-replace golang.org/x/net => golang.org/x/net v0.33.0
+replace golang.org/x/net => golang.org/x/net v0.34.0
