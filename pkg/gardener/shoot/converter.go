@@ -98,10 +98,7 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.MachineImage.DefaultVersion,
 			opts.Workers,
 			opts.InfrastructureConfig,
-			opts.ControlPlaneConfig),
-		extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType),
-		extender2.ExtendWithTolerations,
-	)
+			opts.ControlPlaneConfig))
 
 	extendersForPatch = append(extendersForPatch,
 		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.Extensions),

@@ -140,6 +140,7 @@ func TestConverter(t *testing.T) {
 		assert.Equal(t, "1.30", shoot.Spec.Kubernetes.Version)
 		assert.Equal(t, "gardenlinux", shoot.Spec.Provider.Workers[0].Machine.Image.Name)
 		assert.Equal(t, "1592.2.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
+		assert.Nil(t, shoot.Spec.DNS)
 
 		extensionLen := len(shoot.Spec.Extensions)
 		require.Equalf(t, extensionLen, 5, "unexpected number of extensions: %d, expected: 5", extensionLen)
