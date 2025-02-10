@@ -61,7 +61,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	// This could caused some workers to be not removed from the shoot object during update
 	// More info: https://github.com/kyma-project/infrastructure-manager/issues/640
 
-	if workersAreDifferent(s.shoot.Spec.Provider.Workers, updatedShoot.Spec.Provider.Workers) {
+	if !workersAreEqual(s.shoot.Spec.Provider.Workers, updatedShoot.Spec.Provider.Workers) {
 		copyShoot := s.shoot.DeepCopy()
 		copyShoot.Spec.Provider.Workers = updatedShoot.Spec.Provider.Workers
 
@@ -121,9 +121,9 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
 }
 
-func workersAreDifferent(workers []gardener.Worker, workers2 []gardener.Worker) bool {
+func workersAreEqual(workers []gardener.Worker, workers2 []gardener.Worker) bool {
 	if len(workers) != len(workers2) {
-		return true
+		return false
 	}
 
 	for i := range workers {
@@ -131,7 +131,7 @@ func workersAreDifferent(workers []gardener.Worker, workers2 []gardener.Worker) 
 			return false
 		}
 	}
-	return false
+	return true
 }
 
 func handleForceReconciliationAnnotation(runtime *imv1.Runtime, fsm *fsm, ctx context.Context) error {
