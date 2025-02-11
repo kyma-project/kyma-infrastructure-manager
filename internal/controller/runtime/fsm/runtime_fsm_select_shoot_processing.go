@@ -46,7 +46,7 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 			return switchState(sFnWaitForShootCreation)
 		}
 
-		if lastOperation.Type == gardener.LastOperationTypeReconcile {
+ 		if lastOperation.Type == gardener.LastOperationTypeReconcile {
 			return switchState(sFnWaitForShootReconcile)
 		}
 	}
