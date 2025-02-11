@@ -76,6 +76,11 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 				return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
 			}
 
+			if k8serrors.IsForbidden(err) {
+				m.log.Info("Gardener shoot for runtime is forbidden, retrying")
+				return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+			}
+
 			m.log.Error(err, "Failed to update shoot worker list, exiting with no retry")
 			m.Metrics.IncRuntimeFSMStopCounter()
 			return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("Gardener API shoot update error: %v", err))
@@ -90,6 +95,11 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	if err != nil {
 		if k8serrors.IsConflict(err) {
 			m.log.Info("Gardener shoot for runtime is outdated, retrying", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
+			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+		}
+
+		if k8serrors.IsForbidden(err) {
+			m.log.Info("Gardener shoot for runtime is forbidden, retrying")
 			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
 		}
 
