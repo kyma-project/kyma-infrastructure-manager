@@ -13,25 +13,29 @@ import (
 )
 
 const shootType = "shoots"
+const seedType = "seeds"
 
 // CustomTracker implements ObjectTracker with a sequence of Shoot objects
 // it will be updated with a different shoot sequence for each test case
 type CustomTracker struct {
 	clienttesting.ObjectTracker
-	shootSequence []*gardener_api.Shoot
-	shootCallCnt  int
-	mu            sync.Mutex
+	shootSequence    []*gardener_api.Shoot
+	seedListSequence []*gardener_api.SeedList
+	shootCallCnt     int
+	seedCallCnt      int
+	mu               sync.Mutex
 }
 
-func NewCustomTracker(tracker clienttesting.ObjectTracker, shoots []*gardener_api.Shoot) *CustomTracker {
+func NewCustomTracker(tracker clienttesting.ObjectTracker, shoots []*gardener_api.Shoot, seedLists []*gardener_api.SeedList) *CustomTracker {
 	return &CustomTracker{
-		ObjectTracker: tracker,
-		shootSequence: shoots,
+		ObjectTracker:    tracker,
+		shootSequence:    shoots,
+		seedListSequence: seedLists,
 	}
 }
 
 func (t *CustomTracker) IsSequenceFullyUsed() bool {
-	return (t.shootCallCnt == len(t.shootSequence) && len(t.shootSequence) > 0)
+	return t.shootCallCnt == len(t.shootSequence) && t.seedCallCnt == len(t.seedListSequence)
 }
 
 func (t *CustomTracker) Get(gvr schema.GroupVersionResource, ns, name string, opts ...apimachinery.GetOptions) (runtime.Object, error) {
@@ -42,6 +46,17 @@ func (t *CustomTracker) Get(gvr schema.GroupVersionResource, ns, name string, op
 		return getNextObject(t.shootSequence, &t.shootCallCnt)
 	}
 	return t.ObjectTracker.Get(gvr, ns, name, opts...)
+}
+
+func (t *CustomTracker) List(gvr schema.GroupVersionResource, gvk schema.GroupVersionKind, ns string, opts ...apimachinery.ListOptions) (runtime.Object, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if gvr.Resource == seedType {
+		return getNextObject(t.seedListSequence, &t.seedCallCnt)
+	}
+
+	return t.ObjectTracker.List(gvr, gvk, ns, opts...)
 }
 
 func getNextObject[T any](sequence []*T, counter *int) (*T, error) {

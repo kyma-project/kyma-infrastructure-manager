@@ -255,8 +255,9 @@ func CreateRuntimeStub(resourceName string) *imv1.Runtime {
 		},
 		Spec: imv1.RuntimeSpec{
 			Shoot: imv1.RuntimeShoot{
-				Name:       resourceName,
-				Networking: imv1.Networking{},
+				Name:                resourceName,
+				Networking:          imv1.Networking{},
+				EnforceSeedLocation: ptr.To(true),
 				Provider: imv1.Provider{
 					Type: "aws",
 					Workers: []gardener.Worker{
