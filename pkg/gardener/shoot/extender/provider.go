@@ -316,8 +316,6 @@ func alignWorkersWithShoot(provider *gardener.Provider, existingWorkers []garden
 		if existing, found := existingWorkersMap[alignedWorker.Name]; found {
 
 			alignWorkerZonesForExtension(alignedWorker, existing)
-
-			alignedWorker.Zones = existing.Zones
 			alignWorkerMachineImageVersion(alignedWorker.Machine.Image, existing.Machine.Image)
 		}
 	}
