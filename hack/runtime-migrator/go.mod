@@ -5,7 +5,7 @@ go 1.23.6
 require (
 	github.com/gardener/gardener v1.111.0
 	github.com/gardener/oidc-webhook-authenticator v0.33.0
-	github.com/go-playground/validator/v10 v10.23.0
+	github.com/go-playground/validator/v10 v10.24.0
 	github.com/kyma-project/infrastructure-manager v0.0.0-20241023155010-55a6abeb1690
 	github.com/kyma-project/infrastructure-manager/hack/shoot-comparator v0.0.0-20241023155010-55a6abeb1690
 	github.com/onsi/ginkgo/v2 v2.22.2
@@ -29,7 +29,7 @@ require (
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/gardener/gardener-extension-provider-aws v1.58.3 // indirect
 	github.com/gardener/gardener-extension-provider-gcp v1.40.1 // indirect
 	github.com/gardener/gardener-extension-provider-openstack v1.43.0 // indirect
