@@ -73,9 +73,8 @@ const (
 type RuntimeConditionReason string
 
 const (
-	ConditionReasonProcessing          = RuntimeConditionReason("Processing")
-	ConditionReasonProcessingErr       = RuntimeConditionReason("ProcessingErr")
-	ConditionReasonProcessingCompleted = RuntimeConditionReason("ProcessingCompleted")
+	ConditionReasonProcessing    = RuntimeConditionReason("Processing")
+	ConditionReasonProcessingErr = RuntimeConditionReason("ProcessingErr")
 
 	ConditionReasonInitialized            = RuntimeConditionReason("Initialised")
 	ConditionReasonShootCreationPending   = RuntimeConditionReason("Pending")
@@ -86,22 +85,19 @@ const (
 	ConditionReasonConfigurationCompleted = RuntimeConditionReason("ConfigurationCompleted")
 	ConditionReasonConfigurationErr       = RuntimeConditionReason("ConfigurationError")
 
-	ConditionReasonDeletion             = RuntimeConditionReason("Deletion")
 	ConditionReasonGardenerCRDeleted    = RuntimeConditionReason("GardenerClusterCRDeleted")
 	ConditionReasonGardenerShootDeleted = RuntimeConditionReason("GardenerShootDeleted")
-	ConditionReasonDeletionErr          = RuntimeConditionReason("DeletionErr")
 	ConditionReasonConversionError      = RuntimeConditionReason("ConversionErr")
 	ConditionReasonCreationError        = RuntimeConditionReason("CreationErr")
 	ConditionReasonGardenerError        = RuntimeConditionReason("GardenerErr")
 	ConditionReasonKubernetesAPIErr     = RuntimeConditionReason("KubernetesErr")
-	ConditionReasonSerializationError   = RuntimeConditionReason("SerializationErr")
-	ConditionReasonDeleted              = RuntimeConditionReason("Deleted")
 
 	ConditionReasonAuditLogError = RuntimeConditionReason("AuditLogErr")
 
 	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
 	ConditionReasonOidcConfigured           = RuntimeConditionReason("OidcConfigured")
 	ConditionReasonOidcError                = RuntimeConditionReason("OidcConfigurationErr")
+	ConditionReasonSeedNotFound             = RuntimeConditionReason("SeedNotFound")
 )
 
 //+kubebuilder:object:root=true
