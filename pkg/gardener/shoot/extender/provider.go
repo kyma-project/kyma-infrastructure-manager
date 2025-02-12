@@ -113,7 +113,7 @@ func checkWorkerZonesMatchProviderConfig(providerType string, workerZones []stri
 		}
 
 		// workaround for legacy azure-lite shoots where networking zones are not specified in the infrastructureConfig
-		// such shoots are treated as correct and the validation is skipped
+		// such shoots are treated as correct, and we can skipp the validation of worker zones with infrastructureConfig zones
 		if patchValidation && providerType == hyperscaler.TypeAzure && len(infraConfigZones) == 0 {
 			return nil
 		}
