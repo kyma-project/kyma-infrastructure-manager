@@ -77,7 +77,6 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		}
 	}
 
-
 	patchErr := m.ShootClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
@@ -118,6 +117,7 @@ func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg stri
 			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
 		}
 
+		// We're retrying on Forbidden error because Gardener returns them from time too time for operations that are properly authorized.
 		if k8serrors.IsForbidden(err) {
 			m.log.Info("Gardener shoot for runtime is forbidden, retrying")
 			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
