@@ -76,6 +76,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 				return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
 			}
 
+			// From time to time Gardener returns forbidden errors, which we want to requeue.
 			if k8serrors.IsForbidden(err) {
 				m.log.Info("Gardener shoot for runtime is forbidden, retrying")
 				return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
@@ -98,6 +99,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
 		}
 
+		// From time to time Gardener returns forbidden errors, which we want to requeue.
 		if k8serrors.IsForbidden(err) {
 			m.log.Info("Gardener shoot for runtime is forbidden, retrying")
 			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
