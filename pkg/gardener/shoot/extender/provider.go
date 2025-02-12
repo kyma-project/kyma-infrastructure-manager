@@ -44,7 +44,7 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 		controlPlaneConf, infraConfig = overrideConfigIfProvided(rt, infraConfig, controlPlaneConf)
 
 		// final validation
-		if err = checkWorkerZonesMatchProviderConfig(rt.Spec.Shoot.Provider.Type, workerZones, controlPlaneConf, infraConfig); err != nil {
+		if err = checkWorkerZonesMatchProviderConfig(rt.Spec.Shoot.Provider.Type, workerZones, controlPlaneConf, infraConfig, false); err != nil {
 			return err
 		}
 
@@ -83,8 +83,9 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 		if err != nil {
 			return err
 		}
+
 		// final validation
-		if err = checkWorkerZonesMatchProviderConfig(rt.Spec.Shoot.Provider.Type, workerZones, controlPlaneConf, infraConfig); err != nil {
+		if err = checkWorkerZonesMatchProviderConfig(rt.Spec.Shoot.Provider.Type, workerZones, controlPlaneConf, infraConfig, true); err != nil {
 			return err
 		}
 
@@ -104,11 +105,17 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 	}
 }
 
-func checkWorkerZonesMatchProviderConfig(providerType string, workerZones []string, ctrlPlaneConfig *runtime.RawExtension, infraConfig *runtime.RawExtension) error {
+func checkWorkerZonesMatchProviderConfig(providerType string, workerZones []string, ctrlPlaneConfig *runtime.RawExtension, infraConfig *runtime.RawExtension, patchValidation bool) error {
 	if providerType == hyperscaler.TypeAzure || providerType == hyperscaler.TypeAWS {
 		infraConfigZones, err := getZonesFromProviderConfig(providerType, infraConfig)
 		if err != nil {
 			return err
+		}
+
+		// workaround for legacy azure-lite shoots where networking zones are not specified in the infrastructureConfig
+		// such shoots are treated as correct and the validation is skipped
+		if patchValidation && providerType == hyperscaler.TypeAzure && len(infraConfigZones) == 0 {
+			return nil
 		}
 
 		for _, zone := range workerZones {
