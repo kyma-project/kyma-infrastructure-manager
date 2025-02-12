@@ -106,6 +106,7 @@ func main() {
 	var converterConfigFilepath string
 	var shootSpecDumpEnabled bool
 	var auditLogMandatory bool
+	var debugGardenerClientResponses bool
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -125,6 +126,7 @@ func main() {
 	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "A file path to the gardener shoot converter configuration.")
 	flag.BoolVar(&shootSpecDumpEnabled, "shoot-spec-dump-enabled", false, "Feature flag to allow persisting specs of created shoots")
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration")
+	flag.BoolVar(&debugGardenerClientResponses, "debug-gardener-client-responses", false, "Feature flag to enable debug mode for Gardener client responses")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
@@ -163,7 +165,7 @@ func main() {
 	}
 
 	gardenerNamespace := fmt.Sprintf("garden-%s", gardenerProjectName)
-	gardenerClient, shootClient, dynamicKubeconfigClient, err := initGardenerClients(gardenerKubeconfigPath, gardenerNamespace, runtimeCtrlGardenerRequestTimeout, runtimeCtrlGardenerRateLimiterQPS, runtimeCtrlGardenerRateLimiterBurst)
+	gardenerClient, shootClient, dynamicKubeconfigClient, err := initGardenerClients(gardenerKubeconfigPath, gardenerNamespace, runtimeCtrlGardenerRequestTimeout, runtimeCtrlGardenerRateLimiterQPS, runtimeCtrlGardenerRateLimiterBurst, debugGardenerClientResponses)
 
 	if err != nil {
 		setupLog.Error(err, "unable to initialize gardener clients", "controller", "GardenerCluster")
@@ -263,7 +265,7 @@ func main() {
 	}
 }
 
-func initGardenerClients(kubeconfigPath string, namespace string, timeout time.Duration, rlQPS, rlBurst int) (client.Client, gardener_apis.ShootInterface, client.SubResourceClient, error) {
+func initGardenerClients(kubeconfigPath, namespace string, timeout time.Duration, rlQPS, rlBurst int, debugGardenerClient bool) (client.Client, gardener_apis.ShootInterface, client.SubResourceClient, error) {
 	restConfig, err := gardener.NewRestConfigFromFile(kubeconfigPath)
 	if err != nil {
 		return nil, nil, nil, err
@@ -278,7 +280,7 @@ func initGardenerClients(kubeconfigPath string, namespace string, timeout time.D
 	}
 
 	clientOptions := client.Options{}
-	if os.Getenv("GARDENER_DEBUG") == "true" {
+	if debugGardenerClient == true {
 		httpDebugClient, err := newDebugHTTPClient(restConfig)
 		if err != nil {
 			return nil, nil, nil, err
