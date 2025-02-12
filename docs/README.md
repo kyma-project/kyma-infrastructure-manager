@@ -10,7 +10,7 @@ Run `make test` to see if all tests are passing.
 
 ## Configuration
 
-You can configure the Infrastructure Manager deployment with the following arguments:
+### Deployment Arguments Configuration
 1. `gardener-kubeconfig-path` - defines the path to the Gardener project kubeconfig used during API calls
 2. `gardener-project-name` - the name of the Gardener project where the infrastructure operations are performed
 3. `minimal-rotation-time` - the ratio determines what is the minimal time that needs to pass to rotate the certificate
@@ -24,12 +24,20 @@ You can configure the Infrastructure Manager deployment with the following argum
 11. `runtime-ctrl-workers-cnt` - number of workers running in parallel for Runtime Controller. Default value is `25`.
 12. `gardener-cluster-ctrl-workers-cnt` - number of workers running in parallel for GardenerCluster Controller. Default value is `25`.
 
-
 See [manager_gardener_secret_patch.yaml](../config/default/manager_gardener_secret_patch.yaml) for default values.
 
 ## Troubleshooting
 
-1. Switching between the `provisioner` and `kim`.
+### Runtime Custom Resources Configuration
+The following annotations can control runtime behavior:
+
+| Annotation  | Description                                                                                                                                                                                                                                                                                                                         |
+| ------------- |-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| operator.kyma-project.io/force-patch-reconciliation  | If set to `true`, the next reconciliation loop enters the patch state regardless of the `runtime-generation` number. This annotation is removed automatically after attempting the patch operation. Might produce the `object has been modified` error in the RuntimeController logs until the state is reconciled. |
+| operator.kyma-project.io/suspend-patch-reconciliation  | If set to`true`, the controller does not patch the shoot. It has to be manually removed to resume normal operation.                                                                                                                                                                                                    |
+
+
+### Switching Between `provisioner` and `kim`.
 
 The `kyma-project.io/controlled-by-provisioner` label provides fine-grained control over the `Runtime` CR. Only if the label value is set to `false`, the resource is considered managed and will be controlled by `kyma-application-manager`.
 

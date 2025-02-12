@@ -95,6 +95,7 @@ const (
 	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
 	ConditionReasonOidcConfigured           = RuntimeConditionReason("OidcConfigured")
 	ConditionReasonOidcError                = RuntimeConditionReason("OidcConfigurationErr")
+	ConditionReasonSeedNotFound             = RuntimeConditionReason("SeedNotFound")
 )
 
 //+kubebuilder:object:root=true

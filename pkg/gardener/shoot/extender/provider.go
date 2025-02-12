@@ -314,8 +314,28 @@ func alignWorkersWithShoot(provider *gardener.Provider, existingWorkers []garden
 		alignedWorker := &provider.Workers[i]
 
 		if existing, found := existingWorkersMap[alignedWorker.Name]; found {
-			alignedWorker.Zones = existing.Zones
+
+			alignWorkerZonesForExtension(alignedWorker, existing)
 			alignWorkerMachineImageVersion(alignedWorker.Machine.Image, existing.Machine.Image)
+		}
+	}
+}
+
+func alignWorkerZonesForExtension(worker *gardener.Worker, existing gardener.Worker) {
+	// first check if zones are the same
+	if slices.Equal(worker.Zones, existing.Zones) {
+		return
+	}
+	// if not, align zones with existing worker
+	providedZones := make([]string, len(worker.Zones))
+	copy(providedZones, worker.Zones)
+
+	worker.Zones = existing.Zones
+	// if some preexisting zones are missing in the new worker, they will be added anyway
+	// if there are any zones that are not in the existing worker, append them at the end
+	for _, zone := range providedZones {
+		if !slices.Contains(worker.Zones, zone) {
+			worker.Zones = append(worker.Zones, zone)
 		}
 	}
 }

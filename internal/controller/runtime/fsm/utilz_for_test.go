@@ -15,7 +15,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"time"
 )
 
 type fakeFSMOpt func(*fsm) error
@@ -63,7 +65,10 @@ var (
 			WithScheme(scheme).
 			WithObjects(objs...).
 			WithStatusSubresource(objs...).
-			Build()
+			WithInterceptorFuncs(interceptor.Funcs{
+				Patch:  fsm_testing.GetFakePatchInterceptorFn(),
+				Update: fsm_testing.GetFakeUpdateInterceptorFn(),
+			}).Build()
 
 		return func(fsm *fsm) error {
 			fsm.Client = k8sClient
