@@ -22,6 +22,8 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/http"
+	"net/http/httputil"
 	"os"
 	"time"
 
@@ -275,7 +277,16 @@ func initGardenerClients(kubeconfigPath string, namespace string, timeout time.D
 		return nil, nil, nil, err
 	}
 
-	gardenerClient, err := client.New(restConfig, client.Options{})
+	clientOptions := client.Options{}
+	if os.Getenv("GARDENER_DEBUG") == "true" {
+		httpDebugClient, err := newDebugHTTPClient(restConfig)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		clientOptions.HTTPClient = httpDebugClient
+	}
+
+	gardenerClient, err := client.New(restConfig, clientOptions)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -294,6 +305,38 @@ func initGardenerClients(kubeconfigPath string, namespace string, timeout time.D
 	dynamicKubeconfigAPI := gardenerClient.SubResource("adminkubeconfig")
 
 	return gardenerClient, shootClient, dynamicKubeconfigAPI, nil
+}
+
+type loggingTransport struct {
+	transport http.RoundTripper
+}
+
+func (s *loggingTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	bytes, _ := httputil.DumpRequestOut(r, true)
+
+	resp, err := s.transport.RoundTrip(r)
+	// err is returned after dumping the response
+
+	respBytes, _ := httputil.DumpResponse(resp, true)
+	bytes = append(bytes, respBytes...)
+
+	fmt.Printf("%s\n", bytes)
+
+	return resp, err
+}
+
+
+func newDebugHTTPClient(restConfig *rest.Config) (*http.Client, error) {
+	transport, err := rest.TransportFor(restConfig)
+	if err != nil {
+		return nil, err
+	}
+	return &http.Client{
+		Transport: &loggingTransport{
+			transport: transport,
+		},
+		Timeout: restConfig.Timeout,
+	}, nil
 }
 
 func loadAuditLogDataMap(p string) (auditlogs.Configuration, error) {
