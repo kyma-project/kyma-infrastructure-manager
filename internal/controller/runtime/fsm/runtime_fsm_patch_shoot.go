@@ -65,49 +65,27 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		copyShoot := s.shoot.DeepCopy()
 		copyShoot.Spec.Provider.Workers = updatedShoot.Spec.Provider.Workers
 
-		err = m.ShootClient.Update(ctx, copyShoot,
+		updateErr := m.ShootClient.Update(ctx, copyShoot,
 			&client.UpdateOptions{
 				FieldManager: fieldManagerName,
-			})
+		})
 
-		if err != nil {
-			if k8serrors.IsConflict(err) {
-				m.log.Info("Gardener shoot for runtime is outdated, retrying", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
-				return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
-			}
+		nextState, res, err := handleUpdateError(updateErr, m, s, "Failed to patch shoot object, exiting with no retry", "Gardener API shoot patch error")
 
-			// From time to time Gardener returns forbidden errors, which we want to requeue.
-			if k8serrors.IsForbidden(err) {
-				m.log.Info("Gardener shoot for runtime is forbidden, retrying")
-				return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
-			}
-
-			m.log.Error(err, "Failed to update shoot worker list, exiting with no retry")
-			m.Metrics.IncRuntimeFSMStopCounter()
-			return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("Gardener API shoot update error: %v", err))
+		if nextState != nil {
+			return nextState, res, err
 		}
 	}
 
-	err = m.ShootClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
+
+	patchErr := m.ShootClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
 	})
+	nextState, res, err := handleUpdateError(patchErr, m, s, "Failed to patch shoot object, exiting with no retry", "Gardener API shoot patch error")
 
-	if err != nil {
-		if k8serrors.IsConflict(err) {
-			m.log.Info("Gardener shoot for runtime is outdated, retrying", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
-			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
-		}
-
-		// From time to time Gardener returns forbidden errors, which we want to requeue.
-		if k8serrors.IsForbidden(err) {
-			m.log.Info("Gardener shoot for runtime is forbidden, retrying")
-			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
-		}
-
-		m.log.Error(err, "Failed to patch shoot object, exiting with no retry")
-		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("Gardener API shoot patch error: %v", err))
+	if nextState != nil {
+		return nextState, res, err
 	}
 
 	err = handleForceReconciliationAnnotation(&s.instance, m, ctx)
@@ -131,6 +109,26 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	)
 
 	return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+}
+
+func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg string) (stateFn, *ctrl.Result, error) {
+	if err != nil {
+		if k8serrors.IsConflict(err) {
+			m.log.Info("Gardener shoot for runtime is outdated, retrying", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
+			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+		}
+
+		if k8serrors.IsForbidden(err) {
+			m.log.Info("Gardener shoot for runtime is forbidden, retrying")
+			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+		}
+
+		m.log.Error(err, errMsg)
+		m.Metrics.IncRuntimeFSMStopCounter()
+		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("%s: %v", statusMsg, err))
+	}
+
+	return nil, nil, nil
 }
 
 func workersAreEqual(workers []gardener.Worker, workers2 []gardener.Worker) bool {
