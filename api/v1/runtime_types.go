@@ -34,7 +34,6 @@ import (
 const (
 	Finalizer                              = "runtime-controller.infrastructure-manager.kyma-project.io/deletion-hook"
 	AnnotationGardenerCloudDelConfirmation = "confirmation.gardener.cloud/deletion"
-	LabelControlledByProvisioner           = "kyma-project.io/controlled-by-provisioner"
 )
 
 const (
@@ -62,12 +61,11 @@ const (
 type RuntimeConditionType string
 
 const (
-	ConditionTypeRuntimeProvisioned       RuntimeConditionType = "Provisioned"
-	ConditionTypeRuntimeProvisionedDryRun RuntimeConditionType = "ProvisionedDryRun"
-	ConditionTypeRuntimeKubeconfigReady   RuntimeConditionType = "KubeconfigReady"
-	ConditionTypeOidcConfigured           RuntimeConditionType = "OidcConfigured"
-	ConditionTypeRuntimeConfigured        RuntimeConditionType = "Configured"
-	ConditionTypeRuntimeDeprovisioned     RuntimeConditionType = "Deprovisioned"
+	ConditionTypeRuntimeProvisioned     RuntimeConditionType = "Provisioned"
+	ConditionTypeRuntimeKubeconfigReady RuntimeConditionType = "KubeconfigReady"
+	ConditionTypeOidcConfigured         RuntimeConditionType = "OidcConfigured"
+	ConditionTypeRuntimeConfigured      RuntimeConditionType = "Configured"
+	ConditionTypeRuntimeDeprovisioned   RuntimeConditionType = "Deprovisioned"
 )
 
 type RuntimeConditionReason string
@@ -304,9 +302,4 @@ func (k *Runtime) ValidateRequiredLabels() error {
 		}
 	}
 	return nil
-}
-
-func (k *Runtime) IsControlledByProvisioner() bool {
-	value, found := k.Labels[LabelControlledByProvisioner]
-	return !found || value != "false"
 }

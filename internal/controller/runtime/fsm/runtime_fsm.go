@@ -3,7 +3,6 @@ package fsm
 import (
 	"context"
 	"fmt"
-	"io"
 	"reflect"
 	"runtime"
 	"time"
@@ -22,7 +21,6 @@ import (
 )
 
 type stateFn func(context.Context, *fsm, *systemState) (stateFn, *ctrl.Result, error)
-type writerGetter = func(filePath string) (io.Writer, error)
 
 // runtime reconciler specific configuration
 type RCCfg struct {
@@ -32,7 +30,6 @@ type RCCfg struct {
 	RequeueDurationShootReconcile time.Duration
 	ControlPlaneRequeueDuration   time.Duration
 	Finalizer                     string
-	PVCPath                       string
 	ShootNamesapace               string
 	AuditLogMandatory             bool
 	Metrics                       metrics.Metrics
@@ -62,9 +59,8 @@ type Fsm interface {
 }
 
 type fsm struct {
-	fn             stateFn
-	writerProvider writerGetter
-	log            logr.Logger
+	fn  stateFn
+	log logr.Logger
 	K8s
 	RCCfg
 }
@@ -105,10 +101,9 @@ loop:
 
 func NewFsm(log logr.Logger, cfg RCCfg, k8s K8s) Fsm {
 	return &fsm{
-		fn:             sFnTakeSnapshot,
-		writerProvider: getWriterForFilesystem,
-		RCCfg:          cfg,
-		log:            log,
-		K8s:            k8s,
+		fn:    sFnTakeSnapshot,
+		RCCfg: cfg,
+		log:   log,
+		K8s:   k8s,
 	}
 }
