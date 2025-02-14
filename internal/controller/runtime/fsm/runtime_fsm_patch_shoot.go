@@ -9,6 +9,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"
+	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -55,20 +56,35 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	m.log.Info("Shoot converted successfully", "Name", updatedShoot.Name, "Namespace", updatedShoot.Namespace)
 
-	err = m.ShootClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
+	// The additional Update function is required to fully replace shoot Workers collection with workers defined in updated runtime object.
+	// This is a workaround for the sigs.k8s.io/controller-runtime/pkg/client, which does not support replacing the Workers collection with client.Patch
+	// This could caused some workers to be not removed from the shoot object during update
+	// More info: https://github.com/kyma-project/infrastructure-manager/issues/640
+
+	if !workersAreEqual(s.shoot.Spec.Provider.Workers, updatedShoot.Spec.Provider.Workers) {
+		copyShoot := s.shoot.DeepCopy()
+		copyShoot.Spec.Provider.Workers = updatedShoot.Spec.Provider.Workers
+
+		updateErr := m.ShootClient.Update(ctx, copyShoot,
+			&client.UpdateOptions{
+				FieldManager: fieldManagerName,
+			})
+
+		nextState, res, err := handleUpdateError(updateErr, m, s, "Failed to patch shoot object, exiting with no retry", "Gardener API shoot patch error")
+
+		if nextState != nil {
+			return nextState, res, err
+		}
+	}
+
+	patchErr := m.ShootClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
 	})
+	nextState, res, err := handleUpdateError(patchErr, m, s, "Failed to patch shoot object, exiting with no retry", "Gardener API shoot patch error")
 
-	if err != nil {
-		if k8serrors.IsConflict(err) {
-			m.log.Info("Gardener shoot for runtime is outdated, retrying", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
-			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
-		}
-
-		m.log.Error(err, "Failed to patch shoot object, exiting with no retry")
-		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("Gardener API shoot patch error: %v", err))
+	if nextState != nil {
+		return nextState, res, err
 	}
 
 	err = handleForceReconciliationAnnotation(&s.instance, m, ctx)
@@ -92,6 +108,40 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	)
 
 	return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+}
+
+func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg string) (stateFn, *ctrl.Result, error) {
+	if err != nil {
+		if k8serrors.IsConflict(err) {
+			m.log.Info("Gardener shoot for runtime is outdated, retrying", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
+			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+		}
+
+		// We're retrying on Forbidden error because Gardener returns them from time too time for operations that are properly authorized.
+		if k8serrors.IsForbidden(err) {
+			m.log.Info("Gardener shoot for runtime is forbidden, retrying")
+			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+		}
+
+		m.log.Error(err, errMsg)
+		m.Metrics.IncRuntimeFSMStopCounter()
+		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("%s: %v", statusMsg, err))
+	}
+
+	return nil, nil, nil
+}
+
+func workersAreEqual(workers []gardener.Worker, workers2 []gardener.Worker) bool {
+	if len(workers) != len(workers2) {
+		return false
+	}
+
+	for i := range workers {
+		if !reflect.DeepEqual(workers[i], workers2[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 func handleForceReconciliationAnnotation(runtime *imv1.Runtime, fsm *fsm, ctx context.Context) error {

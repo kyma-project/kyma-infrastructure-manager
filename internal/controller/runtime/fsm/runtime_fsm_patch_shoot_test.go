@@ -2,6 +2,7 @@ package fsm
 
 import (
 	"context"
+	"testing"
 	"time"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -84,5 +85,129 @@ func buildPatchTestFunction(fn stateFn) func(context.Context, *fsm, *systemState
 		Expect(err).To(BeNil())
 		Expect(sFn).To(matchNextFnState)
 		Expect(s.instance.GetAnnotations()).To(Equal(expectedAnnotations))
+	}
+}
+
+func TestWorkersAreEqual(t *testing.T) {
+	tests := []struct {
+		name     string
+		workers1 []gardener.Worker
+		workers2 []gardener.Worker
+		want     bool
+	}{
+		{
+			name: "equal workers",
+			workers1: []gardener.Worker{
+				{Name: "worker1", Minimum: 1, Maximum: 3},
+				{Name: "worker2", Minimum: 3, Maximum: 10},
+			},
+			workers2: []gardener.Worker{
+				{Name: "worker1", Minimum: 1, Maximum: 3},
+				{Name: "worker2", Minimum: 3, Maximum: 10},
+			},
+			want: true,
+		},
+		{
+			name: "equal workers #2 - zones",
+			workers1: []gardener.Worker{
+				{Name: "worker1", Zones: []string{"zone1", "zone2"}},
+			},
+			workers2: []gardener.Worker{
+				{Name: "worker1", Zones: []string{"zone1", "zone2"}},
+			},
+			want: true,
+		},
+		{
+			name: "equal workers #3 - CRI",
+			workers1: []gardener.Worker{
+				{Name: "worker1", CRI: &gardener.CRI{Name: "runtime", ContainerRuntimes: []gardener.ContainerRuntime{
+					{Type: "docker"},
+				}}},
+			},
+			workers2: []gardener.Worker{
+				{Name: "worker1", CRI: &gardener.CRI{Name: "runtime", ContainerRuntimes: []gardener.ContainerRuntime{
+					{Type: "docker"},
+				}}},
+			},
+			want: true,
+		},
+		{
+			name:     "empty workers",
+			workers1: []gardener.Worker{},
+			workers2: []gardener.Worker{},
+			want:     true,
+		},
+		{
+			name: "different workers - name",
+			workers1: []gardener.Worker{
+				{Name: "worker1", Minimum: 1, Maximum: 3},
+			},
+			workers2: []gardener.Worker{
+				{Name: "worker2", Minimum: 1, Maximum: 3},
+			},
+			want: false,
+		},
+		{
+			name: "different workers #2 - minmax",
+			workers1: []gardener.Worker{
+				{Name: "worker1", Minimum: 1, Maximum: 3},
+			},
+			workers2: []gardener.Worker{
+				{Name: "worker1", Minimum: 1, Maximum: 1},
+			},
+			want: false,
+		},
+		{
+			name: "different workers #3 - zones",
+			workers1: []gardener.Worker{
+				{Name: "worker1", Minimum: 1, Maximum: 3, Zones: []string{"zone1", "zone2"}},
+			},
+			workers2: []gardener.Worker{
+				{Name: "worker1", Minimum: 1, Maximum: 3, Zones: []string{"zone1", "zone3"}},
+			},
+			want: false,
+		},
+		{
+			name: "different workers #4 - CRI",
+			workers1: []gardener.Worker{
+				{Name: "worker1", CRI: &gardener.CRI{Name: "runtime", ContainerRuntimes: []gardener.ContainerRuntime{
+					{Type: "docker"},
+				}}},
+			},
+			workers2: []gardener.Worker{
+				{Name: "worker1", CRI: &gardener.CRI{Name: "runtime", ContainerRuntimes: []gardener.ContainerRuntime{
+					{Type: "containerd"},
+				}}},
+			},
+			want: false,
+		},
+		{
+			name: "different number of workers",
+			workers1: []gardener.Worker{
+				{Name: "worker1", Minimum: 1, Maximum: 3},
+			},
+			workers2: []gardener.Worker{
+				{Name: "worker1", Minimum: 1, Maximum: 3},
+				{Name: "worker1", Minimum: 1, Maximum: 3},
+			},
+			want: false,
+		},
+		{
+			name:     "one workers collection is empty",
+			workers1: []gardener.Worker{},
+			workers2: []gardener.Worker{
+				{Name: "worker1", Minimum: 1, Maximum: 3},
+				{Name: "worker1", Minimum: 1, Maximum: 3},
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := workersAreEqual(tt.workers1, tt.workers2); got != tt.want {
+				t.Errorf("workersAreEqual() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

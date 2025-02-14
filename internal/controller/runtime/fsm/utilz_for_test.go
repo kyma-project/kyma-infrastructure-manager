@@ -65,7 +65,8 @@ var (
 			WithObjects(objs...).
 			WithStatusSubresource(objs...).
 			WithInterceptorFuncs(interceptor.Funcs{
-				Patch: fsm_testing.GetFakePatchInterceptorFn(),
+				Patch:  fsm_testing.GetFakePatchInterceptorFn(),
+				Update: fsm_testing.GetFakeUpdateInterceptorFn(),
 			}).Build()
 
 		return func(fsm *fsm) error {
