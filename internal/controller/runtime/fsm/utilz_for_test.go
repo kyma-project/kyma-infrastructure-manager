@@ -3,11 +3,11 @@ package fsm
 import (
 	"context"
 	"fmt"
-	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"time"
+
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
-	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,15 +18,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"time"
 )
 
 type fakeFSMOpt func(*fsm) error
 
 const defaultControlPlaneRequeueDuration = 10 * time.Second
 const defaultGardenerRequeueDuration = 15 * time.Second
-const defaultRequeueDurationShootCreate = 15 * time.Second
-const defaultRequeueDurationShootDelete = 15 * time.Second
 
 var (
 	errFailedToCreateFakeFSM = fmt.Errorf("failed to create fake FSM")
@@ -41,20 +38,6 @@ var (
 	withFinalizer = func(finalizer string) fakeFSMOpt {
 		return func(fsm *fsm) error {
 			fsm.Finalizer = finalizer
-			return nil
-		}
-	}
-
-	withStorageWriter = func(testWriterGetter writerGetter) fakeFSMOpt {
-		return func(fsm *fsm) error {
-			fsm.writerProvider = testWriterGetter
-			return nil
-		}
-	}
-
-	withConverterConfig = func(config config.ConverterConfig) fakeFSMOpt {
-		return func(fsm *fsm) error {
-			fsm.Config.ConverterConfig = config
 			return nil
 		}
 	}
@@ -124,19 +107,6 @@ func newFakeFSM(opts ...fakeFSMOpt) (*fsm, error) {
 		}
 	}
 	return &fsm, nil
-}
-
-// stubAuditLogging - a special type to allow to test audit logging
-type stubAuditLogging struct {
-	isEnabled bool
-	err       error
-}
-
-func (s *stubAuditLogging) Enable(ctx context.Context, shoot *gardener.Shoot) (bool, error) {
-	return s.isEnabled, s.err
-}
-
-func (s *stubAuditLogging) UpdateShootClient(client client.Client) {
 }
 
 func newSetupStateForTest(sfn stateFn, opts ...func(*systemState) error) stateFn {

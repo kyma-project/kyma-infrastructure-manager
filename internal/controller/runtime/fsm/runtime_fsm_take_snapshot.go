@@ -14,10 +14,6 @@ func sFnTakeSnapshot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctr
 	m.log.Info("Take snapshot state")
 	s.saveRuntimeStatus()
 
-	if s.instance.IsControlledByProvisioner() {
-		return switchState(sFnInitialize)
-	}
-
 	var shoot gardener_api.Shoot
 	err := m.ShootClient.Get(ctx, types.NamespacedName{
 		Name:      s.instance.Spec.Shoot.Name,

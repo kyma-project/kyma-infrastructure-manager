@@ -14,28 +14,32 @@ import (
 // All the states we set in the operator are about to be read only by the external clients
 
 func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	instanceIsNotBeingDeleted := s.instance.GetDeletionTimestamp().IsZero()
+	instanceIsBeingDeleted := !s.instance.GetDeletionTimestamp().IsZero()
 	instanceHasFinalizer := controllerutil.ContainsFinalizer(&s.instance, m.Finalizer)
 	provisioningCondition := meta.FindStatusCondition(s.instance.Status.Conditions, string(imv1.ConditionTypeRuntimeProvisioned))
-	dryRunProvisioningCondition := meta.FindStatusCondition(s.instance.Status.Conditions, string(imv1.ConditionTypeRuntimeProvisionedDryRun))
-	dryRunMode := s.instance.IsControlledByProvisioner()
 
-	if instanceIsNotBeingDeleted && !instanceHasFinalizer {
+	if !instanceIsBeingDeleted && !instanceHasFinalizer {
 		return addFinalizerAndRequeue(ctx, m, s)
 	}
 
-	if instanceIsNotBeingDeleted && s.shoot == nil && provisioningCondition == nil && dryRunProvisioningCondition == nil {
-		m.log.Info("Update Runtime state to Pending - initialised")
-
-		getConditionType := func() imv1.RuntimeConditionType {
-			if dryRunMode {
-				return imv1.ConditionTypeRuntimeProvisionedDryRun
-			}
-			return imv1.ConditionTypeRuntimeProvisioned
+	// instance is being deleted
+	if instanceIsBeingDeleted {
+		if s.shoot != nil {
+			m.log.Info("Delete instance resources")
+			return switchState(sFnDeleteKubeconfig)
 		}
 
+		if instanceHasFinalizer {
+			return removeFinalizerAndStop(ctx, m, s) // resource cleanup completed
+		}
+		return stopWithMetrics()
+	}
+
+	if s.shoot == nil && provisioningCondition == nil {
+		m.log.Info("Update Runtime state to Pending - initialised")
+
 		s.instance.UpdateStatePending(
-			getConditionType(),
+			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonInitialized,
 			"Unknown",
 			"Runtime initialized",
@@ -43,40 +47,14 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 		return updateStatusAndRequeue()
 	}
 
-	shootNeedsToBeCreated := func() bool {
-		if dryRunMode {
-			return instanceIsNotBeingDeleted && dryRunProvisioningCondition != nil &&
-				dryRunProvisioningCondition.Status != "True"
-		}
-
-		return instanceIsNotBeingDeleted && s.shoot == nil
-	}
-
-	if shootNeedsToBeCreated() {
-		if !dryRunMode {
-			return switchState(sFnCreateShoot)
-		}
-
+	if s.shoot == nil {
 		m.log.Info("Gardener shoot does not exist, creating new one")
-		return switchState(sFnCreateShootDryRun)
+		return switchState(sFnCreateShoot)
 	}
 
-	if instanceIsNotBeingDeleted && !dryRunMode {
-		m.log.Info("Gardener shoot exists, processing")
-		return switchState(sFnSelectShootProcessing)
-	}
+	m.log.Info("Gardener shoot exists, processing")
 
-	// instance is being deleted
-	if !instanceIsNotBeingDeleted && instanceHasFinalizer {
-		if s.shoot != nil && !dryRunMode {
-			m.log.Info("Delete instance resources")
-			return switchState(sFnDeleteKubeconfig)
-		}
-		return removeFinalizerAndStop(ctx, m, s) // resource cleanup completed
-	}
-
-	m.log.Info("Unhandled reconcile operation, stopping state machine", "RuntimeCR", s.instance.Name)
-	return stopWithMetrics()
+	return switchState(sFnSelectShootProcessing)
 }
 
 func addFinalizerAndRequeue(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
