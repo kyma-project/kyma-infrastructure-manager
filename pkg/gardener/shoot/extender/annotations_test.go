@@ -31,7 +31,7 @@ func TestAnnotationsExtender(t *testing.T) {
 			},
 			expectedAnnotations: map[string]string{
 				"infrastructuremanager.kyma-project.io/runtime-id":         "runtime-id",
-				"infrastructuremanager.kyma-project.io/runtime-generation": "100"},
+				"infrastructuremanager.kyma-project.io/runtime-generation": "should-fail"},
 		},
 		{
 			name: "Create licence type annotation",
