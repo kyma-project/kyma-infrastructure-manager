@@ -3,8 +3,6 @@ package fsm
 import (
 	"context"
 	"fmt"
-	"time"
-
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
@@ -18,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"time"
 )
 
 type fakeFSMOpt func(*fsm) error
