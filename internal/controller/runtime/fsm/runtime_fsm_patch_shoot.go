@@ -68,7 +68,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		updateErr := m.ShootClient.Update(ctx, copyShoot,
 			&client.UpdateOptions{
 				FieldManager: fieldManagerName,
-		})
+			})
 
 		nextState, res, err := handleUpdateError(updateErr, m, s, "Failed to patch shoot object, exiting with no retry", "Gardener API shoot patch error")
 

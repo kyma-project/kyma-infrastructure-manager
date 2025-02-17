@@ -20,7 +20,6 @@ import (
 
 type Migration struct {
 	runtimeMigrator migration.Migrator
-	runtimeVerifier migration.Verifier
 	kcpClient       client.Client
 	shootClient     gardener_types.ShootInterface
 	outputWriter    migration.OutputWriter
@@ -40,7 +39,6 @@ func NewMigration(migratorConfig initialisation.Config, converterConfig config.C
 
 	return Migration{
 		runtimeMigrator: migration.NewMigrator(migratorConfig, kubeconfigProvider, kcpClient),
-		runtimeVerifier: migration.NewVerifier(converterConfig, auditLogConfig),
 		kcpClient:       kcpClient,
 		shootClient:     shootClient,
 		outputWriter:    outputWriter,
@@ -67,17 +65,6 @@ func (m Migration) Do(ctx context.Context, runtimeIDs []string) error {
 
 		results.ErrorOccurred(runtimeID, shootName, msg)
 		slog.Error(msg, "runtimeID", runtimeID)
-	}
-
-	reportValidationError := func(runtimeID, shootName string, msg string, err error) {
-		errorMsg := fmt.Sprintf("%s: %v", msg, err)
-		results.ValidationErrorOccurred(runtimeID, shootName, errorMsg)
-		slog.Error(msg, "runtimeID", runtimeID)
-	}
-
-	reportUnwantedUpdateDetected := func(runtimeID, shootName string, msg string) {
-		results.ValidationDetectedUnwantedUpdate(runtimeID, shootName)
-		slog.Warn(msg, "runtimeID", runtimeID)
 	}
 
 	reportSuccess := func(runtimeID, shootName string, msg string) {
@@ -110,23 +97,6 @@ func (m Migration) Do(ctx context.Context, runtimeIDs []string) error {
 		err = m.outputWriter.SaveRuntimeCR(runtime)
 		if err != nil {
 			reportError(runtimeID, shootToMigrate.Name, "Failed to save runtime CR", err)
-			return
-		}
-
-		shootComparisonResult, err := m.runtimeVerifier.Do(runtime, *shootToMigrate)
-		if err != nil {
-			reportValidationError(runtimeID, shootToMigrate.Name, "Failed to verify runtime", err)
-			return
-		}
-
-		if !shootComparisonResult.IsEqual() {
-			err = m.outputWriter.SaveComparisonResult(shootComparisonResult)
-			if err != nil {
-				reportError(runtimeID, shootToMigrate.Name, "Failed to save comparison result", err)
-				return
-			}
-
-			reportUnwantedUpdateDetected(runtimeID, shootToMigrate.Name, "Runtime CR can cause unwanted update in Gardener")
 			return
 		}
 
