@@ -66,8 +66,25 @@ spec:
                             properties:
                               enabled:
                                 type: boolean
+                              workers:
+                                properties:
+                                  blackholingEnabled:
+                                    description: BlackholingEnabled is a flag to set
+                                      blackholing or firewall approach.
+                                    type: boolean
+                                  names:
+                                    description: Names is a list of worker groups
+                                      to use the specified blocking mode.
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - blackholingEnabled
+                                - names
+                                type: object
                             required:
                             - enabled
+                            - workers
                             type: object
                           ingress:
                             properties:

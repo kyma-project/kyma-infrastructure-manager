@@ -69,6 +69,8 @@ func NewConverterCreate(opts CreateOpts) Converter {
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
 		),
+
+		//why this is not part of NewExtensionsExtenderForCreate as this is also an extension?
 		extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType),
 		extender2.ExtendWithTolerations,
 	)

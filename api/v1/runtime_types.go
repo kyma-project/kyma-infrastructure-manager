@@ -200,6 +200,15 @@ type Ingress struct {
 
 type Egress struct {
 	Enabled bool `json:"enabled"`
+	Workers *Workers `json:"workers"`
+}
+
+type Workers struct {
+	// BlackholingEnabled is a flag to set blackholing or firewall approach.
+	BlackholingEnabled bool `json:"blackholingEnabled"`
+
+	// Names is a list of worker groups to use the specified blocking mode.
+	Names []string `json:"names"`
 }
 
 func init() {
