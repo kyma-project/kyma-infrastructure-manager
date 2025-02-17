@@ -266,7 +266,8 @@ func CreateRuntimeStub(resourceName string) *imv1.Runtime {
 						},
 					},
 				},
-				Region: "eu-central-1",
+				Region:  "eu-central-1",
+				Purpose: "production",
 				Kubernetes: imv1.Kubernetes{
 					KubeAPIServer: imv1.APIServer{
 						OidcConfig: gardener.OIDCConfig{

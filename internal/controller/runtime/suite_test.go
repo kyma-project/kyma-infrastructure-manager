@@ -299,6 +299,13 @@ func fixShootsSequenceForUpdate(shoot *gardener_api.Shoot) []*gardener_api.Shoot
 		Domain: ptr.To("test.domain"),
 	}
 
+	existingShoot.Spec.Maintenance = &gardener_api.Maintenance{
+		TimeWindow: &gardener_api.MaintenanceTimeWindow{
+			Begin: "200000+0000",
+			End:   "000000+0000",
+		},
+	}
+
 	addAuditLogConfigToShoot(existingShoot)
 
 	pendingShoot := existingShoot.DeepCopy()
@@ -379,6 +386,9 @@ func fixConverterConfigForTests() config.Config {
 			AuditLog: config.AuditLogConfig{
 				PolicyConfigMapName: "policy-config-map",
 				TenantConfigPath:    filepath.Join("testdata", "auditConfig.json"),
+			},
+			MaintenanceWindow: config.MaintenanceWindowConfig{
+				WindowMapPath: filepath.Join("testdata", "maintenanceWindow.yaml"),
 			},
 		},
 	}
