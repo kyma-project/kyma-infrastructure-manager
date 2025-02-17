@@ -63,13 +63,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	if s.instance.Spec.Shoot.Purpose == "production" && m.ConverterConfig.MaintenanceWindow.WindowMapPath != "" {
 		maintenanceWindowData, err = maintenance.GetMaintenanceWindow(m.ConverterConfig.MaintenanceWindow.WindowMapPath, s.instance.Spec.Shoot.Region)
 		if err != nil {
-			m.log.Error(err, "Failed to get maintenance window data")
-			m.Metrics.IncRuntimeFSMStopCounter()
-			return updateStatePendingWithErrorAndStop(
-				&s.instance,
-				imv1.ConditionTypeRuntimeProvisioned,
-				imv1.ConditionReasonMaintenanceWindowError,
-				"Failed to get maintenance window data")
+			m.log.Error(err, "Failed to get Maintenance Window data")
 		}
 	}
 
