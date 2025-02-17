@@ -1,6 +1,7 @@
 package extender
 
 import (
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"testing"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -23,7 +24,7 @@ func TestOidcExtender(t *testing.T) {
 
 	t.Run("OIDC should be added in create scenario", func(t *testing.T) {
 		// given
-		shoot := fixEmptyGardenerShoot("test", "kcp-system")
+		shoot := testutils.FixEmptyGardenerShoot("test", "kcp-system")
 		runtimeShoot := imv1.Runtime{
 			ObjectMeta: metav1.ObjectMeta{},
 			Spec: imv1.RuntimeSpec{

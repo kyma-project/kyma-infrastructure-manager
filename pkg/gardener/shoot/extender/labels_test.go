@@ -1,6 +1,7 @@
 package extender
 
 import (
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"testing"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -12,7 +13,7 @@ import (
 func TestLabelsExtender(t *testing.T) {
 	t.Run("Create labels", func(t *testing.T) {
 		// given
-		shoot := fixEmptyGardenerShoot("shoot", "kcp-system")
+		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
 		runtime := imv1.Runtime{
 			ObjectMeta: v1.ObjectMeta{
 				Name:      "runtime",

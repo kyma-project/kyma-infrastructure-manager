@@ -49,6 +49,10 @@ type AuditLogConfig struct {
 	TenantConfigPath    string `json:"tenantConfigPath" validate:"required"`
 }
 
+type MaintenanceWindowConfig struct {
+	WindowMapPath string `json:"windowMapPath"`
+}
+
 type GardenerConfig struct {
 	ProjectName string `json:"projectName" validate:"required"`
 }
@@ -59,12 +63,13 @@ type MachineImageConfig struct {
 }
 
 type ConverterConfig struct {
-	Kubernetes   KubernetesConfig   `json:"kubernetes" validate:"required"`
-	DNS          DNSConfig          `json:"dns" validate:"required"`
-	Provider     ProviderConfig     `json:"provider"`
-	MachineImage MachineImageConfig `json:"machineImage" validate:"required"`
-	Gardener     GardenerConfig     `json:"gardener" validate:"required"`
-	AuditLog     AuditLogConfig     `json:"auditLogging" validate:"required"`
+	Kubernetes        KubernetesConfig        `json:"kubernetes" validate:"required"`
+	DNS               DNSConfig               `json:"dns" validate:"required"`
+	Provider          ProviderConfig          `json:"provider"`
+	MachineImage      MachineImageConfig      `json:"machineImage" validate:"required"`
+	Gardener          GardenerConfig          `json:"gardener" validate:"required"`
+	AuditLog          AuditLogConfig          `json:"auditLogging" validate:"required"`
+	MaintenanceWindow MaintenanceWindowConfig `json:"maintenanceWindow"`
 }
 
 type ReaderGetter = func() (io.Reader, error)

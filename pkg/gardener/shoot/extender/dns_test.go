@@ -1,13 +1,12 @@
 package extender
 
 import (
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"testing"
 
-	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestDNSExtender(t *testing.T) {
@@ -24,7 +23,7 @@ func TestDNSExtender(t *testing.T) {
 			},
 		}
 		extender := NewDNSExtender(secretName, domainPrefix, dnsProviderType)
-		shoot := fixEmptyGardenerShoot("test", "dev")
+		shoot := testutils.FixEmptyGardenerShoot("test", "dev")
 
 		// when
 		err := extender(runtimeShoot, &shoot)
@@ -37,15 +36,4 @@ func TestDNSExtender(t *testing.T) {
 		assert.Equal(t, secretName, *shoot.Spec.DNS.Providers[0].SecretName)
 		assert.Equal(t, true, *shoot.Spec.DNS.Providers[0].Primary)
 	})
-}
-
-func fixEmptyGardenerShoot(name, namespace string) gardener.Shoot {
-	return gardener.Shoot{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels:    map[string]string{},
-		},
-		Spec: gardener.ShootSpec{},
-	}
 }

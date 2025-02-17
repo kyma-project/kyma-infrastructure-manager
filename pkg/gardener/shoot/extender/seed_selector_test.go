@@ -1,6 +1,7 @@
 package extender
 
 import (
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"testing"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -12,7 +13,7 @@ func TestSeedSelectorExtender(t *testing.T) {
 	t.Run("Add and populate seed selector field if RuntimeCR has SeedInSameRegionFlag set to true", func(t *testing.T) {
 		// given
 		runtimeShoot := getRuntimeWithSeedInSameRegionFlag(true)
-		shoot := fixEmptyGardenerShoot("test", "dev")
+		shoot := testutils.FixEmptyGardenerShoot("test", "dev")
 
 		// when
 		err := ExtendWithSeedSelector(runtimeShoot, &shoot)
@@ -26,7 +27,7 @@ func TestSeedSelectorExtender(t *testing.T) {
 	t.Run("Don't add seed selector field if RuntimeCR has SeedInSameRegionFlag set to false", func(t *testing.T) {
 		// given
 		runtimeShoot := getRuntimeWithSeedInSameRegionFlag(false)
-		shoot := fixEmptyGardenerShoot("test", "dev")
+		shoot := testutils.FixEmptyGardenerShoot("test", "dev")
 
 		// when
 		err := ExtendWithSeedSelector(runtimeShoot, &shoot)
@@ -39,7 +40,7 @@ func TestSeedSelectorExtender(t *testing.T) {
 	t.Run("Don't add seed selector field if RuntimeCR has no SeedInSameRegionFlag set", func(t *testing.T) {
 		// given
 		runtimeShoot := getRuntimeWithoutSeedInSameRegionFlag()
-		shoot := fixEmptyGardenerShoot("test", "dev")
+		shoot := testutils.FixEmptyGardenerShoot("test", "dev")
 
 		// when
 		err := ExtendWithSeedSelector(runtimeShoot, &shoot)

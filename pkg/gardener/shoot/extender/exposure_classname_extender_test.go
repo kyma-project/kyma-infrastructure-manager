@@ -1,6 +1,7 @@
 package extender
 
 import (
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"testing"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -38,7 +39,7 @@ func TestExtendWithExposureClassName(t *testing.T) {
 					},
 				},
 			}
-			shoot := fixEmptyGardenerShoot("test", "dev")
+			shoot := testutils.FixEmptyGardenerShoot("test", "dev")
 
 			// when
 			err := ExtendWithExposureClassName(runtime, &shoot)
