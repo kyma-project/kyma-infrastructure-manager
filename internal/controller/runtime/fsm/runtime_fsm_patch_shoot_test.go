@@ -46,6 +46,9 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			DNS: &gardener.DNS{
 				Domain: ptr.To("test-domain"),
 			},
+			Provider: gardener.Provider{
+				Workers: fixWorkers("test-worker", "m5.xlarge", "garden-linux", "1.19.8", 1, 1, []string{"europe-west1-d"}),
+			},
 		},
 		Status: gardener.ShootStatus{
 			LastOperation: &gardener.LastOperation{

@@ -321,7 +321,7 @@ func fixShootsSequenceForUpdate(shoot *gardener_api.Shoot) []*gardener_api.Shoot
 
 	// processedShoot := processingShoot.DeepCopy() // will add specific data later
 
-	return []*gardener_api.Shoot{existingShoot, pendingShoot, tempErrorShoot, processingShoot, processingShoot, readyShoot, readyShoot}
+	return []*gardener_api.Shoot{existingShoot, pendingShoot, tempErrorShoot, processingShoot, readyShoot, readyShoot}
 }
 
 func fixShootsSequenceForDelete(shoot *gardener_api.Shoot) []*gardener_api.Shoot {
