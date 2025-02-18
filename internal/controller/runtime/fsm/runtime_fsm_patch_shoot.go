@@ -8,10 +8,12 @@ import (
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"time"
 )
 
 const fieldManagerName = "kim"
@@ -70,7 +72,15 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 				FieldManager: fieldManagerName,
 			})
 
-		nextState, res, err := handleUpdateError(updateErr, m, s, "Failed to patch shoot object, exiting with no retry", "Gardener API shoot patch error")
+		nextState, res, err := handleUpdateError(updateErr, m, s, "Failed to update shoot object, exiting with no retry", "Gardener API shoot update error")
+		if nextState != nil {
+			return nextState, res, err
+		}
+
+		nextState, res, err = waitForWorkerPoolUpdate(ctx, m, s, copyShoot)
+		if err != nil {
+			return requeue()
+		}
 
 		if nextState != nil {
 			return nextState, res, err
@@ -126,6 +136,39 @@ func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg stri
 		m.log.Error(err, errMsg)
 		m.Metrics.IncRuntimeFSMStopCounter()
 		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("%s: %v", statusMsg, err))
+	}
+
+	return nil, nil, nil
+}
+
+// This function verifies whether the update was applied on the server. For more info please see the following issues:
+// - https://github.com/kyma-project/infrastructure-manager/issues/673
+// - https://github.com/kyma-project/infrastructure-manager/issues/674
+func waitForWorkerPoolUpdate(ctx context.Context, m *fsm, s *systemState, shoot *gardener.Shoot) (stateFn, *ctrl.Result, error) {
+	var newShoot gardener.Shoot
+	delay := time.Millisecond * 200
+
+	for i := 0; i < 5; i++ {
+		m.log.Info("Verify worker pool is in sync")
+		time.Sleep(time.Duration(i) * delay)
+
+		err := m.ShootClient.Get(ctx, types.NamespacedName{
+			Name:      s.instance.Spec.Shoot.Name,
+			Namespace: m.ShootNamesapace,
+		}, &newShoot, &client.GetOptions{})
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if workersAreEqual(shoot.Spec.Provider.Workers, newShoot.Spec.Provider.Workers) {
+			break
+		}
+		m.log.Info(fmt.Sprintf("Worker pool is not in sync. Attempt: %d.Retrying.", i+1))
+	}
+
+	if !workersAreEqual(shoot.Spec.Provider.Workers, newShoot.Spec.Provider.Workers) {
+		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, "Workers pool not synchronised")
 	}
 
 	return nil, nil, nil

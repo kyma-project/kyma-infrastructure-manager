@@ -315,13 +315,16 @@ func fixShootsSequenceForUpdate(shoot *gardener_api.Shoot) []*gardener_api.Shoot
 
 	processingShoot.Status.LastOperation.State = gardener_api.LastOperationStateProcessing
 
+	updatingShoot := processingShoot.DeepCopy()
+	updatingShoot.Spec.Provider.Workers[0].Maximum = 5
+
 	readyShoot := processingShoot.DeepCopy()
 
 	readyShoot.Status.LastOperation.State = gardener_api.LastOperationStateSucceeded
 
 	// processedShoot := processingShoot.DeepCopy() // will add specific data later
 
-	return []*gardener_api.Shoot{existingShoot, pendingShoot, tempErrorShoot, processingShoot, readyShoot, readyShoot}
+	return []*gardener_api.Shoot{existingShoot, pendingShoot, tempErrorShoot, processingShoot, updatingShoot, readyShoot, readyShoot}
 }
 
 func fixShootsSequenceForDelete(shoot *gardener_api.Shoot) []*gardener_api.Shoot {
