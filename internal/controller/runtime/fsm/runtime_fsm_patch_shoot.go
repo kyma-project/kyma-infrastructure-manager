@@ -168,7 +168,7 @@ func waitForWorkerPoolUpdate(ctx context.Context, m *fsm, s *systemState, shoot 
 	}
 
 	if !workersAreEqual(shoot.Spec.Provider.Workers, newShoot.Spec.Provider.Workers) {
-		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("%s", "Workers pool not synchronised"))
+		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, "Workers pool not synchronised")
 	}
 
 	return nil, nil, nil
