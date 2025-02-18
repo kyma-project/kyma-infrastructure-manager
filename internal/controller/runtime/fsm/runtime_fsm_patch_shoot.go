@@ -8,10 +8,12 @@ import (
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"time"
 )
 
 const fieldManagerName = "kim"
@@ -70,10 +72,36 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 				FieldManager: fieldManagerName,
 			})
 
-		nextState, res, err := handleUpdateError(updateErr, m, s, "Failed to patch shoot object, exiting with no retry", "Gardener API shoot patch error")
+		nextState, res, err := handleUpdateError(updateErr, m, s, "Failed to update shoot object, exiting with no retry", "Gardener API shoot update error")
 
 		if nextState != nil {
 			return nextState, res, err
+		}
+
+		var newShoot gardener.Shoot
+		delay := time.Millisecond * 200
+
+		for i := 0; i < 5; i++ {
+			m.log.Info("Verify worker pool is in sync")
+			time.Sleep(time.Duration(i) * delay)
+
+			err := m.ShootClient.Get(ctx, types.NamespacedName{
+				Name:      s.instance.Spec.Shoot.Name,
+				Namespace: m.ShootNamesapace,
+			}, &newShoot, &client.GetOptions{})
+
+			if err != nil {
+				return requeue()
+			}
+
+			if workersAreEqual(copyShoot.Spec.Provider.Workers, newShoot.Spec.Provider.Workers) {
+				break
+			}
+			m.log.Info(fmt.Sprintf("Worker pool is not in sync. Attempt: %d.Retrying.", i+1))
+		}
+
+		if !workersAreEqual(copyShoot.Spec.Provider.Workers, newShoot.Spec.Provider.Workers) {
+			return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("%s: %v", "Workers pool not synchronised", err))
 		}
 	}
 
