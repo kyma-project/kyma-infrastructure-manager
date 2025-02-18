@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infrastructure-manager
+  namespace: system
+spec:
+  template:
+    spec:
+      volumes:
+        - name: maintenance-window-config
+          configMap:
+            name: maintenance-window-config
+            items:
+              - key: config
+                path: config
+      containers:
+        - name: manager
+          volumeMounts:
+            - name: maintenance-window-config
+              mountPath: /maintenance-window-config

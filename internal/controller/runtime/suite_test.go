@@ -388,7 +388,7 @@ func fixConverterConfigForTests() config.Config {
 				TenantConfigPath:    filepath.Join("testdata", "auditConfig.json"),
 			},
 			MaintenanceWindow: config.MaintenanceWindowConfig{
-				WindowMapPath: filepath.Join("testdata", "maintenanceWindow.yaml"),
+				WindowMapPath: filepath.Join("testdata", "maintenanceWindow.json"),
 			},
 		},
 	}
