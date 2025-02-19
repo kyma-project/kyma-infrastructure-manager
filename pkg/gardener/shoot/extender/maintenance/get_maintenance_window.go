@@ -42,22 +42,7 @@ func getDataFromFile(filepath, region string) (map[string]string, error) {
 	if err != nil {
 		return nil, errors.Errorf("failed to read file: %s", err.Error())
 	}
-
-	//var config map[string]interface{}
-	//if err = yaml.Unmarshal(fileData, &config); err != nil {
-	//	return nil, errors.Errorf("failed to unmarshal yaml: %s", err.Error())
-	//}
-	//
-	//dataField, ok := config["data"].(map[string]interface{})
-	//if !ok {
-	//	return nil, errors.New("failed to get data field from config map")
-	//}
-	//
-	//configJSON, ok := dataField["config"].(string)
-	//if !ok {
-	//	return nil, errors.New("failed to get config field from data")
-	//}
-
+	
 	var maintenanceWindow map[string]map[string]string
 	if err := json.Unmarshal(fileData, &maintenanceWindow); err != nil {
 		return nil, errors.Errorf("failed to decode json: %s", err.Error())
