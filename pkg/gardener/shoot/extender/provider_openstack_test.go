@@ -195,7 +195,7 @@ func TestProviderExtenderForPatchWorkersUpdateOpenstack(t *testing.T) {
 			ExistingControlPlaneConfig: fixOpenstackControlPlaneConfig(),
 			ExpectedInfraConfigCIDR:    "10.250.0.0/22",
 		},
-		"Update machine type and image name and version in multiple workers separately": {
+		"Update machine type and limage name and version in multiple workers separately": {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
@@ -277,7 +277,7 @@ func TestProviderExtenderForPatchWorkersUpdateOpenstack(t *testing.T) {
 			shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderPatchOperation(false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion, tc.CurrentShootWorkers, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig)
+			extender := NewProviderExtenderPatchOperation(false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion, tc.CurrentShootWorkers, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig, nil)
 			err := extender(tc.Runtime, &shoot)
 
 			// then
