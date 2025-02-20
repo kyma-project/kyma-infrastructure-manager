@@ -2,6 +2,7 @@ package shoot
 
 import (
 	"fmt"
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -58,6 +59,7 @@ type PatchOpts struct {
 	Resources            []gardener.NamedResourceReference
 	InfrastructureConfig *runtime.RawExtension
 	ControlPlaneConfig   *runtime.RawExtension
+	Log                  *logr.Logger
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {
@@ -98,7 +100,8 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.MachineImage.DefaultVersion,
 			opts.Workers,
 			opts.InfrastructureConfig,
-			opts.ControlPlaneConfig))
+			opts.ControlPlaneConfig,
+			opts.Log))
 
 	extendersForPatch = append(extendersForPatch,
 		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.Extensions),

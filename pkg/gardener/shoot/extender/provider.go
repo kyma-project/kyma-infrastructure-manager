@@ -2,6 +2,7 @@ package extender
 
 import (
 	"fmt"
+	"github.com/go-logr/logr"
 	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -63,7 +64,7 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 
 // Zones for patching workes are taken from existing shoot workers
 // InfrastructureConfig and ControlPlaneConfig are treated as immutable unless they are specified in the RuntimeCR
-func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, defMachineImgVer string, shootWorkers []gardener.Worker, existingInfraConfig *runtime.RawExtension, existingControlPlaneConfig *runtime.RawExtension) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, defMachineImgVer string, shootWorkers []gardener.Worker, existingInfraConfig *runtime.RawExtension, existingControlPlaneConfig *runtime.RawExtension, log *logr.Logger) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
 		provider.Type = rt.Spec.Shoot.Provider.Type
@@ -98,7 +99,7 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 			return err
 		}
 
-		correctOneNodeWorkerPools(provider, shootWorkers)
+		correctOneNodeWorkerPools(log, provider, shootWorkers)
 
 		setWorkerSettings(provider)
 		ensureWorkersOrder(provider, shootWorkers)
@@ -312,7 +313,7 @@ func setMachineImage(provider *gardener.Provider, defMachineImgName, defMachineI
 }
 
 // HACK: can be removed when https://github.com/kyma-project/kyma-environment-broker/issues/1766 was fixed
-func correctOneNodeWorkerPools(provider *gardener.Provider, existingWorkers []gardener.Worker) {
+func correctOneNodeWorkerPools(log *logr.Logger, provider *gardener.Provider, existingWorkers []gardener.Worker) {
 	existingWorkersMap := make(map[string]gardener.Worker)
 	for _, existing := range existingWorkers {
 		existingWorkersMap[existing.Name] = existing
@@ -325,6 +326,10 @@ func correctOneNodeWorkerPools(provider *gardener.Provider, existingWorkers []ga
 		}
 
 		if existing, found := existingWorkersMap[alignedWorker.Name]; found {
+			if log != nil {
+				log.Info("Warning: resulting shoot doesn't contain the state defined in the Runtime CR. It is a result of a workaround for Kyma Environment Broker issue #1766 .")
+			}
+
 			alignedWorker.Zones = existing.Zones
 		}
 	}
