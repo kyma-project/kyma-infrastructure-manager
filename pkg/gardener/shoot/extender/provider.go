@@ -311,6 +311,7 @@ func setMachineImage(provider *gardener.Provider, defMachineImgName, defMachineI
 	}
 }
 
+// HACK: can be removed when https://github.com/kyma-project/kyma-environment-broker/issues/1766 was fixed
 func correctOneNodeWorkerPools(provider *gardener.Provider, existingWorkers []gardener.Worker) {
 	existingWorkersMap := make(map[string]gardener.Worker)
 	for _, existing := range existingWorkers {
