@@ -98,8 +98,10 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 			return err
 		}
 
+		correctOneNodeWorkerPools(provider, shootWorkers)
+
 		setWorkerSettings(provider)
-		alignWorkersWithShoot(provider, shootWorkers)
+		ensureWorkersOrder(provider, shootWorkers)
 
 		return nil
 	}
@@ -309,9 +311,27 @@ func setMachineImage(provider *gardener.Provider, defMachineImgName, defMachineI
 	}
 }
 
+func correctOneNodeWorkerPools(provider *gardener.Provider, existingWorkers []gardener.Worker) {
+	existingWorkersMap := make(map[string]gardener.Worker)
+	for _, existing := range existingWorkers {
+		existingWorkersMap[existing.Name] = existing
+	}
+
+	for i := range provider.Workers {
+		alignedWorker := &provider.Workers[i]
+		if len(alignedWorker.Zones) != 1 {
+			continue
+		}
+
+		if existing, found := existingWorkersMap[alignedWorker.Name]; found {
+			alignedWorker.Zones = existing.Zones
+		}
+	}
+}
+
 // We can't predict what will be the order of zones stored by Gardener.
 // Without this patch, gardener's admission webhook might reject the request if the zones order does not match.
-func alignWorkersWithShoot(provider *gardener.Provider, existingWorkers []gardener.Worker) {
+func ensureWorkersOrder(provider *gardener.Provider, existingWorkers []gardener.Worker) {
 	existingWorkersMap := make(map[string]gardener.Worker)
 	for _, existing := range existingWorkers {
 		existingWorkersMap[existing.Name] = existing
