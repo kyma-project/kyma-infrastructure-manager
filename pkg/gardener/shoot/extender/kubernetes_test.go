@@ -229,7 +229,7 @@ func TestCompareVersions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := compareVersions(tt.version1, tt.version2)
+			result, err := CompareVersions(tt.version1, tt.version2)
 			if tt.expectErr {
 				require.Error(t, err)
 			} else {

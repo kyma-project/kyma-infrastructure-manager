@@ -1,4 +1,4 @@
-package extender
+package provider
 
 import (
 	"encoding/json"

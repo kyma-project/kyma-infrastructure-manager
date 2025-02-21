@@ -1,8 +1,10 @@
-package extender
+package provider
 
 import (
 	"fmt"
 	"github.com/go-logr/logr"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -383,7 +385,18 @@ func alignWorkerMachineImageVersion(workerImage *gardener.ShootMachineImage, sho
 		return
 	}
 
-	if result, err := compareVersions(*workerImage.Version, *shootWorkerImage.Version); err == nil && result < 0 {
+	if result, err := extender.CompareVersions(*workerImage.Version, *shootWorkerImage.Version); err == nil && result < 0 {
 		workerImage.Version = shootWorkerImage.Version
+	}
+}
+
+func fixEmptyGardenerShoot(name, namespace string) gardener.Shoot {
+	return gardener.Shoot{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    map[string]string{},
+		},
+		Spec: gardener.ShootSpec{},
 	}
 }

@@ -3,6 +3,7 @@ package shoot
 import (
 	"fmt"
 	"github.com/go-logr/logr"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -66,7 +67,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 	extendersForCreate := baseExtenders(opts.ConverterConfig)
 
 	extendersForCreate = append(extendersForCreate,
-		extender2.NewProviderExtenderForCreateOperation(
+		provider.NewProviderExtenderForCreateOperation(
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
@@ -94,7 +95,7 @@ func NewConverterPatch(opts PatchOpts) Converter {
 	extendersForPatch := baseExtenders(opts.ConverterConfig)
 
 	extendersForPatch = append(extendersForPatch,
-		extender2.NewProviderExtenderPatchOperation(
+		provider.NewProviderExtenderPatchOperation(
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,

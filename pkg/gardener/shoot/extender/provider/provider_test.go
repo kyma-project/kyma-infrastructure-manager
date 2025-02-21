@@ -1,4 +1,4 @@
-package extender
+package provider
 
 import (
 	"k8s.io/apimachinery/pkg/runtime"
