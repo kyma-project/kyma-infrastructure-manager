@@ -195,7 +195,7 @@ func TestProviderExtenderForPatchWorkersUpdateOpenstack(t *testing.T) {
 			ExistingControlPlaneConfig: fixOpenstackControlPlaneConfig(),
 			ExpectedInfraConfigCIDR:    "10.250.0.0/22",
 		},
-		"Update machine type and limage name and version in multiple workers separately": {
+		"Update machine type and image name and version in multiple workers separately": {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{

@@ -170,7 +170,7 @@ func TestProviderExtenderForPatchWorkersUpdateGCP(t *testing.T) {
 			ExistingInfraConfig:        fixGCPInfrastructureConfig("10.250.0.0/22"),
 			ExistingControlPlaneConfig: fixGCPControlPlaneConfig([]string{"us-central1-a", "us-central1-b", "us-central1-c"}),
 		},
-		"Update machine type and limage name and version in multiple workers separately": {
+		"Update machine type and image name and version in multiple workers separately": {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{

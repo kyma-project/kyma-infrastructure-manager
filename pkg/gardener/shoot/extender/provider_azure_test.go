@@ -201,7 +201,7 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 			ExistingInfraConfig:        fixAzureInfrastructureConfig("10.250.0.0/22", []string{"1", "2", "3"}),
 			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
 		},
-		"Update machine type and limage name and version in multiple workers separately": {
+		"Update machine type and image name and version in multiple workers separately": {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{

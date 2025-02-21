@@ -373,7 +373,7 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 			ExistingInfraConfig:        fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 			ExistingControlPlaneConfig: fixAWSControlPlaneConfig(),
 		},
-		"Edit additional worker - extend existing additional worker from HA setup to non HA setup (not allowed in BTP, the KIM is supposed to not modify the zones list)": {
+		"Edit additional worker - modify existing additional worker from HA setup to non HA setup (not allowed in BTP, the KIM is supposed to not modify the zones list)": {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
