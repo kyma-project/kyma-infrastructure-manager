@@ -34,19 +34,19 @@ func main() {
 	flag.StringVar(&outputPath, "outputPath", "", "Path to the resulting shoot CR file.")
 	flag.Parse()
 
-	runtime, err := readRuntimeCRFromFile(runtimePath)
+	inputRuntime, err := readRuntimeCRFromFile(runtimePath)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("Failed to read runtime CR: %v", err))
 	}
 
-	shoot, err := readShootFromFile(shootPath)
+	existingShoot, err := readShootFromFile(shootPath)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("Failed to read shoot CR: %v", err))
 	}
 
 	kcpClient, err := createKcpClient(kubeconfigPath)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("Failed to create Kubernetes client: %v", err))
 	}
 
 	converterConfig, err := getConverterConfig(kcpClient)
@@ -56,15 +56,15 @@ func main() {
 
 	patchConverter := converter.NewConverterPatch(converter.PatchOpts{
 		ConverterConfig:      converterConfig,
-		Workers:              shoot.Spec.Provider.Workers,
-		ShootK8SVersion:      shoot.Spec.Kubernetes.Version,
-		Extensions:           shoot.Spec.Extensions,
-		Resources:            shoot.Spec.Resources,
-		InfrastructureConfig: shoot.Spec.Provider.InfrastructureConfig,
-		ControlPlaneConfig:   shoot.Spec.Provider.ControlPlaneConfig,
+		Workers:              existingShoot.Spec.Provider.Workers,
+		ShootK8SVersion:      existingShoot.Spec.Kubernetes.Version,
+		Extensions:           existingShoot.Spec.Extensions,
+		Resources:            existingShoot.Spec.Resources,
+		InfrastructureConfig: existingShoot.Spec.Provider.InfrastructureConfig,
+		ControlPlaneConfig:   existingShoot.Spec.Provider.ControlPlaneConfig,
 	})
 
-	updatedShoot, err := patchConverter.ToShoot(*runtime)
+	updatedShoot, err := patchConverter.ToShoot(*inputRuntime)
 	if err != nil {
 		panic(err)
 	}

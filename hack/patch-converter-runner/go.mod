@@ -1,4 +1,4 @@
-module github.com/kyma-project/infrastructure-manager/hack/converter-runner
+module github.com/kyma-project/infrastructure-manager/hack/patch-converter-runner
 
 go 1.23.6
 
