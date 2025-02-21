@@ -48,6 +48,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		Resources:            s.shoot.Spec.Resources,
 		InfrastructureConfig: s.shoot.Spec.Provider.InfrastructureConfig,
 		ControlPlaneConfig:   s.shoot.Spec.Provider.ControlPlaneConfig,
+		Log: ptr.To(m.log),
 	})
 
 	if err != nil {
