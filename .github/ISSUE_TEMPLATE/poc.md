@@ -17,9 +17,9 @@ This is a Proof of Concept. Here's a checklist that should help you consider oft
 - [ ] is it clear who will benefit from the PoC and how?
 - [ ] will the final implementation require any migration steps?
 - [ ] is there a need for alignment with KEB/SRE/other teams? 
-- [ ] usually it's worth to timebox such PoC tasks. What would a good timebox in this case?
+- [ ] usually it's worth timeboxing such PoC tasks. What would be a good timebox in this case?
 - [ ] will the final solution need a new repository or any pipelines adjustments?
-- [ ] are we already aware about any additional challenges related to release process? E.g. should an additional threat modelling sessions be scheduled?
+- [ ] are we already aware of any additional challenges related to the release process? E.g. should additional threat modelling sessions be scheduled?
 - [ ] will automated tests require any unusual efforts? E.g. complex setup for e2e tests?
 
 **Reasons**
