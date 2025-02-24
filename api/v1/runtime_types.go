@@ -49,6 +49,7 @@ const (
 	LabelKymaManagedBy       = "operator.kyma-project.io/managed-by"
 	LabelKymaInternal        = "operator.kyma-project.io/internal"
 	LabelKymaPlatformRegion  = "kyma-project.io/platform-region"
+	LabelBillableOverwrite   = "operator.kyma-project.io/billable-manually-managed"
 )
 
 const (
@@ -138,6 +139,9 @@ type RuntimeStatus struct {
 
 	// List of status conditions to indicate the status of a ServiceInstance.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// Field that represents if cluster can be billed or not
+	Billable bool `json:"billable,omitempty"`
 }
 
 type RuntimeShoot struct {
@@ -252,6 +256,18 @@ func (k *Runtime) UpdateStatePending(c RuntimeConditionType, r RuntimeConditionR
 	meta.SetStatusCondition(&k.Status.Conditions, condition)
 }
 
+func (k *Runtime) UpdateBillableStatus() {
+	billableLabelValue := k.GetLabels()[LabelBillableOverwrite]
+
+	if !k.isBillableStatusSet() {
+		if billableLabelValue == "" {
+			k.Status.Billable = true
+			return
+		}
+		k.setBillableOverwrite(billableLabelValue)
+	}
+}
+
 func (k *Runtime) IsStateWithConditionSet(runtimeState State, c RuntimeConditionType, r RuntimeConditionReason) bool {
 	if k.Status.State != runtimeState {
 		return false
@@ -302,4 +318,16 @@ func (k *Runtime) ValidateRequiredLabels() error {
 		}
 	}
 	return nil
+}
+
+func (k *Runtime) isBillableStatusSet() bool {
+	return k.Status.Billable
+}
+
+func (k *Runtime) setBillableOverwrite(billableValue string) {
+	if billableValue == "true" {
+		k.Status.Billable = true
+	} else {
+		k.Status.Billable = false
+	}
 }

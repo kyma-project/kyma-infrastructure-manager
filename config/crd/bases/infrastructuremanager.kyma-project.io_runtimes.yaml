@@ -1691,6 +1691,9 @@ spec:
           status:
             description: RuntimeStatus defines the observed state of Runtime
             properties:
+              billable:
+                description: Field that represents if cluster can be billed or not
+                type: boolean
               conditions:
                 description: List of status conditions to indicate the status of a
                   ServiceInstance.
