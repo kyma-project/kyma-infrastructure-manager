@@ -41,9 +41,10 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	var maintenanceWindowData *gardener.MaintenanceTimeWindow
 	if s.instance.Spec.Shoot.Purpose == "production" && m.ConverterConfig.MaintenanceWindow.WindowMapPath != "" {
-		maintenanceWindowData, err = maintenance.GetMaintenanceWindow(m.ConverterConfig.MaintenanceWindow.WindowMapPath, s.instance.Spec.Shoot.Region)
-		if err != nil {
-			m.log.Error(err, "Failed to get Maintenance Window data for region", "Region", s.instance.Spec.Shoot.Region)
+		var errs error
+		maintenanceWindowData, errs = maintenance.GetMaintenanceWindow(m.ConverterConfig.MaintenanceWindow.WindowMapPath, s.instance.Spec.Shoot.Region)
+		if errs != nil {
+			m.log.Error(errs, "Failed to get Maintenance Window data for region", "Region", s.instance.Spec.Shoot.Region)
 		}
 	}
 
