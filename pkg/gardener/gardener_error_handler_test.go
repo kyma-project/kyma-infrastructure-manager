@@ -85,6 +85,12 @@ func fixRetryableErrors() []gardener.LastError {
 			},
 		},
 		{
+			Description: "ErrorConfigurationProblem -  non-retryable error according to gardener API which we deliberately consider as retryable",
+			Codes: []gardener.ErrorCode{
+				gardener.ErrorConfigurationProblem,
+			},
+		},
+		{
 			Description: "ErrorRetryableInfraDependencies - retryable",
 			Codes: []gardener.ErrorCode{
 				gardener.ErrorRetryableInfraDependencies,
@@ -135,12 +141,6 @@ func fixNonRetryableErrors() []gardener.LastError {
 			Description: "ErrorInfraUnauthorized - non-retryable",
 			Codes: []gardener.ErrorCode{
 				gardener.ErrorInfraUnauthorized,
-			},
-		},
-		{
-			Description: "ErrorConfigurationProblem - non-retryable",
-			Codes: []gardener.ErrorCode{
-				gardener.ErrorConfigurationProblem,
 			},
 		},
 	}
