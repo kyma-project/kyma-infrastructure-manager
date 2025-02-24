@@ -43,10 +43,10 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	if s.instance.Spec.Shoot.Purpose == "production" && m.ConverterConfig.MaintenanceWindow.WindowMapPath != "" {
 		maintenanceWindowData, err = maintenance.GetMaintenanceWindow(m.ConverterConfig.MaintenanceWindow.WindowMapPath, s.instance.Spec.Shoot.Region)
 		if err != nil {
-			m.log.Error(err, "Failed to get Maintenance Window data for region %s", s.instance.Spec.Shoot.Region)
+			m.log.Error(err, "Failed to get Maintenance Window data for region", "Region", s.instance.Spec.Shoot.Region)
 		}
 	}
-	
+
 	// NOTE: In the future we want to pass the whole shoot object here
 	updatedShoot, err := convertPatch(&s.instance, gardener_shoot.PatchOpts{
 		ConverterConfig:       m.ConverterConfig,
@@ -58,7 +58,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		Resources:             s.shoot.Spec.Resources,
 		InfrastructureConfig:  s.shoot.Spec.Provider.InfrastructureConfig,
 		ControlPlaneConfig:    s.shoot.Spec.Provider.ControlPlaneConfig,
-		Log: ptr.To(m.log),
+		Log:                   ptr.To(m.log),
 	})
 
 	if err != nil {
@@ -229,7 +229,7 @@ func convertPatch(instance *imv1.Runtime, opts gardener_shoot.PatchOpts) (garden
 }
 
 func updateStatePendingWithErrorAndStop(instance *imv1.Runtime,
-//nolint:unparam
+	//nolint:unparam
 	c imv1.RuntimeConditionType, r imv1.RuntimeConditionReason, msg string) (stateFn, *ctrl.Result, error) {
 	instance.UpdateStatePending(c, r, "False", msg)
 	return updateStatusAndStop()
