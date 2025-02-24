@@ -11,7 +11,7 @@ func getMaintenanceTimeWindow(s *systemState, m *fsm) *gardener.MaintenanceTimeW
 		var err error
 		maintenanceWindowData, err = maintenance.GetMaintenanceWindow(m.ConverterConfig.MaintenanceWindow.WindowMapPath, s.instance.Spec.Shoot.Region)
 		if err != nil {
-			m.log.Error(err, "Failed to get Maintenance Window data for region", "Region", s.instance.Spec.Shoot.Region)
+			m.log.Error(err, "Failed to get Maintenance Window data for region")
 		}
 	}
 	return maintenanceWindowData

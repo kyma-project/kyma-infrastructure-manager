@@ -33,8 +33,11 @@ func getWindowForRegion(maintenanceWindowConfigPath, region string) (*gardener.M
 		return nil, err
 	}
 
-	return &gardener.MaintenanceTimeWindow{Begin: windowData[BeginMaintenanceWindowKey], End: windowData[EndMaintenanceWindowKey]}, nil
+	if windowData == nil {
+		return nil, nil
+	}
 
+	return &gardener.MaintenanceTimeWindow{Begin: windowData[BeginMaintenanceWindowKey], End: windowData[EndMaintenanceWindowKey]}, nil
 }
 
 func getDataFromFile(filepath, region string) (map[string]string, error) {
@@ -42,7 +45,7 @@ func getDataFromFile(filepath, region string) (map[string]string, error) {
 	if err != nil {
 		return nil, errors.Errorf("failed to read file: %s", err.Error())
 	}
-	
+
 	var maintenanceWindow map[string]map[string]string
 	if err := json.Unmarshal(fileData, &maintenanceWindow); err != nil {
 		return nil, errors.Errorf("failed to decode json: %s", err.Error())
