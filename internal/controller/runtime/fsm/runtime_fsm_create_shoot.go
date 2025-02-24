@@ -3,8 +3,6 @@ package fsm
 import (
 	"context"
 	"fmt"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
-
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
@@ -59,19 +57,10 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 			msgFailedToConfigureAuditlogs)
 	}
 
-	var maintenanceWindowData *gardener.MaintenanceTimeWindow
-	if s.instance.Spec.Shoot.Purpose == "production" && m.ConverterConfig.MaintenanceWindow.WindowMapPath != "" {
-		var errs error
-		maintenanceWindowData, errs = maintenance.GetMaintenanceWindow(m.ConverterConfig.MaintenanceWindow.WindowMapPath, s.instance.Spec.Shoot.Region)
-		if errs != nil {
-			m.log.Error(errs, "Failed to get Maintenance Window data for region", "Region", s.instance.Spec.Shoot.Region)
-		}
-	}
-
 	shoot, err := convertCreate(&s.instance, gardener_shoot.CreateOpts{
 		ConverterConfig:       m.ConverterConfig,
 		AuditLogData:          data,
-		MaintenanceTimeWindow: maintenanceWindowData,
+		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
 	})
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object")

@@ -6,7 +6,6 @@ import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -39,20 +38,11 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			msgFailedToConfigureAuditlogs)
 	}
 
-	var maintenanceWindowData *gardener.MaintenanceTimeWindow
-	if s.instance.Spec.Shoot.Purpose == "production" && m.ConverterConfig.MaintenanceWindow.WindowMapPath != "" {
-		var errs error
-		maintenanceWindowData, errs = maintenance.GetMaintenanceWindow(m.ConverterConfig.MaintenanceWindow.WindowMapPath, s.instance.Spec.Shoot.Region)
-		if errs != nil {
-			m.log.Error(errs, "Failed to get Maintenance Window data for region", "Region", s.instance.Spec.Shoot.Region)
-		}
-	}
-
 	// NOTE: In the future we want to pass the whole shoot object here
 	updatedShoot, err := convertPatch(&s.instance, gardener_shoot.PatchOpts{
 		ConverterConfig:       m.ConverterConfig,
 		AuditLogData:          data,
-		MaintenanceTimeWindow: maintenanceWindowData,
+		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
 		Workers:               s.shoot.Spec.Provider.Workers,
 		ShootK8SVersion:       s.shoot.Spec.Kubernetes.Version,
 		Extensions:            s.shoot.Spec.Extensions,
