@@ -15,36 +15,42 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
+	"log"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 	"strings"
 )
 
+type config struct {
+	runtimePath    string
+	shootPath      string
+	kubeconfigPath string
+	outputPath     string
+}
+
 func main() {
 
-	var runtimePath string
-	var shootPath string
-	var kubeconfigPath string
-	var outputPath string
+	var cfg config
 
-	flag.StringVar(&runtimePath, "runtime-path", "", "Path to the runtime CR file.")
-	flag.StringVar(&shootPath, "shoot-path", "", "Path to the shoot CR file.")
-	flag.StringVar(&kubeconfigPath, "kubeconfig-path", "", "Path to the kubeconfig file.")
-	flag.StringVar(&outputPath, "outputPath", "", "Path to the resulting shoot CR file.")
+	flag.StringVar(&cfg.runtimePath, "runtime-path", "", "Path to the runtime CR file.")
+	flag.StringVar(&cfg.shootPath, "shoot-path", "", "Path to the shoot CR file.")
+	flag.StringVar(&cfg.kubeconfigPath, "kubeconfig-path", "", "Path to the kubeconfig file.")
+	flag.StringVar(&cfg.outputPath, "output-path", "", "Path to the resulting shoot CR file.")
 	flag.Parse()
 
-	inputRuntime, err := readRuntimeCRFromFile(runtimePath)
+	printConfig(cfg)
+	inputRuntime, err := readRuntimeCRFromFile(cfg.runtimePath)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to read runtime CR: %v", err))
 	}
 
-	existingShoot, err := readShootFromFile(shootPath)
+	existingShoot, err := readShootFromFile(cfg.shootPath)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to read shoot CR: %v", err))
 	}
 
-	kcpClient, err := createKcpClient(kubeconfigPath)
+	kcpClient, err := createKcpClient(cfg.kubeconfigPath)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create Kubernetes client: %v", err))
 	}
@@ -69,12 +75,12 @@ func main() {
 		panic(err)
 	}
 
-	err = saveOutputShootFile(outputPath, &updatedShoot)
+	err = saveOutputShootFile(cfg.outputPath, &updatedShoot)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("Shoot CR generated successfully and saved to %s\n", outputPath)
+	fmt.Printf("Shoot CR generated successfully and saved to %s\n", cfg.outputPath)
 }
 
 func readRuntimeCRFromFile(filePath string) (*imv1.Runtime, error) {
@@ -180,4 +186,13 @@ func saveOutputShootFile(outputPath string, updatedShoot *gardener.Shoot) error 
 	}
 
 	return nil
+}
+
+func printConfig(cfg config) {
+	log.Println("runtime-path:", cfg.runtimePath)
+	log.Println("shoot-path:", cfg.shootPath)
+	log.Println("kubeconfig-path:", cfg.kubeconfigPath)
+	log.Println("output-path:", cfg.outputPath)
+
+	log.Println("")
 }
