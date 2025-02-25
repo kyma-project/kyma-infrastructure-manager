@@ -67,19 +67,19 @@ func TestKubernetesVersionExtender(t *testing.T) {
 			Spec: imv1.RuntimeSpec{
 				Shoot: imv1.RuntimeShoot{
 					Kubernetes: imv1.Kubernetes{
-						Version: ptr.To("1.88"),
+						Version: ptr.To("1.88.0"),
 					},
 				},
 			},
 		}
 
 		// when
-		kubernetesVersionExtender := NewKubernetesExtender("1.99", "2.00")
+		kubernetesVersionExtender := NewKubernetesExtender("1.99.0", "2.0.0")
 		err := kubernetesVersionExtender(runtime, &shoot)
 
 		// then
 		require.NoError(t, err)
-		assert.Equal(t, "2.00", shoot.Spec.Kubernetes.Version)
+		assert.Equal(t, "2.0.0", shoot.Spec.Kubernetes.Version)
 	})
 
 	t.Run("Override current Kubernetes version when it is smaller than version provided in the Runtime CR", func(t *testing.T) {
