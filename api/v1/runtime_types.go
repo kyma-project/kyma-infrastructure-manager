@@ -91,7 +91,7 @@ const (
 	ConditionReasonKubernetesAPIErr     = RuntimeConditionReason("KubernetesErr")
 
 	ConditionReasonAuditLogError = RuntimeConditionReason("AuditLogErr")
-	
+
 	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
 	ConditionReasonOidcConfigured           = RuntimeConditionReason("OidcConfigured")
 	ConditionReasonOidcError                = RuntimeConditionReason("OidcConfigurationErr")
@@ -125,8 +125,9 @@ type RuntimeList struct {
 
 // RuntimeSpec defines the desired state of Runtime
 type RuntimeSpec struct {
-	Shoot    RuntimeShoot `json:"shoot"`
-	Security Security     `json:"security"`
+	Shoot    RuntimeShoot       `json:"shoot"`
+	Security Security           `json:"security"`
+	Caching  ImageRegistryCache `json:"imageRegistryCache"`
 }
 
 // RuntimeStatus defines the observed state of Runtime
@@ -199,6 +200,10 @@ type Ingress struct {
 }
 
 type Egress struct {
+	Enabled bool `json:"enabled"`
+}
+
+type ImageRegistryCache struct {
 	Enabled bool `json:"enabled"`
 }
 
