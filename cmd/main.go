@@ -31,6 +31,7 @@ import (
 	"github.com/go-logr/logr"
 	validator "github.com/go-playground/validator/v10"
 	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	custom_config_controller "github.com/kyma-project/infrastructure-manager/internal/controller/customconfig"
 	kubeconfig_controller "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
 	runtime_controller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
@@ -231,7 +232,13 @@ func main() {
 	)
 
 	if err = runtimeReconciler.SetupWithManager(mgr, runtimeCtrlWorkersCnt); err != nil {
-		setupLog.Error(err, "unable to setup controller with Manager", "controller", "Runtime")
+		setupLog.Error(err, "unable to setup runtime controller with Manager", "controller", "Runtime")
+		os.Exit(1)
+	}
+
+	custom_config_controller.NewCustomSKRConfigReconciler(mgr, logger, cfg)
+	if err = runtimeReconciler.SetupWithManager(mgr, runtimeCtrlWorkersCnt); err != nil {
+		setupLog.Error(err, "unable to setup custom config controller with Manager", "controller", "Runtime")
 		os.Exit(1)
 	}
 
