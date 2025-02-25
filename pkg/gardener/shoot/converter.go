@@ -2,6 +2,7 @@ package shoot
 
 import (
 	"fmt"
+	registrycache "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -44,6 +45,7 @@ type CreateOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
+	RegistryCache []registrycache.RegistryCache
 }
 
 type WorkerZones struct {
@@ -55,6 +57,7 @@ type PatchOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
+	RegistryCache        []registrycache.RegistryCache
 	ShootK8SVersion      string
 	Workers              []gardener.Worker
 	Extensions           []gardener.Extension
@@ -77,7 +80,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 		extender2.ExtendWithTolerations,
 	)
 
-	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.ConverterConfig, opts.AuditLogData))
+	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.ConverterConfig, opts.AuditLogData, opts.RegistryCache))
 
 	extendersForCreate = append(extendersForCreate,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
@@ -108,7 +111,7 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.Log))
 
 	extendersForPatch = append(extendersForPatch,
-		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.Extensions),
+		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.Extensions, opts.RegistryCache),
 		extender2.NewResourcesExtenderForPatch(opts.Resources))
 
 	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))

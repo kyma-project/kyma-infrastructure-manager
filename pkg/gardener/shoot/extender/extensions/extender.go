@@ -2,6 +2,7 @@ package extensions
 
 import (
 	"encoding/json"
+	registrycache "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
 	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -17,7 +18,7 @@ type Extension struct {
 	Create CreateExtensionFunc
 }
 
-func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData auditlogs.AuditLogData) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData auditlogs.AuditLogData, registryCache []registrycache.RegistryCache) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			Type: NetworkFilterType,
@@ -53,10 +54,21 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 				return NewAuditLogExtension(auditLogData)
 			},
 		},
+		{
+			Type: RegistryCacheExtensionType,
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+
+				if len(registryCache) > 0 {
+					return NewRegistryCacheExtension(registryCache)
+				}
+
+				return nil, nil
+			},
+		},
 	}, nil)
 }
 
-func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension, registryCache []registrycache.RegistryCache) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			AuditlogExtensionType,
@@ -98,6 +110,17 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensio
 			Type: NetworkFilterType,
 			Create: func(runtime imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
 				return NewNetworkFilterExtension(!runtime.Spec.Security.Networking.Filter.Egress.Enabled)
+			},
+		},
+		{
+			Type: RegistryCacheExtensionType,
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+
+				if len(registryCache) > 0 {
+					return NewRegistryCacheExtension(registryCache)
+				}
+
+				return nil, nil
 			},
 		},
 	}, extensionsOnTheShoot)

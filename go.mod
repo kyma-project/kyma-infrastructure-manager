@@ -4,10 +4,11 @@ go 1.23.6
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
-	github.com/gardener/gardener v1.106.1
+	github.com/gardener/gardener v1.110.4
 	github.com/gardener/gardener-extension-provider-aws v1.58.3
 	github.com/gardener/gardener-extension-provider-gcp v1.40.1
 	github.com/gardener/gardener-extension-provider-openstack v1.42.1
+	github.com/gardener/gardener-extension-registry-cache v0.13.0
 	github.com/gardener/oidc-webhook-authenticator v0.34.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-playground/validator/v10 v10.25.0
@@ -19,7 +20,7 @@ require (
 	k8s.io/api v0.32.2
 	k8s.io/apimachinery v0.32.2
 	k8s.io/client-go v0.32.2
-	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
+	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	sigs.k8s.io/controller-runtime v0.20.2
 )
 
@@ -32,7 +33,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
-	github.com/go-jose/go-jose/v4 v4.0.3 // indirect
+	github.com/go-jose/go-jose/v4 v4.0.4 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
@@ -74,7 +75,7 @@ require (
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/term v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
-	golang.org/x/time v0.7.0 // indirect
+	golang.org/x/time v0.8.0 // indirect
 	golang.org/x/tools v0.28.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/protobuf v1.36.1 // indirect
@@ -85,7 +86,7 @@ require (
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.4.3 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
@@ -94,5 +95,5 @@ replace (
 	golang.org/x/sys => golang.org/x/sys v0.26.0
 	golang.org/x/text => golang.org/x/text v0.19.0
 	golang.org/x/tools => golang.org/x/tools v0.26.0
-	gopkg.in/square/go-jose.v2 => github.com/go-jose/go-jose/v4 v4.0.4
+//gopkg.in/square/go-jose.v2 => github.com/go-jose/go-jose/v4 v4.0.4
 )

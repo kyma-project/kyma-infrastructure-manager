@@ -3,8 +3,10 @@ package fsm
 import (
 	"context"
 	"fmt"
+	registrycache "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	registrycache2 "github.com/kyma-project/infrastructure-manager/internal/controller/customconfig/registrycache"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -38,11 +40,28 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			msgFailedToConfigureAuditlogs)
 	}
 
+	var registryCache []registrycache.RegistryCache
+
+	if s.instance.Spec.Caching.Enabled {
+		configExplorer, err := registrycache2.NewConfigExplorer(ctx, m.Client, s.instance)
+		if err != nil {
+			m.log.Info("Failed to check whether the runtime have custom config defined, retrying", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
+			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+		}
+
+		registryCache, err = configExplorer.GetRegistryCacheConfig()
+		if err != nil {
+			m.log.Info("Failed to get registry cache config, retrying", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
+			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+		}
+	}
+
 	// NOTE: In the future we want to pass the whole shoot object here
 	updatedShoot, err := convertPatch(&s.instance, gardener_shoot.PatchOpts{
 		ConverterConfig:       m.ConverterConfig,
 		AuditLogData:          data,
 		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
+		RegistryCache:         registryCache,
 		Workers:               s.shoot.Spec.Provider.Workers,
 		ShootK8SVersion:       s.shoot.Spec.Kubernetes.Version,
 		Extensions:            s.shoot.Spec.Extensions,

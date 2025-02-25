@@ -408,7 +408,7 @@ spec:
                                       should be encrypted.
                                     type: boolean
                                   name:
-                                    description: Name of the volume to make it referencable.
+                                    description: Name of the volume to make it referenceable.
                                     type: string
                                   size:
                                     description: VolumeSize is the size of the volume.
@@ -963,7 +963,7 @@ spec:
                                     should be encrypted.
                                   type: boolean
                                 name:
-                                  description: Name of the volume to make it referencable.
+                                  description: Name of the volume to make it referenceable.
                                   type: string
                                 size:
                                   description: VolumeSize is the size of the volume.
@@ -1091,7 +1091,7 @@ spec:
                                       should be encrypted.
                                     type: boolean
                                   name:
-                                    description: Name of the volume to make it referencable.
+                                    description: Name of the volume to make it referenceable.
                                     type: string
                                   size:
                                     description: VolumeSize is the size of the volume.
@@ -1646,7 +1646,7 @@ spec:
                                     should be encrypted.
                                   type: boolean
                                 name:
-                                  description: Name of the volume to make it referencable.
+                                  description: Name of the volume to make it referenceable.
                                   type: string
                                 size:
                                   description: VolumeSize is the size of the volume.
