@@ -1,6 +1,7 @@
 package extender
 
 import (
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"testing"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -49,7 +50,7 @@ func TestExtendWithCloudProfile(t *testing.T) {
 					},
 				},
 			}
-			shoot := fixEmptyGardenerShoot("test", "dev")
+			shoot := testutils.FixEmptyGardenerShoot("test", "dev")
 
 			// when
 			err := ExtendWithCloudProfile(runtime, &shoot)
@@ -72,7 +73,7 @@ func TestExtendWithCloudProfile(t *testing.T) {
 				},
 			},
 		}
-		shoot := fixEmptyGardenerShoot("test", "dev")
+		shoot := testutils.FixEmptyGardenerShoot("test", "dev")
 
 		// when
 		err := ExtendWithCloudProfile(runtime, &shoot)

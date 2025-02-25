@@ -5,6 +5,7 @@ import (
 	gcpext "github.com/gardener/gardener-extension-provider-gcp/pkg/apis/gcp/v1alpha1"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/gcp"
 	"github.com/stretchr/testify/assert"
@@ -72,7 +73,7 @@ func TestProviderExtenderForCreateGCP(t *testing.T) {
 	} {
 		t.Run(tname, func(t *testing.T) {
 			// given
-			shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
+			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
 
@@ -246,7 +247,7 @@ func TestProviderExtenderForPatchWorkersUpdateGCP(t *testing.T) {
 	} {
 		t.Run(tname, func(t *testing.T) {
 			// given
-			shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
+			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
 			extender := NewProviderExtenderPatchOperation(false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion, tc.CurrentShootWorkers, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig, nil)
@@ -297,7 +298,7 @@ func TestProviderExtenderForCreateMultipleWorkersGCP(t *testing.T) {
 	} {
 		t.Run(tname, func(t *testing.T) {
 			// given
-			shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
+			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
 			extender := NewProviderExtenderForCreateOperation(false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)

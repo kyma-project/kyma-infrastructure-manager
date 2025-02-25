@@ -3,7 +3,6 @@ package fsm
 import (
 	"context"
 	"fmt"
-
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
@@ -59,8 +58,9 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	}
 
 	shoot, err := convertCreate(&s.instance, gardener_shoot.CreateOpts{
-		ConverterConfig: m.ConverterConfig,
-		AuditLogData:    data,
+		ConverterConfig:       m.ConverterConfig,
+		AuditLogData:          data,
+		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
 	})
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object")

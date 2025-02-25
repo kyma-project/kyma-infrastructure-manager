@@ -40,15 +40,16 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	// NOTE: In the future we want to pass the whole shoot object here
 	updatedShoot, err := convertPatch(&s.instance, gardener_shoot.PatchOpts{
-		ConverterConfig:      m.ConverterConfig,
-		AuditLogData:         data,
-		Workers:              s.shoot.Spec.Provider.Workers,
-		ShootK8SVersion:      s.shoot.Spec.Kubernetes.Version,
-		Extensions:           s.shoot.Spec.Extensions,
-		Resources:            s.shoot.Spec.Resources,
-		InfrastructureConfig: s.shoot.Spec.Provider.InfrastructureConfig,
-		ControlPlaneConfig:   s.shoot.Spec.Provider.ControlPlaneConfig,
-		Log:                  ptr.To(m.log),
+		ConverterConfig:       m.ConverterConfig,
+		AuditLogData:          data,
+		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
+		Workers:               s.shoot.Spec.Provider.Workers,
+		ShootK8SVersion:       s.shoot.Spec.Kubernetes.Version,
+		Extensions:            s.shoot.Spec.Extensions,
+		Resources:             s.shoot.Spec.Resources,
+		InfrastructureConfig:  s.shoot.Spec.Provider.InfrastructureConfig,
+		ControlPlaneConfig:    s.shoot.Spec.Provider.ControlPlaneConfig,
+		Log:                   ptr.To(m.log),
 	})
 
 	if err != nil {
