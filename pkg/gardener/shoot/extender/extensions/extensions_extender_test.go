@@ -63,7 +63,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 				},
 			}
 
-			extender := NewExtensionsExtenderForCreate(config, testcase.inputAuditLogData)
+			extender := NewExtensionsExtenderForCreate(config, testcase.inputAuditLogData, nil)
 
 			err := extender(runtime, shoot)
 			assert.NoError(t, err)
@@ -181,7 +181,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 
 			isEmptyAuditLogData := testCase.inputAuditLogData == (auditlogs.AuditLogData{})
 
-			extender := NewExtensionsExtenderForPatch(testCase.inputAuditLogData, testCase.previousExtensions)
+			extender := NewExtensionsExtenderForPatch(testCase.inputAuditLogData, testCase.previousExtensions, nil)
 			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, isEmptyAuditLogData)
 
 			err := extender(runtime, shoot)
