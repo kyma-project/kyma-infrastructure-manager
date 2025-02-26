@@ -5,6 +5,7 @@ import (
 	ostext "github.com/gardener/gardener-extension-provider-openstack/pkg/apis/openstack/v1alpha1"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	ops "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/openstack"
 	"github.com/stretchr/testify/assert"
@@ -94,7 +95,7 @@ func TestProviderExtenderForCreateOpenstack(t *testing.T) {
 	} {
 		t.Run(tname, func(t *testing.T) {
 			// given
-			shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
+			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
 			extender := NewProviderExtenderForCreateOperation(false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
@@ -274,7 +275,7 @@ func TestProviderExtenderForPatchWorkersUpdateOpenstack(t *testing.T) {
 	} {
 		t.Run(tname, func(t *testing.T) {
 			// given
-			shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
+			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
 			extender := NewProviderExtenderPatchOperation(false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion, tc.CurrentShootWorkers, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig, nil)

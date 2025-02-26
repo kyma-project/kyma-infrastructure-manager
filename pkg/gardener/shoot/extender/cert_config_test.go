@@ -1,6 +1,7 @@
 package extender
 
 import (
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"testing"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -14,7 +15,7 @@ import (
 func TestCertConfigExtender(t *testing.T) {
 	t.Run("Extend with cert-config", func(t *testing.T) {
 		// given
-		shoot := fixEmptyGardenerShoot("shoot", "kcp-system")
+		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
 		runtime := imv1.Runtime{
 			ObjectMeta: v1.ObjectMeta{
 				Name:      "runtime",

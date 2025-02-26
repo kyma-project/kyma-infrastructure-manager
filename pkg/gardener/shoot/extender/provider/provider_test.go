@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"testing"
@@ -15,7 +16,7 @@ import (
 func TestValidations(t *testing.T) {
 	t.Run("Return error for unknown provider", func(t *testing.T) {
 		// given
-		shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
+		shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 		rt := imv1.Runtime{
 			Spec: imv1.RuntimeSpec{
 				Shoot: imv1.RuntimeShoot{
@@ -79,7 +80,7 @@ func TestValidations(t *testing.T) {
 	} {
 		t.Run(tname, func(t *testing.T) {
 			// given
-			shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
+			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
 			extender := NewProviderExtenderPatchOperation(false, "gardenlinux", "1311.2.0", tc.CurrentWorkers, nil, nil, nil)
@@ -94,7 +95,7 @@ func TestValidations(t *testing.T) {
 func TestFixKEBIssue1766(t *testing.T) {
 	t.Run("The single node worker pool specified in the Runtime CR refers to zone that is different on the existing shoot", func(t *testing.T) {
 		// given
-		shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
+		shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 		runtime := imv1.Runtime{
 			Spec: imv1.RuntimeSpec{
@@ -293,7 +294,7 @@ func TestProviderExtenderForCreateMultipleWorkersAWS(t *testing.T) {
 	} {
 		t.Run(tname, func(t *testing.T) {
 			// given
-			shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
+			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
 			extender := NewProviderExtenderForCreateOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
@@ -506,7 +507,7 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 	} {
 		t.Run(tname, func(t *testing.T) {
 			// given
-			shoot := fixEmptyGardenerShoot("cluster", "kcp-system")
+			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
 			extender := NewProviderExtenderPatchOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion, tc.CurrentShootWorkers, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig, nil)

@@ -24,7 +24,7 @@ import (
 func TestConverter(t *testing.T) {
 	t.Run("Create shoot from Runtime with valid Auditlog Configuration", func(t *testing.T) {
 		// given
-		runtime := fixRuntime()
+		runtime := fixRuntime(gardener.ShootPurposeProduction)
 		converterConfig := fixConverterConfig()
 		auditLogData := auditlogs.AuditLogData{
 			TenantID:   "test-auditlog-tenant",
@@ -52,7 +52,7 @@ func TestConverter(t *testing.T) {
 
 	t.Run("Create shoot from Runtime with empty Auditlog Configuration", func(t *testing.T) {
 		// given
-		runtime := fixRuntime()
+		runtime := fixRuntime(gardener.ShootPurposeProduction)
 		converterConfig := fixConverterConfig()
 		emptyAuditLogData := auditlogs.AuditLogData{}
 
@@ -105,7 +105,7 @@ func TestConverter(t *testing.T) {
 
 	t.Run("Create shoot from Runtime for existing shoot and keep versions if Shoot has bigger versions then Runtime", func(t *testing.T) {
 		// given
-		runtime := fixRuntime()
+		runtime := fixRuntime(gardener.ShootPurposeProduction)
 		converterConfig := fixConverterConfig()
 
 		auditLogData := auditlogs.AuditLogData{
@@ -148,7 +148,7 @@ func TestConverter(t *testing.T) {
 
 	t.Run("Create shoot from Runtime for existing shoot and update versions if Shoot has lesser versions then Runtime", func(t *testing.T) {
 		// given
-		runtime := fixRuntime()
+		runtime := fixRuntime(gardener.ShootPurposeProduction)
 		converterConfig := fixConverterConfig()
 		auditLogData := auditlogs.AuditLogData{
 			TenantID:   "test-auditlog-tenant",
@@ -186,6 +186,95 @@ func TestConverter(t *testing.T) {
 
 		extensionLen := len(shoot.Spec.Extensions)
 		require.Equalf(t, extensionLen, 5, "unexpected number of extensions: %d, expected: 5", extensionLen)
+	})
+
+	t.Run("Create shoot from Runtime and apply Maintenance Window if purpose is set to Production", func(t *testing.T) {
+		// given
+		runtime := fixRuntime(gardener.ShootPurposeProduction)
+		converterConfig := fixConverterConfig()
+		auditLogData := auditlogs.AuditLogData{
+			TenantID:   "test-auditlog-tenant",
+			ServiceURL: "test-auditlog-service-url",
+			SecretName: "doesnt matter",
+		}
+
+		expectedMaintenanceWindow := &gardener.MaintenanceTimeWindow{
+			Begin: "200000+0000",
+			End:   "230000+0000",
+		}
+
+		converter := NewConverterCreate(CreateOpts{
+			ConverterConfig:       converterConfig,
+			AuditLogData:          auditLogData,
+			MaintenanceTimeWindow: expectedMaintenanceWindow,
+		})
+
+		// when
+		shoot, err := converter.ToShoot(runtime)
+
+		// then
+		require.NoError(t, err)
+		assertShootFields(t, runtime, shoot)
+
+		assert.Equal(t, expectedMaintenanceWindow.Begin, shoot.Spec.Maintenance.TimeWindow.Begin)
+		assert.Equal(t, expectedMaintenanceWindow.End, shoot.Spec.Maintenance.TimeWindow.End)
+
+	})
+
+	t.Run("Create shoot from Runtime and do not apply Maintenance Window if purpose is set not to Production", func(t *testing.T) {
+		// given
+		runtime := fixRuntime(gardener.ShootPurposeDevelopment)
+		converterConfig := fixConverterConfig()
+		auditLogData := auditlogs.AuditLogData{
+			TenantID:   "test-auditlog-tenant",
+			ServiceURL: "test-auditlog-service-url",
+			SecretName: "doesnt matter",
+		}
+
+		expectedMaintenanceWindow := &gardener.MaintenanceTimeWindow{}
+
+		converter := NewConverterCreate(CreateOpts{
+			ConverterConfig:       converterConfig,
+			AuditLogData:          auditLogData,
+			MaintenanceTimeWindow: expectedMaintenanceWindow,
+		})
+
+		// when
+		shoot, err := converter.ToShoot(runtime)
+
+		// then
+		require.NoError(t, err)
+		assertShootFields(t, runtime, shoot)
+
+		assert.Equal(t, expectedMaintenanceWindow, shoot.Spec.Maintenance.TimeWindow)
+	})
+
+	t.Run("Create shoot from Runtime, if purpose is set to Production and Maintenance Window is not found", func(t *testing.T) {
+		// given
+		runtime := fixRuntime(gardener.ShootPurposeProduction)
+		converterConfig := fixConverterConfig()
+		auditLogData := auditlogs.AuditLogData{
+			TenantID:   "test-auditlog-tenant",
+			ServiceURL: "test-auditlog-service-url",
+			SecretName: "doesnt matter",
+		}
+
+		expectedMaintenanceWindow := &gardener.MaintenanceTimeWindow{}
+
+		converter := NewConverterCreate(CreateOpts{
+			ConverterConfig:       converterConfig,
+			AuditLogData:          auditLogData,
+			MaintenanceTimeWindow: expectedMaintenanceWindow,
+		})
+
+		// when
+		shoot, err := converter.ToShoot(runtime)
+
+		// then
+		require.NoError(t, err)
+		assertShootFields(t, runtime, shoot)
+
+		assert.Equal(t, expectedMaintenanceWindow, shoot.Spec.Maintenance.TimeWindow)
 	})
 }
 
@@ -288,7 +377,7 @@ func fixAWSControlPlaneConfig() *runtime.RawExtension {
 	return &runtime.RawExtension{Raw: controlPlaneConfig}
 }
 
-func fixRuntime() imv1.Runtime {
+func fixRuntime(purpose gardener.ShootPurpose) imv1.Runtime {
 	kubernetesVersion := "1.28"
 	clientID := "client-id"
 	groupsClaim := "groups"
@@ -303,7 +392,7 @@ func fixRuntime() imv1.Runtime {
 		},
 		Spec: imv1.RuntimeSpec{
 			Shoot: imv1.RuntimeShoot{
-				Purpose:           "production",
+				Purpose:           purpose,
 				Region:            "eu-central-1",
 				SecretBindingName: "my-secret",
 				Provider: imv1.Provider{

@@ -38,8 +38,7 @@ func hasOneOfGardenerNonRetryableErrorCode(lastErrors ...gardener.LastError) boo
 	for _, lastError := range lastErrors {
 		for _, code := range lastError.Codes {
 			if code == gardener.ErrorInfraUnauthenticated ||
-				code == gardener.ErrorInfraUnauthorized ||
-				code == gardener.ErrorConfigurationProblem {
+				code == gardener.ErrorInfraUnauthorized {
 				return true
 			}
 		}
@@ -53,6 +52,7 @@ func hasOneOfKnownRetryableGardenerErrorCode(lastErrors ...gardener.LastError) b
 			if code == gardener.ErrorInfraRateLimitsExceeded ||
 				code == gardener.ErrorInfraQuotaExceeded ||
 				code == gardener.ErrorInfraDependencies ||
+				code == gardener.ErrorConfigurationProblem ||
 				code == gardener.ErrorProblematicWebhook {
 				return true
 			}

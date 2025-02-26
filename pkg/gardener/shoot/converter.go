@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -25,7 +26,6 @@ func baseExtenders(cfg config.ConverterConfig) []Extend {
 		extender2.NewOidcExtender(cfg.Kubernetes.DefaultOperatorOidc),
 		extender2.ExtendWithCloudProfile,
 		extender2.ExtendWithExposureClassName,
-		extender2.NewMaintenanceExtender(cfg.Kubernetes.EnableKubernetesVersionAutoUpdate, cfg.Kubernetes.EnableMachineImageVersionAutoUpdate),
 	}
 }
 
@@ -44,6 +44,7 @@ func newConverter(config config.ConverterConfig, extenders ...Extend) Converter 
 type CreateOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
+	*gardener.MaintenanceTimeWindow
 }
 
 type WorkerZones struct {
@@ -54,6 +55,7 @@ type WorkerZones struct {
 type PatchOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
+	*gardener.MaintenanceTimeWindow
 	ShootK8SVersion      string
 	Workers              []gardener.Worker
 	Extensions           []gardener.Extension
@@ -80,6 +82,8 @@ func NewConverterCreate(opts CreateOpts) Converter {
 
 	extendersForCreate = append(extendersForCreate,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
+
+	extendersForCreate = append(extendersForCreate, maintenance.NewMaintenanceExtender(opts.ConverterConfig.Kubernetes.EnableKubernetesVersionAutoUpdate, opts.ConverterConfig.Kubernetes.EnableMachineImageVersionAutoUpdate, opts.MaintenanceTimeWindow))
 
 	if opts.AuditLogData != (auditlogs.AuditLogData{}) {
 		extendersForCreate = append(extendersForCreate,
@@ -109,6 +113,8 @@ func NewConverterPatch(opts PatchOpts) Converter {
 		extender2.NewResourcesExtenderForPatch(opts.Resources))
 
 	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
+
+	extendersForPatch = append(extendersForPatch, maintenance.NewMaintenanceExtender(opts.ConverterConfig.Kubernetes.EnableKubernetesVersionAutoUpdate, opts.ConverterConfig.Kubernetes.EnableMachineImageVersionAutoUpdate, opts.MaintenanceTimeWindow))
 
 	if opts.AuditLogData != (auditlogs.AuditLogData{}) {
 		extendersForPatch = append(extendersForPatch,

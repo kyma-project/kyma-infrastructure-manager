@@ -1,0 +1,8 @@
+apiVersion: v1
+data:
+  config: |
+    {"eu-central-1":{"begin":"200000+0000","end":"000000+0000"}}
+kind: ConfigMap
+metadata:
+  name: maintenance-window-config
+  namespace: test-namespace
