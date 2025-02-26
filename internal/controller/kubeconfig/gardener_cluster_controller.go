@@ -24,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
+	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -129,7 +130,7 @@ func (controller *GardenerClusterController) Reconcile(ctx context.Context, req 
 	now := time.Now().UTC()
 	requeueAfter := nextRequeue(now, lastSyncTime, controller.rotationPeriod, rotationPeriodRatio)
 
-	controller.log.WithValues(loggingContextFromCluster(&cluster)...).Info("rotation params",
+	controller.log.V(log_level.DEBUG).WithValues(loggingContextFromCluster(&cluster)...).Info("rotation params",
 		"lastSync", lastSyncTime.Format("2006-01-02 15:04:05"),
 		"requeueAfter", requeueAfter.String(),
 		"gardenerRequestTimeout", controller.gardenerRequestTimeout.String(),
@@ -175,8 +176,6 @@ func loggingContext(req ctrl.Request) []any {
 }
 
 func (controller *GardenerClusterController) resultWithRequeue(cluster *imv1.GardenerCluster, requeueAfter time.Duration) ctrl.Result {
-	controller.log.Info("result with requeue", "RequeueAfter", requeueAfter.String())
-
 	controller.metrics.SetGardenerClusterStates(*cluster)
 
 	return ctrl.Result{
@@ -186,7 +185,6 @@ func (controller *GardenerClusterController) resultWithRequeue(cluster *imv1.Gar
 }
 
 func (controller *GardenerClusterController) resultWithoutRequeue(cluster *imv1.GardenerCluster) ctrl.Result { //nolint:unparam
-	controller.log.Info("result without requeue")
 	controller.metrics.SetGardenerClusterStates(*cluster)
 	return ctrl.Result{}
 }
@@ -266,7 +264,7 @@ func (controller *GardenerClusterController) handleKubeconfig(ctx context.Contex
 
 	if secretRotationForced(cluster) {
 		message := fmt.Sprintf("Rotation of secret %s in namespace %s forced.", cluster.Spec.Kubeconfig.Secret.Name, cluster.Spec.Kubeconfig.Secret.Namespace)
-		controller.log.Info(message, loggingContextFromCluster(cluster)...)
+		controller.log.V(log_level.DEBUG).Info(message, loggingContextFromCluster(cluster)...)
 
 		// delete secret containing kubeconfig to be rotated
 		if err := controller.removeKubeconfig(ctx, cluster, secret); err != nil {
@@ -281,7 +279,7 @@ func (controller *GardenerClusterController) handleKubeconfig(ctx context.Contex
 
 	if !secretNeedsToBeRotated(cluster, secret, controller.rotationPeriod, now) {
 		message := fmt.Sprintf("Secret %s in namespace %s does not need to be rotated yet.", cluster.Spec.Kubeconfig.Secret.Name, cluster.Spec.Kubeconfig.Secret.Namespace)
-		controller.log.Info(message, loggingContextFromCluster(cluster)...)
+		controller.log.V(log_level.DEBUG).Info(message, loggingContextFromCluster(cluster)...)
 		cluster.UpdateConditionForReadyState(imv1.ConditionTypeKubeconfigManagement, imv1.ConditionReasonKubeconfigSecretCreated, metav1.ConditionTrue)
 		controller.metrics.SetKubeconfigExpiration(*secret, controller.rotationPeriod, controller.minimalRotationTimeRatio)
 		return ksZero, nil
@@ -336,7 +334,7 @@ func (controller *GardenerClusterController) createNewSecret(ctx context.Context
 	cluster.UpdateConditionForReadyState(imv1.ConditionTypeKubeconfigManagement, imv1.ConditionReasonKubeconfigSecretCreated, metav1.ConditionTrue)
 	controller.metrics.SetKubeconfigExpiration(newSecret, controller.rotationPeriod, controller.minimalRotationTimeRatio)
 	message := fmt.Sprintf("Secret %s has been created in %s namespace.", newSecret.Name, newSecret.Namespace)
-	controller.log.Info(message, loggingContextFromCluster(cluster)...)
+	controller.log.V(log_level.DEBUG).Info(message, loggingContextFromCluster(cluster)...)
 
 	return nil
 }
@@ -379,7 +377,7 @@ func (controller *GardenerClusterController) updateExistingSecret(ctx context.Co
 	controller.metrics.SetKubeconfigExpiration(*existingSecret, controller.rotationPeriod, controller.minimalRotationTimeRatio)
 
 	message := fmt.Sprintf("Secret %s has been updated in %s namespace.", existingSecret.Name, existingSecret.Namespace)
-	controller.log.Info(message, loggingContextFromCluster(cluster)...)
+	controller.log.V(log_level.DEBUG).Info(message, loggingContextFromCluster(cluster)...)
 
 	return nil
 }

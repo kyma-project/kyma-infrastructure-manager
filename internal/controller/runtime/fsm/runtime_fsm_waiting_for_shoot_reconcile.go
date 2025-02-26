@@ -11,8 +11,6 @@ import (
 )
 
 func sFnWaitForShootReconcile(_ context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	m.log.Info("Waiting for shoot reconcile state")
-
 	switch s.shoot.Status.LastOperation.State {
 	case gardener.LastOperationStateProcessing, gardener.LastOperationStatePending, gardener.LastOperationStateAborted, gardener.LastOperationStateError:
 		m.log.Info(fmt.Sprintf("Shoot %s is in %s state, scheduling for retry", s.shoot.Name, s.shoot.Status.LastOperation.State))

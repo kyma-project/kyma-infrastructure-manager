@@ -25,7 +25,6 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 	// instance is being deleted
 	if instanceIsBeingDeleted {
 		if s.shoot != nil {
-			m.log.Info("Delete instance resources")
 			return switchState(sFnDeleteKubeconfig)
 		}
 
@@ -36,8 +35,6 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 	}
 
 	if s.shoot == nil && provisioningCondition == nil {
-		m.log.Info("Update Runtime state to Pending - initialised")
-
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonInitialized,
@@ -52,13 +49,10 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 		return switchState(sFnCreateShoot)
 	}
 
-	m.log.Info("Gardener shoot exists, processing")
-
 	return switchState(sFnSelectShootProcessing)
 }
 
 func addFinalizerAndRequeue(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	m.log.Info("adding finalizer")
 	controllerutil.AddFinalizer(&s.instance, m.Finalizer)
 
 	err := m.Update(ctx, &s.instance)
@@ -69,7 +63,6 @@ func addFinalizerAndRequeue(ctx context.Context, m *fsm, s *systemState) (stateF
 }
 
 func removeFinalizerAndStop(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	m.log.Info("removing finalizer")
 	runtimeID := s.instance.GetLabels()[metrics.RuntimeIDLabel]
 	controllerutil.RemoveFinalizer(&s.instance, m.Finalizer)
 	err := m.Update(ctx, &s.instance)

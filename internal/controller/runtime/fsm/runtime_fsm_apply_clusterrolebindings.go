@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,7 +72,7 @@ func logDeletedClusterRoleBindings(removed []rbacv1.ClusterRoleBinding, m *fsm, 
 		for _, binding := range removed {
 			crbsNames = append(crbsNames, binding.Name)
 		}
-		m.log.Info("Following CRBs were deleted", "deletedCRBs", crbsNames)
+		m.log.V(log_level.DEBUG).Info("Following CRBs were deleted", "deletedCRBs", crbsNames)
 	}
 }
 

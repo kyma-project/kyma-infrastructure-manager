@@ -5,14 +5,13 @@ import (
 	"fmt"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 func sFnDeleteKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	m.log.Info("delete Kubeconfig/GardenerCluster CR state")
-
 	// get section
 	runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
 	var cluster imv1.GardenerCluster
@@ -39,7 +38,7 @@ func sFnDeleteKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 
 	// wait section
 	if !cluster.DeletionTimestamp.IsZero() {
-		m.log.Info("Waiting for GardenerCluster CR to be deleted", "Runtime", runtimeID, "Shoot", s.shoot.Name)
+		m.log.V(log_level.DEBUG).Info("Waiting for GardenerCluster CR to be deleted", "Runtime", runtimeID, "Shoot", s.shoot.Name)
 		return requeueAfter(m.RCCfg.ControlPlaneRequeueDuration)
 	}
 
