@@ -38,4 +38,4 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-../../bin/patch-converter-runner --output-path "$OUTPUTDIR/generated-shoot.yaml" --runtime-path  "$OUTPUTDIR/runtime.yaml" --shoot-path  "$OUTPUTDIR/current-shoot.yaml" --kubeconfig-path $KCP_KUBECONFIG
+../../bin/patch-converter-runner --output-path "$OUTPUTDIR/generated-shoot.yaml" --runtime-path  "$OUTPUTDIR/runtime.yaml" --shoot-path  "$OUTPUTDIR/current-shoot.yaml" --kcp-kubeconfig-path $KCP_KUBECONFIG

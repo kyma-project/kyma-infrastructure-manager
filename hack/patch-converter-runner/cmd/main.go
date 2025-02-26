@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	kimConfig "github.com/kyma-project/infrastructure-manager/pkg/config"
 	converter "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
@@ -35,7 +34,7 @@ func main() {
 
 	flag.StringVar(&cfg.runtimePath, "runtime-path", "", "Path to the runtime CR file.")
 	flag.StringVar(&cfg.shootPath, "shoot-path", "", "Path to the shoot CR file.")
-	flag.StringVar(&cfg.kubeconfigPath, "kubeconfig-path", "", "Path to the kubeconfig file.")
+	flag.StringVar(&cfg.kubeconfigPath, "kcp-kubeconfig-path", "", "Path to the kubeconfig file.")
 	flag.StringVar(&cfg.outputPath, "output-path", "", "Path to the resulting shoot CR file.")
 	flag.Parse()
 
@@ -83,8 +82,8 @@ func main() {
 	fmt.Printf("Shoot CR generated successfully and saved to %s\n", cfg.outputPath)
 }
 
-func readRuntimeCRFromFile(filePath string) (*imv1.Runtime, error) {
-	return readObjectFromFile[imv1.Runtime](filePath)
+func readRuntimeCRFromFile(filePath string) (*v1.Runtime, error) {
+	return readObjectFromFile[v1.Runtime](filePath)
 }
 
 func readShootFromFile(filePath string) (*gardener.Shoot, error) {
@@ -129,14 +128,14 @@ func createKcpClient(kcpKubeconfigPath string) (client.Client, error) {
 }
 
 func addToScheme(s *runtime.Scheme) error {
-	for _, add := range []func(s *runtime.Scheme) error{
-		corev1.AddToScheme,
-		v1.AddToScheme,
-	} {
-		if err := add(s); err != nil {
-			return fmt.Errorf("unable to add scheme: %w", err)
-		}
+	if err := corev1.AddToScheme(s); err != nil {
+		return fmt.Errorf("unable to add scheme: %v", err)
 	}
+
+	if err := v1.AddToScheme(s); err != nil {
+		return fmt.Errorf("unable to add scheme ee: %v", err)
+	}
+
 	return nil
 }
 
