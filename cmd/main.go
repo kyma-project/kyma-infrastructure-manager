@@ -236,8 +236,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	custom_config_controller.NewCustomSKRConfigReconciler(mgr, logger, cfg)
-	if err = runtimeReconciler.SetupWithManager(mgr, runtimeCtrlWorkersCnt); err != nil {
+	customConfigReconciler := custom_config_controller.NewCustomSKRConfigReconciler(mgr, logger)
+	if err = customConfigReconciler.SetupWithManager(mgr, 1); err != nil {
 		setupLog.Error(err, "unable to setup custom config controller with Manager", "controller", "Runtime")
 		os.Exit(1)
 	}

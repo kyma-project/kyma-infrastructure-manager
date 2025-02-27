@@ -98,5 +98,6 @@ func (r *RuntimeReconciler) SetupWithManager(mgr ctrl.Manager, numberOfWorkers i
 			predicate.LabelChangedPredicate{},
 			predicate.AnnotationChangedPredicate{},
 		)).
+		Named("runtime-controller").
 		Complete(r)
 }

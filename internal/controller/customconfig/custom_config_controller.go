@@ -78,13 +78,13 @@ func (r *CustomSKRConfigReconciler) handleCustomConfig(ctx context.Context, runt
 		r.Log.Error(err, "Failed to create custom config explorer")
 		return ctrl.Result{
 			Requeue:      true,
-			RequeueAfter: time.Minute,
+			RequeueAfter: 30 * time.Minute,
 		}, err
 	}
 
 	exists, err := customConfigExplorer.RegistryCacheConfigExists()
 	if err != nil {
-		r.Log.Error(err, "Failed to create custom config explorer")
+		r.Log.Error(err, "Failed to verify custom config explorer")
 		return ctrl.Result{
 			Requeue:      true,
 			RequeueAfter: time.Minute,
@@ -109,17 +109,16 @@ func (r *CustomSKRConfigReconciler) handleCustomConfig(ctx context.Context, runt
 
 	return ctrl.Result{
 		Requeue:      true,
-		RequeueAfter: time.Minute,
+		RequeueAfter: 30 * time.Minute,
 	}, err
 }
 
-func NewCustomSKRConfigReconciler(mgr ctrl.Manager, logger logr.Logger, cfg fsm.RCCfg) *CustomSKRConfigReconciler {
+func NewCustomSKRConfigReconciler(mgr ctrl.Manager, logger logr.Logger) *CustomSKRConfigReconciler {
 	return &CustomSKRConfigReconciler{
 		Client:        mgr.GetClient(),
 		Scheme:        mgr.GetScheme(),
 		EventRecorder: mgr.GetEventRecorderFor("runtime-controller"),
 		Log:           logger,
-		Cfg:           cfg,
 	}
 }
 
@@ -133,5 +132,6 @@ func (r *CustomSKRConfigReconciler) SetupWithManager(mgr ctrl.Manager, numberOfW
 			predicate.LabelChangedPredicate{},
 			predicate.AnnotationChangedPredicate{},
 		)).
+		Named("custom-config-controller").
 		Complete(r)
 }

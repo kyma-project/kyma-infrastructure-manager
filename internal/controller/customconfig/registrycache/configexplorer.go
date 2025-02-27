@@ -21,6 +21,7 @@ func NewConfigExplorer(ctx context.Context, kcpClient client.Client, runtime imv
 
 	return ConfigExplorer{
 		shootClient: shootClient,
+		Context:     ctx,
 	}, nil
 }
 

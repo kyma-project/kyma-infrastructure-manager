@@ -125,9 +125,9 @@ type RuntimeList struct {
 
 // RuntimeSpec defines the desired state of Runtime
 type RuntimeSpec struct {
-	Shoot    RuntimeShoot       `json:"shoot"`
-	Security Security           `json:"security"`
-	Caching  ImageRegistryCache `json:"imageRegistryCache"`
+	Shoot    RuntimeShoot        `json:"shoot"`
+	Security Security            `json:"security"`
+	Caching  *ImageRegistryCache `json:"imageRegistryCache,omitempty"`
 }
 
 // RuntimeStatus defines the observed state of Runtime

@@ -1692,7 +1692,6 @@ spec:
                 - secretBindingName
                 type: object
             required:
-            - imageRegistryCache
             - security
             - shoot
             type: object
