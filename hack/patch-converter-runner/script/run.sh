@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#u/usr/bin/env bash
 
 if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
   echo "Usage: $0 <output_dir> $1 <runtime> $2 <shoot>"
@@ -38,4 +38,4 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-../../bin/patch-converter-runner --output-path "$OUTPUTDIR/generated-shoot.yaml" --runtime-path  "$OUTPUTDIR/runtime.yaml" --shoot-path  "$OUTPUTDIR/current-shoot.yaml" --kcp-kubeconfig-path $KCP_KUBECONFIG
+ go run ./cmd/main.go --output-path "$OUTPUTDIR/generated-shoot.yaml" --runtime-path  "$OUTPUTDIR/runtime.yaml" --shoot-path  "$OUTPUTDIR/current-shoot.yaml" --kcp-kubeconfig-path $KCP_KUBECONFIG
