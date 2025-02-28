@@ -130,6 +130,10 @@ type RuntimeSpec struct {
 	Caching  *ImageRegistryCache `json:"imageRegistryCache,omitempty"`
 }
 
+type ImageRegistryCache struct {
+	Enabled bool `json:"enabled"`
+}
+
 // RuntimeStatus defines the observed state of Runtime
 type RuntimeStatus struct {
 	// State signifies current state of Runtime
@@ -200,10 +204,6 @@ type Ingress struct {
 }
 
 type Egress struct {
-	Enabled bool `json:"enabled"`
-}
-
-type ImageRegistryCache struct {
 	Enabled bool `json:"enabled"`
 }
 
