@@ -57,7 +57,7 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 func shouldPatchShoot(runtime *imv1.Runtime, shoot *gardener.Shoot, logger *logr.Logger) (bool, error) {
 	if reconciler.ShouldSuspendReconciliation(runtime.Annotations) {
 		msg := fmt.Sprintf(`Reconciliation is suspended. Remove "%s" annotation to resume reconciliation`, reconciler.SuspendReconcileAnnotation)
-		logger.V(log_level.DEBUG).Info(msg)
+		logger.Info(msg)
 		return false, nil
 	}
 
