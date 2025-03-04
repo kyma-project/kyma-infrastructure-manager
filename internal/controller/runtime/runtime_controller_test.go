@@ -106,6 +106,10 @@ var _ = Describe("Runtime Controller", func() {
 					return false
 				}
 
+				if !runtime.IsProvisioningCompletedStatusSet() {
+					return false
+				}
+
 				if !runtime.IsConditionSet(imv1.ConditionTypeOidcConfigured, imv1.ConditionReasonOidcConfigured) {
 					return false
 				}
@@ -152,6 +156,10 @@ var _ = Describe("Runtime Controller", func() {
 					return false
 				}
 
+				if !runtime.IsProvisioningCompletedStatusSet() {
+					return false
+				}
+
 				return true
 			}, time.Second*300, time.Second*3).Should(BeTrue())
 
@@ -168,6 +176,10 @@ var _ = Describe("Runtime Controller", func() {
 				}
 
 				if !runtime.IsConditionSet(imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonConfigurationCompleted) {
+					return false
+				}
+
+				if !runtime.IsProvisioningCompletedStatusSet() {
 					return false
 				}
 
@@ -201,6 +213,10 @@ var _ = Describe("Runtime Controller", func() {
 					return false
 				}
 
+				if !runtime.IsProvisioningCompletedStatusSet() {
+					return false
+				}
+
 				if !runtime.IsConditionSet(imv1.ConditionTypeRuntimeDeprovisioned, imv1.ConditionReasonGardenerCRDeleted) {
 					return false
 				}
@@ -216,6 +232,10 @@ var _ = Describe("Runtime Controller", func() {
 				}
 
 				if !runtime.IsConditionSet(imv1.ConditionTypeRuntimeDeprovisioned, imv1.ConditionReasonGardenerShootDeleted) {
+					return false
+				}
+
+				if !runtime.IsProvisioningCompletedStatusSet() {
 					return false
 				}
 				return true
