@@ -59,7 +59,7 @@ func isIngressBlackholingEnabled(filter imv1.Filter) bool {
 }
 
 // Configuration represents `RawExtension` we want to set as `ProviderConfig` in the `gardener.Extension`
-// copied from https://github.com/gardener/gardener-extension-shoot-networking-filter/blob/master/pkg/apis/config/v1alpha1/types.go#L16C1-L26C2
+// copied partially from https://github.com/gardener/gardener-extension-shoot-networking-filter/blob/master/pkg/apis/config/v1alpha1/types.go#L16C1-L26C2
 type Configuration struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -80,29 +80,17 @@ type EgressFilter struct {
 	StaticFilterList []Filter `json:"staticFilterList,omitempty"`
 }
 
-// Workers allows to specify block modes per worker group.
-// copied from https://github.com/gardener/gardener-extension-shoot-networking-filter/blob/master/pkg/apis/config/types.go#L110
-//type Workers struct {
-//	// BlackholingEnabled is a flag to set blackholing or firewall approach.
-//	BlackholingEnabled bool `json:"blackholingEnabled"`
-//
-//	// Names is a list of worker groups to use the specified blocking mode.
-//	Names []string `json:"names"`
-//}
-
 // Policy is the access policy
-// copied from https://github.com/gardener/gardener-extension-shoot-networking-filter/blob/master/pkg/apis/config/types.go#L62
+// copied partially from https://github.com/gardener/gardener-extension-shoot-networking-filter/blob/master/pkg/apis/config/types.go#L62
 type Policy string
 
 const (
-	// PolicyAllowAccess is the `ALLOW_ACCESS` policy
-	PolicyAllowAccess Policy = "ALLOW_ACCESS"
 	// PolicyBlockAccess is the `BLOCK_ACCESS` policy
 	PolicyBlockAccess Policy = "BLOCK_ACCESS"
 )
 
 // Filter specifies a network-CIDR policy pair.
-// copied from https://github.com/gardener/gardener-extension-shoot-networking-filter/blob/master/pkg/apis/config/types.go#L71
+// copied partially from https://github.com/gardener/gardener-extension-shoot-networking-filter/blob/master/pkg/apis/config/types.go#L71
 type Filter struct {
 	// Network is the network CIDR of the filter.
 	Network string `json:"network"`
