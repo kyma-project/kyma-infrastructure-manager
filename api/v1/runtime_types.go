@@ -91,7 +91,7 @@ const (
 	ConditionReasonKubernetesAPIErr     = RuntimeConditionReason("KubernetesErr")
 
 	ConditionReasonAuditLogError = RuntimeConditionReason("AuditLogErr")
-	
+
 	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
 	ConditionReasonOidcConfigured           = RuntimeConditionReason("OidcConfigured")
 	ConditionReasonOidcError                = RuntimeConditionReason("OidcConfigurationErr")
