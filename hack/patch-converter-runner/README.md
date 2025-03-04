@@ -3,7 +3,7 @@
 ## Overview
 
 The `patch-converter-runner` program invokes converter library to generate shoot from runtime resources. The purpose of this application is to allow developers to:
-- quickly reproduce problems with updating existing Gardener clusters
+- quickly reproduce problems by updating existing Gardener clusters
 - debug converter without a need to run the whole KIM system
 
 ## Building the Binary
@@ -37,7 +37,7 @@ go run ./cmd/main.go -runtime-path=<runtime CR fie path> -shoot-path=<shoot CR p
 
 ### Helper script
 
-You can also run `./script/run.sh` script to execute the application. Before running the script you need to setup the following environment variables:
+You can also run `./script/run.sh` to execute the application. Before running the script, you need to set up the following environment variables:
 - `KCP_KUBECONFIG` - the path to the KCP kubeconfig file
 - `GARDENER_KUBECONFIG` - the path to the Gardener kubeconfig file
 - `GARDENER_NAMESPACE` - the namespace where the shoot resources are stored
