@@ -1,4 +1,5 @@
 module-name: infrastructure-manager
+kind: kcp
 bdba:
   - europe-docker.pkg.dev/kyma-project/prod/infrastructure-manager:latest
 mend:
