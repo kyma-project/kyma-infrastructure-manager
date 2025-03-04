@@ -1,8 +1,12 @@
 module-name: infrastructure-manager
-protecode:
+kind: kcp
+bdba:
   - europe-docker.pkg.dev/kyma-project/prod/infrastructure-manager:latest
-whitesource:
+mend:
   language: golang-mod
-  subprojects: false
   exclude:
     - "**/*_test.go"
+checkmarx-one:
+    preset: go-default
+    exclude:
+        - '**/*_test.go'
