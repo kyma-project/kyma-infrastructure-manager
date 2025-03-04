@@ -3,6 +3,7 @@ package extensions
 import (
 	"encoding/json"
 	registrycache "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
+	"k8s.io/utils/ptr"
 	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -59,7 +60,7 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
 
 				if len(registryCache) > 0 {
-					return NewRegistryCacheExtension(registryCache)
+					return NewRegistryCacheExtension(registryCache, true)
 				}
 
 				return nil, nil
@@ -115,12 +116,23 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensio
 		{
 			Type: RegistryCacheExtensionType,
 			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-
-				if len(registryCache) > 0 {
-					return NewRegistryCacheExtension(registryCache)
+				if runtime.Spec.Caching.Enabled {
+					return NewRegistryCacheExtension(registryCache, false)
 				}
 
-				return nil, nil
+				// This is related to the fact ProviderConfig cannot be empty
+				// It would make sense to completely remove the extension in the case is being disabled
+				var cacheExtension gardener.Extension
+
+				for _, ext := range shoot.Spec.Extensions {
+					if ext.Type == RegistryCacheExtensionType {
+						cacheExtension = ext
+						break
+					}
+				}
+
+				cacheExtension.Disabled = ptr.To(true)
+				return &cacheExtension, nil
 			},
 		},
 	}, extensionsOnTheShoot)

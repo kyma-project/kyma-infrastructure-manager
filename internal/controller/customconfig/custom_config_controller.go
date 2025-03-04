@@ -18,6 +18,7 @@ package runtime
 
 import (
 	"context"
+	"fmt"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/customconfig/registrycache"
 	"k8s.io/utils/ptr"
 	"sync/atomic"
@@ -56,6 +57,7 @@ func (r *CustomSKRConfigReconciler) Reconcile(ctx context.Context, request ctrl.
 
 	var runtime imv1.Runtime
 	if err := r.Get(ctx, request.NamespacedName, &runtime); err != nil {
+		r.Log.Error(err, fmt.Sprintf("Failed to get runtime %s", request.Name))
 		return ctrl.Result{
 			Requeue: false,
 		}, client.IgnoreNotFound(err)
@@ -91,8 +93,18 @@ func (r *CustomSKRConfigReconciler) handleCustomConfig(ctx context.Context, runt
 		}, err
 	}
 
+	if exists {
+		r.Log.Info(fmt.Sprintf("Custom config exists on runtime %s", runtime.Name))
+	} else {
+		r.Log.Info(fmt.Sprintf("Custom config doesn't exist on runtime %s", runtime.Name))
+	}
+
+	runtime.ManagedFields = nil
+
 	if runtime.Spec.Caching.Enabled != exists {
 		runtime.Spec.Caching.Enabled = exists
+
+		r.Log.Info(fmt.Sprintf("Updating runtime %s with caching enabled: %t", runtime.Name, exists))
 
 		err := r.Client.Patch(ctx, &runtime, client.Apply, &client.PatchOptions{
 			FieldManager: fieldManagerName,
@@ -109,7 +121,7 @@ func (r *CustomSKRConfigReconciler) handleCustomConfig(ctx context.Context, runt
 
 	return ctrl.Result{
 		Requeue:      true,
-		RequeueAfter: 30 * time.Minute,
+		RequeueAfter: 1 * time.Minute,
 	}, err
 }
 
