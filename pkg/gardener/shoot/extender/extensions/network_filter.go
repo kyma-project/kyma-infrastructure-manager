@@ -68,7 +68,6 @@ type Configuration struct {
 	EgressFilter *EgressFilter `json:"egressFilter,omitempty"`
 }
 
-
 // EgressFilter contains the configuration for the egress filter.
 // copied and adjusted from https://github.com/gardener/gardener-extension-shoot-networking-filter/blob/master/pkg/apis/config/v1alpha1/types.go#L29
 type EgressFilter struct {
@@ -110,4 +109,3 @@ type Filter struct {
 	// Policy is the access policy (`BLOCK_ACCESS` or `ALLOW_ACCESS`).
 	Policy Policy `json:"policy"`
 }
-
