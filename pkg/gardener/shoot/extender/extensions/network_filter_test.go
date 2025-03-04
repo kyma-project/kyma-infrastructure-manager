@@ -1,7 +1,6 @@
 package extensions
 
 import (
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"k8s.io/utils/ptr"
 	"testing"
 
@@ -27,15 +26,14 @@ func TestNetworkingFilterExtender(t *testing.T) {
 	t.Run("Disable networking-filter extension", func(t *testing.T) {
 		// given
 		runtimeShoot := getRuntimeWithNetworkingFilter(false)
-		shoot := testutils.FixEmptyGardenerShoot("test", "dev")
 
 		// when
-		err := ExtendWithNetworkFilter(runtimeShoot, &shoot)
+		extension, err := NewNetworkFilterExtension(runtimeShoot.Spec.Security.Networking.Filter)
 
 		// then
 		require.NoError(t, err)
-		assert.Equal(t, true, *shoot.Spec.Extensions[0].Disabled)
-		assert.Equal(t, NetworkFilterType, shoot.Spec.Extensions[0].Type)
+		assert.Equal(t, ptr.To(true), extension.Disabled)
+		assert.Equal(t, NetworkFilterType, extension.Type)
 	})
 }
 
