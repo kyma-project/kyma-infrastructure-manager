@@ -1,4 +1,4 @@
-package extender
+package provider
 
 import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
