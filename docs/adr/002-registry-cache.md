@@ -59,7 +59,7 @@ Pros:
 Cons:
 - KIM uses controller pattern for performing operations, so it would be a bit inconsistent to implement such a feature in a different way.
 - Some implementation effort needed to synchronise access to multiple runtimes, and implement proper error handling.
-- Adding Runtime Watcher will require to slightly modify the implementation (e.g. some new channel will be needed to notify about the new configuration).
+- Adding Runtime Watcher will require to slightly modify the implementation (a new channel will be needed to notify about the new configuration).
 
 ## Option 3: implement a new controller for the `registry-cache` extension
 
