@@ -20,7 +20,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/customconfig/registrycache"
+	"github.com/pkg/errors"
+	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	"sync/atomic"
@@ -57,9 +60,34 @@ const fieldManagerName = "customconfigcontroller"
 func (r *CustomSKRConfigReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	r.Log.Info(request.String())
 
+	var secret v1.Secret
+	if err := r.Get(ctx, request.NamespacedName, &secret); err != nil {
+		r.Log.Error(err, fmt.Sprintf("Failed to get secret %s", request.Name))
+
+		if apierrors.IsNotFound(err) {
+			r.Log.Info(fmt.Sprintf("Secret %s not found", request.Name))
+		}
+
+		return ctrl.Result{
+			Requeue: false,
+		}, client.IgnoreNotFound(err)
+	}
+
+	runtimeID, ok := secret.Labels["kyma-project.io/runtime-id"]
+	if !ok {
+		r.Log.Error(errors.New("secret not labeled with runtime-id"), fmt.Sprintf("Failed to get runtime %s", request.Name))
+
+		return ctrl.Result{
+			Requeue: false,
+		}, nil
+	}
+
 	var runtime imv1.Runtime
-	if err := r.Get(ctx, request.NamespacedName, &runtime); err != nil {
-		r.Log.Error(err, fmt.Sprintf("Failed to get runtime %s", request.Name))
+	if err := r.Get(ctx, types.NamespacedName{
+		Name:      runtimeID,
+		Namespace: request.Namespace,
+	}, &runtime); err != nil {
+		r.Log.Error(err, fmt.Sprintf("Failed to get runtime %s", runtimeID))
 
 		if apierrors.IsNotFound(err) {
 			r.Log.Info(fmt.Sprintf("Runtime %s not found", request.Name))
@@ -68,11 +96,6 @@ func (r *CustomSKRConfigReconciler) Reconcile(ctx context.Context, request ctrl.
 		return ctrl.Result{
 			Requeue: false,
 		}, client.IgnoreNotFound(err)
-	}
-
-	runtimeID, ok := runtime.Labels["kyma-project.io/runtime-id"]
-	if !ok {
-		runtimeID = runtime.Name
 	}
 
 	log := r.Log.WithValues("runtimeID", runtimeID, "shootName", runtime.Spec.Shoot.Name, "requestID", r.RequestID.Add(1))
@@ -144,7 +167,7 @@ func NewCustomSKRConfigReconciler(mgr ctrl.Manager, logger logr.Logger) *CustomS
 // SetupWithManager sets up the controller with the Manager.
 func (r *CustomSKRConfigReconciler) SetupWithManager(mgr ctrl.Manager, channelSource source.Source, numberOfWorkers int) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&imv1.Runtime{}).
+		For(&v1.Secret{}).
 		WithOptions(controller.Options{MaxConcurrentReconciles: numberOfWorkers}).
 		WithEventFilter(predicate.Or(
 			predicate.GenerationChangedPredicate{},
