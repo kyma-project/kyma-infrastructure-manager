@@ -10,7 +10,7 @@ Proposed
 - Credentials for the image registries should be stored in secrets on SKR. 
 - The Gardener's `registry-cache` extension will be used to implement the registry cache functionality.
 - In the first phase KIM will periodically pull the registry cache configuration from SKR.
-- At some point, the Runtime Watcher will be used to trigger events to notify KIM that configuration changed.
+- At some point the Runtime Watcher will be used to trigger events to notify KIM that configuration changed.
 
 # Options
 
@@ -26,14 +26,14 @@ It seems to be obvious to implement the configuration of the `registry-cache` ex
 - How we will implement time based reconciliation? What will be the impact on the existing implementation?
 
 Conclusions:
-- Introducing a new property to the Runtime CR seems to not be a good idea. It would require two steps from the user: preparing configuration on SKR, and enabling caching in the BTP.
+- Introducing a new property to the Runtime CR does not seem to be a good idea. It would require two steps from the user: preparing configuration on SKR, and enabling caching in the BTP.
 - Currently, in some states of the state machine we don't requeue the event. As a result of introducing time based reconciliation we would need to change the implementation of the state machine.
 
 ### Summary
 
 Pros:
 - Seems like the right approach since runtime controller is fully responsible for configuring the shoot.
-- Adding Runtime Watcher integration will be easy 
+- Integrating the Runtime Watcher will be easy 
 
 Cons:
 - The controller will apply some changes that are not explicitly defined in Runtime CR. So the Runtime CR is no longer a full description of the desired state.
