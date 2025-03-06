@@ -54,7 +54,7 @@ Conclusions:
 ### Summary
 
 Pros:
-- Seems to be simple to implement. Go primitives such as go routines and channels are handy for such tasks.
+- Go primitives such as go routines and channels are handy for such tasks.
 
 Cons:
 - KIM uses controller pattern for performing operations, so it would be a bit inconsistent to implement such a feature in a different way.
