@@ -73,7 +73,7 @@ Questions:
 Conclusions:
 - Direct shoot modification violates the architecture. The Runtime Controller should be fully responsible for configuring the shoot.
 - The implementation will require introducing a new property to the Runtime CR to enable the cache.
-- The new controller will be listening on the Runtime CR events, and will be responsible for setting up the enable cache property on the Runtime CR.
+- The new controller will be listening on the secret events, and will be responsible for setting up the enable cache property on the Runtime CR.
 - The new controller will be triggerred in time based manner to periodically check the SKRs for the cache configuration.
 
 ### Summary
