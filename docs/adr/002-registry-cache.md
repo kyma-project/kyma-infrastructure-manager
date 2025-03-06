@@ -7,7 +7,7 @@ Proposed
 # Requirements
 
 - The user should be able to configure the cache for specific image registries.
-- Credentials for the image registries should be stored in a secret on SKR. 
+- Credentials for the image registries should be stored in secrets on SKR. 
 - The Gardener's `registry-cache` extension will be used to implement the registry cache functionality.
 - In the first phase KIM will periodically pull the registry cache configuration from SKR.
 - At some point, the Runtime Watcher will be used to trigger events to notify KIM that configuration changed.
