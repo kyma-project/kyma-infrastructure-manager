@@ -6,11 +6,11 @@ Proposed
 
 # Requirements
 
-- The user should be able to configure the cache for each image registry.
-- Credentials for the image registries should be stored in a secret on the SKR. 
+- The user should be able to configure the cache for specific image registries.
+- Credentials for the image registries should be stored in a secret on SKR. 
 - The Gardener's `registry-cache` extension will be used to implement the registry cache functionality.
-- In the first phase it is acceptable to periodically pull the cache configuration from the SKR.
-- Finally, we will use the Runtime Watcher to trigger events to notify KIM that configuration changed.
+- In the first phase it is acceptable to periodically pull the registry cache configuration from SKR.
+- Finally, the Runtime Watcher will be used to trigger events to notify KIM that configuration changed.
 
 # Options
 
@@ -27,17 +27,17 @@ It seems to be obvious to implement the configuration of the `registry-cache` ex
 
 Conclusions:
 - Introducing a new property to the Runtime CR seems to not be a good idea. It would require two steps from the user: preparing configuration on SKR, and enabling caching in the BTP.
-- Currently, in some states we don't requeue the event, so we need to change the implementation to handle time based reconciliation.
+- Currently, in some states of the state machine we don't requeue the event. As a result of introducing time based reconciliation we would need to change the implementation of the state machine.
 
 ### Summary
 
 Pros:
-- Seems like the right approach.
-- Adding Runtime Watcher integration will be easy.
+- Seems like the right approach since runtime controller is fully responsible for configuring the shoot.
+- Adding Runtime Watcher integration will be easy 
 
 Cons:
-- The controller will apply some changes that are not explicitly defined in the CR. So the Runtime CR is no longer a description of the desired state.
-- Since the control loop is triggerred by both CR modifications, and time based reconciliation changes to the state machine code are required.  
+- The controller will apply some changes that are not explicitly defined in Runtime CR. So the Runtime CR is no longer a full description of the desired state.
+- Since the control loop is triggerred by both CR modifications, and time based reconciliation changes to the state machine code are required. It increases the complexity of the Runtime Controller implementation. 
 
 ## Option 2: implement periodic checks with go routines and directly modify the shoot to configure `registry-cache` extension
 
@@ -48,7 +48,7 @@ There are the following questions:
 - What will be the impact on the existing implementation?
 
 Conclusions:
-- Direct shoot modification violates the architecture. The Runtime Controller should be responsible for configuring the shoot.
+- Direct shoot modification violates the architecture. The Runtime Controller should be fully responsible for configuring the shoot.
 - The implementation will require introducing a new property to the Runtime CR to enable the cache.
 
 ### Summary
@@ -61,7 +61,7 @@ Cons:
 - Some implementation effort needed to synchronise access to multiple runtimes, and implement proper error handling.
 - Adding Runtime Watcher will require to slightly modify the implementation (e.g. some new channel will be needed to notify about the new configuration).
 
-## Options 3: implement a new controller for the `registry-cache` extension
+## Option 3: implement a new controller for the `registry-cache` extension
 
 The third approach would be to implement a new controller that will be responsible for configuring the `registry-cache` extension. 
 
@@ -71,8 +71,8 @@ Questions:
 - What will be the impact on the existing implementation?
 
 Conclusions:
+- Direct shoot modification violates the architecture. The Runtime Controller should be fully responsible for configuring the shoot.
 - The implementation will require introducing a new property to the Runtime CR to enable the cache.
-- Direct shoot modification violates the architecture. The Runtime Controller should be responsible for configuring the shoot.
 - The new controller will be listening on the Runtime CR events, and will be responsible for setting up the enable cache property on the Runtime CR.
 - The new controller will be triggerred in time based manner to periodically check the SKRs for the cache configuration.
 
@@ -82,12 +82,9 @@ Pros:
 - It is easy to implement time based reconciliation in a separate controller.
 - Adding Runtime Watcher integration seems to be easy.
 
-Cons:
-- It seems to be a bit unclear on the first glance why we have two controllers on Runtime resource. We could try to listen on another resource (e.g. Kyma) but it could be also not clear why Kyma Infrastructure Manager needs to do that.
-
 # Decision
 
-The third option was chosen. 
+The third option was selected. 
 The following diagram shows the proposed architecture:
 
 ![](./assets/caching-in-kim.drawio.svg)
