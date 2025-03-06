@@ -20,7 +20,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/customconfig/registrycache"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 	"sync/atomic"
 	"time"
 
@@ -58,6 +60,11 @@ func (r *CustomSKRConfigReconciler) Reconcile(ctx context.Context, request ctrl.
 	var runtime imv1.Runtime
 	if err := r.Get(ctx, request.NamespacedName, &runtime); err != nil {
 		r.Log.Error(err, fmt.Sprintf("Failed to get runtime %s", request.Name))
+
+		if apierrors.IsNotFound(err) {
+			r.Log.Info(fmt.Sprintf("Runtime %s not found", request.Name))
+		}
+
 		return ctrl.Result{
 			Requeue: false,
 		}, client.IgnoreNotFound(err)
@@ -135,7 +142,7 @@ func NewCustomSKRConfigReconciler(mgr ctrl.Manager, logger logr.Logger) *CustomS
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *CustomSKRConfigReconciler) SetupWithManager(mgr ctrl.Manager, numberOfWorkers int) error {
+func (r *CustomSKRConfigReconciler) SetupWithManager(mgr ctrl.Manager, channelSource source.Source, numberOfWorkers int) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&imv1.Runtime{}).
 		WithOptions(controller.Options{MaxConcurrentReconciles: numberOfWorkers}).
@@ -145,5 +152,6 @@ func (r *CustomSKRConfigReconciler) SetupWithManager(mgr ctrl.Manager, numberOfW
 			predicate.AnnotationChangedPredicate{},
 		)).
 		Named("custom-config-controller").
+		WatchesRawSource(channelSource).
 		Complete(r)
 }

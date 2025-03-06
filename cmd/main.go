@@ -22,7 +22,13 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/workqueue"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -237,7 +243,7 @@ func main() {
 	}
 
 	customConfigReconciler := custom_config_controller.NewCustomSKRConfigReconciler(mgr, logger)
-	if err = customConfigReconciler.SetupWithManager(mgr, 1); err != nil {
+	if err = customConfigReconciler.SetupWithManager(mgr, getTestSource(), 1); err != nil {
 		setupLog.Error(err, "unable to setup custom config controller with Manager", "controller", "Runtime")
 		os.Exit(1)
 	}
@@ -261,6 +267,39 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+type dummyEvent struct {
+	Name string
+}
+
+func getTestSource() source.Source {
+	channel := make(chan event.TypedGenericEvent[dummyEvent])
+
+	dummyEventHandler := func() *handler.TypedFuncs[dummyEvent, reconcile.Request] {
+		return &handler.TypedFuncs[dummyEvent, reconcile.Request]{
+			GenericFunc: func(ctx context.Context, evnt event.TypedGenericEvent[dummyEvent], queue workqueue.TypedRateLimitingInterface[ctrl.Request]) {
+
+				queue.Add(reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name:      evnt.Object.Name,
+						Namespace: "kyma-system",
+					},
+				})
+			},
+		}
+	}
+
+	go func() {
+		<-time.After(30 * time.Second)
+		channel <- event.TypedGenericEvent[dummyEvent]{
+			Object: dummyEvent{
+				Name: "test-not-exists",
+			},
+		}
+	}()
+
+	return source.Channel(channel, dummyEventHandler())
 }
 
 func initGardenerClients(kubeconfigPath string, namespace string, timeout time.Duration, rlQPS, rlBurst int) (client.Client, gardener_apis.ShootInterface, client.SubResourceClient, error) {
