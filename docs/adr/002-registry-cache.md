@@ -33,7 +33,7 @@ Conclusions:
 
 Pros:
 - Seems like the right approach since runtime controller is fully responsible for configuring the shoot.
-- Integrating the Runtime Watcher will be easy 
+- Integrating the Runtime Watcher will be relatively easy. 
 
 Cons:
 - The controller will apply some changes that are not explicitly defined in Runtime CR. So the Runtime CR is no longer a full description of the desired state.
@@ -80,7 +80,7 @@ Conclusions:
 Pros:
 - Responsibilities are clearly defined. The new controller reads the SKR to find the configuration and sets up the enable cache property.
 - It is easy to implement time based reconciliation in a separate controller.
-- Adding Runtime Watcher integration seems to be easy.
+- Integrating the Runtime Watcher will be relatively easy.
 
 # Decision
 
