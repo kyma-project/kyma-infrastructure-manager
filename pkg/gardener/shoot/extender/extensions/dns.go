@@ -9,7 +9,7 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-const DNSExtensionType = "shoot-dns-servicegrv"
+const DNSExtensionType = "shoot-dns-service"
 
 // The types were copied from the following file: https://github.com/gardener/gardener-extension-shoot-dns-service/blob/master/pkg/apis/service/types.go
 type DNSExtensionProviderConfig struct {
