@@ -74,9 +74,22 @@ func newDNSExtensionConfig(domain, secretName, dnsProviderType string) *DNSExten
 }
 
 func NewDNSExtension(shootName, secretName, domainSuffix, dnsProviderType string) (*gardener.Extension, error) {
-	domain := fmt.Sprintf("%s.%s", shootName, domainSuffix)
 
-	extensionJSON, err := json.Marshal(newDNSExtensionConfig(domain, secretName, dnsProviderType))
+	var providerConfig *DNSExtensionProviderConfig = nil
+
+	if secretName == "" && dnsProviderType == "" && domainSuffix == "" {
+		// special case for Gardener's DNS solution
+		providerConfig = &DNSExtensionProviderConfig{
+			APIVersion:                    "service.dns.extensions.gardener.cloud/v1alpha1",
+			Kind:                          "DNSConfig",
+			SyncProvidersFromShootSpecDNS: ptr.To(true),
+		}
+	} else {
+		domain := fmt.Sprintf("%s.%s", shootName, domainSuffix)
+		providerConfig = newDNSExtensionConfig(domain, secretName, dnsProviderType)
+	}
+
+	extensionJSON, err := json.Marshal(providerConfig)
 	if err != nil {
 		return nil, err
 	}
