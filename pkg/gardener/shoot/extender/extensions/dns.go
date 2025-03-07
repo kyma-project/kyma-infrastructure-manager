@@ -74,7 +74,7 @@ func newDNSExtensionConfig(domain, secretName, dnsProviderType string) *DNSExten
 }
 
 func NewDNSExtension(shootName, secretName, domainSuffix, dnsProviderType string) (*gardener.Extension, error) {
-	var providerConfig *DNSExtensionProviderConfig = nil
+	var providerConfig *DNSExtensionProviderConfig
 
 	if secretName == "" && dnsProviderType == "" && domainSuffix == "" {
 		// special case for Gardener's DNS solution
