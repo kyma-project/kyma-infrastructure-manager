@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/customconfig/registrycache"
-	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -62,10 +61,11 @@ func (r *CustomSKRConfigReconciler) Reconcile(ctx context.Context, request ctrl.
 
 	var secret v1.Secret
 	if err := r.Get(ctx, request.NamespacedName, &secret); err != nil {
-		r.Log.Error(err, fmt.Sprintf("Failed to get secret %s", request.Name))
 
 		if apierrors.IsNotFound(err) {
 			r.Log.Info(fmt.Sprintf("Secret %s not found", request.Name))
+		} else {
+			r.Log.Error(err, fmt.Sprintf("Failed to get secret %s", request.Name))
 		}
 
 		return ctrl.Result{
@@ -74,8 +74,10 @@ func (r *CustomSKRConfigReconciler) Reconcile(ctx context.Context, request ctrl.
 	}
 
 	runtimeID, ok := secret.Labels["kyma-project.io/runtime-id"]
-	if !ok {
-		r.Log.Error(errors.New("secret not labeled with runtime-id"), fmt.Sprintf("Failed to get runtime %s", request.Name))
+	secretControlledByKIM := ok && secret.Labels["operator.kyma-project.io/managed-by"] == "infrastructure-manager"
+
+	if !secretControlledByKIM {
+		r.Log.Info(fmt.Sprintf("Secret doesn't contain kubeconfig %s", request.Name))
 
 		return ctrl.Result{
 			Requeue: false,
@@ -101,11 +103,14 @@ func (r *CustomSKRConfigReconciler) Reconcile(ctx context.Context, request ctrl.
 	log := r.Log.WithValues("runtimeID", runtimeID, "shootName", runtime.Spec.Shoot.Name, "requestID", r.RequestID.Add(1))
 	log.Info("Reconciling custom configuration", "Name", runtime.Name, "Namespace", runtime.Namespace)
 
-	return r.handleCustomConfig(ctx, runtime)
+	return r.handleCustomConfig(ctx, runtime, secret)
 }
 
-func (r *CustomSKRConfigReconciler) handleCustomConfig(ctx context.Context, runtime imv1.Runtime) (ctrl.Result, error) {
-	customConfigExplorer, err := registrycache.NewConfigExplorer(ctx, r.Client, runtime)
+func (r *CustomSKRConfigReconciler) handleCustomConfig(ctx context.Context, runtime imv1.Runtime, kubeconfigSecret v1.Secret) (ctrl.Result, error) {
+	getSecretFunc := func() (v1.Secret, error) {
+		return kubeconfigSecret, nil
+	}
+	customConfigExplorer, err := registrycache.NewConfigExplorer(ctx, getSecretFunc)
 	if err != nil {
 		r.Log.Error(err, "Failed to create custom config explorer")
 		return ctrl.Result{
@@ -131,8 +136,12 @@ func (r *CustomSKRConfigReconciler) handleCustomConfig(ctx context.Context, runt
 
 	runtime.ManagedFields = nil
 
-	if runtime.Spec.Caching.Enabled != exists {
-		runtime.Spec.Caching.Enabled = exists
+	cachingEnabled := runtime.Spec.Caching != nil && runtime.Spec.Caching.Enabled
+
+	if cachingEnabled != exists {
+		runtime.Spec.Caching = &imv1.ImageRegistryCache{
+			Enabled: exists,
+		}
 
 		r.Log.Info(fmt.Sprintf("Updating runtime %s with caching enabled: %t", runtime.Name, exists))
 
@@ -140,6 +149,7 @@ func (r *CustomSKRConfigReconciler) handleCustomConfig(ctx context.Context, runt
 			FieldManager: fieldManagerName,
 			Force:        ptr.To(true),
 		})
+
 		if err != nil {
 			r.Log.Error(err, "Failed to patch runtime")
 			return ctrl.Result{

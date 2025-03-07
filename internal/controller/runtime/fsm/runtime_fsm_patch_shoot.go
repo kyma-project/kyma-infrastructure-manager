@@ -9,6 +9,7 @@ import (
 	registrycache2 "github.com/kyma-project/infrastructure-manager/internal/controller/customconfig/registrycache"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
+	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -43,7 +44,10 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	var registryCache []registrycache.RegistryCache
 
 	if s.instance.Spec.Caching.Enabled {
-		configExplorer, err := registrycache2.NewConfigExplorer(ctx, m.Client, s.instance)
+		getSecretFunc := func() (v1.Secret, error) {
+			return getKubeconfigSecret(ctx, m.Client, s.instance.Labels[imv1.LabelKymaRuntimeID], s.instance.Namespace)
+		}
+		configExplorer, err := registrycache2.NewConfigExplorer(ctx, getSecretFunc)
 		if err != nil {
 			m.log.Info("Failed to check whether the runtime have custom config defined, retrying", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
 			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)

@@ -5,6 +5,7 @@ import (
 	registrycache "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -13,8 +14,16 @@ type ConfigExplorer struct {
 	Context     context.Context
 }
 
-func NewConfigExplorer(ctx context.Context, kcpClient client.Client, runtime imv1.Runtime) (ConfigExplorer, error) {
-	shootClient, err := gardener.GetShootClient(ctx, kcpClient, runtime)
+type GetSecretFunc func() (corev1.Secret, error)
+
+func NewConfigExplorer(ctx context.Context, secretFunc GetSecretFunc) (ConfigExplorer, error) {
+
+	secret, err := secretFunc()
+	if err != nil {
+		return ConfigExplorer{}, err
+	}
+
+	shootClient, err := gardener.GetShootClient(secret)
 	if err != nil {
 		return ConfigExplorer{}, err
 	}
