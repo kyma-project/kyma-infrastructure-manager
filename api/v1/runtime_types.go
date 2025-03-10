@@ -197,10 +197,14 @@ type Filter struct {
 	Egress  Egress   `json:"egress"`
 }
 
+// Ingress filtering can be enabled for `shoot-networking-fitler` extension with
+// the blackholing feature, see https://github.com/gardener/gardener-extension-shoot-networking-filter/blob/master/docs/usage/shoot-networking-filter.md#ingress-filtering
 type Ingress struct {
+	// It means that the blackholing filtering is enabled on the per shoot level.
 	Enabled bool `json:"enabled"`
 }
 
+// Egress filtering is a default filtering mode for `shoot-networking-fitler` extension.
 type Egress struct {
 	Enabled bool `json:"enabled"`
 }
