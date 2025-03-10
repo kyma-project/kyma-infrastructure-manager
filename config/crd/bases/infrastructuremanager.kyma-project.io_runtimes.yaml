@@ -63,6 +63,8 @@ spec:
                       filter:
                         properties:
                           egress:
+                            description: Egress filtering is a default filtering mode
+                              for `shoot-networking-fitler` extension.
                             properties:
                               enabled:
                                 type: boolean
@@ -70,8 +72,13 @@ spec:
                             - enabled
                             type: object
                           ingress:
+                            description: |-
+                              Ingress filtering can be enabled for `shoot-networking-fitler` extension with
+                              the blackholing feature, see https://github.com/gardener/gardener-extension-shoot-networking-filter/blob/master/docs/usage/shoot-networking-filter.md#ingress-filtering
                             properties:
                               enabled:
+                                description: It means that the blackholing filtering
+                                  is enabled on the per shoot level.
                                 type: boolean
                             required:
                             - enabled
@@ -1749,6 +1756,10 @@ spec:
                   - type
                   type: object
                 type: array
+              provisioningCompleted:
+                description: ProvisioningCompleted indicates if the initial provisioning
+                  of the cluster is completed
+                type: boolean
               state:
                 description: State signifies current state of Runtime
                 enum:
