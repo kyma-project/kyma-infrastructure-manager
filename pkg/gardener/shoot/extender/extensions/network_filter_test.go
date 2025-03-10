@@ -13,6 +13,54 @@ import (
 )
 
 func TestNetworkingFilterExtender(t *testing.T) {
+
+	for _, testCase := range []struct {
+		name                string
+		egressFilterEnabled              bool
+		ingressEnabled         bool
+		expectedFilterDisabled bool
+	}{
+		{
+			name:                   "Networking filter should be enabled when both egress filter and blackholing are enabled",
+			egressFilterEnabled:    true,
+			ingressEnabled:         true,
+			expectedFilterDisabled: false,
+		},
+		{
+			name:                   "Networking filter should be disabled when both egress filter and blackholing are disabled",
+			egressFilterEnabled:    false,
+			ingressEnabled:         false,
+			expectedFilterDisabled: true,
+		},
+		{
+			name:                   "Networking filter should be disabled when egress filter is disabled, even if blackholing is enabled",
+			egressFilterEnabled:    false,
+			ingressEnabled:         true,
+			expectedFilterDisabled: true,
+		},
+		{
+			name:                   "Networking filter should be enabled when egress filter is enabled, also when blackholing is enabled",
+			egressFilterEnabled:    true,
+			ingressEnabled:         false,
+			expectedFilterDisabled: false,
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			// given
+			filter := imv1.Filter{
+				Ingress: &imv1.Ingress{Enabled: testCase.ingressEnabled},
+				Egress:  imv1.Egress{Enabled: testCase.egressFilterEnabled},
+			}
+			// when
+			disabled := isNetworkingFilterDisabled(filter)
+
+			//then 
+			assert.Equal(t, testCase.expectedFilterDisabled, disabled)
+		})
+	}
+
+
+
 	t.Run("Enable networking-filter extension", func(t *testing.T) {
 		// given
 		runtimeShoot := getRuntimeWithNetworkingFilter(true)

@@ -40,8 +40,7 @@ func NewNetworkFilterExtension(filter imv1.Filter) (*gardener.Extension, error) 
 }
 
 func isNetworkingFilterDisabled(filter imv1.Filter) bool {
-	return !filter.Egress.Enabled ||
-		(filter.Ingress != nil && !filter.Ingress.Enabled)
+	return !filter.Egress.Enabled
 }
 
 func isIngressBlackholingEnabled(filter imv1.Filter) bool {
