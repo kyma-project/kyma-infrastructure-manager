@@ -51,25 +51,12 @@ type DNSProviderReplication struct {
 	Enabled bool `json:"enabled"`
 }
 
-func NewDNSExtender(secretName, domainPrefix, dnsProviderType string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewDNSExtender(domainPrefix string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		domain := fmt.Sprintf("%s.%s", runtime.Spec.Shoot.Name, domainPrefix)
-		isPrimary := true
 
 		shoot.Spec.DNS = &gardener.DNS{
 			Domain: &domain,
-			Providers: []gardener.DNSProvider{
-				{
-					Domains: &gardener.DNSIncludeExclude{
-						Include: []string{
-							domain,
-						},
-					},
-					Primary:    &isPrimary,
-					SecretName: &secretName,
-					Type:       &dnsProviderType,
-				},
-			},
 		}
 
 		return nil

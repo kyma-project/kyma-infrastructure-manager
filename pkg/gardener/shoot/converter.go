@@ -74,7 +74,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
 		),
-		extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType),
+		extender2.NewDNSExtender(opts.DNS.DomainPrefix),
 		extender2.ExtendWithTolerations,
 	)
 
