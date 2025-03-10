@@ -138,6 +138,9 @@ type RuntimeStatus struct {
 
 	// List of status conditions to indicate the status of a ServiceInstance.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// ProvisioningCompleted indicates if the initial provisioning of the cluster is completed
+	ProvisioningCompleted bool `json:"provisioningCompleted,omitempty"`
 }
 
 type RuntimeShoot struct {
@@ -255,6 +258,14 @@ func (k *Runtime) UpdateStatePending(c RuntimeConditionType, r RuntimeConditionR
 		Message:            msg,
 	}
 	meta.SetStatusCondition(&k.Status.Conditions, condition)
+}
+
+func (k *Runtime) UpdateStateProvisioningCompleted() {
+	k.Status.ProvisioningCompleted = true
+}
+
+func (k *Runtime) IsProvisioningCompletedStatusSet() bool {
+	return k.Status.ProvisioningCompleted
 }
 
 func (k *Runtime) IsStateWithConditionSet(runtimeState State, c RuntimeConditionType, r RuntimeConditionReason) bool {

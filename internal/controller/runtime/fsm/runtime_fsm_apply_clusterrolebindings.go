@@ -58,6 +58,10 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 		"Cluster admin configuration complete",
 	)
 
+	if !s.instance.IsProvisioningCompletedStatusSet() {
+		s.instance.UpdateStateProvisioningCompleted()
+	}
+
 	return updateStatusAndStop()
 }
 

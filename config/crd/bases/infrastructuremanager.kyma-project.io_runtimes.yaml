@@ -1757,6 +1757,10 @@ spec:
                   - type
                   type: object
                 type: array
+              provisioningCompleted:
+                description: ProvisioningCompleted indicates if the initial provisioning
+                  of the cluster is completed
+                type: boolean
               state:
                 description: State signifies current state of Runtime
                 enum:
