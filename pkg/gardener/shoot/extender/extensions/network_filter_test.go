@@ -15,8 +15,8 @@ import (
 func TestNetworkingFilterExtender(t *testing.T) {
 
 	for _, testCase := range []struct {
-		name                string
-		egressFilterEnabled              bool
+		name                   string
+		egressFilterEnabled    bool
 		ingressEnabled         bool
 		expectedFilterDisabled bool
 	}{
@@ -59,8 +59,6 @@ func TestNetworkingFilterExtender(t *testing.T) {
 		})
 	}
 
-
-
 	t.Run("Enable networking-filter extension", func(t *testing.T) {
 		// given
 		runtimeShoot := getRuntimeWithNetworkingFilter(true)
@@ -87,7 +85,7 @@ func TestNetworkingFilterExtender(t *testing.T) {
 		assert.Equal(t, NetworkFilterType, extension.Type)
 	})
 
-	t.Run("Ingress-filter should be enabled with static IPs list", func(t *testing.T) {
+	t.Run("Ingress-filter with blackholing raw provider config", func(t *testing.T) {
 		// given
 		runtimeShoot := getRuntimeWithIngressFiltering()
 
