@@ -25,8 +25,11 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 	// instance is being deleted
 	if instanceIsBeingDeleted {
 		if s.shoot != nil {
+			m.log.Info("Shoot is being deleted, removing kubeconfig", "Name", s.shoot.Name)
 			return switchState(sFnDeleteKubeconfig)
 		}
+
+		m.log.Info("Shoot deleted", "Name", s.shoot.Name)
 
 		if instanceHasFinalizer {
 			return removeFinalizerAndStop(ctx, m, s) // resource cleanup completed
