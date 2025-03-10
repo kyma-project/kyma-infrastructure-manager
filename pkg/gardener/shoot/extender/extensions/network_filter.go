@@ -21,20 +21,10 @@ func NewNetworkFilterExtension(filter imv1.Filter) (*gardener.Extension, error) 
 	if isIngressBlackholingEnabled(filter) {
 		ingressFilterConfig := filter.Ingress
 
-		var filterList []Filter
-		for _, staticIP := range ingressFilterConfig.StaticIPs {
-			var filter = Filter{
-				Network: *staticIP,
-				Policy:  PolicyBlockAccess,
-			}
-			filterList = append(filterList, filter)
-		}
-
 		filterProviderConfig := Configuration{
 			TypeMeta: metav1.TypeMeta{},
 			EgressFilter: &EgressFilter{
 				BlackholingEnabled: ingressFilterConfig.Enabled,
-				StaticFilterList:   filterList,
 			},
 		}
 
@@ -73,11 +63,6 @@ type Configuration struct {
 type EgressFilter struct {
 	// BlackholingEnabled is a flag to set blackholing or firewall approach.
 	BlackholingEnabled bool `json:"blackholingEnabled"`
-
-	// StaticFilterList contains the static filter list.
-	// Only used for provider type `static`.
-	// +optional
-	StaticFilterList []Filter `json:"staticFilterList,omitempty"`
 }
 
 // Policy is the access policy
@@ -88,12 +73,3 @@ const (
 	// PolicyBlockAccess is the `BLOCK_ACCESS` policy
 	PolicyBlockAccess Policy = "BLOCK_ACCESS"
 )
-
-// Filter specifies a network-CIDR policy pair.
-// copied partially from https://github.com/gardener/gardener-extension-shoot-networking-filter/blob/master/pkg/apis/config/types.go#L71
-type Filter struct {
-	// Network is the network CIDR of the filter.
-	Network string `json:"network"`
-	// Policy is the access policy (`BLOCK_ACCESS` or `ALLOW_ACCESS`).
-	Policy Policy `json:"policy"`
-}

@@ -81,19 +81,6 @@ spec:
                                   It means that the blackholing filtering is enabled.
                                   Either on the per shoot level, or the per worker group level.
                                 type: boolean
-                              staticIPs:
-                                description: List of the static IPs for which the
-                                  blackholing filtering is enabled
-                                items:
-                                  type: string
-                                type: array
-                              workerNames:
-                                description: List of the worker pool names for which
-                                  the blackholing filtering is enabled on the per
-                                  worker group level.
-                                items:
-                                  type: string
-                                type: array
                             required:
                             - enabled
                             type: object

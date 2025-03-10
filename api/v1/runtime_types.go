@@ -200,12 +200,6 @@ type Ingress struct {
 	// It means that the blackholing filtering is enabled.
 	// Either on the per shoot level, or the per worker group level.
 	Enabled bool `json:"enabled"`
-
-	// List of the worker pool names for which the blackholing filtering is enabled on the per worker group level.
-	WorkerNames []*string `json:"workerNames,omitempty"`
-
-	// List of the static IPs for which the blackholing filtering is enabled
-	StaticIPs []*string `json:"staticIPs,omitempty"`
 }
 
 // Egress filtering is a default filtering mode for `shoot-networking-fitler` extension.

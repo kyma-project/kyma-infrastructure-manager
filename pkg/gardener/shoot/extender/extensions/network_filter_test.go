@@ -41,10 +41,7 @@ func TestNetworkingFilterExtender(t *testing.T) {
 
 	t.Run("Ingress-filter should be enabled with static IPs list", func(t *testing.T) {
 		// given
-		workerNames := []*string{ptr.To("worker1"), ptr.To("worker2")}
-		staticIPs := []*string{ptr.To("89.100.10.0/24)"), ptr.To("200.100.100.0/24")}
-
-		runtimeShoot := getRuntimeWithIngressFiltering(workerNames, staticIPs)
+		runtimeShoot := getRuntimeWithIngressFiltering()
 
 		// when
 		extension, err := NewNetworkFilterExtension(runtimeShoot.Spec.Security.Networking.Filter)
@@ -65,20 +62,10 @@ func TestNetworkingFilterExtender(t *testing.T) {
 }
 
 func fixExpectedProviderConfiguration() Configuration {
-	var filterList []Filter
-	for _, staticIP := range []string{"89.100.10.0/24)", "200.100.100.0/24"} {
-		var filter = Filter{
-			Network: staticIP,
-			Policy:  PolicyBlockAccess,
-		}
-		filterList = append(filterList, filter)
-	}
-
 	filterProviderConfig := Configuration{
 		TypeMeta: metav1.TypeMeta{},
 		EgressFilter: &EgressFilter{
 			BlackholingEnabled: true,
-			StaticFilterList:   filterList,
 		},
 	}
 	return filterProviderConfig
@@ -103,12 +90,10 @@ func getRuntimeWithNetworkingFilter(enabled bool) imv1.Runtime {
 	}
 }
 
-func getRuntimeWithIngressFiltering(workerNames []*string, staticIPs []*string) imv1.Runtime {
+func getRuntimeWithIngressFiltering() imv1.Runtime {
 	runtime := getRuntimeWithNetworkingFilter(true)
 	runtime.Spec.Security.Networking.Filter.Ingress = &imv1.Ingress{
-		Enabled:     true,
-		WorkerNames: workerNames,
-		StaticIPs:   staticIPs,
+		Enabled: true,
 	}
 
 	return runtime
