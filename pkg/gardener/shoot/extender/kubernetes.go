@@ -23,7 +23,7 @@ func NewKubernetesExtender(defaultKubernetesVersion, currentKubernetesVersion st
 
 		// use current Kubernetes version from shoot when it is greater than determined above - autoupdate case
 		if currentKubernetesVersion != "" && currentKubernetesVersion != shoot.Spec.Kubernetes.Version {
-			result, err := compareVersions(shoot.Spec.Kubernetes.Version, currentKubernetesVersion)
+			result, err := CompareVersions(shoot.Spec.Kubernetes.Version, currentKubernetesVersion)
 			if err == nil && result < 0 {
 				shoot.Spec.Kubernetes.Version = currentKubernetesVersion
 			}
@@ -35,7 +35,7 @@ func NewKubernetesExtender(defaultKubernetesVersion, currentKubernetesVersion st
 	}
 }
 
-func compareVersions(prevVersion, currVersion string) (int, error) {
+func CompareVersions(prevVersion, currVersion string) (int, error) {
 	v1, err := semver.NewVersion(prevVersion)
 	if err != nil {
 		return 0, err

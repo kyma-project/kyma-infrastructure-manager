@@ -1,8 +1,9 @@
-package extender
+package provider
 
 import (
 	"fmt"
 	"github.com/go-logr/logr"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -383,7 +384,7 @@ func alignWorkerMachineImageVersion(workerImage *gardener.ShootMachineImage, sho
 		return
 	}
 
-	if result, err := compareVersions(*workerImage.Version, *shootWorkerImage.Version); err == nil && result < 0 {
+	if result, err := extender.CompareVersions(*workerImage.Version, *shootWorkerImage.Version); err == nil && result < 0 {
 		workerImage.Version = shootWorkerImage.Version
 	}
 }
