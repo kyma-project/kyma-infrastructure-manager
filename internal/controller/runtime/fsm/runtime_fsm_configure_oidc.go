@@ -49,7 +49,7 @@ func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ct
 		return requeue()
 	}
 
-	m.log.V(log_level.DEBUG).Info("OIDC has been configured", "Name", s.shoot.Name)
+	m.log.V(log_level.DEBUG).Info("OIDC has been configured", "name", s.shoot.Name)
 	s.instance.UpdateStatePending(
 		imv1.ConditionTypeOidcConfigured,
 		imv1.ConditionReasonOidcConfigured,

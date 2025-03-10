@@ -40,7 +40,7 @@ func sFnHandleKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 			return updateStatusAndStop()
 		}
 
-		m.log.V(log_level.DEBUG).Info("GardenerCluster CR not found, creating a new one", "Name", runtimeID)
+		m.log.V(log_level.DEBUG).Info("GardenerCluster CR not found, creating a new one", "name", runtimeID)
 		err = m.Create(ctx, makeGardenerClusterForRuntime(s.instance, s.shoot))
 		if err != nil {
 			m.log.Error(err, "GardenerCluster CR create error", "name", runtimeID)
@@ -63,7 +63,7 @@ func sFnHandleKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 		return requeueAfter(m.RCCfg.ControlPlaneRequeueDuration)
 	}
 
-	m.log.V(log_level.DEBUG).Info("GardenerCluster CR is ready", "Name", runtimeID)
+	m.log.V(log_level.DEBUG).Info("GardenerCluster CR is ready", "name", runtimeID)
 
 	return ensureStatusConditionIsSetAndContinue(&s.instance,
 		imv1.ConditionTypeRuntimeKubeconfigReady,
