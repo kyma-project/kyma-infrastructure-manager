@@ -23,8 +23,6 @@ func NewNetworkFilterExtension(filter imv1.Filter) (*gardener.Extension, error) 
 	}
 
 	if isIngressBlackholingEnabled(filter) {
-		ingressFilterConfig := filter.Ingress
-
 		filterProviderConfig := Configuration{
 			TypeMeta: metav1.TypeMeta{},
 			EgressFilter: &EgressFilter{
