@@ -54,7 +54,7 @@ func TestNetworkingFilterExtender(t *testing.T) {
 			// when
 			disabled := isNetworkingFilterDisabled(filter)
 
-			//then 
+			//then
 			assert.Equal(t, testCase.expectedFilterDisabled, disabled)
 		})
 	}

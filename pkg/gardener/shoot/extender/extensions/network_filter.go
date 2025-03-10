@@ -17,9 +17,11 @@ func NewNetworkFilterExtension(filter imv1.Filter) (*gardener.Extension, error) 
 		Type:     NetworkFilterType,
 		Disabled: &disabled,
 	}
- if disabled {
-    return return &networkingFilterExtension, nil
-  }
+
+	if disabled {
+		return &networkingFilterExtension, nil
+	}
+
 	if isIngressBlackholingEnabled(filter) {
 		ingressFilterConfig := filter.Ingress
 
