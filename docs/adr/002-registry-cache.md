@@ -8,40 +8,40 @@ Proposed
 
 - The user should be able to configure the cache for specific image registries.
 - Credentials for the image registries should be stored in secrets on SKR. 
-- The Gardener's `registry-cache` extension will be used to implement the registry cache functionality.
-- In the first phase KIM will periodically pull the registry cache configuration from SKR.
-- At some point the Runtime Watcher will be used to trigger events to notify KIM that configuration changed.
+- The Gardener extension `registry-cache` will be used to implement the registry cache functionality.
+- In the first phase KIM, will periodically pull the registry cache configuration from SKR.
+- At some point, the Runtime Watcher will be used to trigger events to notify KIM that the configuration changed.
 
 # Options
 
-The implementation of the registry cache in the KIM can be done in several ways. The following options were considered:
+The implementation of the registry cache in the KIM can be done in several ways. We considered following options:
 - Option 1: enhance Runtime Controller to configure `registry-cache` extension
 - Option 2: implement periodic checks with go routines and directly modify the shoot to configure `registry-cache` extension
 - Option 3: implement a new controller for the `registry-cache` extension
 
-## Option 1: enhance Runtime Controller to configure `registry-cache` extension
+## Option 1: Enhance Runtime Controller to Configure the `registry-cache` Extension
 
 It seems to be obvious to implement the configuration of the `registry-cache` extension in the Runtime Controller. However, there are the following questions:
 - Should the Runtime CR have a property to enable the cache? Who will set this property?
-- How we will implement time based reconciliation? What will be the impact on the existing implementation?
+- How do we implement time-based reconciliation? What will be the impact on the existing implementation?
 
 Conclusions:
 - Introducing a new property to the Runtime CR does not seem to be a good idea. It would require two steps from the user: preparing configuration on SKR, and enabling caching in the BTP.
-- Currently, in some states of the state machine we don't requeue the event. As a result of introducing time based reconciliation we would need to change the implementation of the state machine.
+- Currently, in some states of the state machine we don't requeue the event. As a result of introducing time-based reconciliation, we would need to change the implementation of the state machine.
 
 ### Summary
 
 Pros:
-- Seems like the right approach since runtime controller is fully responsible for configuring the shoot.
+- Seems like the right approach because Runtime Controller is fully responsible for configuring the shoot.
 - Integrating the Runtime Watcher will be relatively easy. 
 
 Cons:
-- The controller will apply some changes that are not explicitly defined in Runtime CR. So the Runtime CR is no longer a full description of the desired state.
-- Since the control loop is triggerred by both CR modifications, and time based reconciliation changes to the state machine code are required. It increases the complexity of the Runtime Controller implementation. 
+- The controller will apply some changes that are not explicitly defined in the Runtime CR. So the Runtime CR is no longer a full description of the desired state.
+- Because the control loop is triggered by both CR modifications, and time-based reconciliation changes to the state machine code are required, it increases the complexity of the Runtime Controller implementation. 
 
-## Option 2: implement periodic checks with go routines and directly modify the shoot to configure `registry-cache` extension
+## Option 2: Implement Periodic Checks with Go Routines and Directly Modify the Shoot to Configure `registry-cache` Extension
 
-The second approach would be to implement a go routine that periodically checks all the SKRs for the cache configuration.
+The second approach would be to implement a Go routine that periodically checks all the SKRs for the cache configuration.
 
 There are the following questions:
 - Should we directly modify the shoot to configure the `registry-cache` extension?
@@ -54,14 +54,14 @@ Conclusions:
 ### Summary
 
 Pros:
-- Go primitives such as go routines and channels are handy for such tasks.
+- Go primitives such as Go routines and channels are handy for such tasks.
 
 Cons:
-- KIM uses controller pattern for performing operations, so it would be a bit inconsistent to implement such a feature in a different way.
-- Some implementation effort needed to synchronise access to multiple runtimes, and implement proper error handling.
-- Adding Runtime Watcher will require to slightly modify the implementation (a new channel will be needed to notify about the new configuration).
+- KIM uses a controller pattern for performing operations, so it would be a bit inconsistent to implement such a feature in a different way.
+- Some implementation effort is needed to synchronise access to multiple runtimes, and implement proper error handling.
+- Adding Runtime Watcher will require to slightly modify the implementation: A new channel will be needed to notify about the new configuration.
 
-## Option 3: implement a new controller for the `registry-cache` extension
+## Option 3: Implement a New Controller for The `registry-cache` Extension
 
 The third approach would be to implement a new controller that will be responsible for configuring the `registry-cache` extension. 
 
@@ -74,12 +74,12 @@ Conclusions:
 - Direct shoot modification violates the architecture. The Runtime Controller should be fully responsible for configuring the shoot.
 - The implementation will require introducing a new property to the Runtime CR to enable the cache.
 - The new controller will be listening on the secret events, and will be responsible for setting up the enable cache property on the Runtime CR.
-- The new controller will be triggerred in time based manner to periodically check the SKRs for the cache configuration.
+- The new controller will be triggered in time-based manner to periodically check the SKRs for the cache configuration.
 
 ### Summary
 Pros:
 - Responsibilities are clearly defined. The new controller reads the SKR to find the configuration and sets up the enable cache property.
-- It is easy to implement time based reconciliation in a separate controller.
+- It is easy to implement time-based reconciliation in a separate controller.
 - Integrating the Runtime Watcher will be relatively easy.
 
 # Decision
@@ -99,7 +99,7 @@ The operation flow is as follows:
 
 ### Runtime CR modification
 
-The Runtime CR will be modified to include as follows:
+The Runtime CR will be modified to include the following:
 ```go
 type RuntimeSpec struct {
 	Shoot    RuntimeShoot        `json:"shoot"`
@@ -112,7 +112,7 @@ type ImageRegistryCache struct {
 }
 ```
 
-### Custom Resource for the cache configuration
+### Custom Resource for the Cache Configuration
 
 The following assumptions were taken:
 - The CR will be deployed as a part of the `kim-snatch` project.
