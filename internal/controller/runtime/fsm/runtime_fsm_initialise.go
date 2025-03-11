@@ -29,7 +29,7 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 			return switchState(sFnDeleteKubeconfig)
 		}
 
-		m.log.Info("Shoot deleted", "Name", s.shoot.Name)
+		m.log.Info("Shoot deleted", "Name", s.instance.Name)
 
 		if instanceHasFinalizer {
 			return removeFinalizerAndStop(ctx, m, s) // resource cleanup completed
