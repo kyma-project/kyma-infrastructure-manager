@@ -3,12 +3,12 @@ package fsm
 import (
 	"context"
 	"fmt"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	k8s_client "sigs.k8s.io/controller-runtime/pkg/client"
@@ -113,7 +113,7 @@ func deleteExistingKymaOpenIDConnectResources(ctx context.Context, client k8s_cl
 
 func isOidcExtensionEnabled(shoot gardener.Shoot) bool {
 	for _, extension := range shoot.Spec.Extensions {
-		if extension.Type == extender.OidcExtensionType {
+		if extension.Type == extensions.OidcExtensionType {
 			if extension.Disabled == nil {
 				return true
 			}

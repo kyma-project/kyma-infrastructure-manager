@@ -45,12 +45,14 @@ func TestOidcExtender(t *testing.T) {
 		}
 
 		// when
-		extender := NewOidcExtender(defaultOidc)
+		extender := NewOidcExtender("auth-cm")
 		err := extender(runtimeShoot, &shoot)
 
 		// then
 		require.NoError(t, err)
 
-		assert.Equal(t, runtimeShoot.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig, *shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig)
+		require.Nil(t, shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig)
+		require.NotNil(t, shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication)
+		assert.Equal(t, "auth-cm", shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName)
 	})
 }
