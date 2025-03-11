@@ -63,6 +63,8 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 		s.instance.UpdateStateProvisioningCompleted()
 	}
 
+	m.log.Info("Finished configuring shoot")
+
 	return updateStatusAndStop()
 }
 
