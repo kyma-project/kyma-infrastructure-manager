@@ -43,7 +43,7 @@ func sFnDeleteKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 	}
 
 	// action section
-	m.log.Info("deleting GardenerCluster CR", "Runtime", runtimeID, "Shoot", s.shoot.Name)
+	m.log.Info("Deleting GardenerCluster CR", "Runtime", runtimeID, "Shoot", s.shoot.Name)
 	err = m.Delete(ctx, &cluster)
 	if err != nil {
 		// action error handler section
