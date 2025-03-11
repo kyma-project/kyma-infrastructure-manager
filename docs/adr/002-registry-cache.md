@@ -82,9 +82,17 @@ Pros:
 - It is easy to implement time-based reconciliation in a separate controller.
 - Integrating the Runtime Watcher will be relatively easy.
 
+Cons:
+- At first glance, it seems like overkill to introduce a new controller for such a simple feature.
+
 # Decision
 
-The third option was selected. 
+
+  The third option was selected for the following reasons:
+- A clear responsibility separation between the Runtime Controller and the new controller will improve the maintainability of the code.
+- The impact on the existing implementation is minimal.
+- Introducing a new property to the Runtime CR to enable caching aligns with the controller pattern.
+
 The following diagram shows the proposed architecture:
 
 ![](./assets/caching-in-kim.drawio.svg)
