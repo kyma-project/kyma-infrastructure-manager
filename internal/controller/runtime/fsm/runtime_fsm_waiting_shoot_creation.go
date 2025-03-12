@@ -6,6 +6,7 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	imgardenerhandler "github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -27,7 +28,7 @@ func ensureTerminatingStatusConditionAndContinue(instance *imv1.Runtime, condTyp
 }
 
 func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	m.log.Info("Waiting for shoot creation state")
+	m.log.V(log_level.DEBUG).Info("Waiting for shoot creation state")
 
 	switch s.shoot.Status.LastOperation.State {
 	case gardener.LastOperationStateProcessing, gardener.LastOperationStatePending, gardener.LastOperationStateAborted, gardener.LastOperationStateError:
@@ -41,7 +42,7 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 			return updateStatusAndStop()
 		}
 
-		m.log.Info(fmt.Sprintf("Shoot %s is in %s state, scheduling for retry", s.shoot.Name, s.shoot.Status.LastOperation.State))
+		m.log.V(log_level.DEBUG).Info(fmt.Sprintf("Shoot %s is in %s state, scheduling for retry", s.shoot.Name, s.shoot.Status.LastOperation.State))
 
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRuntimeProvisioned,

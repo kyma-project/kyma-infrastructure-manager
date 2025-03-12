@@ -3,24 +3,24 @@ package fsm
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"time"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
-	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 const fieldManagerName = "kim"
 
 func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	m.log.Info("Patch shoot state")
-
 	data, err := m.AuditLogging.GetAuditLogData(
 		s.instance.Spec.Shoot.Provider.Type,
 		s.instance.Spec.Shoot.Region)
@@ -58,7 +58,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonConversionError, "Runtime conversion error")
 	}
 
-	m.log.Info("Shoot converted successfully", "Name", updatedShoot.Name, "Namespace", updatedShoot.Namespace)
+	m.log.V(log_level.DEBUG).Info("Shoot converted successfully", "Name", updatedShoot.Name, "Namespace", updatedShoot.Namespace)
 
 	// The additional Update function is required to fully replace shoot Workers collection with workers defined in updated runtime object.
 	// This is a workaround for the sigs.k8s.io/controller-runtime/pkg/client, which does not support replacing the Workers collection with client.Patch
@@ -110,7 +110,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		return switchState(sFnHandleKubeconfig)
 	}
 
-	m.log.Info("Gardener shoot for runtime patched successfully", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
+	m.log.V(log_level.DEBUG).Info("Gardener shoot for runtime patched successfully", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
 
 	s.instance.UpdateStatePending(
 		imv1.ConditionTypeRuntimeProvisioned,
@@ -151,7 +151,6 @@ func waitForWorkerPoolUpdate(ctx context.Context, m *fsm, s *systemState, shoot 
 	delay := time.Millisecond * 200
 
 	for i := 0; i < 5; i++ {
-		m.log.Info("Verify worker pool is in sync")
 		time.Sleep(time.Duration(i) * delay)
 
 		err := m.ShootClient.Get(ctx, types.NamespacedName{

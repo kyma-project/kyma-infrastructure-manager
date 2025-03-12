@@ -23,6 +23,7 @@ import (
 	"github.com/go-logr/logr"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
+	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -48,7 +49,7 @@ type RuntimeReconciler struct {
 //+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=runtimes/finalizers,verbs=get;list;delete;create;update;patch,namespace=kcp-system
 
 func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	r.Log.Info(request.String())
+	r.Log.V(log_level.TRACE).Info(request.String())
 
 	var runtime imv1.Runtime
 	if err := r.Get(ctx, request.NamespacedName, &runtime); err != nil {

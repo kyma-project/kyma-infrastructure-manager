@@ -11,7 +11,6 @@ import (
 
 // to save the runtime status at the begining of the reconciliation
 func sFnTakeSnapshot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	m.log.Info("Take snapshot state")
 	s.saveRuntimeStatus()
 
 	var shoot gardener_api.Shoot
