@@ -4,15 +4,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
-	v1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/yaml"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apiserver/pkg/apis/apiserver"
 	ctrl "sigs.k8s.io/controller-runtime"
 	k8s_client "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -50,14 +47,6 @@ func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ct
 	if err != nil {
 		updateConditionFailed(&s.instance)
 		m.log.Error(err, "Failed to create OpenIDConnect resource. Scheduling for retry")
-		return requeue()
-	}
-
-	err = createOIDCConfigMap(ctx, &s.instance, m.RCCfg, m, s)
-
-	if err != nil {
-		updateConditionFailed(&s.instance)
-		m.log.Error(err, "Failed to create structured authentication config map. Scheduling for retry")
 		return requeue()
 	}
 
@@ -180,72 +169,4 @@ func updateConditionFailed(rt *imv1.Runtime) {
 		string(metav1.ConditionFalse),
 		"failed to configure OIDC",
 	)
-}
-
-func createOIDCConfigMap(ctx context.Context, runtime *imv1.Runtime, cfg RCCfg, m *fsm, s *systemState) error {
-	cmName := cfg.ConverterConfig.Kubernetes.AuthenticationConfigurationConfigMap
-
-	shootAdminClient, shootClientError := GetShootClient(ctx, m.Client, s.instance)
-	if shootClientError != nil {
-		return shootClientError
-	}
-
-	authenticationConfig := toAuthenticationConfiguration(runtime)
-
-	authConfigBytes, err := yaml.Marshal(authenticationConfig)
-	if err != nil {
-		return err
-	}
-
-	return shootAdminClient.Create(ctx, &v1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ConfigMap",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cmName,
-			Namespace: s.instance.Namespace,
-		},
-		Data: map[string]string{
-			"config.yaml": string(authConfigBytes),
-		},
-	})
-
-}
-
-func toAuthenticationConfiguration(runtime *imv1.Runtime) apiserver.AuthenticationConfiguration {
-
-	toJWTAuthenticator := func(oidcConfig gardener.OIDCConfig) apiserver.JWTAuthenticator {
-		return apiserver.JWTAuthenticator{
-			Issuer: apiserver.Issuer{
-				URL:       *oidcConfig.IssuerURL,
-				Audiences: []string{*oidcConfig.ClientID},
-			},
-			ClaimMappings: apiserver.ClaimMappings{
-				Username: apiserver.PrefixedClaimOrExpression{
-					Claim:  *oidcConfig.UsernameClaim,
-					Prefix: oidcConfig.UsernamePrefix,
-				},
-				Groups: apiserver.PrefixedClaimOrExpression{
-					Claim:  *oidcConfig.GroupsClaim,
-					Prefix: oidcConfig.GroupsPrefix,
-				},
-			},
-		}
-	}
-
-	jwtAuthenticators := make([]apiserver.JWTAuthenticator, 0)
-	jwtAuthenticators = append(jwtAuthenticators, toJWTAuthenticator(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig))
-
-	for _, oidcConfig := range *runtime.Spec.Shoot.Kubernetes.KubeAPIServer.AdditionalOidcConfig {
-		jwtAuthenticators = append(jwtAuthenticators, toJWTAuthenticator(oidcConfig))
-	}
-
-	return apiserver.AuthenticationConfiguration{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "AuthenticationConfiguration",
-			APIVersion: "apiserver.config.k8s.io/v1beta1",
-		},
-		JWT: jwtAuthenticators,
-	}
 }
