@@ -7,7 +7,6 @@ import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -45,14 +44,12 @@ func TestOidcExtender(t *testing.T) {
 		}
 
 		// when
-		extender := NewOidcExtender("auth-cm")
+		extender := NewOidcExtender()
 		err := extender(runtimeShoot, &shoot)
 
 		// then
 		require.NoError(t, err)
 
 		require.Nil(t, shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig)
-		require.NotNil(t, shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication)
-		assert.Equal(t, "auth-cm", shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName)
 	})
 }
