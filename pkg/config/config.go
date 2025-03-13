@@ -23,9 +23,9 @@ type AWSConfig struct {
 }
 
 type DNSConfig struct {
-	SecretName   string `json:"secretName" validate:"required"`
-	DomainPrefix string `json:"domainPrefix" validate:"required"`
-	ProviderType string `json:"providerType" validate:"required"`
+	SecretName   string `json:"secretName"`
+	DomainPrefix string `json:"domainPrefix"`
+	ProviderType string `json:"providerType"`
 }
 
 type KubernetesConfig struct {
