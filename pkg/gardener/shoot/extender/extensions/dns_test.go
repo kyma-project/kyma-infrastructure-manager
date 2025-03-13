@@ -28,7 +28,6 @@ func TestDNSExtensionsExtender(t *testing.T) {
 		{
 			name:        "Should generate DNS extension for internal Gardener DNS configuration",
 			shootName:   "myshoot",
-			prefix:      "dev.kyma.ondemand.com",
 			expectLocal: true,
 		},
 	} {

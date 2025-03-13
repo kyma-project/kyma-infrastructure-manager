@@ -74,12 +74,13 @@ func NewConverterCreate(opts CreateOpts) Converter {
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
 		),
-		extender2.NewDNSExtender(opts.DNS.DomainPrefix),
 		extender2.ExtendWithTolerations,
 	)
 
+	if opts.DNS.ProviderType != "" && opts.DNS.SecretName != "" && opts.DNS.DomainPrefix != "" {
+		extendersForCreate = append(extendersForCreate, extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType))
+	}
 	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.ConverterConfig, opts.AuditLogData))
-
 	extendersForCreate = append(extendersForCreate,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
 

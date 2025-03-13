@@ -23,9 +23,9 @@ type AWSConfig struct {
 }
 
 type DNSConfig struct {
-	SecretName   string `json:"secretName"`
+	SecretName   string `json:"secretName" validate:"required"`
 	DomainPrefix string `json:"domainPrefix" validate:"required"`
-	ProviderType string `json:"providerType" `
+	ProviderType string `json:"providerType" validate:"required"`
 }
 
 type KubernetesConfig struct {
@@ -64,7 +64,7 @@ type MachineImageConfig struct {
 
 type ConverterConfig struct {
 	Kubernetes        KubernetesConfig        `json:"kubernetes" validate:"required"`
-	DNS               DNSConfig               `json:"dns" validate:"required"`
+	DNS               DNSConfig               `json:"dns"`
 	Provider          ProviderConfig          `json:"provider"`
 	MachineImage      MachineImageConfig      `json:"machineImage" validate:"required"`
 	Gardener          GardenerConfig          `json:"gardener" validate:"required"`

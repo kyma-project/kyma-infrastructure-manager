@@ -75,7 +75,7 @@ func newDNSExtensionConfig(domain, secretName, dnsProviderType string) *DNSExten
 func NewDNSExtension(shootName, secretName, domainSuffix, dnsProviderType string) (*gardener.Extension, error) {
 	var providerConfig *DNSExtensionProviderConfig
 
-	if secretName != "" && dnsProviderType != "" {
+	if secretName != "" && dnsProviderType != "" && domainSuffix != "" {
 		domain := fmt.Sprintf("%s.%s", shootName, domainSuffix)
 		providerConfig = newDNSExtensionConfig(domain, secretName, dnsProviderType)
 	} else {

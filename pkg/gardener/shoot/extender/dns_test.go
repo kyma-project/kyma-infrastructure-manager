@@ -12,7 +12,9 @@ import (
 func TestDNSExtender(t *testing.T) {
 	t.Run("Create DNS config for create scenario", func(t *testing.T) {
 		// given
+		secretName := "my-secret"
 		domainPrefix := "dev.mydomain.com"
+		dnsProviderType := "aws-route53"
 		runtimeShoot := imv1.Runtime{
 			Spec: imv1.RuntimeSpec{
 				Shoot: imv1.RuntimeShoot{
@@ -20,7 +22,7 @@ func TestDNSExtender(t *testing.T) {
 				},
 			},
 		}
-		extender := NewDNSExtender(domainPrefix)
+		extender := NewDNSExtender(secretName, domainPrefix, dnsProviderType)
 		shoot := testutils.FixEmptyGardenerShoot("test", "dev")
 
 		// when
@@ -29,5 +31,9 @@ func TestDNSExtender(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, "myshoot.dev.mydomain.com", *shoot.Spec.DNS.Domain)
+		assert.Equal(t, []string{"myshoot.dev.mydomain.com"}, shoot.Spec.DNS.Providers[0].Domains.Include)
+		assert.Equal(t, dnsProviderType, *shoot.Spec.DNS.Providers[0].Type)
+		assert.Equal(t, secretName, *shoot.Spec.DNS.Providers[0].SecretName)
+		assert.Equal(t, true, *shoot.Spec.DNS.Providers[0].Primary)
 	})
 }
