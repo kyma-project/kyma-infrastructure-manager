@@ -32,11 +32,13 @@ func TestDNSExtensionsExtender(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			ext, err := NewDNSExtension(testcase.shootName, testcase.secretName, testcase.prefix, testcase.providerType)
-			require.NoError(t, err)
 			if testcase.expectLocal {
+				ext, err := NewDNSExtensionInternal()
+				require.NoError(t, err)
 				verifyLocalDNSExtension(t, ext)
 			} else {
+				ext, err := NewDNSExtensionExternal(testcase.shootName, testcase.secretName, testcase.prefix, testcase.providerType)
+				require.NoError(t, err)
 				verifyExternalDNSExtension(t, ext)
 			}
 		})

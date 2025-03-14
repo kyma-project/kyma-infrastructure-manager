@@ -72,6 +72,11 @@ type ConverterConfig struct {
 	MaintenanceWindow MaintenanceWindowConfig `json:"maintenanceWindow"`
 }
 
+// special case for own Gardener's DNS solution
+func (c DNSConfig) IsGardenerInternal() bool {
+	return c.ProviderType == "" && c.SecretName == "" && c.DomainPrefix == ""
+}
+
 type ReaderGetter = func() (io.Reader, error)
 
 func (c *Config) Load(f ReaderGetter) error {

@@ -72,21 +72,24 @@ func newDNSExtensionConfig(domain, secretName, dnsProviderType string) *DNSExten
 	}
 }
 
-func NewDNSExtension(shootName, secretName, domainSuffix, dnsProviderType string) (*gardener.Extension, error) {
-	var providerConfig *DNSExtensionProviderConfig
+func NewDNSExtensionExternal(shootName, secretName, domainSuffix, dnsProviderType string) (*gardener.Extension, error) {
+	domain := fmt.Sprintf("%s.%s", shootName, domainSuffix)
+	providerConfig := newDNSExtensionConfig(domain, secretName, dnsProviderType)
 
-	if secretName != "" && dnsProviderType != "" && domainSuffix != "" {
-		domain := fmt.Sprintf("%s.%s", shootName, domainSuffix)
-		providerConfig = newDNSExtensionConfig(domain, secretName, dnsProviderType)
-	} else {
-		// special case for Gardener's DNS solution
-		providerConfig = &DNSExtensionProviderConfig{
-			APIVersion:                    "service.dns.extensions.gardener.cloud/v1alpha1",
-			Kind:                          "DNSConfig",
-			SyncProvidersFromShootSpecDNS: ptr.To(true),
-		}
+	return serializedDNSExtension(providerConfig)
+}
+
+func NewDNSExtensionInternal() (*gardener.Extension, error) {
+	providerConfig := &DNSExtensionProviderConfig{
+		APIVersion:                    "service.dns.extensions.gardener.cloud/v1alpha1",
+		Kind:                          "DNSConfig",
+		SyncProvidersFromShootSpecDNS: ptr.To(true),
 	}
 
+	return serializedDNSExtension(providerConfig)
+}
+
+func serializedDNSExtension(providerConfig *DNSExtensionProviderConfig) (*gardener.Extension, error) {
 	extensionJSON, err := json.Marshal(providerConfig)
 	if err != nil {
 		return nil, err

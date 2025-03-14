@@ -77,7 +77,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 		extender2.ExtendWithTolerations,
 	)
 
-	if opts.DNS.ProviderType != "" && opts.DNS.SecretName != "" && opts.DNS.DomainPrefix != "" {
+	if !opts.DNS.IsGardenerInternal() {
 		extendersForCreate = append(extendersForCreate, extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType))
 	}
 	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.ConverterConfig, opts.AuditLogData))
