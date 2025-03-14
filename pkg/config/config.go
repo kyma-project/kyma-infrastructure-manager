@@ -23,9 +23,9 @@ type AWSConfig struct {
 }
 
 type DNSConfig struct {
-	SecretName   string `json:"secretName" validate:"required"`
-	DomainPrefix string `json:"domainPrefix" validate:"required"`
-	ProviderType string `json:"providerType" validate:"required"`
+	SecretName   string `json:"secretName"`
+	DomainPrefix string `json:"domainPrefix"`
+	ProviderType string `json:"providerType"`
 }
 
 type KubernetesConfig struct {
@@ -64,12 +64,17 @@ type MachineImageConfig struct {
 
 type ConverterConfig struct {
 	Kubernetes        KubernetesConfig        `json:"kubernetes" validate:"required"`
-	DNS               DNSConfig               `json:"dns" validate:"required"`
+	DNS               DNSConfig               `json:"dns"`
 	Provider          ProviderConfig          `json:"provider"`
 	MachineImage      MachineImageConfig      `json:"machineImage" validate:"required"`
 	Gardener          GardenerConfig          `json:"gardener" validate:"required"`
 	AuditLog          AuditLogConfig          `json:"auditLogging" validate:"required"`
 	MaintenanceWindow MaintenanceWindowConfig `json:"maintenanceWindow"`
+}
+
+// special case for own Gardener's DNS solution
+func (c DNSConfig) IsGardenerInternal() bool {
+	return c.ProviderType == "" && c.SecretName == "" && c.DomainPrefix == ""
 }
 
 type ReaderGetter = func() (io.Reader, error)
