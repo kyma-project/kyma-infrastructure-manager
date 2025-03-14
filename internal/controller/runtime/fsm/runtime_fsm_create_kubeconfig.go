@@ -6,6 +6,7 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -17,8 +18,6 @@ const (
 )
 
 func sFnHandleKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	m.log.Info("Create Gardener Cluster CR state")
-
 	runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
 
 	// get section
@@ -41,7 +40,7 @@ func sFnHandleKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 			return updateStatusAndStop()
 		}
 
-		m.log.Info("GardenerCluster CR not found, creating a new one", "Name", runtimeID)
+		m.log.V(log_level.DEBUG).Info("GardenerCluster CR not found, creating a new one", "name", runtimeID)
 		err = m.Create(ctx, makeGardenerClusterForRuntime(s.instance, s.shoot))
 		if err != nil {
 			m.log.Error(err, "GardenerCluster CR create error", "name", runtimeID)
@@ -55,18 +54,16 @@ func sFnHandleKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 			return updateStatusAndStop()
 		}
 
-		m.log.Info("Gardener Cluster CR created, waiting for readiness", "Name", runtimeID)
 		s.instance.UpdateStatePending(imv1.ConditionTypeRuntimeKubeconfigReady, imv1.ConditionReasonGardenerCRCreated, "Unknown", "Gardener Cluster CR created, waiting for readiness")
 		return updateStatusAndRequeueAfter(m.RCCfg.ControlPlaneRequeueDuration)
 	}
 
 	// wait section
 	if cluster.Status.State != imv1.ReadyState {
-		m.log.Info("GardenerCluster CR is not ready yet, requeue", "Name", runtimeID, "State", cluster.Status.State)
 		return requeueAfter(m.RCCfg.ControlPlaneRequeueDuration)
 	}
 
-	m.log.Info("GardenerCluster CR is ready", "Name", runtimeID)
+	m.log.V(log_level.DEBUG).Info("GardenerCluster CR is ready", "name", runtimeID)
 
 	return ensureStatusConditionIsSetAndContinue(&s.instance,
 		imv1.ConditionTypeRuntimeKubeconfigReady,

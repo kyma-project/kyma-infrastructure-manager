@@ -5,23 +5,22 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	m.log.Info("delete shoot state")
-
 	// wait section
 	if !s.shoot.GetDeletionTimestamp().IsZero() {
-		m.log.Info("Waiting for shoot to be deleted", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
+		m.log.V(log_level.DEBUG).Info("Waiting for shoot to be deleted", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
 		return requeueAfter(m.RCCfg.RequeueDurationShootDelete)
 	}
 
 	// action section
 	if !isGardenerCloudDelConfirmationSet(s.shoot.Annotations) {
-		m.log.Info("patching shoot with del-confirmation")
+		m.log.V(log_level.DEBUG).Info("patching shoot with del-confirmation")
 		// workaround for Gardener client
 		setObjectFields(s.shoot)
 		s.shoot.Annotations = addGardenerCloudDelConfirmation(s.shoot.Annotations)
