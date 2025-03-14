@@ -3,8 +3,10 @@ package fsm
 import (
 	"context"
 	"fmt"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -12,8 +14,6 @@ import (
 const msgFailedToConfigureAuditlogs = "Failed to configure audit logs"
 
 func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	m.log.Info("Create shoot state")
-
 	if s.instance.Spec.Shoot.EnforceSeedLocation != nil && *s.instance.Spec.Shoot.EnforceSeedLocation {
 		seedAvailable, regionsWithSeeds, err := seedForRegionAvailable(ctx, m.ShootClient, s.instance.Spec.Shoot.Provider.Type, s.instance.Spec.Shoot.Region)
 		if err != nil {
@@ -84,9 +84,9 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
 	}
 
-	m.log.Info(
+	m.log.V(log_level.DEBUG).Info(
 		"Gardener shoot for runtime initialised successfully",
-		"Name", shoot.Name,
+		"name", shoot.Name,
 		"Namespace", shoot.Namespace,
 	)
 

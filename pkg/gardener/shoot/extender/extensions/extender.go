@@ -22,7 +22,7 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 		{
 			Type: NetworkFilterType,
 			Create: func(runtime imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
-				return NewNetworkFilterExtension(!runtime.Spec.Security.Networking.Filter.Egress.Enabled)
+				return NewNetworkFilterExtension(runtime.Spec.Security.Networking.Filter)
 			},
 		},
 		{
@@ -97,7 +97,7 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensio
 		{
 			Type: NetworkFilterType,
 			Create: func(runtime imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
-				return NewNetworkFilterExtension(!runtime.Spec.Security.Networking.Filter.Egress.Enabled)
+				return NewNetworkFilterExtension(runtime.Spec.Security.Networking.Filter)
 			},
 		},
 	}, extensionsOnTheShoot)
