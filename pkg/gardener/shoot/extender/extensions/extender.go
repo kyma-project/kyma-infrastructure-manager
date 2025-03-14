@@ -34,7 +34,10 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 		{
 			Type: DNSExtensionType,
 			Create: func(_ imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-				return NewDNSExtension(shoot.Name, config.DNS.SecretName, config.DNS.DomainPrefix, config.DNS.ProviderType)
+				if config.DNS.IsGardenerInternal() {
+					return NewDNSExtensionInternal()
+				}
+				return NewDNSExtensionExternal(shoot.Name, config.DNS.SecretName, config.DNS.DomainPrefix, config.DNS.ProviderType)
 			},
 		},
 		{

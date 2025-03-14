@@ -3,7 +3,6 @@ package extensions
 import (
 	"encoding/json"
 	"fmt"
-
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
@@ -73,10 +72,25 @@ func newDNSExtensionConfig(domain, secretName, dnsProviderType string) *DNSExten
 	}
 }
 
-func NewDNSExtension(shootName, secretName, domainSuffix, dnsProviderType string) (*gardener.Extension, error) {
+func NewDNSExtensionExternal(shootName, secretName, domainSuffix, dnsProviderType string) (*gardener.Extension, error) {
 	domain := fmt.Sprintf("%s.%s", shootName, domainSuffix)
+	providerConfig := newDNSExtensionConfig(domain, secretName, dnsProviderType)
 
-	extensionJSON, err := json.Marshal(newDNSExtensionConfig(domain, secretName, dnsProviderType))
+	return serializedDNSExtension(providerConfig)
+}
+
+func NewDNSExtensionInternal() (*gardener.Extension, error) {
+	providerConfig := &DNSExtensionProviderConfig{
+		APIVersion:                    "service.dns.extensions.gardener.cloud/v1alpha1",
+		Kind:                          "DNSConfig",
+		SyncProvidersFromShootSpecDNS: ptr.To(true),
+	}
+
+	return serializedDNSExtension(providerConfig)
+}
+
+func serializedDNSExtension(providerConfig *DNSExtensionProviderConfig) (*gardener.Extension, error) {
+	extensionJSON, err := json.Marshal(providerConfig)
 	if err != nil {
 		return nil, err
 	}
