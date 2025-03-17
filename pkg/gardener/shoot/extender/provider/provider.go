@@ -101,6 +101,7 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 		}
 
 		correctOneNodeWorkerPools(log, provider, shootWorkers)
+		alignWorkersUpdateStrategy(provider, shootWorkers)
 
 		setWorkerSettings(provider)
 		ensureWorkersOrder(provider, shootWorkers)
@@ -332,6 +333,24 @@ func correctOneNodeWorkerPools(log *logr.Logger, provider *gardener.Provider, ex
 			}
 
 			alignedWorker.Zones = existing.Zones
+		}
+	}
+}
+
+func alignWorkersUpdateStrategy(provider *gardener.Provider, existingWorkers []gardener.Worker) {
+	existingWorkersMap := make(map[string]gardener.Worker)
+	for _, existing := range existingWorkers {
+		existingWorkersMap[existing.Name] = existing
+	}
+
+	for i := range provider.Workers {
+		alignedWorker := &provider.Workers[i]
+		if alignedWorker.UpdateStrategy != nil { // we are setting someting
+			continue
+		}
+
+		if existing, found := existingWorkersMap[alignedWorker.Name]; found {
+			alignedWorker.UpdateStrategy = existing.UpdateStrategy
 		}
 	}
 }
