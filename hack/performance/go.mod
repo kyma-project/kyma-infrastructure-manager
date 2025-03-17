@@ -6,7 +6,7 @@ require (
 	github.com/kyma-project/infrastructure-manager v0.0.0-20250314134958-79537a984938
 	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.3
-	sigs.k8s.io/controller-runtime v0.20.2
+	sigs.k8s.io/controller-runtime v0.20.3
 )
 
 require (
