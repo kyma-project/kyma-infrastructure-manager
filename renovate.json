@@ -5,8 +5,12 @@
   ],
   "gomod": {
     "postUpdateOptions": [
-    "gomodTidy"
-  ],
-  "enabled": true
-  }
+      "gomodTidy"
+    ],
+    "enabled": true
+  },
+   "postUpdateOptions": [
+      "gomodTidy1.17",
+      "gomodUpdateImportPaths"
+  ]
 }
