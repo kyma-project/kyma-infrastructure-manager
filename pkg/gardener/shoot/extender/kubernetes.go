@@ -4,7 +4,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"k8s.io/utils/ptr"
 )
 
 // NewKubernetesExtender creates a new Kubernetes extender function.
@@ -28,8 +27,6 @@ func NewKubernetesExtender(defaultKubernetesVersion, currentKubernetesVersion st
 				shoot.Spec.Kubernetes.Version = currentKubernetesVersion
 			}
 		}
-
-		shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
 
 		return nil
 	}
