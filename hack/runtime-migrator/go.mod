@@ -3,10 +3,10 @@ module github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app
 go 1.23.6
 
 require (
-	github.com/gardener/gardener v1.113.0
+	github.com/gardener/gardener v1.114.0
 	github.com/gardener/oidc-webhook-authenticator v0.34.0
 	github.com/go-playground/validator/v10 v10.25.0
-	github.com/kyma-project/infrastructure-manager v0.0.0-20241023155010-55a6abeb1690
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250317114844-28018e5a8c79
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
 	k8s.io/api v0.32.3
@@ -14,7 +14,7 @@ require (
 	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.3
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
-	sigs.k8s.io/controller-runtime v0.20.2
+	sigs.k8s.io/controller-runtime v0.20.3
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -39,7 +39,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/gnostic-models v0.6.9 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -61,12 +61,12 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/crypto v0.35.0 // indirect
-	golang.org/x/net v0.35.0 // indirect
+	golang.org/x/crypto v0.36.0 // indirect
+	golang.org/x/net v0.37.0 // indirect
 	golang.org/x/oauth2 v0.26.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/term v0.29.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/term v0.30.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/time v0.10.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/protobuf v1.36.1 // indirect
@@ -81,5 +81,9 @@ require (
 
 replace (
 	github.com/kyma-project/infrastructure-manager => ../../
-	golang.org/x/net => golang.org/x/net v0.36.0
+	golang.org/x/crypto => golang.org/x/crypto v0.36.0
+	golang.org/x/net => golang.org/x/net v0.37.0
+	golang.org/x/sys => golang.org/x/sys v0.31.0
+	golang.org/x/text => golang.org/x/text v0.23.0
+	golang.org/x/tools => golang.org/x/tools v0.31.0
 )
