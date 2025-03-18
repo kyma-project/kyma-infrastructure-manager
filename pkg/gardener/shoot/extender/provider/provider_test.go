@@ -92,7 +92,7 @@ func TestValidations(t *testing.T) {
 	}
 }
 
-func TestFixKEBIssue1766(t *testing.T) {
+func TestFixAlignWorkerZonesWithGardener(t *testing.T) {
 	t.Run("The single node worker pool specified in the Runtime CR refers to zone that is different on the existing shoot", func(t *testing.T) {
 		// given
 		shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
@@ -123,7 +123,7 @@ func TestFixKEBIssue1766(t *testing.T) {
 		// then
 		require.NoError(t, err)
 
-		assert.Equal(t, []string{"eu-central-1b"}, shoot.Spec.Provider.Workers[1].Zones)
+		assert.Equal(t, []string{"eu-central-1b", "eu-central-1a"}, shoot.Spec.Provider.Workers[1].Zones)
 	})
 }
 

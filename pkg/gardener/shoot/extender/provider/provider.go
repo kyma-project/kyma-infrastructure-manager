@@ -100,9 +100,7 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 			return err
 		}
 
-		correctOneNodeWorkerPools(log, provider, shootWorkers)
-		alignWorkersUpdateStrategy(provider, shootWorkers)
-
+		alignWorkersWithGardener(log, provider, shootWorkers)
 		setWorkerSettings(provider)
 		ensureWorkersOrder(provider, shootWorkers)
 
@@ -314,8 +312,7 @@ func setMachineImage(provider *gardener.Provider, defMachineImgName, defMachineI
 	}
 }
 
-// HACK: can be removed when https://github.com/kyma-project/kyma-environment-broker/issues/1766 was fixed
-func correctOneNodeWorkerPools(log *logr.Logger, provider *gardener.Provider, existingWorkers []gardener.Worker) {
+func alignWorkersWithGardener(log *logr.Logger, provider *gardener.Provider, existingWorkers []gardener.Worker) {
 	existingWorkersMap := make(map[string]gardener.Worker)
 	for _, existing := range existingWorkers {
 		existingWorkersMap[existing.Name] = existing
@@ -323,34 +320,20 @@ func correctOneNodeWorkerPools(log *logr.Logger, provider *gardener.Provider, ex
 
 	for i := range provider.Workers {
 		alignedWorker := &provider.Workers[i]
-		if len(alignedWorker.Zones) != 1 {
-			continue
-		}
 
 		if existing, found := existingWorkersMap[alignedWorker.Name]; found {
-			if log != nil {
-				log.Info("Warning: resulting shoot doesn't contain the state defined in the Runtime CR. It is a result of a workaround for Kyma Environment Broker issue #1766 .")
+			if alignedWorker.UpdateStrategy == nil {
+				alignedWorker.UpdateStrategy = existing.UpdateStrategy
 			}
 
-			alignedWorker.Zones = existing.Zones
-		}
-	}
-}
-
-func alignWorkersUpdateStrategy(provider *gardener.Provider, existingWorkers []gardener.Worker) {
-	existingWorkersMap := make(map[string]gardener.Worker)
-	for _, existing := range existingWorkers {
-		existingWorkersMap[existing.Name] = existing
-	}
-
-	for i := range provider.Workers {
-		alignedWorker := &provider.Workers[i]
-		if alignedWorker.UpdateStrategy != nil { // we are setting someting
-			continue
-		}
-
-		if existing, found := existingWorkersMap[alignedWorker.Name]; found {
-			alignedWorker.UpdateStrategy = existing.UpdateStrategy
+			for _, zone := range existing.Zones {
+				if !slices.Contains(alignedWorker.Zones, zone) {
+					if log != nil {
+						log.Info("Warning: Updated worker has missing zone that is already specified in Gardener", "worker", alignedWorker.Name, "zone", zone)
+					}
+					alignedWorker.Zones = append(alignedWorker.Zones, zone)
+				}
+			}
 		}
 	}
 }
