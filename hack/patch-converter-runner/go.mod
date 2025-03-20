@@ -6,7 +6,7 @@ toolchain go1.24.1
 
 require (
 	github.com/gardener/gardener v1.114.1
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250320121810-704c60e7c66d
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250320153709-565b3e3833ae
 	k8s.io/api v0.32.3
 	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.3
@@ -22,7 +22,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/gardener/gardener-extension-provider-aws v1.60.2 // indirect
 	github.com/gardener/gardener-extension-provider-gcp v1.43.1 // indirect
-	github.com/gardener/gardener-extension-provider-openstack v1.42.1 // indirect
+	github.com/gardener/gardener-extension-provider-openstack v1.46.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
