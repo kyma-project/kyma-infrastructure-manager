@@ -6,7 +6,7 @@ toolchain go1.24.1
 
 require (
 	github.com/gardener/gardener v1.114.1
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250320150819-d94e738ae948
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250320153709-565b3e3833ae
 	k8s.io/api v0.32.3
 	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.3
