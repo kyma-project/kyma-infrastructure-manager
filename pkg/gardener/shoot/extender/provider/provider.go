@@ -100,9 +100,8 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 			return err
 		}
 
-		alignWorkersWithGardener(log, provider, shootWorkers)
 		setWorkerSettings(provider)
-		ensureWorkersOrder(provider, shootWorkers)
+		alignWorkersWithGardener(provider, shootWorkers)
 
 		return nil
 	}
@@ -312,7 +311,9 @@ func setMachineImage(provider *gardener.Provider, defMachineImgName, defMachineI
 	}
 }
 
-func alignWorkersWithGardener(log *logr.Logger, provider *gardener.Provider, existingWorkers []gardener.Worker) {
+// We can't predict what will be the order of zones stored by Gardener.
+// Without this patch, gardener's admission webhook might reject the request if the zones order does not match.
+func alignWorkersWithGardener(provider *gardener.Provider, existingWorkers []gardener.Worker) {
 	existingWorkersMap := make(map[string]gardener.Worker)
 	for _, existing := range existingWorkers {
 		existingWorkersMap[existing.Name] = existing
@@ -325,31 +326,6 @@ func alignWorkersWithGardener(log *logr.Logger, provider *gardener.Provider, exi
 			if alignedWorker.UpdateStrategy == nil {
 				alignedWorker.UpdateStrategy = existing.UpdateStrategy
 			}
-
-			for _, zone := range existing.Zones {
-				if !slices.Contains(alignedWorker.Zones, zone) {
-					if log != nil {
-						log.Info("Warning: Updated worker has missing zone that is already specified in Gardener", "worker", alignedWorker.Name, "zone", zone)
-					}
-					alignedWorker.Zones = append(alignedWorker.Zones, zone)
-				}
-			}
-		}
-	}
-}
-
-// We can't predict what will be the order of zones stored by Gardener.
-// Without this patch, gardener's admission webhook might reject the request if the zones order does not match.
-func ensureWorkersOrder(provider *gardener.Provider, existingWorkers []gardener.Worker) {
-	existingWorkersMap := make(map[string]gardener.Worker)
-	for _, existing := range existingWorkers {
-		existingWorkersMap[existing.Name] = existing
-	}
-
-	for i := range provider.Workers {
-		alignedWorker := &provider.Workers[i]
-
-		if existing, found := existingWorkersMap[alignedWorker.Name]; found {
 
 			alignWorkerZonesForExtension(alignedWorker, existing)
 			alignWorkerMachineImageVersion(alignedWorker.Machine.Image, existing.Machine.Image)
