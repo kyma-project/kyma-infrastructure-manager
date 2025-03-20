@@ -3,7 +3,8 @@ run:
   timeout: 10m
 
 output:
-  formats: tab
+  formats:
+    - format: tab
   sort-results: true
 
 
