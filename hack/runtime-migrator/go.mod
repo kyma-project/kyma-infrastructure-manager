@@ -1,12 +1,14 @@
 module github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app
 
-go 1.23.6
+go 1.24.0
+
+toolchain go1.24.1
 
 require (
-	github.com/gardener/gardener v1.114.0
+	github.com/gardener/gardener v1.114.1
 	github.com/gardener/oidc-webhook-authenticator v0.34.0
 	github.com/go-playground/validator/v10 v10.25.0
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250317114844-28018e5a8c79
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250320121810-704c60e7c66d
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
 	k8s.io/api v0.32.3
@@ -53,7 +55,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/prometheus/client_golang v1.21.0 // indirect
+	github.com/prometheus/client_golang v1.21.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect

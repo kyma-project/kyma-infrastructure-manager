@@ -1,20 +1,22 @@
 module github.com/kyma-project/infrastructure-manager
 
-go 1.23.6
+go 1.24.0
+
+toolchain go1.24.1
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
-	github.com/gardener/gardener v1.114.0
-	github.com/gardener/gardener-extension-provider-aws v1.58.3
-	github.com/gardener/gardener-extension-provider-gcp v1.40.1
+	github.com/gardener/gardener v1.114.1
+	github.com/gardener/gardener-extension-provider-aws v1.60.2
+	github.com/gardener/gardener-extension-provider-gcp v1.43.1
 	github.com/gardener/gardener-extension-provider-openstack v1.42.1
 	github.com/gardener/oidc-webhook-authenticator v0.34.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-playground/validator/v10 v10.25.0
-	github.com/onsi/ginkgo/v2 v2.23.0
+	github.com/onsi/ginkgo/v2 v2.23.1
 	github.com/onsi/gomega v1.36.2
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.21.0
+	github.com/prometheus/client_golang v1.21.1
 	github.com/stretchr/testify v1.10.0
 	k8s.io/api v0.32.3
 	k8s.io/apimachinery v0.32.3

@@ -1,9 +1,11 @@
 module github.com/kyma-project/infrastructure-manager/hack/performance
 
-go 1.23.6
+go 1.24.0
+
+toolchain go1.24.1
 
 require (
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250317114844-28018e5a8c79
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250320121810-704c60e7c66d
 	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.3
 	sigs.k8s.io/controller-runtime v0.20.3
@@ -14,7 +16,7 @@ require (
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
-	github.com/gardener/gardener v1.114.0 // indirect
+	github.com/gardener/gardener v1.114.1 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect

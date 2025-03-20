@@ -1,10 +1,12 @@
 module github.com/kyma-project/infrastructure-manager/hack/patch-converter-runner
 
-go 1.23.6
+go 1.24.0
+
+toolchain go1.24.1
 
 require (
-	github.com/gardener/gardener v1.114.0
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250317114844-28018e5a8c79
+	github.com/gardener/gardener v1.114.1
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250320121810-704c60e7c66d
 	k8s.io/api v0.32.3
 	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.3
@@ -18,8 +20,8 @@ require (
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
-	github.com/gardener/gardener-extension-provider-aws v1.58.3 // indirect
-	github.com/gardener/gardener-extension-provider-gcp v1.40.1 // indirect
+	github.com/gardener/gardener-extension-provider-aws v1.60.2 // indirect
+	github.com/gardener/gardener-extension-provider-gcp v1.43.1 // indirect
 	github.com/gardener/gardener-extension-provider-openstack v1.42.1 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
