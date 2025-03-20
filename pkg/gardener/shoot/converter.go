@@ -100,7 +100,13 @@ func NewConverterPatch(opts PatchOpts) Converter {
 	extendersForPatch := baseExtenders(opts.ConverterConfig)
 
 	extendersForPatch = append(extendersForPatch,
-		provider.NewProviderExtenderPatchOperation(opts.Provider.AWS.EnableIMDSv2, opts.MachineImage.DefaultName, opts.MachineImage.DefaultVersion, opts.Workers, opts.InfrastructureConfig, opts.ControlPlaneConfig))
+		provider.NewProviderExtenderPatchOperation(
+			opts.Provider.AWS.EnableIMDSv2,
+			opts.MachineImage.DefaultName,
+			opts.MachineImage.DefaultVersion,
+			opts.Workers,
+			opts.InfrastructureConfig,
+			opts.ControlPlaneConfig))
 
 	extendersForPatch = append(extendersForPatch,
 		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.Extensions),
