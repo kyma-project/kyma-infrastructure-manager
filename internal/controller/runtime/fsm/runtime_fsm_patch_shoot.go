@@ -3,6 +3,7 @@ package fsm
 import (
 	"context"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
 	"reflect"
 	"time"
 
@@ -37,6 +38,20 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			imv1.ConditionReasonAuditLogError,
 			msgFailedToConfigureAuditlogs)
 	}
+
+	//structuredConfigExists, err := structuredAuthConfigMapExists(ctx, m, s)
+	//if err != nil {
+	//	m.Metrics.IncRuntimeFSMStopCounter()
+	//	return updateStatePendingWithErrorAndStop(
+	//		&s.instance,
+	//		imv1.ConditionTypeRuntimeProvisioned,
+	//		imv1.ConditionReasonOidcError,
+	//		msgFailedStructuredConfigMap)
+	//}
+
+	//if !structuredConfigExists {
+	//
+	//}
 
 	// NOTE: In the future we want to pass the whole shoot object here
 	updatedShoot, err := convertPatch(&s.instance, gardener_shoot.PatchOpts{
@@ -223,4 +238,12 @@ func updateStatePendingWithErrorAndStop(instance *imv1.Runtime,
 	c imv1.RuntimeConditionType, r imv1.RuntimeConditionReason, msg string) (stateFn, *ctrl.Result, error) {
 	instance.UpdateStatePending(c, r, "False", msg)
 	return updateStatusAndStop()
+}
+
+func structuredAuthConfigMapExists(ctx context.Context, m *fsm, s *systemState) (bool, error) {
+	cmName := fmt.Sprintf("structure-config-%s", s.instance.Spec.Shoot.Name)
+
+	err := m.ShootClient.Get(ctx, types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace}, &corev1.ConfigMap{})
+
+	return err != nil && k8serrors.IsNotFound(err), client.IgnoreNotFound(err)
 }

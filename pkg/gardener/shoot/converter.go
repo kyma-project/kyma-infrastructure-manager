@@ -23,7 +23,7 @@ func baseExtenders(cfg config.ConverterConfig) []Extend {
 		extender2.ExtendWithAnnotations,
 		extender2.ExtendWithLabels,
 		extender2.ExtendWithSeedSelector,
-		extender2.NewOidcExtender(cfg.Kubernetes.AuthenticationConfigurationConfigMap),
+		extender2.NewOidcExtender(),
 		extender2.ExtendWithCloudProfile,
 		extender2.ExtendWithExposureClassName,
 	}
