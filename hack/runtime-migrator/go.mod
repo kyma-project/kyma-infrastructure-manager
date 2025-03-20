@@ -1,6 +1,8 @@
 module github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app
 
-go 1.23.6
+go 1.24.0
+
+toolchain go1.24.1
 
 require (
 	github.com/gardener/gardener v1.114.0
