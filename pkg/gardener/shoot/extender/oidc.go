@@ -5,12 +5,16 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 )
 
-func NewOidcExtender() func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+const (
+	OidcExtensionType = "shoot-oidc-service"
+)
 
-		// shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig will be no longer supported, so we need to remove it
+func NewOidcExtender(authenticationConfigurationConfigMap string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		shoot.Spec.Kubernetes.KubeAPIServer = &gardener.KubeAPIServerConfig{
-			OIDCConfig: nil,
+			StructuredAuthentication: &gardener.StructuredAuthentication{
+				ConfigMapName: authenticationConfigurationConfigMap,
+			},
 		}
 
 		return nil

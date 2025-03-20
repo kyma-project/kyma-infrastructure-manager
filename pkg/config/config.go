@@ -29,10 +29,11 @@ type DNSConfig struct {
 }
 
 type KubernetesConfig struct {
-	DefaultVersion                      string       `json:"defaultVersion" validate:"required"`
-	EnableKubernetesVersionAutoUpdate   bool         `json:"enableKubernetesVersionAutoUpdate"`
-	EnableMachineImageVersionAutoUpdate bool         `json:"enableMachineImageVersionVersionAutoUpdate"`
-	DefaultOperatorOidc                 OidcProvider `json:"defaultOperatorOidc" validate:"required"`
+	DefaultVersion                       string       `json:"defaultVersion" validate:"required"`
+	EnableKubernetesVersionAutoUpdate    bool         `json:"enableKubernetesVersionAutoUpdate"`
+	EnableMachineImageVersionAutoUpdate  bool         `json:"enableMachineImageVersionVersionAutoUpdate"`
+	DefaultOperatorOidc                  OidcProvider `json:"defaultOperatorOidc" validate:"required"`
+	AuthenticationConfigurationConfigMap string       `json:"authenticationConfigurationConfigMap" validate:"required"`
 }
 
 type OidcProvider struct {
