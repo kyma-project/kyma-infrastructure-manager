@@ -41,8 +41,8 @@ github.com/gardener/etcd-druid v0.27.0 h1:vqcusx1O3G01BU3CHke6nZEYvDfiFqgCGS59mQ
 github.com/gardener/etcd-druid v0.27.0/go.mod h1:SKjfV8bvdLGF1ynFbWF4ioK2a6M33g7N6lct45p50J8=
 github.com/gardener/gardener v1.114.1 h1:OsVE4QhosWcQZNPkL56FM3xOFwZq8LdqR9ysPidCInw=
 github.com/gardener/gardener v1.114.1/go.mod h1:8FDYyOlNx2JiQAWKvPbEj8l9Ku8Biv+pgFvelAILkjk=
-github.com/gardener/gardener-extension-provider-aws v1.58.3 h1:YDv5s5BEVpPQ+x70tHOcwf762/vo/I6OvwjeT3FD3AU=
-github.com/gardener/gardener-extension-provider-aws v1.58.3/go.mod h1:EFrr2XNSCCEzC6U8Y/wUxCri3Y8zwgaRvFxEPkMOJww=
+github.com/gardener/gardener-extension-provider-aws v1.60.2 h1:svICenxdOgvGEjzd/CQvGFpffr7C3EQhDO2Ota9MFUU=
+github.com/gardener/gardener-extension-provider-aws v1.60.2/go.mod h1:S2wa1ALIYVpBix3Up4M6PbD61IsN7RhYJBvqaBBVfa4=
 github.com/gardener/gardener-extension-provider-gcp v1.43.1 h1:rA5QLF/CYDkzJOds4WGxcCnzez+V+dH3h7OJVhER44M=
 github.com/gardener/gardener-extension-provider-gcp v1.43.1/go.mod h1:dnW8Xd+1HTmFgsPBeKm3SQmPGzPjgInfnhxvlG6RIk8=
 github.com/gardener/gardener-extension-provider-openstack v1.42.1 h1:Umj1dOFn0bLsNQR3dZup3+20j5UtSSAOm3ms5LkaZt0=
