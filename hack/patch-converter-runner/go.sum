@@ -39,8 +39,8 @@ github.com/gardener/gardener v1.114.0 h1:ThEFualAmvndGqNQ2cahUPpfRabBezsCCbGFe43
 github.com/gardener/gardener v1.114.0/go.mod h1:8FDYyOlNx2JiQAWKvPbEj8l9Ku8Biv+pgFvelAILkjk=
 github.com/gardener/gardener-extension-provider-aws v1.58.3 h1:YDv5s5BEVpPQ+x70tHOcwf762/vo/I6OvwjeT3FD3AU=
 github.com/gardener/gardener-extension-provider-aws v1.58.3/go.mod h1:EFrr2XNSCCEzC6U8Y/wUxCri3Y8zwgaRvFxEPkMOJww=
-github.com/gardener/gardener-extension-provider-gcp v1.40.1 h1:ErTgztMj/6zLSN8sFJXQ2D3ZNyGD1t+GZjAcCBIP+mU=
-github.com/gardener/gardener-extension-provider-gcp v1.40.1/go.mod h1:7Ra8FdadX+y2xcSwJ1Y4gLOYoS5dcY28lIbNamafVqA=
+github.com/gardener/gardener-extension-provider-gcp v1.43.1 h1:rA5QLF/CYDkzJOds4WGxcCnzez+V+dH3h7OJVhER44M=
+github.com/gardener/gardener-extension-provider-gcp v1.43.1/go.mod h1:dnW8Xd+1HTmFgsPBeKm3SQmPGzPjgInfnhxvlG6RIk8=
 github.com/gardener/gardener-extension-provider-openstack v1.42.1 h1:Umj1dOFn0bLsNQR3dZup3+20j5UtSSAOm3ms5LkaZt0=
 github.com/gardener/gardener-extension-provider-openstack v1.42.1/go.mod h1:77m0Wte0mF1HiQxi3ixLqCyHoJKRs9INCAI/9CKF7Xc=
 github.com/gardener/machine-controller-manager v0.56.1 h1:8L+69IArB0+r+ma+CJe/6SE7NMDs2GU9095RGSzwydk=
