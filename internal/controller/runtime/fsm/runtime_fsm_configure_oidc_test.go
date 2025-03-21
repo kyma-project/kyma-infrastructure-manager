@@ -122,42 +122,56 @@ func TestOidcState(t *testing.T) {
 		}
 		// end of fake client setup
 
-		runtimeStub := runtimeForTest()
-		shootStub := shootForTest()
-		oidcService := gardener.Extension{
-			Type:     "shoot-oidc-service",
-			Disabled: ptr.To(false),
+		for _, tc := range []struct {
+			name                 string
+			additionalOIDCConfig *[]gardener.OIDCConfig
+		}{
+			{"Should configure OIDC using defaults when additional OIDC config is nil", nil},
+			{"Should configure OIDC using defaults when additional OIDC config contains empty array", &[]gardener.OIDCConfig{}},
+			{"Should configure OIDC using defaults when additional OIDC config contains one empty element", &[]gardener.OIDCConfig{{}}},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				runtimeStub := runtimeForTest()
+
+				runtimeStub.Spec.Shoot.Kubernetes.KubeAPIServer.AdditionalOidcConfig = tc.additionalOIDCConfig
+
+				shootStub := shootForTest()
+				oidcService := gardener.Extension{
+					Type:     "shoot-oidc-service",
+					Disabled: ptr.To(false),
+				}
+				shootStub.Spec.Extensions = append(shootStub.Spec.Extensions, oidcService)
+
+				systemState := &systemState{
+					instance: runtimeStub,
+					shoot:    shootStub,
+				}
+
+				expectedRuntimeConditions := []metav1.Condition{
+					{
+						Type:    string(imv1.ConditionTypeOidcConfigured),
+						Reason:  string(imv1.ConditionReasonOidcConfigured),
+						Status:  "True",
+						Message: "OIDC configuration completed",
+					},
+				}
+
+				// when
+				stateFn, _, _ := sFnConfigureOidc(ctx, testFsm, systemState)
+
+				// then
+				require.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
+
+				var openIdConnects authenticationv1alpha1.OpenIDConnectList
+
+				err = fakeClient.List(ctx, &openIdConnects)
+				require.NoError(t, err)
+				assert.Len(t, openIdConnects.Items, 1)
+
+				assertOIDCCRD(t, "kyma-oidc-0", "defaut-client-id", openIdConnects.Items[0])
+				assertEqualConditions(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)
+			})
 		}
-		shootStub.Spec.Extensions = append(shootStub.Spec.Extensions, oidcService)
-
-		systemState := &systemState{
-			instance: runtimeStub,
-			shoot:    shootStub,
-		}
-
-		expectedRuntimeConditions := []metav1.Condition{
-			{
-				Type:    string(imv1.ConditionTypeOidcConfigured),
-				Reason:  string(imv1.ConditionReasonOidcConfigured),
-				Status:  "True",
-				Message: "OIDC configuration completed",
-			},
-		}
-
-		// when
-		stateFn, _, _ := sFnConfigureOidc(ctx, testFsm, systemState)
-
-		// then
-		require.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
-
-		var openIdConnects authenticationv1alpha1.OpenIDConnectList
-
-		err = fakeClient.List(ctx, &openIdConnects)
-		require.NoError(t, err)
-		assert.Len(t, openIdConnects.Items, 1)
-
-		assertOIDCCRD(t, "kyma-oidc-0", "defaut-client-id", openIdConnects.Items[0])
-		assertEqualConditions(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)
 	})
 
 	t.Run("Should not crash and configure OIDC using defaults when Disabled field is missing in extension data", func(t *testing.T) {

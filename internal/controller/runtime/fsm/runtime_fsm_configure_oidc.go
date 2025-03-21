@@ -3,7 +3,6 @@ package fsm
 import (
 	"context"
 	"fmt"
-
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -63,7 +62,21 @@ func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ct
 func defaultAdditionalOidcIfNotPresent(runtime *imv1.Runtime, cfg RCCfg) {
 	additionalOidcConfig := runtime.Spec.Shoot.Kubernetes.KubeAPIServer.AdditionalOidcConfig
 
-	if additionalOidcConfig == nil {
+	additionalOIDCConfigEmpty := func() bool {
+		if additionalOidcConfig == nil {
+			return true
+		}
+
+		for _, oidcConfig := range *additionalOidcConfig {
+			if oidcConfig.ClientID != nil && oidcConfig.IssuerURL != nil {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	if additionalOIDCConfigEmpty() {
 		additionalOidcConfig = &[]gardener.OIDCConfig{}
 		defaultOIDCConfig := createDefaultOIDCConfig(cfg.ClusterConfig.DefaultSharedIASTenant)
 		*additionalOidcConfig = append(*additionalOidcConfig, defaultOIDCConfig)
