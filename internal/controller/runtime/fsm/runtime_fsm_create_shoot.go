@@ -5,7 +5,6 @@ import (
 	"fmt"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apiserver/pkg/apis/apiserver"
 	"sigs.k8s.io/yaml"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -162,20 +161,46 @@ func createOIDCConfigMap(ctx context.Context, oidcConfig gardener.OIDCConfig, cf
 	})
 }
 
-func toAuthenticationConfiguration(oidcConfig gardener.OIDCConfig) apiserver.AuthenticationConfiguration {
+type JWTAuthenticator struct {
+	Issuer        Issuer        `json:"issuer"`
+	ClaimMappings ClaimMappings `json:"claimMappings"`
+}
 
-	toJWTAuthenticator := func(oidcConfig gardener.OIDCConfig) apiserver.JWTAuthenticator {
-		return apiserver.JWTAuthenticator{
-			Issuer: apiserver.Issuer{
+type Issuer struct {
+	URL       string   `json:"url"`
+	Audiences []string `json:"audiences""`
+}
+
+type ClaimMappings struct {
+	Username PrefixedClaim `json:"username"`
+	Groups   PrefixedClaim `json:"groups"`
+}
+
+type PrefixedClaim struct {
+	Claim  string  `json:"claim"`
+	Prefix *string `json:"prefix"`
+}
+
+type AuthenticationConfiguration struct {
+	metav1.TypeMeta
+
+	JWT []JWTAuthenticator `json:"jwt"`
+}
+
+func toAuthenticationConfiguration(oidcConfig gardener.OIDCConfig) AuthenticationConfiguration {
+
+	toJWTAuthenticator := func(oidcConfig gardener.OIDCConfig) JWTAuthenticator {
+		return JWTAuthenticator{
+			Issuer: Issuer{
 				URL:       *oidcConfig.IssuerURL,
 				Audiences: []string{*oidcConfig.ClientID},
 			},
-			ClaimMappings: apiserver.ClaimMappings{
-				Username: apiserver.PrefixedClaimOrExpression{
+			ClaimMappings: ClaimMappings{
+				Username: PrefixedClaim{
 					Claim:  *oidcConfig.UsernameClaim,
 					Prefix: oidcConfig.UsernamePrefix,
 				},
-				Groups: apiserver.PrefixedClaimOrExpression{
+				Groups: PrefixedClaim{
 					Claim:  *oidcConfig.GroupsClaim,
 					Prefix: oidcConfig.GroupsPrefix,
 				},
@@ -183,10 +208,10 @@ func toAuthenticationConfiguration(oidcConfig gardener.OIDCConfig) apiserver.Aut
 		}
 	}
 
-	jwtAuthenticators := make([]apiserver.JWTAuthenticator, 0)
+	jwtAuthenticators := make([]JWTAuthenticator, 0)
 	jwtAuthenticators = append(jwtAuthenticators, toJWTAuthenticator(oidcConfig))
 
-	return apiserver.AuthenticationConfiguration{
+	return AuthenticationConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "AuthenticationConfiguration",
 			APIVersion: "apiserver.config.k8s.io/v1beta1",
