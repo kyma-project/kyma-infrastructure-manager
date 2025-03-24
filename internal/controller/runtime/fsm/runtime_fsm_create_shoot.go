@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	v1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -52,7 +55,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		oidcConfig = createDefaultOIDCConfig(m.RCCfg.ClusterConfig.DefaultSharedIASTenant)
 	}
 
-	err := createOIDCConfigMap(ctx, oidcConfig, m.RCCfg, m, s)
+	err := createOrUpdateOIDCConfigMap(ctx, oidcConfig, m, s)
 	if err != nil {
 		m.Metrics.IncRuntimeFSMStopCounter()
 		return updateStatePendingWithErrorAndStop(
@@ -136,29 +139,52 @@ func convertCreate(instance *imv1.Runtime, opts gardener_shoot.CreateOpts) (gard
 	return newShoot, nil
 }
 
-func createOIDCConfigMap(ctx context.Context, oidcConfig gardener.OIDCConfig, cfg RCCfg, m *fsm, s *systemState) error {
-	cmName := fmt.Sprintf("structure-config-%s", s.instance.Spec.Shoot.Name)
+func createOrUpdateOIDCConfigMap(ctx context.Context, oidcConfig gardener.OIDCConfig, m *fsm, s *systemState) error {
+	cmName := fmt.Sprintf("structured-auth-config-%s", s.instance.Spec.Shoot.Name)
 
-	authenticationConfig := toAuthenticationConfiguration(oidcConfig)
+	creteConfigMapObject := func() (v1.ConfigMap, error) {
+		authenticationConfig := toAuthenticationConfiguration(oidcConfig)
+		authConfigBytes, err := yaml.Marshal(authenticationConfig)
+		if err != nil {
+			return v1.ConfigMap{}, err
+		}
 
-	authConfigBytes, err := yaml.Marshal(authenticationConfig)
+		return v1.ConfigMap{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ConfigMap",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cmName,
+				Namespace: m.ShootNamesapace,
+			},
+			Data: map[string]string{
+				"config.yaml": string(authConfigBytes),
+			},
+		}, err
+	}
+
+	var existingCM v1.ConfigMap
+	err := m.ShootClient.Get(ctx, types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace}, &existingCM)
+
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return err
+	}
+
+	configMapAlreadyExists := err == nil
+
+	newConfigMap, err := creteConfigMapObject()
+
 	if err != nil {
 		return err
 	}
 
-	return m.ShootClient.Create(ctx, &v1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ConfigMap",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cmName,
-			Namespace: m.ShootNamesapace,
-		},
-		Data: map[string]string{
-			"config.yaml": string(authConfigBytes),
-		},
-	})
+	if configMapAlreadyExists {
+		existingCM.Data = newConfigMap.Data
+		return m.ShootClient.Update(ctx, &existingCM)
+	}
+
+	return m.ShootClient.Create(ctx, &newConfigMap)
 }
 
 type JWTAuthenticator struct {
@@ -168,7 +194,7 @@ type JWTAuthenticator struct {
 
 type Issuer struct {
 	URL       string   `json:"url"`
-	Audiences []string `json:"audiences""`
+	Audiences []string `json:"audiences"`
 }
 
 type ClaimMappings struct {
@@ -178,7 +204,7 @@ type ClaimMappings struct {
 
 type PrefixedClaim struct {
 	Claim  string  `json:"claim"`
-	Prefix *string `json:"prefix"`
+	Prefix *string `json:"prefix,omitempty"`
 }
 
 type AuthenticationConfiguration struct {
@@ -202,7 +228,7 @@ func toAuthenticationConfiguration(oidcConfig gardener.OIDCConfig) Authenticatio
 				},
 				Groups: PrefixedClaim{
 					Claim:  *oidcConfig.GroupsClaim,
-					Prefix: oidcConfig.GroupsPrefix,
+					Prefix: ptr.To("-"),
 				},
 			},
 		}

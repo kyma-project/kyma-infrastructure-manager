@@ -2,6 +2,9 @@ package fsm
 
 import (
 	"context"
+	"fmt"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -36,8 +39,21 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		}
 	}
 
+	m.log.Info("deleting structured authentication config", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
+	err := deleteStructuredConfig(m, s)
+	if err != nil {
+		// action error handler section
+		m.log.Error(err, "Failed to delete gardener Shoot")
+		s.instance.UpdateStateDeletion(
+			imv1.ConditionTypeRuntimeDeprovisioned,
+			imv1.ConditionReasonGardenerShootDeleted,
+			"False",
+			"Gardener API shoot delete error",
+		)
+	}
+
 	m.log.Info("deleting shoot", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
-	err := m.ShootClient.Delete(ctx, s.shoot)
+	err = m.ShootClient.Delete(ctx, s.shoot)
 	if err != nil {
 		// action error handler section
 		m.log.Error(err, "Failed to delete gardener Shoot")
@@ -81,4 +97,17 @@ func addGardenerCloudDelConfirmation(a map[string]string) map[string]string {
 	}
 	a[imv1.AnnotationGardenerCloudDelConfirmation] = "true"
 	return a
+}
+
+func deleteStructuredConfig(m *fsm, s *systemState) error {
+	cmName := fmt.Sprintf("structured-auth-config-%s", s.instance.Spec.Shoot.Name)
+
+	err := m.ShootClient.Delete(context.Background(), &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cmName,
+			Namespace: m.ShootNamesapace,
+		},
+	})
+
+	return client.IgnoreNotFound(err)
 }
