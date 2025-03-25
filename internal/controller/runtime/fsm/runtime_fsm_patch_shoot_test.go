@@ -2,6 +2,8 @@ package fsm
 
 import (
 	"context"
+	v1 "k8s.io/api/core/v1"
+	types2 "k8s.io/apimachinery/pkg/types"
 	"testing"
 	"time"
 
@@ -88,6 +90,12 @@ func buildPatchTestFunction(fn stateFn) func(context.Context, *fsm, *systemState
 		Expect(err).To(BeNil())
 		Expect(sFn).To(matchNextFnState)
 		Expect(s.instance.GetAnnotations()).To(Equal(expectedAnnotations))
+
+		var existingCM v1.ConfigMap
+		err = r.ShootClient.Get(ctx, types2.NamespacedName{Name: "structured-auth-config-test-shoot", Namespace: r.ShootNamesapace}, &existingCM)
+
+		Expect(err).To(BeNil())
+		Expect(existingCM.Data).To(Not(BeEmpty()))
 	}
 }
 

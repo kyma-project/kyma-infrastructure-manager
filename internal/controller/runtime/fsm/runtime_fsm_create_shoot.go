@@ -217,6 +217,13 @@ type AuthenticationConfiguration struct {
 func toAuthenticationConfiguration(oidcConfig gardener.OIDCConfig) AuthenticationConfiguration {
 
 	toJWTAuthenticator := func(oidcConfig gardener.OIDCConfig) JWTAuthenticator {
+		// If Groups prefix is not set by the KEB, default is set as Gardener requires non-empty value
+		groupsPrefix := ptr.To("-")
+
+		if oidcConfig.GroupsPrefix != nil {
+			groupsPrefix = oidcConfig.GroupsPrefix
+		}
+
 		return JWTAuthenticator{
 			Issuer: Issuer{
 				URL:       *oidcConfig.IssuerURL,
@@ -229,7 +236,7 @@ func toAuthenticationConfiguration(oidcConfig gardener.OIDCConfig) Authenticatio
 				},
 				Groups: PrefixedClaim{
 					Claim:  *oidcConfig.GroupsClaim,
-					Prefix: ptr.To("-"),
+					Prefix: groupsPrefix,
 				},
 			},
 		}
