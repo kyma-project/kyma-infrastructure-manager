@@ -58,6 +58,8 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 
 	err := createOrUpdateOIDCConfigMap(ctx, oidcConfig, m, s)
 	if err != nil {
+		m.log.Error(err, fmt.Sprintf(msgFailedToConfigureAuditlogs+":%s", err))
+
 		m.Metrics.IncRuntimeFSMStopCounter()
 		return updateStatePendingWithErrorAndStop(
 			&s.instance,
