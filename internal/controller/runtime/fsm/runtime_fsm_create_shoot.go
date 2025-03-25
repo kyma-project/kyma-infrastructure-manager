@@ -45,14 +45,10 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		}
 	}
 
-	oidcConfig := s.instance.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig
-
-	if oidcConfig.IssuerURL == nil || oidcConfig.ClientID == nil {
-		oidcConfig = createDefaultOIDCConfig(m.RCCfg.ClusterConfig.DefaultSharedIASTenant)
-	}
-
 	cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
-	err := structuredauth.CreateOrUpdateOIDCConfigMap(ctx, m.ShootClient, types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace}, oidcConfig)
+	oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.RCCfg.ClusterConfig.DefaultSharedIASTenant.ToOIDCConfig())
+
+	err := structuredauth.CreateOrUpdateStructuredAuthConfigMap(ctx, m.ShootClient, types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace}, oidcConfig)
 	if err != nil {
 		m.log.Error(err, "Failed to create structured authentication config map")
 

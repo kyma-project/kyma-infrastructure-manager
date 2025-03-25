@@ -2,12 +2,10 @@ package fsm
 
 import (
 	"context"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,7 +37,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	}
 
 	m.log.Info("deleting structured authentication config", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
-	err := deleteStructuredConfig(m, s)
+	err := structuredauth.DeleteStructuredConfigMap(ctx, m.ShootClient, *s.shoot)
 	if err != nil {
 		// action error handler section
 		m.log.Error(err, "Failed to delete structured authentication configmap")
@@ -96,25 +94,4 @@ func addGardenerCloudDelConfirmation(a map[string]string) map[string]string {
 	}
 	a[imv1.AnnotationGardenerCloudDelConfirmation] = "true"
 	return a
-}
-
-func deleteStructuredConfig(m *fsm, s *systemState) error {
-	if s.shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication != nil {
-		cmName := s.shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName
-
-		if cmName == "" {
-			return nil
-		}
-
-		err := m.ShootClient.Delete(context.Background(), &v1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cmName,
-				Namespace: m.ShootNamesapace,
-			},
-		})
-
-		return client.IgnoreNotFound(err)
-	}
-
-	return nil
 }

@@ -40,14 +40,10 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			msgFailedToConfigureAuditlogs)
 	}
 
-	oidcConfig := s.instance.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig
-
-	if oidcConfig.IssuerURL == nil || oidcConfig.ClientID == nil {
-		oidcConfig = createDefaultOIDCConfig(m.RCCfg.ClusterConfig.DefaultSharedIASTenant)
-	}
+	oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.RCCfg.ClusterConfig.DefaultSharedIASTenant.ToOIDCConfig())
 
 	cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
-	err = structuredauth.CreateOrUpdateOIDCConfigMap(ctx, m.ShootClient, types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace}, oidcConfig)
+	err = structuredauth.CreateOrUpdateStructuredAuthConfigMap(ctx, m.ShootClient, types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace}, oidcConfig)
 
 	if err != nil {
 		m.Metrics.IncRuntimeFSMStopCounter()

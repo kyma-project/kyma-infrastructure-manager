@@ -78,7 +78,7 @@ func toAuthenticationConfiguration(oidcConfig gardener.OIDCConfig) Authenticatio
 	}
 }
 
-func CreateOrUpdateOIDCConfigMap(ctx context.Context, shootClient client.Client, cmKey types.NamespacedName, oidcConfig gardener.OIDCConfig) error {
+func CreateOrUpdateStructuredAuthConfigMap(ctx context.Context, shootClient client.Client, cmKey types.NamespacedName, oidcConfig gardener.OIDCConfig) error {
 	creteConfigMapObject := func() (v1.ConfigMap, error) {
 		authenticationConfig := toAuthenticationConfiguration(oidcConfig)
 		authConfigBytes, err := yaml.Marshal(authenticationConfig)
@@ -122,4 +122,25 @@ func CreateOrUpdateOIDCConfigMap(ctx context.Context, shootClient client.Client,
 	}
 
 	return shootClient.Create(ctx, &newConfigMap)
+}
+
+func DeleteStructuredConfigMap(ctx context.Context, shootClient client.Client, shoot gardener.Shoot) error {
+	if shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication != nil {
+		cmName := shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName
+
+		if cmName == "" {
+			return nil
+		}
+
+		err := shootClient.Delete(ctx, &v1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName,
+				Namespace: shoot.Namespace,
+			},
+		})
+
+		return client.IgnoreNotFound(err)
+	}
+
+	return nil
 }
