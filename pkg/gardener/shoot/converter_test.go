@@ -607,6 +607,14 @@ func Test_ConverterConfig_Load_OK(t *testing.T) {
 				DefaultVersion:                      "0.1.2.3",
 				EnableKubernetesVersionAutoUpdate:   true,
 				EnableMachineImageVersionAutoUpdate: false,
+				DefaultOperatorOidc: config.OidcProvider{
+					ClientID:       "test-clientID",
+					GroupsClaim:    "test-group",
+					IssuerURL:      "test-issuer-url",
+					SigningAlgs:    []string{"test-alg"},
+					UsernameClaim:  "test-username-claim",
+					UsernamePrefix: "-",
+				},
 			},
 			DNS: config.DNSConfig{
 				SecretName:   "test-secret-name",
