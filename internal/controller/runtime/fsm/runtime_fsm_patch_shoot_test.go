@@ -26,7 +26,9 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 	defer cancel()
 
 	testScheme := runtime.NewScheme()
+
 	util.Must(imv1.AddToScheme(testScheme))
+	util.Must(v1.AddToScheme(testScheme))
 	util.Must(gardener.AddToScheme(testScheme))
 
 	withMockedMetrics := func() fakeFSMOpt {
