@@ -3,18 +3,13 @@ package fsm
 import (
 	"context"
 	"fmt"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
-	v1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
-	"sigs.k8s.io/yaml"
-
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -56,9 +51,10 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		oidcConfig = createDefaultOIDCConfig(m.RCCfg.ClusterConfig.DefaultSharedIASTenant)
 	}
 
-	err := createOrUpdateOIDCConfigMap(ctx, oidcConfig, m, s)
+	cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
+	err := structuredauth.CreateOrUpdateOIDCConfigMap(ctx, m.ShootClient, types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace}, oidcConfig)
 	if err != nil {
-		m.log.Error(err, fmt.Sprintf(msgFailedToConfigureAuditlogs+":%s", err))
+		m.log.Error(err, "Failed to create structured authentication config map")
 
 		m.Metrics.IncRuntimeFSMStopCounter()
 		return updateStatePendingWithErrorAndStop(
@@ -140,118 +136,4 @@ func convertCreate(instance *imv1.Runtime, opts gardener_shoot.CreateOpts) (gard
 	}
 
 	return newShoot, nil
-}
-
-func createOrUpdateOIDCConfigMap(ctx context.Context, oidcConfig gardener.OIDCConfig, m *fsm, s *systemState) error {
-	cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
-
-	creteConfigMapObject := func() (v1.ConfigMap, error) {
-		authenticationConfig := toAuthenticationConfiguration(oidcConfig)
-		authConfigBytes, err := yaml.Marshal(authenticationConfig)
-		if err != nil {
-			return v1.ConfigMap{}, err
-		}
-
-		return v1.ConfigMap{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "ConfigMap",
-				APIVersion: "v1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cmName,
-				Namespace: m.ShootNamesapace,
-			},
-			Data: map[string]string{
-				"config.yaml": string(authConfigBytes),
-			},
-		}, err
-	}
-
-	var existingCM v1.ConfigMap
-	err := m.ShootClient.Get(ctx, types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace}, &existingCM)
-
-	if err != nil && !k8serrors.IsNotFound(err) {
-		return err
-	}
-
-	configMapAlreadyExists := err == nil
-
-	newConfigMap, err := creteConfigMapObject()
-
-	if err != nil {
-		return err
-	}
-
-	if configMapAlreadyExists {
-		existingCM.Data = newConfigMap.Data
-		return m.ShootClient.Update(ctx, &existingCM)
-	}
-
-	return m.ShootClient.Create(ctx, &newConfigMap)
-}
-
-type JWTAuthenticator struct {
-	Issuer        Issuer        `json:"issuer"`
-	ClaimMappings ClaimMappings `json:"claimMappings"`
-}
-
-type Issuer struct {
-	URL       string   `json:"url"`
-	Audiences []string `json:"audiences"`
-}
-
-type ClaimMappings struct {
-	Username PrefixedClaim `json:"username"`
-	Groups   PrefixedClaim `json:"groups"`
-}
-
-type PrefixedClaim struct {
-	Claim  string  `json:"claim"`
-	Prefix *string `json:"prefix,omitempty"`
-}
-
-type AuthenticationConfiguration struct {
-	metav1.TypeMeta
-
-	JWT []JWTAuthenticator `json:"jwt"`
-}
-
-func toAuthenticationConfiguration(oidcConfig gardener.OIDCConfig) AuthenticationConfiguration {
-
-	toJWTAuthenticator := func(oidcConfig gardener.OIDCConfig) JWTAuthenticator {
-		// If Groups prefix is not set by the KEB, default is set as Gardener requires non-empty value
-		groupsPrefix := ptr.To("-")
-
-		if oidcConfig.GroupsPrefix != nil {
-			groupsPrefix = oidcConfig.GroupsPrefix
-		}
-
-		return JWTAuthenticator{
-			Issuer: Issuer{
-				URL:       *oidcConfig.IssuerURL,
-				Audiences: []string{*oidcConfig.ClientID},
-			},
-			ClaimMappings: ClaimMappings{
-				Username: PrefixedClaim{
-					Claim:  *oidcConfig.UsernameClaim,
-					Prefix: oidcConfig.UsernamePrefix,
-				},
-				Groups: PrefixedClaim{
-					Claim:  *oidcConfig.GroupsClaim,
-					Prefix: groupsPrefix,
-				},
-			},
-		}
-	}
-
-	jwtAuthenticators := make([]JWTAuthenticator, 0)
-	jwtAuthenticators = append(jwtAuthenticators, toJWTAuthenticator(oidcConfig))
-
-	return AuthenticationConfiguration{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "AuthenticationConfiguration",
-			APIVersion: "apiserver.config.k8s.io/v1beta1",
-		},
-		JWT: jwtAuthenticators,
-	}
 }
