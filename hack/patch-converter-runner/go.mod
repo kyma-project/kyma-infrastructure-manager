@@ -1,10 +1,12 @@
 module github.com/kyma-project/infrastructure-manager/hack/patch-converter-runner
 
-go 1.23.6
+go 1.24.0
+
+toolchain go1.24.1
 
 require (
-	github.com/gardener/gardener v1.114.0
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250317114844-28018e5a8c79
+	github.com/gardener/gardener v1.115.0
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250321101459-275a5ee8e5bd
 	k8s.io/api v0.32.3
 	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.3
@@ -18,9 +20,9 @@ require (
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
-	github.com/gardener/gardener-extension-provider-aws v1.58.3 // indirect
-	github.com/gardener/gardener-extension-provider-gcp v1.40.1 // indirect
-	github.com/gardener/gardener-extension-provider-openstack v1.42.1 // indirect
+	github.com/gardener/gardener-extension-provider-aws v1.60.2 // indirect
+	github.com/gardener/gardener-extension-provider-gcp v1.43.1 // indirect
+	github.com/gardener/gardener-extension-provider-openstack v1.46.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
@@ -45,11 +47,11 @@ require (
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/term v0.30.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
-	golang.org/x/time v0.10.0 // indirect
-	google.golang.org/protobuf v1.36.1 // indirect
+	golang.org/x/time v0.11.0 // indirect
+	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.32.2 // indirect
+	k8s.io/apiextensions-apiserver v0.32.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20241212222426-2c72e554b1e7 // indirect
 	k8s.io/utils v0.0.0-20241210054802-24370beab758 // indirect
