@@ -97,8 +97,6 @@ var _ = BeforeSuite(func() {
 	err = imv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	_ = v12.AddToScheme(scheme.Scheme)
-
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Metrics: metricsserver.Options{
 			BindAddress: ":8083",
@@ -109,7 +107,6 @@ var _ = BeforeSuite(func() {
 	clientScheme := runtime.NewScheme()
 	_ = gardener_api.AddToScheme(clientScheme)
 	_ = imv1.AddToScheme(clientScheme)
-	_ = v12.AddToScheme(clientScheme)
 
 	// tracker will be updated with different shoot sequence for each test case
 	tracker := clienttesting.NewObjectTracker(clientScheme, serializer.NewCodecFactory(clientScheme).UniversalDecoder())
@@ -193,6 +190,7 @@ func setupGardenerTestClientForDelete() {
 func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot, seeds []*gardener_api.SeedList) {
 	clientScheme := runtime.NewScheme()
 	_ = gardener_api.AddToScheme(clientScheme)
+	_ = v12.AddToScheme(clientScheme)
 
 	tracker := clienttesting.NewObjectTracker(clientScheme, serializer.NewCodecFactory(clientScheme).UniversalDecoder())
 	customTracker = NewCustomTracker(tracker, shoots, seeds)
