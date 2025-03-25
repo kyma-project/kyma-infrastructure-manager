@@ -54,6 +54,6 @@ func TestOidcExtender(t *testing.T) {
 
 		require.Nil(t, shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig)
 		require.NotNil(t, shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication)
-		assert.Equal(t, "structure-config-shoot", shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName)
+		assert.Equal(t, "structured-auth-config-shoot", shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName)
 	})
 }
