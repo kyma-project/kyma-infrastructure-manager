@@ -97,6 +97,8 @@ var _ = BeforeSuite(func() {
 	err = imv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
+	_ = v12.AddToScheme(scheme.Scheme)
+
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Metrics: metricsserver.Options{
 			BindAddress: ":8083",
