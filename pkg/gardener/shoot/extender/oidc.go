@@ -7,13 +7,13 @@ import (
 )
 
 const (
-	OidcExtensionType = "shoot-oidc-service"
+	StructuredAuthConfigFmt = "structured-auth-config-%s"
 )
 
 func NewOidcExtender() func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		cmName := fmt.Sprintf("structured-auth-config-%s", runtime.Spec.Shoot.Name)
+		cmName := fmt.Sprintf(StructuredAuthConfigFmt, runtime.Spec.Shoot.Name)
 
 		shoot.Spec.Kubernetes.KubeAPIServer = &gardener.KubeAPIServerConfig{
 			StructuredAuthentication: &gardener.StructuredAuthentication{

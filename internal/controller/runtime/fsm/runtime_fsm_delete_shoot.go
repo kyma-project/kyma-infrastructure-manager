@@ -3,6 +3,7 @@ package fsm
 import (
 	"context"
 	"fmt"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -100,7 +101,7 @@ func addGardenerCloudDelConfirmation(a map[string]string) map[string]string {
 }
 
 func deleteStructuredConfig(m *fsm, s *systemState) error {
-	cmName := fmt.Sprintf("structured-auth-config-%s", s.instance.Spec.Shoot.Name)
+	cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
 
 	err := m.ShootClient.Delete(context.Background(), &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{

@@ -3,6 +3,7 @@ package fsm
 import (
 	"context"
 	"fmt"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -140,7 +141,7 @@ func convertCreate(instance *imv1.Runtime, opts gardener_shoot.CreateOpts) (gard
 }
 
 func createOrUpdateOIDCConfigMap(ctx context.Context, oidcConfig gardener.OIDCConfig, m *fsm, s *systemState) error {
-	cmName := fmt.Sprintf("structured-auth-config-%s", s.instance.Spec.Shoot.Name)
+	cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
 
 	creteConfigMapObject := func() (v1.ConfigMap, error) {
 		authenticationConfig := toAuthenticationConfiguration(oidcConfig)
