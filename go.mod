@@ -6,7 +6,7 @@ toolchain go1.24.1
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
-	github.com/gardener/gardener v1.115.0
+	github.com/gardener/gardener v1.115.1
 	github.com/gardener/gardener-extension-provider-aws v1.60.2
 	github.com/gardener/gardener-extension-provider-gcp v1.43.1
 	github.com/gardener/gardener-extension-provider-openstack v1.46.0
