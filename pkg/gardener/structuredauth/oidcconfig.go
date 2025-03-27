@@ -14,3 +14,7 @@ func GetOIDCConfigOrDefault(runtime imv1.Runtime, defaultOIDC gardener.OIDCConfi
 
 	return oidcConfig
 }
+
+func OIDCConfigured(oidcConfig *gardener.OIDCConfig) bool {
+	return oidcConfig != nil && oidcConfig.IssuerURL != nil && oidcConfig.ClientID != nil
+}

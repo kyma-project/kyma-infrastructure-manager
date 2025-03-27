@@ -76,6 +76,17 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	m.log.V(log_level.DEBUG).Info("Shoot converted successfully", "Name", updatedShoot.Name, "Namespace", updatedShoot.Namespace)
 
+	// The additional update operation is required to migrate OIDC to structured authentication. Thr Gardener doesn't support setting spec.kubernetes.kubeAPIServer.OIDCConfig and spec.kubernetes.kubeAPIServer.structuredAuthentication at the same time.
+	// Patch operation is not enough to nil the OIDCConfig field in the shoot object. The OIDCConfig field is marked with omitempty so that the server patch apply cannot remove it.
+	// The attempt to set the empty OIDCConfig field didn't work as the validation code checks if the OIDCConfig is not nil (https://github.com/gardener/gardener/blob/d48ed8610558c98e3a9fd3de963c11c13402c534/pkg/apis/core/validation/shoot.go#L1416).
+	// Once the migration is done this code should be removed
+	err = migrateOIDCToStructuredAuth(ctx, updatedShoot, m, s)
+	nextState, res, err := handleUpdateError(err, m, s, "Failed to migrate shoot object to structured authentication", "Gardener API shoot update error")
+
+	if nextState != nil {
+		return nextState, res, err
+	}
+
 	// The additional Update function is required to fully replace shoot Workers collection with workers defined in updated runtime object.
 	// This is a workaround for the sigs.k8s.io/controller-runtime/pkg/client, which does not support replacing the Workers collection with client.Patch
 	// This could caused some workers to be not removed from the shoot object during update
@@ -109,7 +120,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
 	})
-	nextState, res, err := handleUpdateError(patchErr, m, s, "Failed to patch shoot object, exiting with no retry", "Gardener API shoot patch error")
+	nextState, res, err = handleUpdateError(patchErr, m, s, "Failed to patch shoot object, exiting with no retry", "Gardener API shoot patch error")
 
 	if nextState != nil {
 		return nextState, res, err
@@ -239,4 +250,25 @@ func updateStatePendingWithErrorAndStop(instance *imv1.Runtime,
 	c imv1.RuntimeConditionType, r imv1.RuntimeConditionReason, msg string) (stateFn, *ctrl.Result, error) {
 	instance.UpdateStatePending(c, r, "False", msg)
 	return updateStatusAndStop()
+}
+
+func migrateOIDCToStructuredAuth(ctx context.Context, shootToUpdate gardener.Shoot, m *fsm, s *systemState) error {
+
+	var err error
+
+	if shootToUpdate.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication != nil &&
+		structuredauth.OIDCConfigured(s.shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig) {
+		m.log.Info("Migrating OIDC to structured authentication")
+
+		copyShoot := s.shoot.DeepCopy()
+		copyShoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
+
+		err = m.ShootClient.Update(ctx, copyShoot, &client.UpdateOptions{
+			FieldManager: fieldManagerName,
+		})
+
+		s.shoot = copyShoot
+	}
+
+	return err
 }
