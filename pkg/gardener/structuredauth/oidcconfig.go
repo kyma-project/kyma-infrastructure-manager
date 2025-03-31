@@ -19,7 +19,7 @@ func OIDCConfigured(shoot gardener.Shoot) bool {
 	if shoot.Spec.Kubernetes.KubeAPIServer == nil {
 		return false
 	}
-
+	// nolint: staticcheck
 	oidcConfig := shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig
 
 	return oidcConfig != nil && oidcConfig.IssuerURL != nil && oidcConfig.ClientID != nil
