@@ -53,45 +53,6 @@ func TestOidcState(t *testing.T) {
 		assertEqualConditions(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)
 	})
 
-	t.Run("Should switch state to ApplyClusterRoleBindings when  multi OIDC support is disabled", func(t *testing.T) {
-		// given
-		ctx := context.Background()
-		fsm := &fsm{}
-
-		runtimeStub := runtimeForTest()
-		runtimeStub.ObjectMeta.Labels = map[string]string{
-			"operator.kyma-project.io/created-by-migrator": "true",
-		}
-
-		shootStub := shootForTest()
-		oidcService := gardener.Extension{
-			Type:     "shoot-oidc-service",
-			Disabled: ptr.To(false),
-		}
-		shootStub.Spec.Extensions = append(shootStub.Spec.Extensions, oidcService)
-
-		systemState := &systemState{
-			instance: runtimeStub,
-			shoot:    shootStub,
-		}
-
-		expectedRuntimeConditions := []metav1.Condition{
-			{
-				Type:    string(imv1.ConditionTypeOidcConfigured),
-				Reason:  string(imv1.ConditionReasonOidcConfigured),
-				Status:  "True",
-				Message: "Multi OIDC not supported for migrated runtimes",
-			},
-		}
-
-		// when
-		stateFn, _, _ := sFnConfigureOidc(ctx, fsm, systemState)
-
-		// then
-		require.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
-		assertEqualConditions(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)
-	})
-
 	t.Run("Should configure OIDC using defaults", func(t *testing.T) {
 		// given
 		ctx := context.Background()

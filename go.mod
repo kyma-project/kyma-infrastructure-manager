@@ -6,13 +6,13 @@ toolchain go1.24.1
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
-	github.com/gardener/gardener v1.115.0
+	github.com/gardener/gardener v1.115.1
 	github.com/gardener/gardener-extension-provider-aws v1.60.2
 	github.com/gardener/gardener-extension-provider-gcp v1.43.1
-	github.com/gardener/gardener-extension-provider-openstack v1.46.0
+	github.com/gardener/gardener-extension-provider-openstack v1.47.0
 	github.com/gardener/oidc-webhook-authenticator v0.34.0
 	github.com/go-logr/logr v1.4.2
-	github.com/go-playground/validator/v10 v10.25.0
+	github.com/go-playground/validator/v10 v10.26.0
 	github.com/onsi/ginkgo/v2 v2.23.3
 	github.com/onsi/gomega v1.36.3
 	github.com/pkg/errors v0.9.1
@@ -21,9 +21,9 @@ require (
 	k8s.io/api v0.32.3
 	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.3
-	k8s.io/utils v0.0.0-20241210054802-24370beab758
-	sigs.k8s.io/controller-runtime v0.20.3
-	sigs.k8s.io/yaml v1.4.0
+	k8s.io/utils v0.0.0-20250321185631-1f6e0b77f77e
+	sigs.k8s.io/controller-runtime v0.20.4
+  sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -93,7 +93,7 @@ require (
 
 replace (
 	golang.org/x/crypto => golang.org/x/crypto v0.36.0
-	golang.org/x/net => golang.org/x/net v0.37.0
+	golang.org/x/net => golang.org/x/net v0.38.0
 	golang.org/x/sys => golang.org/x/sys v0.31.0
 	golang.org/x/text => golang.org/x/text v0.23.0
 	golang.org/x/tools => golang.org/x/tools v0.31.0
