@@ -13,22 +13,22 @@ const (
 func ExtendWithAccessRestriction() func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		if isEuAccess(runtime.Spec.Shoot.PlatformRegion) {
-			shoot.Spec.AccessRestrictions = append(shoot.Spec.AccessRestrictions, extendWithEuAccess())
+			extendWithEuAccess(shoot)
 		}
 		return nil
 	}
 }
 
-func extendWithEuAccess() gardener.AccessRestrictionWithOptions {
-	restrictions := make([]gardener.AccessRestrictionWithOptions, 1)
-	restrictions[0].AccessRestriction = gardener.AccessRestriction{
-		Name: "eu-access-only",
-	}
-	restrictions[0].Options = map[string]string{
-		euAccessAddons: "true",
-		euAccessNodes:  "true",
-	}
-	return restrictions[0]
+func extendWithEuAccess(shoot *gardener.Shoot) {
+	shoot.Spec.AccessRestrictions = append(shoot.Spec.AccessRestrictions, gardener.AccessRestrictionWithOptions{
+		AccessRestriction: gardener.AccessRestriction{
+			Name: "eu-access-only",
+		},
+		Options: map[string]string{
+			euAccessAddons: "true",
+			euAccessNodes:  "true",
+		},
+	})
 }
 
 func isEuAccess(platformRegion string) bool {
