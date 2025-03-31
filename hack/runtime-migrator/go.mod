@@ -7,7 +7,7 @@ toolchain go1.24.1
 require (
 	github.com/gardener/gardener v1.115.1
 	github.com/gardener/oidc-webhook-authenticator v0.34.0
-	github.com/go-playground/validator/v10 v10.25.0
+	github.com/go-playground/validator/v10 v10.26.0
 	github.com/kyma-project/infrastructure-manager v0.0.0-20250326171129-fb1a01899e76
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
@@ -84,7 +84,7 @@ require (
 replace (
 	github.com/kyma-project/infrastructure-manager => ../../
 	golang.org/x/crypto => golang.org/x/crypto v0.36.0
-	golang.org/x/net => golang.org/x/net v0.37.0
+	golang.org/x/net => golang.org/x/net v0.38.0
 	golang.org/x/sys => golang.org/x/sys v0.31.0
 	golang.org/x/text => golang.org/x/text v0.23.0
 	golang.org/x/tools => golang.org/x/tools v0.31.0

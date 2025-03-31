@@ -1,4 +1,5 @@
-[![REUSE status](https://api.reuse.software/badge/github.com/kyma-project/infrastructure-manager)](https://api.reuse.software/info/github.com/kyma-project/infrastructure-manager)
+[![REUSE status](https://api.reuse.software/badge/github.com/kyma-project/infrastructure-manager)](https://api.reuse.software/info/github.com/kyma-project/infrastructure-manager) 
+[![Go Report Card](https://goreportcard.com/badge/github.com/kyma-project/infrastructure-manager)](https://goreportcard.com/report/github.com/kyma-project/infrastructure-manager)
 
 # Infrastructure manager
 
