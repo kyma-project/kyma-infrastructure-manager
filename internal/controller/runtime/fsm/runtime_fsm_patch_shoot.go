@@ -261,7 +261,7 @@ func migrateOIDCToStructuredAuth(ctx context.Context, shootToUpdate gardener.Sho
 		m.log.Info("Migrating OIDC to structured authentication")
 
 		copyShoot := s.shoot.DeepCopy()
-		// nolint: revive
+		// nolint: staticcheck
 		copyShoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
 
 		err = m.ShootClient.Update(ctx, copyShoot, &client.UpdateOptions{
