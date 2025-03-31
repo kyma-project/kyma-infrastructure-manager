@@ -13,11 +13,10 @@ import (
 //- support.gardener.cloud/eu-access-for-cluster-nodes
 
 const (
-	ShootRuntimeGenerationAnnotation  = "infrastructuremanager.kyma-project.io/runtime-generation"
-	ShootRuntimeIDAnnotation          = "infrastructuremanager.kyma-project.io/runtime-id"
-	ShootLicenceTypeAnnotation        = "infrastructuremanager.kyma-project.io/licence-type"
-	RuntimeIDLabel                    = "kyma-project.io/runtime-id"
-	ShootRestrictedEUAccessAnnotation = "support.gardener.cloud/eu-access-for-cluster-nodes"
+	ShootRuntimeGenerationAnnotation = "infrastructuremanager.kyma-project.io/runtime-generation"
+	ShootRuntimeIDAnnotation         = "infrastructuremanager.kyma-project.io/runtime-id"
+	ShootLicenceTypeAnnotation       = "infrastructuremanager.kyma-project.io/licence-type"
+	RuntimeIDLabel                   = "kyma-project.io/runtime-id"
 )
 
 func ExtendWithAnnotations(runtime imv1.Runtime, shoot *gardener.Shoot) error {
@@ -35,20 +34,6 @@ func getAnnotations(runtime imv1.Runtime) map[string]string {
 	if runtime.Spec.Shoot.LicenceType != nil && *runtime.Spec.Shoot.LicenceType != "" {
 		annotations[ShootLicenceTypeAnnotation] = *runtime.Spec.Shoot.LicenceType
 	}
-
-	if isEuAccess(runtime.Spec.Shoot.PlatformRegion) {
-		annotations[ShootRestrictedEUAccessAnnotation] = "true"
-	}
-
+	
 	return annotations
-}
-
-func isEuAccess(platformRegion string) bool {
-	switch platformRegion {
-	case "cf-eu11":
-		return true
-	case "cf-ch20":
-		return true
-	}
-	return false
 }
