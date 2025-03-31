@@ -15,6 +15,12 @@ func GetOIDCConfigOrDefault(runtime imv1.Runtime, defaultOIDC gardener.OIDCConfi
 	return oidcConfig
 }
 
-func OIDCConfigured(oidcConfig *gardener.OIDCConfig) bool {
+func OIDCConfigured(shoot gardener.Shoot) bool {
+	if shoot.Spec.Kubernetes.KubeAPIServer == nil {
+		return false
+	}
+
+	oidcConfig := shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig
+
 	return oidcConfig != nil && oidcConfig.IssuerURL != nil && oidcConfig.ClientID != nil
 }
