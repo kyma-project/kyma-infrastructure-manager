@@ -20,7 +20,7 @@ require (
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
-	github.com/gardener/gardener-extension-provider-aws v1.60.2 // indirect
+	github.com/gardener/gardener-extension-provider-aws v1.61.1 // indirect
 	github.com/gardener/gardener-extension-provider-gcp v1.43.1 // indirect
 	github.com/gardener/gardener-extension-provider-openstack v1.47.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
