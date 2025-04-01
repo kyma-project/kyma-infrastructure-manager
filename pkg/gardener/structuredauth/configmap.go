@@ -50,16 +50,16 @@ func toAuthenticationConfiguration(oidcConfig gardener.OIDCConfig) Authenticatio
 
 		return JWTAuthenticator{
 			Issuer: Issuer{
-				URL:       *oidcConfig.IssuerURL,
-				Audiences: []string{*oidcConfig.ClientID},
+				URL:       ptr.Deref(oidcConfig.IssuerURL, ""),
+				Audiences: []string{ptr.Deref(oidcConfig.ClientID, "")},
 			},
 			ClaimMappings: ClaimMappings{
 				Username: PrefixedClaim{
-					Claim:  *oidcConfig.UsernameClaim,
+					Claim:  ptr.Deref(oidcConfig.UsernameClaim, ""),
 					Prefix: oidcConfig.UsernamePrefix,
 				},
 				Groups: PrefixedClaim{
-					Claim:  *oidcConfig.GroupsClaim,
+					Claim:  ptr.Deref(oidcConfig.GroupsClaim, ""),
 					Prefix: groupsPrefix,
 				},
 			},
@@ -125,7 +125,7 @@ func CreateOrUpdateStructuredAuthConfigMap(ctx context.Context, shootClient clie
 }
 
 func DeleteStructuredConfigMap(ctx context.Context, shootClient client.Client, shoot gardener.Shoot) error {
-	if shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication != nil {
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil && shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication != nil {
 		cmName := shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName
 
 		if cmName == "" {
