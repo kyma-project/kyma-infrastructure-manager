@@ -43,10 +43,12 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		m.log.Error(err, "Failed to delete structured authentication configmap")
 		s.instance.UpdateStateDeletion(
 			imv1.ConditionTypeRuntimeDeprovisioned,
-			imv1.ConditionReasonGardenerShootDeleted,
+			imv1.ConditionReasonStructuredConfigDeleted,
 			"False",
 			"Gardener API structured authentication configmap delete error",
 		)
+
+		return updateStatusAndRequeueAfter(m.RCCfg.RequeueDurationShootDelete)
 	}
 
 	m.log.Info("deleting shoot", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
