@@ -42,7 +42,7 @@ func toAuthenticationConfiguration(oidcConfig gardener.OIDCConfig) Authenticatio
 
 	toJWTAuthenticator := func(oidcConfig gardener.OIDCConfig) JWTAuthenticator {
 		// If Groups prefix is not set by the KEB, default is set as Gardener requires non-empty value
-		groupsPrefix := ptr.To("+")
+		groupsPrefix := ptr.To("-")
 
 		if oidcConfig.GroupsPrefix != nil {
 			groupsPrefix = oidcConfig.GroupsPrefix
@@ -56,7 +56,7 @@ func toAuthenticationConfiguration(oidcConfig gardener.OIDCConfig) Authenticatio
 			ClaimMappings: ClaimMappings{
 				Username: PrefixedClaim{
 					Claim:  *oidcConfig.UsernameClaim,
-					Prefix: oidcConfig.UsernamePrefix,
+					Prefix: ptr.To("+"),
 				},
 				Groups: PrefixedClaim{
 					Claim:  *oidcConfig.GroupsClaim,
