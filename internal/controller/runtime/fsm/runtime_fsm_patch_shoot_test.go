@@ -2,16 +2,17 @@ package fsm
 
 import (
 	"context"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"k8s.io/apimachinery/pkg/api/meta"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"testing"
 	"time"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
 	"github.com/onsi/gomega/types"
-	"github.com/stretchr/testify/mock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	util "k8s.io/apimachinery/pkg/util/runtime"
@@ -27,17 +28,71 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 	util.Must(imv1.AddToScheme(testScheme))
 	util.Must(gardener.AddToScheme(testScheme))
 
-	withMockedMetrics := func() fakeFSMOpt {
-		m := &mocks.Metrics{}
-		m.On("SetRuntimeStates", mock.Anything).Return()
-		m.On("CleanUpRuntimeGauge", mock.Anything, mock.Anything).Return()
-		m.On("IncRuntimeFSMStopCounter").Return()
-		return withMetrics(m)
-	}
+	expectedAnnotations := map[string]string{"operator.kyma-project.io/existing-annotation": "true"}
+	inputRuntimeWithForceAnnotation := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/force-patch-reconciliation": "true", "operator.kyma-project.io/existing-annotation": "true"})
+	inputRuntime := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
 
-	inputRtWithForceAnnotation := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/force-patch-reconciliation": "true"})
+	testFunction := buildPatchTestFunction(sFnPatchExistingShoot)
+	var resNil *ctrl.Result
 
-	testShoot := gardener.Shoot{
+	DescribeTable(
+		"transition graph validation for sFnPatchExistingShoot success",
+		testFunction,
+		Entry(
+			"should transition to Pending Unknown state after successful shoot patching",
+			testCtx,
+			setupFakeFSMForTest(testScheme, inputRuntime),
+			&systemState{instance: *inputRuntime, shoot: getTestShootForPatch()},
+			haveName("sFnUpdateStatus"),
+			expectedAnnotations,
+			getExpectedPendingUnknownState(),
+			resNil,
+		),
+		Entry(
+			"should transition to Pending Unknown state after successful patching and remove force patch annotation",
+			testCtx,
+			setupFakeFSMForTest(testScheme, inputRuntimeWithForceAnnotation),
+			&systemState{instance: *inputRuntimeWithForceAnnotation, shoot: getTestShootForPatch()},
+			haveName("sFnUpdateStatus"),
+			expectedAnnotations,
+			getExpectedPendingUnknownState(),
+			resNil,
+		),
+		Entry(
+			"should transition to Pending Unknown state after successful patching when Audit Logs are mandatory and Audit Log Config can be read",
+			testCtx,
+			setupFakeFSMForTestWithAuditLogMandatoryAndConfig(testScheme, inputRuntime),
+			&systemState{instance: *inputRuntime, shoot: getTestShootForPatch()},
+			haveName("sFnUpdateStatus"),
+			expectedAnnotations,
+			getExpectedPendingUnknownState(),
+			resNil,
+		),
+		Entry(
+			"should transition to Failed state when Audit Logs are mandatory and Audit Log Config cannot be read",
+			testCtx,
+			setupFakeFSMForTestWithAuditLogMandatory(testScheme, inputRuntime),
+			&systemState{instance: *inputRuntime, shoot: getTestShootForPatch()},
+			haveName("sFnUpdateStatus"),
+			expectedAnnotations,
+			getExpectedPendingStateAuditLogError(),
+			resNil,
+		),
+		Entry(
+			"should transition to handleKubeconfig state when shoot generation is identical",
+			testCtx,
+			setupFakeFSMForTestKeepGeneration(testScheme, inputRuntime),
+			&systemState{instance: *inputRuntime, shoot: getTestShootForPatch()},
+			haveName("sFnHandleKubeconfig"),
+			expectedAnnotations,
+			getExpectedPendingNoChangedState(),
+			resNil,
+		),
+	)
+})
+
+func getTestShootForPatch() *gardener.Shoot {
+	return &gardener.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-shoot",
 			Namespace: "garden-",
@@ -56,36 +111,122 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			},
 		},
 	}
+}
 
-	testFunction := buildPatchTestFunction(sFnPatchExistingShoot)
+func getExpectedPendingUnknownState() imv1.RuntimeStatus {
+	var result imv1.RuntimeStatus
+	result.State = imv1.RuntimeStatePending
+	result.ProvisioningCompleted = false
 
-	var expectedAnnotations map[string]string
+	condition := metav1.Condition{
+		Type:    string(imv1.ConditionTypeRuntimeProvisioned),
+		Status:  metav1.ConditionStatus("Unknown"),
+		Reason:  string(imv1.ConditionReasonProcessing),
+		Message: "Shoot is pending for update",
+	}
+	meta.SetStatusCondition(&result.Conditions, condition)
+	return result
+}
 
-	DescribeTable(
-		"transition graph validation for sFnPatchExistingShoot",
-		testFunction,
-		Entry(
-			"should update status after succesful patching and remove force patch annotation",
-			testCtx,
-			must(newFakeFSM, withMockedMetrics(), withTestFinalizer, withFakedK8sClient(testScheme, inputRtWithForceAnnotation), withFakeEventRecorder(1)),
-			&systemState{instance: *inputRtWithForceAnnotation, shoot: &testShoot},
-			haveName("sFnUpdateStatus"),
-			expectedAnnotations,
-		),
+func getExpectedPendingNoChangedState() imv1.RuntimeStatus {
+	var result imv1.RuntimeStatus
+	result.State = imv1.RuntimeStatePending
+	result.ProvisioningCompleted = false
+
+	condition := metav1.Condition{
+		Type:    string(imv1.ConditionTypeRuntimeProvisioned),
+		Status:  metav1.ConditionStatus("True"),
+		Reason:  string(imv1.ConditionReasonProcessing),
+		Message: "Shoot updated without changes",
+	}
+	meta.SetStatusCondition(&result.Conditions, condition)
+	return result
+}
+
+func getExpectedPendingStateAuditLogError() imv1.RuntimeStatus {
+	var result imv1.RuntimeStatus
+	result.State = imv1.RuntimeStateFailed
+	result.ProvisioningCompleted = false
+
+	condition := metav1.Condition{
+		Type:    string(imv1.ConditionTypeRuntimeProvisioned),
+		Status:  metav1.ConditionStatus("False"),
+		Reason:  string(imv1.ConditionReasonAuditLogError),
+		Message: "Failed to configure audit logs",
+	}
+	meta.SetStatusCondition(&result.Conditions, condition)
+	return result
+}
+
+func setupFakeFSMForTest(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+	return must(newFakeFSM,
+		withMockedMetrics(),
+		withTestFinalizer,
+		withFakedK8sClient(scheme, runtime),
+		withFakeEventRecorder(1),
+		withDefaultReconcileDuration(),
 	)
-})
+}
 
-func buildPatchTestFunction(fn stateFn) func(context.Context, *fsm, *systemState, types.GomegaMatcher, map[string]string) {
-	return func(ctx context.Context, r *fsm, s *systemState, matchNextFnState types.GomegaMatcher, expectedAnnotations map[string]string) {
+func setupFakeFSMForTestKeepGeneration(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+	return must(newFakeFSM,
+		withMockedMetrics(),
+		withTestFinalizer,
+		withFakedK8sClientKeepGeneration(scheme, runtime),
+		withFakeEventRecorder(1),
+		withDefaultReconcileDuration(),
+	)
+}
+
+func setupFakeFSMForTestWithAuditLogMandatory(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+	return must(newFakeFSM,
+		withMockedMetrics(),
+		withTestFinalizer,
+		withFakedK8sClient(scheme, runtime),
+		withFakeEventRecorder(1),
+		withDefaultReconcileDuration(),
+		withAuditLogMandatory(true),
+	)
+}
+
+func setupFakeFSMForTestWithAuditLogMandatoryAndConfig(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+	return must(newFakeFSM,
+		withMockedMetrics(),
+		withTestFinalizer,
+		withFakedK8sClient(scheme, runtime),
+		withFakeEventRecorder(1),
+		withDefaultReconcileDuration(),
+		withAuditLogMandatory(true),
+		withAuditLogConfig("gcp", "region", auditlogs.AuditLogData{
+			TenantID:   "test-tenant",
+			ServiceURL: "http://test-auditlog-service",
+			SecretName: "test-secret",
+		}),
+	)
+}
+
+func buildPatchTestFunction(fn stateFn) func(context.Context, *fsm, *systemState, types.GomegaMatcher, map[string]string, imv1.RuntimeStatus, *ctrl.Result) {
+	return func(ctx context.Context, r *fsm, s *systemState, matchNextFnState types.GomegaMatcher, expectedAnnotations map[string]string, expectedStatus imv1.RuntimeStatus, expectedResult *ctrl.Result) {
 
 		createErr := r.ShootClient.Create(ctx, s.shoot)
 		if createErr != nil {
 			return
 		}
 
-		sFn, _, err := fn(ctx, r, s)
+		sFn, res, err := fn(ctx, r, s)
 
 		Expect(err).To(BeNil())
+		Expect(res).To(Equal(expectedResult))
+
+		if s.instance.Status.Conditions != nil {
+			Expect(len(s.instance.Status.Conditions)).To(Equal(len(expectedStatus.Conditions)))
+			for i := range s.instance.Status.Conditions {
+				s.instance.Status.Conditions[i].LastTransitionTime = metav1.Time{}
+				expectedStatus.Conditions[i].LastTransitionTime = metav1.Time{}
+			}
+		}
+
+		Expect(s.instance.Status).To(Equal(expectedStatus))
 		Expect(sFn).To(matchNextFnState)
 		Expect(s.instance.GetAnnotations()).To(Equal(expectedAnnotations))
 	}

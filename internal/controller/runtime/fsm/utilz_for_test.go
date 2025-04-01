@@ -5,9 +5,12 @@ import (
 	"fmt"
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
+	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
+	"github.com/stretchr/testify/mock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -41,6 +44,34 @@ var (
 		}
 	}
 
+	withTestFinalizer = withFinalizer("test-me-plz")
+
+	withMockedMetrics = func() fakeFSMOpt {
+		m := &mocks.Metrics{}
+		m.On("SetRuntimeStates", mock.Anything).Return()
+		m.On("CleanUpRuntimeGauge", mock.Anything, mock.Anything).Return()
+		m.On("IncRuntimeFSMStopCounter").Return()
+		return withMetrics(m)
+	}
+
+	withAuditLogMandatory = func(isMandatory bool) fakeFSMOpt {
+		return func(fsm *fsm) error {
+			fsm.AuditLogMandatory = isMandatory
+			return nil
+		}
+	}
+
+	withAuditLogConfig = func(provider, region string, data auditlogs.AuditLogData) fakeFSMOpt {
+		return func(fsm *fsm) error {
+			fsm.AuditLogging = auditlogs.Configuration{
+				provider: {
+					region: data,
+				},
+			}
+			return nil
+		}
+	}
+
 	withMetrics = func(m metrics.Metrics) fakeFSMOpt {
 		return func(fsm *fsm) error {
 			fsm.Metrics = m
@@ -65,8 +96,28 @@ var (
 			WithObjects(objs...).
 			WithStatusSubresource(objs...).
 			WithInterceptorFuncs(interceptor.Funcs{
-				Patch:  fsm_testing.GetFakePatchInterceptorFn(),
-				Update: fsm_testing.GetFakeUpdateInterceptorFn(),
+				Patch:  fsm_testing.GetFakePatchInterceptorFn(true),
+				Update: fsm_testing.GetFakeUpdateInterceptorFn(true),
+			}).Build()
+
+		return func(fsm *fsm) error {
+			fsm.Client = k8sClient
+			fsm.ShootClient = k8sClient
+			return nil
+		}
+	}
+
+	withFakedK8sClientKeepGeneration = func(
+		scheme *runtime.Scheme,
+		objs ...client.Object) fakeFSMOpt {
+
+		k8sClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(objs...).
+			WithStatusSubresource(objs...).
+			WithInterceptorFuncs(interceptor.Funcs{
+				Patch:  fsm_testing.GetFakePatchInterceptorFn(false),
+				Update: fsm_testing.GetFakeUpdateInterceptorFn(false),
 			}).Build()
 
 		return func(fsm *fsm) error {

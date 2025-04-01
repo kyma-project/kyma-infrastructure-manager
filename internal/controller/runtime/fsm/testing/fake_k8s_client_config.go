@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func GetFakePatchInterceptorFn() func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+func GetFakePatchInterceptorFn(incGeneration bool) func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
 	return func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
 		// Apply patches are supposed to upsert, but fake client fails if the object doesn't exist,
 		// Update the generation to simulate the object being updated using interceptor function.
@@ -19,19 +19,23 @@ func GetFakePatchInterceptorFn() func(ctx context.Context, client client.WithWat
 		if !ok {
 			return errors.New("failed to cast object to shoot")
 		}
-		shoot.Generation++
+		if incGeneration {
+			shoot.Generation++
+		}
 		return nil
 	}
 }
 
-func GetFakeUpdateInterceptorFn() func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+func GetFakeUpdateInterceptorFn(incGeneration bool) func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
 	return func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
 		shoot, ok := obj.(*gardener_api.Shoot)
 		if !ok {
 			return client.Update(ctx, obj, opts...)
 		}
 		// Update the generation to simulate shoot object being updated using interceptor function.
-		shoot.Generation++
+		if incGeneration {
+			shoot.Generation++
+		}
 		return nil
 	}
 }
