@@ -140,9 +140,9 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 			assert.Equal(t, tt.oidcConfig.UsernamePrefix, authenticationConfiguration.JWT[0].ClaimMappings.Username.Prefix)
 			assert.Equal(t, *tt.oidcConfig.GroupsClaim, authenticationConfiguration.JWT[0].ClaimMappings.Groups.Claim)
 			if tt.oidcConfig.GroupsPrefix == nil {
-				assert.Equal(t, "-", *authenticationConfiguration.JWT[0].ClaimMappings.Groups.Prefix)
+				assert.Equal(t, "", *authenticationConfiguration.JWT[0].ClaimMappings.Groups.Prefix)
 			} else {
-				assert.Equal(t, tt.oidcConfig.GroupsPrefix, authenticationConfiguration.JWT[0].ClaimMappings.Groups.Prefix)
+				assert.Equal(t, *tt.oidcConfig.GroupsPrefix, *authenticationConfiguration.JWT[0].ClaimMappings.Groups.Prefix)
 			}
 		})
 	}
