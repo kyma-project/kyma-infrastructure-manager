@@ -108,8 +108,7 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.MachineImage.DefaultVersion,
 			opts.Workers,
 			opts.InfrastructureConfig,
-			opts.ControlPlaneConfig,
-			opts.Log))
+			opts.ControlPlaneConfig))
 
 	extendersForPatch = append(extendersForPatch,
 		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.Extensions),
