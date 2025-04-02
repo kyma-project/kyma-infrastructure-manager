@@ -2,7 +2,7 @@ module github.com/kyma-project/infrastructure-manager/hack/performance
 
 go 1.24.0
 
-toolchain go1.24.1
+toolchain go1.24.2
 
 require (
 	github.com/kyma-project/infrastructure-manager v0.0.0-20250401071101-3f3516b7d4e9
