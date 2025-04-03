@@ -284,7 +284,7 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderPatchOperation(false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion, tc.CurrentShootWorkers, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig, nil)
+			extender := NewProviderExtenderPatchOperation(false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion, tc.CurrentShootWorkers, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig)
 			err := extender(tc.Runtime, &shoot)
 
 			// then

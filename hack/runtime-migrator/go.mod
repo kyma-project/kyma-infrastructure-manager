@@ -2,13 +2,13 @@ module github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app
 
 go 1.24.0
 
-toolchain go1.24.1
+toolchain go1.24.2
 
 require (
 	github.com/gardener/gardener v1.115.1
 	github.com/gardener/oidc-webhook-authenticator v0.34.0
 	github.com/go-playground/validator/v10 v10.26.0
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250401071101-3f3516b7d4e9
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250402094957-670c969b9169
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
 	k8s.io/api v0.32.3
