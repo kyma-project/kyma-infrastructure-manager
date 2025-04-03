@@ -42,7 +42,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			"should transition to Pending Unknown state after successful shoot patching",
 			testCtx,
 			setupFakeFSMForTest(testScheme, inputRuntime),
-			&systemState{instance: *inputRuntime, shoot: &fsm_testing.TestShootForPatch},
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
 			outputFnState{
 				nextStep:    haveName("sFnUpdateStatus"),
 				annotations: expectedAnnotations,
@@ -54,7 +54,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			"should transition to Pending Unknown state after successful patching and remove force patch annotation",
 			testCtx,
 			setupFakeFSMForTest(testScheme, inputRuntimeWithForceAnnotation),
-			&systemState{instance: *inputRuntimeWithForceAnnotation, shoot: &fsm_testing.TestShootForPatch},
+			&systemState{instance: *inputRuntimeWithForceAnnotation, shoot: fsm_testing.TestShootForPatch()},
 			outputFnState{
 				nextStep:    haveName("sFnUpdateStatus"),
 				annotations: expectedAnnotations,
@@ -66,7 +66,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			"should transition to Failed state when Audit Logs are mandatory and Audit Log Config cannot be read",
 			testCtx,
 			setupFakeFSMForTestWithAuditLogMandatory(testScheme, inputRuntime),
-			&systemState{instance: *inputRuntime, shoot: &fsm_testing.TestShootForPatch},
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
 			outputFnState{
 				nextStep:    haveName("sFnUpdateStatus"),
 				annotations: expectedAnnotations,
@@ -78,7 +78,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			"should transition to Pending Unknown state after successful patching when Audit Logs are mandatory and Audit Log Config can be read",
 			testCtx,
 			setupFakeFSMForTestWithAuditLogMandatoryAndConfig(testScheme, inputRuntime),
-			&systemState{instance: *inputRuntime, shoot: &fsm_testing.TestShootForPatch},
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
 			outputFnState{
 				nextStep:    haveName("sFnUpdateStatus"),
 				annotations: expectedAnnotations,
@@ -90,7 +90,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			"should transition to handleKubeconfig state when shoot generation is identical",
 			testCtx,
 			setupFakeFSMForTestKeepGeneration(testScheme, inputRuntime),
-			&systemState{instance: *inputRuntime, shoot: &fsm_testing.TestShootForPatch},
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
 			outputFnState{
 				nextStep:    haveName("sFnHandleKubeconfig"),
 				annotations: expectedAnnotations,
@@ -102,7 +102,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			"should transition to Pending Unknown when cannot execute Patch shoot with inConflict error",
 			testCtx,
 			setupFakeFSMForTestWithFailingPatchWithInConflictError(testScheme, inputRuntime),
-			&systemState{instance: *inputRuntime, shoot: &fsm_testing.TestShootForPatch},
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
 			outputFnState{
 				nextStep:    haveName("sFnUpdateStatus"),
 				annotations: expectedAnnotations,
@@ -114,7 +114,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			"should transition to Pending Unknown when cannot execute Patch shoot with forbidden error",
 			testCtx,
 			setupFakeFSMForTestWithFailingPatchWithForbiddenError(testScheme, inputRuntime),
-			&systemState{instance: *inputRuntime, shoot: &fsm_testing.TestShootForPatch},
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
 			outputFnState{
 				nextStep:    haveName("sFnUpdateStatus"),
 				annotations: expectedAnnotations,
@@ -126,7 +126,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			"should transition to Failed state when cannot execute Patch shoot with any other error",
 			testCtx,
 			setupFakeFSMForTestWithFailingPatchWithOtherError(testScheme, inputRuntime),
-			&systemState{instance: *inputRuntime, shoot: &fsm_testing.TestShootForPatch},
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
 			outputFnState{
 				nextStep:    haveName("sFnUpdateStatus"),
 				annotations: expectedAnnotations,
@@ -138,7 +138,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			"should transition to Pending Unknown when cannot execute Update shoot with inConflict error",
 			testCtx,
 			setupFakeFSMForTestWithFailingUpdateWithInConflictError(testScheme, inputRuntime),
-			&systemState{instance: *inputRuntime, shoot: &fsm_testing.TestShootForUpdate},
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForUpdate()},
 			outputFnState{
 				nextStep:    haveName("sFnUpdateStatus"),
 				annotations: expectedAnnotations,
@@ -150,7 +150,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			"should transition to Pending Unknown when cannot execute Update shoot with forbidden error",
 			testCtx,
 			setupFakeFSMForTestWithFailingUpdateWithForbiddenError(testScheme, inputRuntime),
-			&systemState{instance: *inputRuntime, shoot: &fsm_testing.TestShootForUpdate},
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForUpdate()},
 			outputFnState{
 				nextStep:    haveName("sFnUpdateStatus"),
 				annotations: expectedAnnotations,
@@ -162,12 +162,12 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			"should transition to to Failed state when cannot execute Update shoot with any other error",
 			testCtx,
 			setupFakeFSMForTestWithFailingUpdateWithOtherError(testScheme, inputRuntime),
-			&systemState{instance: *inputRuntime, shoot: &fsm_testing.TestShootForUpdate},
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForUpdate()},
 			outputFnState{
 				nextStep:    haveName("sFnUpdateStatus"),
 				annotations: expectedAnnotations,
 				result:      nil,
-				status:      fsm_testing.FailedStatusPatchErr(),
+				status:      fsm_testing.FailedStatusUpdateError(),
 			},
 		),
 	)

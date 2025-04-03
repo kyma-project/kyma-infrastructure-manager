@@ -220,8 +220,10 @@ var (
 			},
 		},
 	}
+)
 
-	TestShootForPatch = gardener.Shoot{
+func TestShootForPatch() *gardener.Shoot {
+	return &gardener.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-shoot",
 			Namespace: "garden-",
@@ -240,8 +242,10 @@ var (
 			},
 		},
 	}
+}
 
-	TestShootForUpdate = gardener.Shoot{
+func TestShootForUpdate() *gardener.Shoot {
+	return &gardener.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-shoot",
 			Namespace: "garden-",
@@ -260,7 +264,7 @@ var (
 			},
 		},
 	}
-)
+}
 
 func fixWorkers(name, machineType, machineImageName, machineImageVersion string, min, max int32, zones []string) []gardener.Worker {
 	return []gardener.Worker{
