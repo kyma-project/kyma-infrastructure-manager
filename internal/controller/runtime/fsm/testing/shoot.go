@@ -4,6 +4,7 @@ import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 var (
@@ -219,4 +220,62 @@ var (
 			},
 		},
 	}
+
+	TestShootForPatch = gardener.Shoot{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-shoot",
+			Namespace: "garden-",
+		},
+		Spec: gardener.ShootSpec{
+			DNS: &gardener.DNS{
+				Domain: ptr.To("test-domain"),
+			},
+			Provider: gardener.Provider{
+				Workers: fixWorkers("test-worker", "m5.xlarge", "garden-linux", "1.19.8", 1, 1, []string{"europe-west1-d"}),
+			},
+		},
+		Status: gardener.ShootStatus{
+			LastOperation: &gardener.LastOperation{
+				State: gardener.LastOperationStateSucceeded,
+			},
+		},
+	}
+
+	TestShootForUpdate = gardener.Shoot{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-shoot",
+			Namespace: "garden-",
+		},
+		Spec: gardener.ShootSpec{
+			DNS: &gardener.DNS{
+				Domain: ptr.To("test-domain"),
+			},
+			Provider: gardener.Provider{
+				Workers: fixWorkers("test-worker", "m5.xlarge", "garden-linux", "1.19.8", 2, 5, []string{"europe-west1-d"}),
+			},
+		},
+		Status: gardener.ShootStatus{
+			LastOperation: &gardener.LastOperation{
+				State: gardener.LastOperationStateSucceeded,
+			},
+		},
+	}
 )
+
+func fixWorkers(name, machineType, machineImageName, machineImageVersion string, min, max int32, zones []string) []gardener.Worker {
+	return []gardener.Worker{
+		{
+			Name: name,
+			Machine: gardener.Machine{
+				Type: machineType,
+				Image: &gardener.ShootMachineImage{
+					Name:    machineImageName,
+					Version: &machineImageVersion,
+				},
+			},
+			Minimum: min,
+			Maximum: max,
+			Zones:   zones,
+		},
+	}
+}

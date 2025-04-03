@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -23,6 +24,18 @@ func GetFakePatchInterceptorFn(incGeneration bool) func(ctx context.Context, cli
 			shoot.Generation++
 		}
 		return nil
+	}
+}
+
+func GetFakePatchInterceptorFnError(returnedError *k8s_errors.StatusError) func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+	return func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+		return returnedError
+	}
+}
+
+func GetFakeUpdateInterceptorFnError(returnedError *k8s_errors.StatusError) func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+	return func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+		return returnedError
 	}
 }
 
