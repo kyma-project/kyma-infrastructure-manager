@@ -81,21 +81,6 @@ func FailedStatusPatchErr() imv1.RuntimeStatus {
 	return result
 }
 
-func FailedStatusUpdateError() imv1.RuntimeStatus {
-	var result imv1.RuntimeStatus
-	result.State = imv1.RuntimeStateFailed
-	result.ProvisioningCompleted = false
-
-	condition := metav1.Condition{
-		Type:    string(imv1.ConditionTypeRuntimeProvisioned),
-		Status:  metav1.ConditionStatus("False"),
-		Reason:  string(imv1.ConditionReasonProcessingErr),
-		Message: "Gardener API shoot update error: test unauthorized",
-	}
-	meta.SetStatusCondition(&result.Conditions, condition)
-	return result
-}
-
 func FailedStatusAuditLogError() imv1.RuntimeStatus {
 	var result imv1.RuntimeStatus
 	result.State = imv1.RuntimeStateFailed
