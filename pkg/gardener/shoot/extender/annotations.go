@@ -34,6 +34,6 @@ func getAnnotations(runtime imv1.Runtime) map[string]string {
 	if runtime.Spec.Shoot.LicenceType != nil && *runtime.Spec.Shoot.LicenceType != "" {
 		annotations[ShootLicenceTypeAnnotation] = *runtime.Spec.Shoot.LicenceType
 	}
-	
+
 	return annotations
 }
