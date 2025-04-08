@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"k8s.io/apimachinery/pkg/api/meta"
 	"strconv"
 	"time"
 
@@ -22,6 +23,7 @@ const (
 	GardenerClusterStateMetricName = "im_gardener_clusters_state"
 	RuntimeStateMetricName         = "im_runtime_state"
 	RuntimeFSMStopMetricName       = "unexpected_stops_total"
+	PendigStateDurationMetricName  = "im_runtime_pending_state_duration"
 	provider                       = "provider"
 	state                          = "state"
 	reason                         = "reason"
@@ -41,13 +43,16 @@ type Metrics interface {
 	CleanUpGardenerClusterGauge(runtimeID string)
 	CleanUpKubeconfigExpiration(runtimeID string)
 	SetKubeconfigExpiration(secret corev1.Secret, rotationPeriod time.Duration, minimalRotationTimeRatio float64)
+	SetPendingStateDuration(runtime v1.Runtime)
+	CleanUpPendingStateDuration(runtimeID string)
 }
 
 type metricsImpl struct {
-	gardenerClustersStateGaugeVec *prometheus.GaugeVec
-	kubeconfigExpirationGauge     *prometheus.GaugeVec
-	runtimeStateGauge             *prometheus.GaugeVec
-	runtimeFSMUnexpectedStopsCnt  prometheus.Counter
+	gardenerClustersStateGaugeVec    *prometheus.GaugeVec
+	kubeconfigExpirationGauge        *prometheus.GaugeVec
+	runtimeStateGauge                *prometheus.GaugeVec
+	runtimeFSMUnexpectedStopsCnt     prometheus.Counter
+	runtimePendingStateDurationGauge *prometheus.GaugeVec
 }
 
 func NewMetrics() Metrics {
@@ -75,6 +80,12 @@ func NewMetrics() Metrics {
 				Name: RuntimeFSMStopMetricName,
 				Help: "Exposes the number of unexpected state machine stop events",
 			}),
+		runtimePendingStateDurationGauge: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Subsystem: componentName,
+				Name:      PendigStateDurationMetricName,
+				Help:      "Exposes duration of pending state for Runtime CRs",
+			}, []string{runtimeIDKeyName, runtimeNameKeyName, shootNameIDKeyName, provider, state, message}),
 	}
 	ctrlMetrics.Registry.MustRegister(m.gardenerClustersStateGaugeVec, m.kubeconfigExpirationGauge, m.runtimeStateGauge, m.runtimeFSMUnexpectedStopsCnt)
 	return m
@@ -172,4 +183,29 @@ func (m metricsImpl) SetKubeconfigExpiration(secret corev1.Secret, rotationPerio
 			).Set(float64(expirationTimeEpoch))
 		}
 	}
+}
+
+func (m metricsImpl) SetPendingStateDuration(runtime v1.Runtime) {
+	runtimeID := runtime.GetLabels()[RuntimeIDLabel]
+
+	getDuration := func() time.Duration {
+		if runtime.Status.State == v1.RuntimeStatePending {
+			condition := meta.FindStatusCondition(runtime.Status.Conditions, string(v1.ConditionTypeRuntimeProvisioned))
+			return time.Since(condition.LastTransitionTime.Time)
+		}
+
+		return 0
+	}
+
+	if runtimeID != "" {
+		m.runtimePendingStateDurationGauge.
+			WithLabelValues(runtimeID, runtime.Name, runtime.Spec.Shoot.Name, runtime.Spec.Shoot.Provider.Type).
+			Set(getDuration().Minutes())
+	}
+}
+
+func (m metricsImpl) CleanUpPendingStateDuration(runtimeID string) {
+	m.runtimePendingStateDurationGauge.DeletePartialMatch(prometheus.Labels{
+		runtimeIDKeyName: runtimeID,
+	})
 }
