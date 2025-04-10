@@ -14,6 +14,7 @@ import (
 func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	// wait section
 	if !s.shoot.GetDeletionTimestamp().IsZero() {
+		m.Metrics.SetPendingStateDuration("delete", s.instance)
 		m.log.V(log_level.DEBUG).Info("Waiting for shoot to be deleted", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
 		return requeueAfter(m.RCCfg.RequeueDurationShootDelete)
 	}

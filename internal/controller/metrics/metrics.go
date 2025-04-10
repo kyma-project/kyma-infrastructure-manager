@@ -31,6 +31,7 @@ const (
 	KubeconfigExpirationMetricName = "im_kubeconfig_expiration"
 	expires                        = "expires"
 	lastSyncAnnotation             = "operator.kyma-project.io/last-sync"
+	operation                      = "operation"
 )
 
 //go:generate mockery --name=Metrics
@@ -43,8 +44,8 @@ type Metrics interface {
 	CleanUpGardenerClusterGauge(runtimeID string)
 	CleanUpKubeconfigExpiration(runtimeID string)
 	SetKubeconfigExpiration(secret corev1.Secret, rotationPeriod time.Duration, minimalRotationTimeRatio float64)
-	SetPendingStateDuration(runtime v1.Runtime)
-	CleanUpPendingStateDuration(runtimeID string)
+	SetPendingStateDuration(operation string, runtime v1.Runtime)
+	CleanUpPendingStateDuration(runtimeName string)
 }
 
 type metricsImpl struct {
@@ -84,10 +85,10 @@ func NewMetrics() Metrics {
 			prometheus.GaugeOpts{
 				Subsystem: componentName,
 				Name:      PendigStateDurationMetricName,
-				Help:      "Exposes duration of pending state for Runtime CRs",
-			}, []string{runtimeIDKeyName, runtimeNameKeyName, shootNameIDKeyName, provider, state, message}),
+				Help:      "Exposes duration of pending state for Runtime CRs in minutes",
+			}, []string{operation, runtimeIDKeyName, runtimeNameKeyName, shootNameIDKeyName, provider}),
 	}
-	ctrlMetrics.Registry.MustRegister(m.gardenerClustersStateGaugeVec, m.kubeconfigExpirationGauge, m.runtimeStateGauge, m.runtimeFSMUnexpectedStopsCnt)
+	ctrlMetrics.Registry.MustRegister(m.gardenerClustersStateGaugeVec, m.kubeconfigExpirationGauge, m.runtimeStateGauge, m.runtimeFSMUnexpectedStopsCnt, m.runtimePendingStateDurationGauge)
 	return m
 }
 
@@ -185,7 +186,7 @@ func (m metricsImpl) SetKubeconfigExpiration(secret corev1.Secret, rotationPerio
 	}
 }
 
-func (m metricsImpl) SetPendingStateDuration(runtime v1.Runtime) {
+func (m metricsImpl) SetPendingStateDuration(operation string, runtime v1.Runtime) {
 	runtimeID := runtime.GetLabels()[RuntimeIDLabel]
 
 	getDuration := func() time.Duration {
@@ -194,18 +195,22 @@ func (m metricsImpl) SetPendingStateDuration(runtime v1.Runtime) {
 			return time.Since(condition.LastTransitionTime.Time)
 		}
 
+		if runtime.Status.State == v1.RuntimeStateTerminating {
+			return time.Since(runtime.DeletionTimestamp.Time)
+		}
+
 		return 0
 	}
 
 	if runtimeID != "" {
 		m.runtimePendingStateDurationGauge.
-			WithLabelValues(runtimeID, runtime.Name, runtime.Spec.Shoot.Name, runtime.Spec.Shoot.Provider.Type).
+			WithLabelValues(operation, runtimeID, runtime.Name, runtime.Spec.Shoot.Name, runtime.Spec.Shoot.Provider.Type).
 			Set(getDuration().Minutes())
 	}
 }
 
-func (m metricsImpl) CleanUpPendingStateDuration(runtimeID string) {
+func (m metricsImpl) CleanUpPendingStateDuration(runtimeName string) {
 	m.runtimePendingStateDurationGauge.DeletePartialMatch(prometheus.Labels{
-		runtimeIDKeyName: runtimeID,
+		runtimeNameKeyName: runtimeName,
 	})
 }

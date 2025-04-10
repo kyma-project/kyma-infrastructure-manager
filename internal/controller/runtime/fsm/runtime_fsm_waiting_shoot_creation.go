@@ -44,11 +44,7 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 
 		m.log.V(log_level.DEBUG).Info(fmt.Sprintf("Shoot %s is in %s state, scheduling for retry", s.shoot.Name, s.shoot.Status.LastOperation.State))
 
-		s.instance.UpdateStatePending(
-			imv1.ConditionTypeRuntimeProvisioned,
-			imv1.ConditionReasonShootCreationPending,
-			"Unknown",
-			"Shoot creation in progress")
+		m.Metrics.SetPendingStateDuration("create", s.instance)
 
 		return updateStatusAndRequeueAfter(m.RCCfg.RequeueDurationShootCreate)
 
@@ -75,11 +71,15 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 			"False",
 			"Shoot creation failed")
 
+		m.Metrics.CleanUpPendingStateDuration(s.instance.Name)
 		m.Metrics.IncRuntimeFSMStopCounter()
 		return updateStatusAndStop()
 
 	case gardener.LastOperationStateSucceeded:
 		m.log.Info(fmt.Sprintf("Shoot %s successfully created", s.shoot.Name))
+
+		m.Metrics.CleanUpPendingStateDuration(s.instance.Name)
+
 		return ensureStatusConditionIsSetAndContinue(
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,

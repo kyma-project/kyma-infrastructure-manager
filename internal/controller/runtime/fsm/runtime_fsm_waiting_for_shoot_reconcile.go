@@ -16,7 +16,7 @@ func sFnWaitForShootReconcile(_ context.Context, m *fsm, s *systemState) (stateF
 	case gardener.LastOperationStateProcessing, gardener.LastOperationStatePending, gardener.LastOperationStateAborted, gardener.LastOperationStateError:
 		m.log.V(log_level.DEBUG).Info(fmt.Sprintf("Shoot %s is in %s state, scheduling for retry", s.shoot.Name, s.shoot.Status.LastOperation.State))
 
-		m.Metrics.SetPendingStateDuration(s.instance)
+		m.Metrics.SetPendingStateDuration("update", s.instance)
 
 		return updateStatusAndRequeueAfter(m.RCCfg.RequeueDurationShootReconcile)
 
@@ -43,13 +43,13 @@ func sFnWaitForShootReconcile(_ context.Context, m *fsm, s *systemState) (stateF
 			"False",
 			string(reason),
 		)
-		m.Metrics.CleanUpPendingStateDuration(s.instance.GetLabels()["kyma-project.io/runtime-id"])
+		m.Metrics.CleanUpPendingStateDuration(s.instance.Name)
 		m.Metrics.IncRuntimeFSMStopCounter()
 		return updateStatusAndStop()
 
 	case gardener.LastOperationStateSucceeded:
 		m.log.Info(fmt.Sprintf("Shoot %s successfully updated, moving to processing", s.shoot.Name))
-		m.Metrics.CleanUpPendingStateDuration(s.instance.GetLabels()["kyma-project.io/runtime-id"])
+		m.Metrics.CleanUpPendingStateDuration(s.instance.Name)
 
 		return ensureStatusConditionIsSetAndContinue(
 			&s.instance,
