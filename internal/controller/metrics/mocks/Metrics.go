@@ -27,9 +27,9 @@ func (_m *Metrics) CleanUpKubeconfigExpiration(runtimeID string) {
 	_m.Called(runtimeID)
 }
 
-// CleanUpPendingStateDuration provides a mock function with given fields: runtimeID
-func (_m *Metrics) CleanUpPendingStateDuration(runtimeID string) {
-	_m.Called(runtimeID)
+// CleanUpPendingStateDuration provides a mock function with given fields: runtimeName
+func (_m *Metrics) CleanUpPendingStateDuration(runtimeName string) {
+	_m.Called(runtimeName)
 }
 
 // CleanUpRuntimeGauge provides a mock function with given fields: runtimeID, runtimeName
@@ -57,9 +57,9 @@ func (_m *Metrics) SetKubeconfigExpiration(secret corev1.Secret, rotationPeriod 
 	_m.Called(secret, rotationPeriod, minimalRotationTimeRatio)
 }
 
-// SetPendingStateDuration provides a mock function with given fields: runtime
-func (_m *Metrics) SetPendingStateDuration(runtime v1.Runtime) {
-	_m.Called(runtime)
+// SetPendingStateDuration provides a mock function with given fields: operation, runtime
+func (_m *Metrics) SetPendingStateDuration(operation string, runtime v1.Runtime) {
+	_m.Called(operation, runtime)
 }
 
 // SetRuntimeStates provides a mock function with given fields: runtime
