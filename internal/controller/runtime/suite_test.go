@@ -119,6 +119,8 @@ var _ = BeforeSuite(func() {
 	mm.On("SetRuntimeStates", mock.Anything).Return()
 	mm.On("IncRuntimeFSMStopCounter").Return()
 	mm.On("CleanUpRuntimeGauge", mock.Anything, mock.Anything).Return()
+	mm.On("SetPendingStateDuration", mock.Anything, mock.Anything).Return()
+	mm.On("CleanUpPendingStateDuration", mock.Anything).Return()
 
 	fsmCfg := fsm.RCCfg{
 		Finalizer:                     imv1.Finalizer,
