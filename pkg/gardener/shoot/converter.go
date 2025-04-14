@@ -19,12 +19,19 @@ import (
 
 type Extend func(imv1.Runtime, *gardener.Shoot) error
 
-func baseExtenders(cfg config.ConverterConfig) []Extend {
+func baseExtenders(cfg config.ConverterConfig, structuredAuthEnabled bool) []Extend {
+
+	oidcExtender := extender2.NewLegacyOidcExtender(cfg.Kubernetes.DefaultOperatorOidc)
+
+	if structuredAuthEnabled {
+		oidcExtender = extender2.NewOidcExtender()
+	}
+
 	return []Extend{
 		extender2.ExtendWithAnnotations,
 		extender2.ExtendWithLabels,
 		extender2.ExtendWithSeedSelector,
-		extender2.NewOidcExtender(),
+		oidcExtender,
 		extender2.ExtendWithCloudProfile,
 		extender2.ExtendWithExposureClassName,
 		restrictions.ExtendWithAccessRestriction(),
@@ -43,10 +50,15 @@ func newConverter(config config.ConverterConfig, extenders ...Extend) Converter 
 	}
 }
 
+type FeatureFlags struct {
+	StructuredAuthEnabled bool
+}
+
 type CreateOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
+	FeatureFlags
 }
 
 type WorkerZones struct {
@@ -65,10 +77,11 @@ type PatchOpts struct {
 	InfrastructureConfig *runtime.RawExtension
 	ControlPlaneConfig   *runtime.RawExtension
 	Log                  *logr.Logger
+	FeatureFlags         ``
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {
-	extendersForCreate := baseExtenders(opts.ConverterConfig)
+	extendersForCreate := baseExtenders(opts.ConverterConfig, opts.StructuredAuthEnabled)
 
 	extendersForCreate = append(extendersForCreate,
 		provider.NewProviderExtenderForCreateOperation(
@@ -99,7 +112,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 }
 
 func NewConverterPatch(opts PatchOpts) Converter {
-	extendersForPatch := baseExtenders(opts.ConverterConfig)
+	extendersForPatch := baseExtenders(opts.ConverterConfig, opts.StructuredAuthEnabled)
 
 	extendersForPatch = append(extendersForPatch,
 		provider.NewProviderExtenderPatchOperation(
