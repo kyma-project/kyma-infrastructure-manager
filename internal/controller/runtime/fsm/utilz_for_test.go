@@ -4,10 +4,16 @@ import (
 	"context"
 	"fmt"
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
+	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
+	"github.com/onsi/gomega/types"
+	"github.com/stretchr/testify/mock"
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -24,6 +30,13 @@ type fakeFSMOpt func(*fsm) error
 const defaultControlPlaneRequeueDuration = 10 * time.Second
 const defaultGardenerRequeueDuration = 15 * time.Second
 
+type outputFnState struct {
+	nextStep    types.GomegaMatcher
+	annotations map[string]string
+	result      *ctrl.Result
+	status      imv1.RuntimeStatus
+}
+
 var (
 	errFailedToCreateFakeFSM = fmt.Errorf("failed to create fake FSM")
 
@@ -37,6 +50,41 @@ var (
 	withFinalizer = func(finalizer string) fakeFSMOpt {
 		return func(fsm *fsm) error {
 			fsm.Finalizer = finalizer
+			return nil
+		}
+	}
+
+	withShootNamespace = func(ns string) fakeFSMOpt {
+		return func(fsm *fsm) error {
+			fsm.ShootNamesapace = ns
+			return nil
+		}
+	}
+
+	withTestFinalizer = withFinalizer("test-me-plz")
+
+	withMockedMetrics = func() fakeFSMOpt {
+		m := &mocks.Metrics{}
+		m.On("SetRuntimeStates", mock.Anything).Return()
+		m.On("CleanUpRuntimeGauge", mock.Anything, mock.Anything).Return()
+		m.On("IncRuntimeFSMStopCounter").Return()
+		return withMetrics(m)
+	}
+
+	withAuditLogMandatory = func(isMandatory bool) fakeFSMOpt {
+		return func(fsm *fsm) error {
+			fsm.AuditLogMandatory = isMandatory
+			return nil
+		}
+	}
+
+	withAuditLogConfig = func(provider, region string, data auditlogs.AuditLogData) fakeFSMOpt {
+		return func(fsm *fsm) error {
+			fsm.AuditLogging = auditlogs.Configuration{
+				provider: {
+					region: data,
+				},
+			}
 			return nil
 		}
 	}
@@ -65,8 +113,70 @@ var (
 			WithObjects(objs...).
 			WithStatusSubresource(objs...).
 			WithInterceptorFuncs(interceptor.Funcs{
-				Patch:  fsm_testing.GetFakePatchInterceptorFn(),
-				Update: fsm_testing.GetFakeUpdateInterceptorFn(),
+				Patch:  fsm_testing.GetFakePatchInterceptorFn(true),
+				Update: fsm_testing.GetFakeUpdateInterceptorFn(true),
+			}).Build()
+
+		return func(fsm *fsm) error {
+			fsm.Client = k8sClient
+			fsm.ShootClient = k8sClient
+			return nil
+		}
+	}
+
+	withFakedK8sClientKeepGeneration = func(
+		scheme *runtime.Scheme,
+		objs ...client.Object) fakeFSMOpt {
+
+		k8sClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(objs...).
+			WithStatusSubresource(objs...).
+			WithInterceptorFuncs(interceptor.Funcs{
+				Patch:  fsm_testing.GetFakePatchInterceptorFn(false),
+				Update: fsm_testing.GetFakeUpdateInterceptorFn(false),
+			}).Build()
+
+		return func(fsm *fsm) error {
+			fsm.Client = k8sClient
+			fsm.ShootClient = k8sClient
+			return nil
+		}
+	}
+
+	withFakedK8sClientFailPatchError = func(
+		err *k8s_errors.StatusError,
+		scheme *runtime.Scheme,
+		objs ...client.Object) fakeFSMOpt {
+
+		k8sClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(objs...).
+			WithStatusSubresource(objs...).
+			WithInterceptorFuncs(interceptor.Funcs{
+				Patch:  fsm_testing.GetFakePatchInterceptorFnError(err),
+				Update: fsm_testing.GetFakeUpdateInterceptorFn(true),
+			}).Build()
+
+		return func(fsm *fsm) error {
+			fsm.Client = k8sClient
+			fsm.ShootClient = k8sClient
+			return nil
+		}
+	}
+
+	withFakedK8sClientFailUpdateError = func(
+		err *k8s_errors.StatusError,
+		scheme *runtime.Scheme,
+		objs ...client.Object) fakeFSMOpt {
+
+		k8sClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(objs...).
+			WithStatusSubresource(objs...).
+			WithInterceptorFuncs(interceptor.Funcs{
+				Patch:  fsm_testing.GetFakePatchInterceptorFn(true),
+				Update: fsm_testing.GetFakeUpdateInterceptorFnError(err),
 			}).Build()
 
 		return func(fsm *fsm) error {

@@ -6,19 +6,15 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
 	"github.com/onsi/gomega/types"
-	"github.com/stretchr/testify/mock"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	util "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-var withTestFinalizer = withFinalizer("test-me-plz")
 
 var _ = Describe("KIM sFnInitialise", func() {
 	now := metav1.NewTime(time.Now())
@@ -35,14 +31,6 @@ var _ = Describe("KIM sFnInitialise", func() {
 		return func(fsm *fsm) error {
 			return withFakedK8sClient(testScheme, objs...)(fsm)
 		}
-	}
-
-	withMockedMetrics := func() fakeFSMOpt {
-		m := &mocks.Metrics{}
-		m.On("SetRuntimeStates", mock.Anything).Return()
-		m.On("CleanUpRuntimeGauge", mock.Anything, mock.Anything).Return()
-		m.On("IncRuntimeFSMStopCounter").Return()
-		return withMetrics(m)
 	}
 
 	testRt := imv1.Runtime{

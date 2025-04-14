@@ -138,7 +138,15 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	}
 
 	if updatedShoot.Generation == s.shoot.Generation {
-		m.log.Info("Gardener shoot for runtime did not change after patch, moving to processing", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
+		m.log.V(log_level.DEBUG).Info("Gardener shoot for runtime did not change after patch, moving to processing", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
+
+		s.instance.UpdateStatePending(
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonProcessing,
+			"True",
+			"Shoot patched without changes",
+		)
+
 		return switchState(sFnHandleKubeconfig)
 	}
 
@@ -148,7 +156,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		imv1.ConditionTypeRuntimeProvisioned,
 		imv1.ConditionReasonProcessing,
 		"Unknown",
-		"Shoot is pending for update",
+		"Shoot is pending for update after patch",
 	)
 
 	return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
@@ -158,12 +166,28 @@ func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg stri
 	if err != nil {
 		if k8serrors.IsConflict(err) {
 			m.log.Info("Gardener shoot for runtime is outdated, retrying", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
+
+			s.instance.UpdateStatePending(
+				imv1.ConditionTypeRuntimeProvisioned,
+				imv1.ConditionReasonProcessing,
+				"Unknown",
+				"Shoot is pending for update after conflict error",
+			)
+
 			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
 		}
 
 		// We're retrying on Forbidden error because Gardener returns them from time too time for operations that are properly authorized.
 		if k8serrors.IsForbidden(err) {
 			m.log.Info("Gardener shoot for runtime is forbidden, retrying")
+
+			s.instance.UpdateStatePending(
+				imv1.ConditionTypeRuntimeProvisioned,
+				imv1.ConditionReasonProcessing,
+				"Unknown",
+				"Shoot is pending for update after forbidden error",
+			)
+
 			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
 		}
 
