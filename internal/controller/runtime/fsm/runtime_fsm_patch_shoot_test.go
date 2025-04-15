@@ -5,9 +5,14 @@ import (
 	"errors"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
+	v1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 	"testing"
 	"time"
 
@@ -28,8 +33,8 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 	testScheme := runtime.NewScheme()
 
 	util.Must(imv1.AddToScheme(testScheme))
-	util.Must(v1.AddToScheme(testScheme))
 	util.Must(gardener.AddToScheme(testScheme))
+	util.Must(v1.AddToScheme(testScheme))
 
 	expectedAnnotations := map[string]string{"operator.kyma-project.io/existing-annotation": "true"}
 	inputRuntimeWithForceAnnotation := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/force-patch-reconciliation": "true", "operator.kyma-project.io/existing-annotation": "true"})
@@ -173,6 +178,78 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			},
 		),
 	)
+
+	Context("When migrating OIDC setting for existing clusters", func() {
+		const ResourceName = "test-resource"
+		ctx := context.Background()
+
+		typeNamespacedName := types.NamespacedName{
+			Name:      ResourceName,
+			Namespace: "default",
+		}
+
+		It("Should successfully nil OIDC property, and setup structured auth config", func() {
+			testFunc := buildPatchTestFunction(sFnPatchExistingShoot)
+			fakeFSM := setupFakeFSMForTestWithStructuredAuthEnabled(testScheme, inputRuntime)
+
+			runtimeWithOIDC := *inputRuntime.DeepCopy()
+
+			runtimeWithOIDC.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig.ClientID = ptr.To("client-id")
+			runtimeWithOIDC.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig.IssuerURL = ptr.To("some.url.com")
+
+			shootWithOIDC := fsm_testing.TestShootForUpdate().DeepCopy()
+
+			shootWithOIDC.Spec.Kubernetes = gardener.Kubernetes{
+				KubeAPIServer: &gardener.KubeAPIServerConfig{
+					OIDCConfig: &gardener.OIDCConfig{
+						ClientID:  ptr.To("some-old-client-id"),
+						IssuerURL: ptr.To("some-old-url.com"),
+					},
+				},
+			}
+
+			fakeSystemState := &systemState{instance: runtimeWithOIDC, shoot: shootWithOIDC}
+
+			outputFsmState := outputFnState{
+				nextStep:    haveName("sFnUpdateStatus"),
+				annotations: expectedAnnotations,
+				result:      nil,
+				status:      fsm_testing.PendingStatusShootPatched(),
+			}
+
+			newConfigMap := &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "structured-auth-config-" + fakeSystemState.instance.Spec.Shoot.Name,
+					Namespace: fakeSystemState.shoot.Namespace,
+				},
+			}
+
+			err := fakeFSM.ShootClient.Create(ctx, newConfigMap)
+			Expect(err).To(BeNil())
+
+			testFunc(ctx, fakeFSM, fakeSystemState, outputFsmState)
+			shootAfterUpdate := &gardener.Shoot{}
+
+			err = fakeFSM.ShootClient.Get(ctx, typeNamespacedName, shootAfterUpdate)
+
+			Expect(err).To(BeNil())
+			Expect(shootAfterUpdate.Spec.Kubernetes.KubeAPIServer.OIDCConfig).To(BeNil())
+
+			var updatedConfigMap v1.ConfigMap
+
+			err = fakeFSM.ShootClient.Get(ctx, types.NamespacedName{Name: "structured-auth-test-shoot", Namespace: typeNamespacedName.Namespace}, &updatedConfigMap)
+			Expect(err).To(BeNil())
+
+			authenticationConfigString := updatedConfigMap.Data["config.yaml"]
+			var authenticationConfiguration structuredauth.AuthenticationConfiguration
+			err = yaml.Unmarshal([]byte(authenticationConfigString), &authenticationConfiguration)
+
+			Expect(err).To(BeNil())
+			Expect(authenticationConfiguration.JWT).To(HaveLen(1))
+			Expect(authenticationConfiguration.JWT[0].Issuer.URL).To(Equal("some.url.com"))
+			Expect(authenticationConfiguration.JWT[0].Issuer.Audiences).To(Equal([]string{"client-id"}))
+		})
+	})
 })
 
 func setupFakeFSMForTest(scheme *runtime.Scheme, objs ...client.Object) *fsm {
@@ -288,6 +365,18 @@ func setupFakeFSMForTestWithAuditLogMandatory(scheme *runtime.Scheme, runtime *i
 		withFakeEventRecorder(1),
 		withDefaultReconcileDuration(),
 		withAuditLogMandatory(true),
+	)
+}
+
+func setupFakeFSMForTestWithStructuredAuthEnabled(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+	return must(newFakeFSM,
+		withMockedMetrics(),
+		withShootNamespace("garden-"),
+		withTestFinalizer,
+		withFakedK8sClient(scheme, runtime),
+		withFakeEventRecorder(1),
+		withDefaultReconcileDuration(),
+		withStructuredAuthEnabled(true),
 	)
 }
 

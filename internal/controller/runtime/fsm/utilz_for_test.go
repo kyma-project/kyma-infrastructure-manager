@@ -78,6 +78,13 @@ var (
 		}
 	}
 
+	withStructuredAuthEnabled = func(enabled bool) fakeFSMOpt {
+		return func(fsm *fsm) error {
+			fsm.StructuredAuthEnabled = enabled
+			return nil
+		}
+	}
+
 	withAuditLogConfig = func(provider, region string, data auditlogs.AuditLogData) fakeFSMOpt {
 		return func(fsm *fsm) error {
 			fsm.AuditLogging = auditlogs.Configuration{

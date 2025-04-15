@@ -40,18 +40,20 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			msgFailedToConfigureAuditlogs)
 	}
 
-	oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.RCCfg.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
+	if m.StructuredAuthEnabled {
+		oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.RCCfg.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
 
-	cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
-	err = structuredauth.CreateOrUpdateStructuredAuthConfigMap(ctx, m.ShootClient, types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace}, oidcConfig)
+		cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
+		err = structuredauth.CreateOrUpdateStructuredAuthConfigMap(ctx, m.ShootClient, types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace}, oidcConfig)
 
-	if err != nil {
-		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(
-			&s.instance,
-			imv1.ConditionTypeRuntimeProvisioned,
-			imv1.ConditionReasonOidcError,
-			msgFailedStructuredConfigMap)
+		if err != nil {
+			m.Metrics.IncRuntimeFSMStopCounter()
+			return updateStatePendingWithErrorAndStop(
+				&s.instance,
+				imv1.ConditionTypeRuntimeProvisioned,
+				imv1.ConditionReasonOidcError,
+				msgFailedStructuredConfigMap)
+		}
 	}
 
 	// NOTE: In the future we want to pass the whole shoot object here
@@ -113,6 +115,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 		nextState, res, err = waitForWorkerPoolUpdate(ctx, m, s, copyShoot)
 		if err != nil {
+
 			return requeue()
 		}
 
