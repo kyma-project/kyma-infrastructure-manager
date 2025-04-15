@@ -42,6 +42,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 
 	testFunction := buildPatchTestFunction(sFnPatchExistingShoot)
 
+	// When removing the feature flag for structured auth, the tests should be updated to check the contents of the ConfigMap
 	DescribeTable(
 		"transition graph validation for sFnPatchExistingShoot success",
 		testFunction,
@@ -179,18 +180,13 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 		),
 	)
 
+	// When removing the feature flag for structured auth, the test should be removed
 	Context("When migrating OIDC setting for existing clusters", func() {
 		const ResourceName = "test-resource"
 		ctx := context.Background()
 
-		typeNamespacedName := types.NamespacedName{
-			Name:      ResourceName,
-			Namespace: "default",
-		}
-
 		It("Should successfully nil OIDC property, and setup structured auth config", func() {
 			testFunc := buildPatchTestFunction(sFnPatchExistingShoot)
-			fakeFSM := setupFakeFSMForTestWithStructuredAuthEnabled(testScheme, inputRuntime)
 
 			runtimeWithOIDC := *inputRuntime.DeepCopy()
 
@@ -208,6 +204,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 				},
 			}
 
+			fakeFSM := setupFakeFSMForTestWithStructuredAuthEnabled(testScheme, &runtimeWithOIDC)
 			fakeSystemState := &systemState{instance: runtimeWithOIDC, shoot: shootWithOIDC}
 
 			outputFsmState := outputFnState{
@@ -219,7 +216,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 
 			newConfigMap := &v1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "structured-auth-config-" + fakeSystemState.instance.Spec.Shoot.Name,
+					Name:      "structured-auth-config-" + fakeSystemState.shoot.Name,
 					Namespace: fakeSystemState.shoot.Namespace,
 				},
 			}
@@ -230,14 +227,20 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			testFunc(ctx, fakeFSM, fakeSystemState, outputFsmState)
 			shootAfterUpdate := &gardener.Shoot{}
 
-			err = fakeFSM.ShootClient.Get(ctx, typeNamespacedName, shootAfterUpdate)
+			err = fakeFSM.ShootClient.Get(ctx, types.NamespacedName{
+				Name:      fakeSystemState.shoot.Name,
+				Namespace: fakeSystemState.shoot.Namespace,
+			}, shootAfterUpdate)
 
 			Expect(err).To(BeNil())
 			Expect(shootAfterUpdate.Spec.Kubernetes.KubeAPIServer.OIDCConfig).To(BeNil())
 
 			var updatedConfigMap v1.ConfigMap
 
-			err = fakeFSM.ShootClient.Get(ctx, types.NamespacedName{Name: "structured-auth-test-shoot", Namespace: typeNamespacedName.Namespace}, &updatedConfigMap)
+			err = fakeFSM.ShootClient.Get(ctx, types.NamespacedName{
+				Name:      newConfigMap.Name,
+				Namespace: newConfigMap.Namespace,
+			}, &updatedConfigMap)
 			Expect(err).To(BeNil())
 
 			authenticationConfigString := updatedConfigMap.Data["config.yaml"]
@@ -248,6 +251,40 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			Expect(authenticationConfiguration.JWT).To(HaveLen(1))
 			Expect(authenticationConfiguration.JWT[0].Issuer.URL).To(Equal("some.url.com"))
 			Expect(authenticationConfiguration.JWT[0].Issuer.Audiences).To(Equal([]string{"client-id"}))
+		})
+
+		It("Should retry when failed to migrate OIDC", func() {
+			testFunc := buildPatchTestFunction(sFnPatchExistingShoot)
+			runtimeWithOIDC := *inputRuntime.DeepCopy()
+
+			runtimeWithOIDC.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig.ClientID = ptr.To("client-id")
+			runtimeWithOIDC.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig.IssuerURL = ptr.To("some.url.com")
+
+			shootWithOIDC := fsm_testing.TestShootForUpdate().DeepCopy()
+
+			shootWithOIDC.Spec.Kubernetes = gardener.Kubernetes{
+				KubeAPIServer: &gardener.KubeAPIServerConfig{
+					OIDCConfig: &gardener.OIDCConfig{
+						ClientID:  ptr.To("some-old-client-id"),
+						IssuerURL: ptr.To("some-old-url.com"),
+					},
+				},
+			}
+
+			fakeFSM := setupFakeFSMForTestWithFailingUpdateWithInConflictError(testScheme, &runtimeWithOIDC)
+			fakeFSM.StructuredAuthEnabled = true
+
+			fakeSystemState := &systemState{instance: runtimeWithOIDC, shoot: shootWithOIDC}
+
+			outputFsmState := outputFnState{
+				nextStep:    haveName("sFnUpdateStatus"),
+				annotations: expectedAnnotations,
+				result:      nil,
+				status:      fsm_testing.PendingStatusAfterConflictErr(),
+			}
+
+			testFunc(ctx, fakeFSM, fakeSystemState, outputFsmState)
+
 		})
 	})
 })
@@ -373,7 +410,7 @@ func setupFakeFSMForTestWithStructuredAuthEnabled(scheme *runtime.Scheme, runtim
 		withMockedMetrics(),
 		withShootNamespace("garden-"),
 		withTestFinalizer,
-		withFakedK8sClient(scheme, runtime),
+		withFakedK8sClientNoPatchInterceptor(scheme, runtime),
 		withFakeEventRecorder(1),
 		withDefaultReconcileDuration(),
 		withStructuredAuthEnabled(true),

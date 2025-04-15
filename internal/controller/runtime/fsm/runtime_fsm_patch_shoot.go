@@ -301,7 +301,7 @@ func migrateOIDCToStructuredAuth(ctx context.Context, shootToUpdate gardener.Sho
 		})
 
 		if err == nil {
-			_ = m.ShootClient.Get(ctx, types.NamespacedName{
+			err = m.ShootClient.Get(ctx, types.NamespacedName{
 				Name:      s.instance.Spec.Shoot.Name,
 				Namespace: m.ShootNamesapace,
 			}, s.shoot, &client.GetOptions{})
