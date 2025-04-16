@@ -188,25 +188,27 @@ func (m metricsImpl) SetKubeconfigExpiration(secret corev1.Secret, rotationPerio
 
 func (m metricsImpl) SetPendingStateDuration(operation string, runtime v1.Runtime) {
 	runtimeID := runtime.GetLabels()[RuntimeIDLabel]
-
-	getDuration := func() time.Duration {
-		if runtime.Status.State == v1.RuntimeStatePending {
-			condition := meta.FindStatusCondition(runtime.Status.Conditions, string(v1.ConditionTypeRuntimeProvisioned))
-			return time.Since(condition.LastTransitionTime.Time)
-		}
-
-		if runtime.Status.State == v1.RuntimeStateTerminating {
-			return time.Since(runtime.DeletionTimestamp.Time)
-		}
-
-		return 0
+	if runtimeID == "" {
+		return
 	}
 
-	if runtimeID != "" {
-		m.runtimePendingStateDurationGauge.
-			WithLabelValues(operation, runtimeID, runtime.Name, runtime.Spec.Shoot.Name, runtime.Spec.Shoot.Provider.Type).
-			Set(getDuration().Minutes())
+	duration := time.Duration(0)
+
+	if runtime.Status.State == v1.RuntimeStatePending {
+		condition := meta.FindStatusCondition(runtime.Status.Conditions, string(v1.ConditionTypeRuntimeProvisioned))
+
+		if condition != nil {
+			duration = time.Since(condition.LastTransitionTime.Time)
+		}
 	}
+
+	if runtime.Status.State == v1.RuntimeStateTerminating {
+		duration = time.Since(runtime.DeletionTimestamp.Time)
+	}
+
+	m.runtimePendingStateDurationGauge.
+		WithLabelValues(operation, runtimeID, runtime.Name, runtime.Spec.Shoot.Name, runtime.Spec.Shoot.Provider.Type).
+		Set(duration.Minutes())
 }
 
 func (m metricsImpl) CleanUpPendingStateDuration(runtimeName string) {
