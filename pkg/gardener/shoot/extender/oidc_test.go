@@ -52,7 +52,7 @@ func TestOidcExtender(t *testing.T) {
 		// then
 		require.NoError(t, err)
 
-		require.Nil(t, shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig)
+		require.Nil(t, shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig) //nolint:staticcheck
 		require.NotNil(t, shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication)
 		assert.Equal(t, "structured-auth-config-shoot", shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName)
 	})

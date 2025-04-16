@@ -50,7 +50,7 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 			"Unknown",
 			"Shoot creation in progress")
 
-		return updateStatusAndRequeueAfter(m.RCCfg.RequeueDurationShootCreate)
+		return updateStatusAndRequeueAfter(m.RequeueDurationShootCreate)
 
 	case gardener.LastOperationStateFailed:
 		lastErrors := s.shoot.Status.LastErrors
@@ -63,7 +63,7 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 				imv1.ConditionReasonShootCreationPending,
 				"Unknown",
 				"Retryable gardener errors during cluster provisioning")
-			return updateStatusAndRequeueAfter(m.RCCfg.RequeueDurationShootCreate)
+			return updateStatusAndRequeueAfter(m.RequeueDurationShootCreate)
 		}
 
 		msg := fmt.Sprintf("Provisioning failed for shoot: %s ! Last state: %s, Description: %s", s.shoot.Name, s.shoot.Status.LastOperation.State, s.shoot.Status.LastOperation.Description)

@@ -24,8 +24,8 @@ func TestControlPlaneConfig(t *testing.T) {
 		err = json.Unmarshal(controlPlaneConfigBytes, &controlPlaneConfig)
 		assert.NoError(t, err)
 
-		assert.Equal(t, apiVersion, controlPlaneConfig.TypeMeta.APIVersion)
-		assert.Equal(t, controlPlaneConfigKind, controlPlaneConfig.TypeMeta.Kind)
+		assert.Equal(t, apiVersion, controlPlaneConfig.APIVersion)
+		assert.Equal(t, controlPlaneConfigKind, controlPlaneConfig.Kind)
 	})
 }
 
@@ -128,8 +128,8 @@ func TestInfrastructureConfig(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			assert.Equal(t, apiVersion, infrastructureConfig.TypeMeta.APIVersion)
-			assert.Equal(t, infrastructureConfigKind, infrastructureConfig.TypeMeta.Kind)
+			assert.Equal(t, apiVersion, infrastructureConfig.APIVersion)
+			assert.Equal(t, infrastructureConfigKind, infrastructureConfig.Kind)
 
 			assert.Equal(t, tcase.givenVnetCidr, *infrastructureConfig.Networks.VNet.CIDR)
 
