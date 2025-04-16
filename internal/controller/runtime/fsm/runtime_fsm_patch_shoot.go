@@ -68,9 +68,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		InfrastructureConfig:  s.shoot.Spec.Provider.InfrastructureConfig,
 		ControlPlaneConfig:    s.shoot.Spec.Provider.ControlPlaneConfig,
 		Log:                   ptr.To(m.log),
-		FeatureFlags: gardener_shoot.FeatureFlags{
-			StructuredAuthEnabled: m.StructuredAuthEnabled,
-		},
+		StructuredAuthEnabled: m.StructuredAuthEnabled,
 	})
 
 	if err != nil {

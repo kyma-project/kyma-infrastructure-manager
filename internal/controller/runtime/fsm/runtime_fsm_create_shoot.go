@@ -83,9 +83,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		ConverterConfig:       m.ConverterConfig,
 		AuditLogData:          data,
 		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
-		FeatureFlags: gardener_shoot.FeatureFlags{
-			StructuredAuthEnabled: m.StructuredAuthEnabled,
-		},
+		StructuredAuthEnabled: m.StructuredAuthEnabled,
 	})
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object")

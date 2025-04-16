@@ -50,15 +50,11 @@ func newConverter(config config.ConverterConfig, extenders ...Extend) Converter 
 	}
 }
 
-type FeatureFlags struct {
-	StructuredAuthEnabled bool
-}
-
 type CreateOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
-	FeatureFlags
+	StructuredAuthEnabled bool
 }
 
 type WorkerZones struct {
@@ -70,14 +66,14 @@ type PatchOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
-	ShootK8SVersion      string
-	Workers              []gardener.Worker
-	Extensions           []gardener.Extension
-	Resources            []gardener.NamedResourceReference
-	InfrastructureConfig *runtime.RawExtension
-	ControlPlaneConfig   *runtime.RawExtension
-	Log                  *logr.Logger
-	FeatureFlags         ``
+	ShootK8SVersion       string
+	Workers               []gardener.Worker
+	Extensions            []gardener.Extension
+	Resources             []gardener.NamedResourceReference
+	InfrastructureConfig  *runtime.RawExtension
+	ControlPlaneConfig    *runtime.RawExtension
+	Log                   *logr.Logger
+	StructuredAuthEnabled bool
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {
