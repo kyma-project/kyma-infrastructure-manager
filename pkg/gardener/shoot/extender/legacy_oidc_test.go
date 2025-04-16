@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestOidcExtender(t *testing.T) {
+func TestLegacyOidcExtender(t *testing.T) {
 	defaultOidc := config.OidcProvider{
 		ClientID:       "client-id",
 		GroupsClaim:    "groups",
@@ -29,7 +29,6 @@ func TestOidcExtender(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{},
 			Spec: imv1.RuntimeSpec{
 				Shoot: imv1.RuntimeShoot{
-					Name: "shoot",
 					Kubernetes: imv1.Kubernetes{
 						KubeAPIServer: imv1.APIServer{
 							OidcConfig: gardener.OIDCConfig{
@@ -46,14 +45,12 @@ func TestOidcExtender(t *testing.T) {
 		}
 
 		// when
-		extender := NewOidcExtender()
+		extender := NewLegacyOidcExtender(defaultOidc)
 		err := extender(runtimeShoot, &shoot)
 
 		// then
 		require.NoError(t, err)
 
-		require.Nil(t, shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig)
-		require.NotNil(t, shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication)
-		assert.Equal(t, "structured-auth-config-shoot", shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName)
+		assert.Equal(t, runtimeShoot.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig, *shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig)
 	})
 }
