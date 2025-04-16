@@ -78,17 +78,40 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 			provider.Workers = append(provider.Workers, *rt.Spec.Shoot.Provider.AdditionalWorkers...)
 		}
 
-		controlPlaneConf, infraConfig := overrideConfigIfProvided(rt, existingInfraConfig, existingControlPlaneConfig)
-
 		workerZones, err := getNetworkingZonesFromWorkers(provider.Workers)
 		if err != nil {
 			return err
 		}
 
-		// final validation
-		if err = checkWorkerZonesMatchProviderConfig(rt.Spec.Shoot.Provider.Type, workerZones, controlPlaneConf, infraConfig, true); err != nil {
+		infraConfig, controlPlaneConf, err := getConfig(rt.Spec.Shoot, workerZones)
+		if err != nil {
 			return err
 		}
+
+		// special case azure lite use previous infrastructureConfig
+		if rt.Spec.Shoot.Provider.Type == hyperscaler.TypeAzure {
+			infraConfigZones, err := getZonesFromProviderConfig(rt.Spec.Shoot.Provider.Type, existingInfraConfig)
+			if err != nil {
+				return err
+			}
+
+			if len(infraConfigZones) == 0 {
+				infraConfig = existingInfraConfig
+				controlPlaneConf = existingControlPlaneConfig
+			}
+		}
+
+		controlPlaneConf, infraConfig = overrideConfigIfProvided(rt, infraConfig, controlPlaneConf)
+
+		//// validate that we do not remove any exiting zone from the infrastructureConfig and controlPlaneConfig
+		//if err = checkNewConfigsCanBeAccepted(rt.Spec.Shoot.Provider.Type, existingInfraConfig, existingControlPlaneConfig, infraConfig, controlPlaneConf); err != nil {
+		//	return err
+		//}
+
+		// validation if
+		//if err = checkWorkerZonesMatchProviderConfig(rt.Spec.Shoot.Provider.Type, workerZones, existingControlPlaneConfig, existingInfraConfig, true); err != nil {
+		//	return err
+		//}
 
 		provider.ControlPlaneConfig = controlPlaneConf
 		provider.InfrastructureConfig = infraConfig
@@ -105,6 +128,48 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 		return nil
 	}
 }
+
+// validate that we do not remove or change any exiting zone from the existing infrastructureConfig and controlPlaneConfig
+// only option is to extend the zones
+/*func checkIfNewConfigsCanBeAccepted(providerType string, oldInfraConfig, oldControlPlaneConfig, newInfraConfig, newControlPlaneConfig *runtime.RawExtension) error {
+	if providerType == hyperscaler.TypeAzure || providerType == hyperscaler.TypeAWS {
+		oldInfraZones, err := getZonesFromProviderConfig(providerType, oldInfraConfig)
+
+		if err != nil {
+			return err
+		}
+
+		newInfraZones, err := getZonesFromProviderConfig(providerType, newInfraConfig)
+
+		if err != nil {
+			return err
+		}
+
+		for _, zone := range oldInfraZones {
+			if !slices.Contains(newInfraZones, zone) {
+				return fmt.Errorf("one of zones is removed from the infrastructureConfig: %s", zone)
+			}
+		}
+	}
+
+	if providerType == hyperscaler.TypeGCP {
+		oldCtrlPlaneZones, err := getZonesFromProviderConfig(providerType, oldControlPlaneConfig)
+		if err != nil {
+			return err
+		}
+
+		if len(oldCtrlPlaneZones) == 0 {
+			return fmt.Errorf("Cannot read current networking zone for ControlPlane config")
+		}
+
+		if !slices.Contains(workerZones, ctrlPlaneZones[0]) {
+			return fmt.Errorf("none of workers is using networking zone specified in the controlPlaneConfig: %s", ctrlPlaneZones[0])
+		}
+
+	}
+
+	return nil
+} */
 
 func checkWorkerZonesMatchProviderConfig(providerType string, workerZones []string, ctrlPlaneConfig *runtime.RawExtension, infraConfig *runtime.RawExtension, patchValidation bool) error {
 	if providerType == hyperscaler.TypeAzure || providerType == hyperscaler.TypeAWS {
