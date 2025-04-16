@@ -5,8 +5,8 @@ go 1.24.0
 toolchain go1.24.2
 
 require (
-	github.com/gardener/gardener v1.115.1
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250402094957-670c969b9169
+	github.com/gardener/gardener v1.116.1
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250416084458-8371ca0bcd2a
 	k8s.io/api v0.32.3
 	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.3
@@ -21,7 +21,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/gardener/gardener-extension-provider-aws v1.61.1 // indirect
-	github.com/gardener/gardener-extension-provider-gcp v1.43.1 // indirect
+	github.com/gardener/gardener-extension-provider-gcp v1.43.2 // indirect
 	github.com/gardener/gardener-extension-provider-openstack v1.47.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
@@ -44,7 +44,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/net v0.37.0 // indirect
 	golang.org/x/oauth2 v0.26.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/term v0.30.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
@@ -62,7 +62,7 @@ require (
 replace (
 	github.com/kyma-project/infrastructure-manager => ../../
 	golang.org/x/net => golang.org/x/net v0.38.0
-	golang.org/x/sys => golang.org/x/sys v0.31.0
+	golang.org/x/sys => golang.org/x/sys v0.32.0
 	golang.org/x/text => golang.org/x/text v0.24.0
 	golang.org/x/tools => golang.org/x/tools v0.31.0
 )

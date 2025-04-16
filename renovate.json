@@ -1,7 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    "schedule:earlyMondays"
   ],
   "gomod": {
     "postUpdateOptions": [
@@ -9,8 +10,31 @@
     ],
     "enabled": true
   },
-   "postUpdateOptions": [
-      "gomodTidy1.17",
-      "gomodUpdateImportPaths"
+  "labels": [
+    "area/dependency",
+    "kind/chore"
+  ],
+  "branchPrefix": "renovate/",
+  "github-actions": {
+    "enabled": true
+  },
+  "dockerfile": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "matchCategories": [
+        "golang"
+      ],
+      "postUpdateOptions": [
+        "gomodTidy"
+      ],
+      "enabled": true
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": "!/^0/",
+      "automerge": true
+    }
   ]
 }
