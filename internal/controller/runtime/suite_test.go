@@ -190,6 +190,7 @@ func setupGardenerTestClientForDelete() {
 func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot, seeds []*gardener_api.SeedList) {
 	clientScheme := runtime.NewScheme()
 	_ = gardener_api.AddToScheme(clientScheme)
+	_ = v12.AddToScheme(clientScheme)
 
 	tracker := clienttesting.NewObjectTracker(clientScheme, serializer.NewCodecFactory(clientScheme).UniversalDecoder())
 	customTracker = NewCustomTracker(tracker, shoots, seeds)

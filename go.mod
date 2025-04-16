@@ -14,7 +14,7 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/onsi/ginkgo/v2 v2.23.3
-	github.com/onsi/gomega v1.36.3
+	github.com/onsi/gomega v1.37.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.21.1
 	github.com/stretchr/testify v1.10.0
@@ -23,6 +23,7 @@ require (
 	k8s.io/client-go v0.32.3
 	k8s.io/utils v0.0.0-20250321185631-1f6e0b77f77e
 	sigs.k8s.io/controller-runtime v0.20.4
+  sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -72,7 +73,7 @@ require (
 	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/net v0.37.0 // indirect
 	golang.org/x/oauth2 v0.26.0 // indirect
-	golang.org/x/sync v0.12.0 // indirect
+	golang.org/x/sync v0.13.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/term v0.30.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
@@ -88,14 +89,13 @@ require (
 	k8s.io/kube-openapi v0.0.0-20241212222426-2c72e554b1e7 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.5.0 // indirect
-	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
 replace (
 	golang.org/x/crypto => golang.org/x/crypto v0.36.0
 	golang.org/x/net => golang.org/x/net v0.38.0
 	golang.org/x/sys => golang.org/x/sys v0.31.0
-	golang.org/x/text => golang.org/x/text v0.23.0
+	golang.org/x/text => golang.org/x/text v0.24.0
 	golang.org/x/tools => golang.org/x/tools v0.31.0
 	gopkg.in/square/go-jose.v2 => github.com/go-jose/go-jose/v4 v4.0.4
 )

@@ -83,12 +83,13 @@ const (
 	ConditionReasonConfigurationCompleted = RuntimeConditionReason("ConfigurationCompleted")
 	ConditionReasonConfigurationErr       = RuntimeConditionReason("ConfigurationError")
 
-	ConditionReasonGardenerCRDeleted    = RuntimeConditionReason("GardenerClusterCRDeleted")
-	ConditionReasonGardenerShootDeleted = RuntimeConditionReason("GardenerShootDeleted")
-	ConditionReasonConversionError      = RuntimeConditionReason("ConversionErr")
-	ConditionReasonCreationError        = RuntimeConditionReason("CreationErr")
-	ConditionReasonGardenerError        = RuntimeConditionReason("GardenerErr")
-	ConditionReasonKubernetesAPIErr     = RuntimeConditionReason("KubernetesErr")
+	ConditionReasonGardenerCRDeleted       = RuntimeConditionReason("GardenerClusterCRDeleted")
+	ConditionReasonGardenerShootDeleted    = RuntimeConditionReason("GardenerShootDeleted")
+	ConditionReasonStructuredConfigDeleted = RuntimeConditionReason("StructuredConfigDeleted")
+	ConditionReasonConversionError         = RuntimeConditionReason("ConversionErr")
+	ConditionReasonCreationError           = RuntimeConditionReason("CreationErr")
+	ConditionReasonGardenerError           = RuntimeConditionReason("GardenerErr")
+	ConditionReasonKubernetesAPIErr        = RuntimeConditionReason("KubernetesErr")
 
 	ConditionReasonAuditLogError = RuntimeConditionReason("AuditLogErr")
 

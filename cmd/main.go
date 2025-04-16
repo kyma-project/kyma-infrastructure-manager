@@ -103,6 +103,7 @@ func main() {
 	var gardenerClusterCtrlWorkersCnt int
 	var converterConfigFilepath string
 	var auditLogMandatory bool
+	var structuredAuthEnabled bool
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -121,6 +122,7 @@ func main() {
 	flag.IntVar(&gardenerClusterCtrlWorkersCnt, "gardener-cluster-ctrl-workers-cnt", defaultGardenerClusterCtrlWorkersCnt, "A number of workers running in parallel for Gardener Cluster Controller")
 	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "A file path to the gardener shoot converter configuration.")
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration")
+	flag.BoolVar(&structuredAuthEnabled, "structured-auth-enabled", false, "Feature flag to enable structured authentication")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
@@ -221,6 +223,7 @@ func main() {
 		AuditLogMandatory:             auditLogMandatory,
 		Metrics:                       metrics,
 		AuditLogging:                  auditLogDataMap,
+		StructuredAuthEnabled:         structuredAuthEnabled,
 	}
 
 	runtimeReconciler := runtime_controller.NewRuntimeReconciler(
