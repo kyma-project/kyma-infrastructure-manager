@@ -411,7 +411,7 @@ func assertOIDCCRD(t *testing.T, expectedName, expectedClientID string, actual a
 	assert.Equal(t, expectedName, actual.Name)
 	assert.Equal(t, expectedClientID, actual.Spec.ClientID)
 	assert.Equal(t, ptr.To("groups"), actual.Spec.GroupsClaim)
-	assert.Nil(t, actual.Spec.GroupsPrefix)
+	assert.Equal(t, ptr.To("-"), actual.Spec.GroupsPrefix)
 	assert.Equal(t, "https://my.cool.tokens.com", actual.Spec.IssuerURL)
 	assert.Equal(t, []authenticationv1alpha1.SigningAlgorithm{"RS256"}, actual.Spec.SupportedSigningAlgs)
 	assert.Equal(t, ptr.To("sub"), actual.Spec.UsernameClaim)
