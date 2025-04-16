@@ -121,7 +121,7 @@ func TestProviderExtenderForPatchWorkersUpdateGCP(t *testing.T) {
 				{"main-worker", "n2-standard-2", "gardenlinux", "1312.4.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-c"}},
 				{"next-worker", "n2-standard-2", "gardenlinux", "1312.2.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-d"}}}),
 			ExistingInfraConfig:        fixGCPInfrastructureConfig("10.250.0.0/22"),
-			ExistingControlPlaneConfig: fixGCPControlPlaneConfig([]string{"us-central1-a", "us-central1-b", "us-central1-c", "us-central1-d"}),
+			ExistingControlPlaneConfig: fixGCPControlPlaneConfig([]string{"us-central1-a", "us-central1-b", "us-central1-c"}),
 		},
 		// NOTE: uncomment this unit test after the issue of extending the existing infrastructure config with additional zones is implemented
 		"Add additional worker - extend existing additional worker from non HA setup to HA setup by adding more zones, infrastructureConfig already has three zones, keep existing order": {
