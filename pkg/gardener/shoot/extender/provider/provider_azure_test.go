@@ -109,7 +109,7 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAzure, fixMultipleWorkers([]workerConfig{
 							{"main-worker", "azure.small", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
-							{"next-worker", "azure.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "3"}},
+							{"next-worker", "azure.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "4"}},
 						})),
 						Networking: imv1.Networking{
 							Nodes: "10.250.0.0/22",
@@ -119,11 +119,11 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 			},
 			DefaultMachineImageName:    "gardenlinux",
 			DefaultMachineImageVersion: "1312.3.0",
-			ExpectedZonesCount:         3,
+			ExpectedZonesCount:         4,
 			CurrentShootWorkers:        fixWorkers("main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}),
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "azure.small", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
-				{"next-worker", "azure.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "3"}}}),
+				{"next-worker", "azure.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "4"}}}),
 			ExistingInfraConfig:        fixAzureInfrastructureConfig("10.250.0.0/22", []string{"1", "2", "3"}),
 			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
 		},
