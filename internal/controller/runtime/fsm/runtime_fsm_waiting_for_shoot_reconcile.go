@@ -22,7 +22,7 @@ func sFnWaitForShootReconcile(_ context.Context, m *fsm, s *systemState) (stateF
 			"Unknown",
 			"Shoot update is in progress")
 
-		return updateStatusAndRequeueAfter(m.RCCfg.RequeueDurationShootReconcile)
+		return updateStatusAndRequeueAfter(m.RequeueDurationShootReconcile)
 
 	case gardener.LastOperationStateFailed:
 		lastErrors := s.shoot.Status.LastErrors
@@ -35,7 +35,7 @@ func sFnWaitForShootReconcile(_ context.Context, m *fsm, s *systemState) (stateF
 				imv1.ConditionReasonShootCreationPending,
 				"Unknown",
 				"Retryable gardener errors during cluster reconcile")
-			return updateStatusAndRequeueAfter(m.RCCfg.RequeueDurationShootReconcile)
+			return updateStatusAndRequeueAfter(m.RequeueDurationShootReconcile)
 		}
 
 		msg := fmt.Sprintf("error during cluster processing: reconcilation failed for shoot %s, reason: %s, exiting with no retry", s.shoot.Name, reason)

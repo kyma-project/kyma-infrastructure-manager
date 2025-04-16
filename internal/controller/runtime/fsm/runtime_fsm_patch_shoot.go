@@ -31,7 +31,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		m.log.Error(err, msgFailedToConfigureAuditlogs)
 	}
 
-	if err != nil && m.RCCfg.AuditLogMandatory {
+	if err != nil && m.AuditLogMandatory {
 		m.Metrics.IncRuntimeFSMStopCounter()
 		return updateStatePendingWithErrorAndStop(
 			&s.instance,
@@ -41,7 +41,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	}
 
 	if m.StructuredAuthEnabled {
-		oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.RCCfg.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
+		oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
 
 		cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
 		err = structuredauth.CreateOrUpdateStructuredAuthConfigMap(ctx, m.ShootClient, types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace}, oidcConfig)
@@ -160,7 +160,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		"Shoot is pending for update after patch",
 	)
 
-	return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+	return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
 }
 
 func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg string) (stateFn, *ctrl.Result, error) {
@@ -175,7 +175,7 @@ func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg stri
 				"Shoot is pending for update after conflict error",
 			)
 
-			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+			return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
 		}
 
 		// We're retrying on Forbidden error because Gardener returns them from time too time for operations that are properly authorized.
@@ -189,7 +189,7 @@ func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg stri
 				"Shoot is pending for update after forbidden error",
 			)
 
-			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+			return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
 		}
 
 		m.log.Error(err, errMsg)

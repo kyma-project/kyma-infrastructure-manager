@@ -47,7 +47,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 
 	if m.StructuredAuthEnabled {
 		cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
-		oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.RCCfg.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
+		oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
 
 		err := structuredauth.CreateOrUpdateStructuredAuthConfigMap(ctx, m.ShootClient, types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace}, oidcConfig)
 		if err != nil {
@@ -70,7 +70,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		m.log.Error(err, msgFailedToConfigureAuditlogs)
 	}
 
-	if err != nil && m.RCCfg.AuditLogMandatory {
+	if err != nil && m.AuditLogMandatory {
 		m.Metrics.IncRuntimeFSMStopCounter()
 		return updateStatePendingWithErrorAndStop(
 			&s.instance,

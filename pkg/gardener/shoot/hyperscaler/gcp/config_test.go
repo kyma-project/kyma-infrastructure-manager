@@ -21,8 +21,8 @@ func TestControlPlaneConfig(t *testing.T) {
 		err = json.Unmarshal(controlPlaneConfigBytes, &controlPlaneConfig)
 		assert.NoError(t, err)
 
-		assert.Equal(t, apiVersion, controlPlaneConfig.TypeMeta.APIVersion)
-		assert.Equal(t, controlPlaneConfigKind, controlPlaneConfig.TypeMeta.Kind)
+		assert.Equal(t, apiVersion, controlPlaneConfig.APIVersion)
+		assert.Equal(t, controlPlaneConfigKind, controlPlaneConfig.Kind)
 		assert.Equal(t, "europe-west3a", controlPlaneConfig.Zone)
 	})
 
