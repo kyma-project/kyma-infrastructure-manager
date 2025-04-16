@@ -6,17 +6,17 @@ toolchain go1.24.2
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
-	github.com/gardener/gardener v1.116.1
+	github.com/gardener/gardener v1.115.1
 	github.com/gardener/gardener-extension-provider-aws v1.61.1
-	github.com/gardener/gardener-extension-provider-gcp v1.43.2
+	github.com/gardener/gardener-extension-provider-gcp v1.43.1
 	github.com/gardener/gardener-extension-provider-openstack v1.47.0
-	github.com/gardener/oidc-webhook-authenticator v0.35.0
+	github.com/gardener/oidc-webhook-authenticator v0.34.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-playground/validator/v10 v10.26.0
-	github.com/onsi/ginkgo/v2 v2.23.4
+	github.com/onsi/ginkgo/v2 v2.23.3
 	github.com/onsi/gomega v1.37.0
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.22.0
+	github.com/prometheus/client_golang v1.21.1
 	github.com/stretchr/testify v1.10.0
 	k8s.io/api v0.32.3
 	k8s.io/apimachinery v0.32.3
@@ -49,12 +49,13 @@ require (
 	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 // indirect
+	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -67,16 +68,15 @@ require (
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/crypto v0.37.0 // indirect
+	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/net v0.37.0 // indirect
 	golang.org/x/oauth2 v0.26.0 // indirect
 	golang.org/x/sync v0.13.0 // indirect
-	golang.org/x/sys v0.32.0 // indirect
-	golang.org/x/term v0.31.0 // indirect
-	golang.org/x/text v0.24.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/term v0.30.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	golang.org/x/tools v0.31.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
@@ -93,7 +93,7 @@ require (
 
 replace (
 	golang.org/x/net => golang.org/x/net v0.38.0
-	golang.org/x/sys => golang.org/x/sys v0.32.0
+	golang.org/x/sys => golang.org/x/sys v0.31.0
 	golang.org/x/text => golang.org/x/text v0.24.0
 	golang.org/x/tools => golang.org/x/tools v0.31.0
 	gopkg.in/square/go-jose.v2 => github.com/go-jose/go-jose/v4 v4.0.4
