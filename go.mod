@@ -6,11 +6,11 @@ toolchain go1.24.2
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
-	github.com/gardener/gardener v1.115.1
+	github.com/gardener/gardener v1.116.1
 	github.com/gardener/gardener-extension-provider-aws v1.61.1
-	github.com/gardener/gardener-extension-provider-gcp v1.43.1
+	github.com/gardener/gardener-extension-provider-gcp v1.43.2
 	github.com/gardener/gardener-extension-provider-openstack v1.47.0
-	github.com/gardener/oidc-webhook-authenticator v0.34.0
+	github.com/gardener/oidc-webhook-authenticator v0.35.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/onsi/ginkgo/v2 v2.23.3
