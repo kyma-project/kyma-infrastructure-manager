@@ -18,21 +18,21 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 	if s.shoot.Spec.DNS == nil || s.shoot.Spec.DNS.Domain == nil {
 		m.log.V(log_level.DEBUG).Info("DNS Domain is not set yet for shoot, scheduling for retry", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
 		m.Metrics.SetRuntimeStates(s.instance)
-		return requeueAfter(m.RCCfg.GardenerRequeueDuration)
+		return requeueAfter(m.GardenerRequeueDuration)
 	}
 
 	lastOperation := s.shoot.Status.LastOperation
 	if lastOperation == nil {
 		m.log.V(log_level.DEBUG).Info("Last operation is nil for shoot, scheduling for retry", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
 		m.Metrics.SetRuntimeStates(s.instance)
-		return requeueAfter(m.RCCfg.GardenerRequeueDuration)
+		return requeueAfter(m.GardenerRequeueDuration)
 	}
 
 	patchShoot, err := shouldPatchShoot(&s.instance, s.shoot, &m.log)
 	if err != nil {
 		m.log.Error(err, "Failed to get applied generation for shoot", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name)
 		m.Metrics.SetRuntimeStates(s.instance)
-		return requeueAfter(m.RCCfg.GardenerRequeueDuration)
+		return requeueAfter(m.GardenerRequeueDuration)
 	}
 
 	if patchShoot {

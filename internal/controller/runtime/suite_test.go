@@ -311,7 +311,7 @@ func fixShootsSequenceForUpdate(shoot *gardener_api.Shoot) []*gardener_api.Shoot
 
 	pendingShoot := existingShoot.DeepCopy()
 
-	pendingShoot.ObjectMeta.Annotations["infrastructuremanager.kyma-project.io/runtime-generation"] = "2"
+	pendingShoot.Annotations["infrastructuremanager.kyma-project.io/runtime-generation"] = "2"
 
 	pendingShoot.Status.LastOperation.State = gardener_api.LastOperationStatePending
 

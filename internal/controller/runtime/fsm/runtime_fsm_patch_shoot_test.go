@@ -182,7 +182,6 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 
 	// When removing the feature flag for structured auth, the test should be removed
 	Context("When migrating OIDC setting for existing clusters", func() {
-		const ResourceName = "test-resource"
 		ctx := context.Background()
 
 		It("Should successfully nil OIDC property, and setup structured auth config", func() {
@@ -233,7 +232,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			}, shootAfterUpdate)
 
 			Expect(err).To(BeNil())
-			Expect(shootAfterUpdate.Spec.Kubernetes.KubeAPIServer.OIDCConfig).To(BeNil())
+			Expect(shootAfterUpdate.Spec.Kubernetes.KubeAPIServer.OIDCConfig).To(BeNil()) //nolint:staticcheck
 
 			var updatedConfigMap v1.ConfigMap
 

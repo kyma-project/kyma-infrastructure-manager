@@ -286,8 +286,8 @@ func assertShootFields(t *testing.T, runtime imv1.Runtime, shoot gardener.Shoot)
 	assert.Equal(t, runtime.Spec.Shoot.Networking.Nodes, *shoot.Spec.Networking.Nodes)
 	assert.Equal(t, runtime.Spec.Shoot.Networking.Pods, *shoot.Spec.Networking.Pods)
 	assert.Equal(t, runtime.Spec.Shoot.Networking.Services, *shoot.Spec.Networking.Services)
-	assert.Equal(t, "Shoot", shoot.TypeMeta.Kind)
-	assert.Equal(t, "core.gardener.cloud/v1beta1", shoot.TypeMeta.APIVersion)
+	assert.Equal(t, "Shoot", shoot.Kind)
+	assert.Equal(t, "core.gardener.cloud/v1beta1", shoot.APIVersion)
 }
 
 func fixWorkersWithReversedZones(machineImageName, machineImageVersion string) []gardener.Worker {

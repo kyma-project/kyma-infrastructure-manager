@@ -51,6 +51,6 @@ func TestLegacyOidcExtender(t *testing.T) {
 		// then
 		require.NoError(t, err)
 
-		assert.Equal(t, runtimeShoot.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig, *shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig)
+		assert.Equal(t, runtimeShoot.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig, *shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig) //nolint:staticcheck
 	})
 }

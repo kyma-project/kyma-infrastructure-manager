@@ -15,7 +15,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	// wait section
 	if !s.shoot.GetDeletionTimestamp().IsZero() {
 		m.log.V(log_level.DEBUG).Info("Waiting for shoot to be deleted", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
-		return requeueAfter(m.RCCfg.RequeueDurationShootDelete)
+		return requeueAfter(m.RequeueDurationShootDelete)
 	}
 
 	// action section
@@ -49,7 +49,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 				"Gardener API structured authentication configmap delete error",
 			)
 
-			return updateStatusAndRequeueAfter(m.RCCfg.RequeueDurationShootDelete)
+			return updateStatusAndRequeueAfter(m.RequeueDurationShootDelete)
 		}
 	}
 
@@ -74,7 +74,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	}
 
 	// out section
-	return updateStatusAndRequeueAfter(m.RCCfg.RequeueDurationShootDelete)
+	return updateStatusAndRequeueAfter(m.RequeueDurationShootDelete)
 }
 
 // workaround

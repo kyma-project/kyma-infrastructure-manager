@@ -95,7 +95,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 	extendersForCreate = append(extendersForCreate,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
 
-	extendersForCreate = append(extendersForCreate, maintenance.NewMaintenanceExtender(opts.ConverterConfig.Kubernetes.EnableKubernetesVersionAutoUpdate, opts.ConverterConfig.Kubernetes.EnableMachineImageVersionAutoUpdate, opts.MaintenanceTimeWindow))
+	extendersForCreate = append(extendersForCreate, maintenance.NewMaintenanceExtender(opts.Kubernetes.EnableKubernetesVersionAutoUpdate, opts.Kubernetes.EnableMachineImageVersionAutoUpdate, opts.MaintenanceTimeWindow))
 
 	if opts.AuditLogData != (auditlogs.AuditLogData{}) {
 		extendersForCreate = append(extendersForCreate,
@@ -125,11 +125,11 @@ func NewConverterPatch(opts PatchOpts) Converter {
 
 	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
 
-	extendersForPatch = append(extendersForPatch, maintenance.NewMaintenanceExtender(opts.ConverterConfig.Kubernetes.EnableKubernetesVersionAutoUpdate, opts.ConverterConfig.Kubernetes.EnableMachineImageVersionAutoUpdate, opts.MaintenanceTimeWindow))
+	extendersForPatch = append(extendersForPatch, maintenance.NewMaintenanceExtender(opts.Kubernetes.EnableKubernetesVersionAutoUpdate, opts.Kubernetes.EnableMachineImageVersionAutoUpdate, opts.MaintenanceTimeWindow))
 
 	if opts.AuditLogData != (auditlogs.AuditLogData{}) {
 		extendersForPatch = append(extendersForPatch,
-			auditlogs.NewAuditlogExtenderForPatch(opts.ConverterConfig.AuditLog.PolicyConfigMapName))
+			auditlogs.NewAuditlogExtenderForPatch(opts.AuditLog.PolicyConfigMapName))
 	}
 
 	return newConverter(opts.ConverterConfig, extendersForPatch...)

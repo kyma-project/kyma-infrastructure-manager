@@ -97,7 +97,7 @@ var _ = Describe("Runtime Controller", func() {
 				// the second controller normally should do that
 				if gardenCluster.Status.State != imv1.ReadyState {
 					gardenCluster.Status.State = imv1.ReadyState
-					k8sClient.Status().Update(ctx, &gardenCluster)
+					_ = k8sClient.Status().Update(ctx, &gardenCluster)
 					return false
 				}
 
