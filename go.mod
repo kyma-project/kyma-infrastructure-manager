@@ -6,7 +6,7 @@ toolchain go1.24.2
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
-	github.com/gardener/gardener v1.116.1
+	github.com/gardener/gardener v1.117.0
 	github.com/gardener/gardener-extension-provider-aws v1.61.1
 	github.com/gardener/gardener-extension-provider-gcp v1.43.2
 	github.com/gardener/gardener-extension-provider-openstack v1.47.0
@@ -72,7 +72,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.37.0 // indirect
 	golang.org/x/net v0.39.0 // indirect
-	golang.org/x/oauth2 v0.26.0 // indirect
+	golang.org/x/oauth2 v0.28.0 // indirect
 	golang.org/x/sync v0.13.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/term v0.31.0 // indirect
