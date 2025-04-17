@@ -572,12 +572,12 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 
 			assertProviderMultipleWorkers(t, tc.Runtime.Spec.Shoot, shoot, tc.EnableIMDSv2, tc.ExpectedShootWorkers)
 			assertProviderSpecificConfigAWS(t, shoot, tc.ExpectedZonesCount)
-			assertExistingZonesInfrastructureNotModified(t, tc.ExistingInfraConfig, shoot.Spec.Provider.InfrastructureConfig)
+			assertExistingZonesAWSInfrastructureNotModified(t, tc.ExistingInfraConfig, shoot.Spec.Provider.InfrastructureConfig)
 		})
 	}
 }
 
-func assertExistingZonesInfrastructureNotModified(t *testing.T, infraConfigBeforeUpdate *runtime.RawExtension, infraConfigToUpdate *runtime.RawExtension) {
+func assertExistingZonesAWSInfrastructureNotModified(t *testing.T, infraConfigBeforeUpdate *runtime.RawExtension, infraConfigToUpdate *runtime.RawExtension) {
 	var existingInfraConfig awsinfra.InfrastructureConfig
 	err := yaml.Unmarshal(infraConfigBeforeUpdate.Raw, &existingInfraConfig)
 	require.NoError(t, err)
