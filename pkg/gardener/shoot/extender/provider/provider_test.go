@@ -1,8 +1,10 @@
 package provider
 
 import (
+	awsinfra "github.com/gardener/gardener-extension-provider-aws/pkg/apis/aws/v1alpha1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/yaml"
 
 	"testing"
 
@@ -46,7 +48,7 @@ func TestValidations(t *testing.T) {
 						Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeAWS, fixMultipleWorkers([]workerConfig{
 							{"main-worker", "m6i.large", "gardenlinux", "1310.4.0", 1, 3, []string{"eu-central-1d"}},
 							{"additional", "m7i.large", "gardenlinux", "1311.2.0", 2, 4, []string{"eu-central-1a", "eu-central-1b"}},
-						}), fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}), fixAWSControlPlaneConfig()),
+						}), fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}), fixAWSControlPlaneConfig()),
 						Networking: imv1.Networking{
 							Nodes: "10.250.0.0/22",
 						},
@@ -103,7 +105,7 @@ func TestFixAlignWorkerZonesWithGardener(t *testing.T) {
 					Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeAWS, fixMultipleWorkers([]workerConfig{
 						{"main-worker", "m6i.large", "gardenlinux", "1310.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}},
 						{"additional", "m7i.large", "gardenlinux", "1311.2.0", 2, 4, []string{"eu-central-1a"}},
-					}), fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}), fixAWSControlPlaneConfig()),
+					}), fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}), fixAWSControlPlaneConfig()),
 					Networking: imv1.Networking{
 						Nodes: "10.250.0.0/22",
 					},
@@ -275,7 +277,7 @@ func TestProviderExtenderForCreateMultipleWorkersAWS(t *testing.T) {
 							{"main-worker", "m6i.large", "gardenlinux", "1310.4.0", 1, 3, []string{"eu-central-1a"}},
 							{"additional", "m7i.large", "gardenlinux", "1311.2.0", 2, 4, []string{"eu-central-1a", "eu-central-1b"}},
 							{"another", "m8i.large", "gardenlinux", "1312.2.0", 3, 5, []string{"eu-central-1a"}},
-						}), fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}), fixAWSControlPlaneConfig()),
+						}), fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}), fixAWSControlPlaneConfig()),
 						Networking: imv1.Networking{
 							Nodes: "10.250.0.0/22",
 						},
@@ -328,6 +330,31 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAWS, fixMultipleWorkers([]workerConfig{
 							{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}},
+							{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}},
+						})),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			EnableIMDSv2:               false,
+			DefaultMachineImageName:    "gardenlinux",
+			DefaultMachineImageVersion: "1312.3.0",
+			ExpectedZonesCount:         3,
+			CurrentShootWorkers:        fixWorkers("main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}},
+				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}}}),
+			ExistingInfraConfig:        fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingControlPlaneConfig: fixAWSControlPlaneConfig(),
+		},
+		"Add additional worker with new zone": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAWS, fixMultipleWorkers([]workerConfig{
+							{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}},
 							{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1d"}},
 						})),
 						Networking: imv1.Networking{
@@ -344,10 +371,10 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}},
 				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1d"}}}),
-			ExistingInfraConfig:        fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingInfraConfig:        fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 			ExistingControlPlaneConfig: fixAWSControlPlaneConfig(),
 		},
-		"Edit additional worker - extend existing additional worker from non HA setup to HA setup by adding more zones, infrastructureConfig already has three zones": {
+		"Edit additional worker - extend existing additional worker from non HA setup to HA setup (use zone already specified in the existing shoot)": {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
@@ -371,7 +398,34 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}},
 				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}}}),
-			ExistingInfraConfig:        fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingInfraConfig:        fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingControlPlaneConfig: fixAWSControlPlaneConfig(),
+		},
+		"Edit additional worker - extend existing additional worker from non HA setup to HA setup (use zone not specified in the existing shoot)": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAWS, fixMultipleWorkers([]workerConfig{
+							{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}},
+							{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1d"}},
+						})),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			EnableIMDSv2:               false,
+			DefaultMachineImageName:    "gardenlinux",
+			DefaultMachineImageVersion: "1312.3.0",
+			ExpectedZonesCount:         4,
+			CurrentShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}},
+				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a"}}}),
+			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}},
+				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1d"}}}),
+			ExistingInfraConfig:        fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 			ExistingControlPlaneConfig: fixAWSControlPlaneConfig(),
 		},
 		"Edit additional worker - modify existing additional worker from HA setup to non HA setup (not allowed in BTP, the KIM is supposed to not modify the zones list)": {
@@ -398,7 +452,7 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}},
 				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}}}),
-			ExistingInfraConfig:        fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingInfraConfig:        fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 			ExistingControlPlaneConfig: fixAWSControlPlaneConfig(),
 		},
 		"Remove additional worker from existing set of workers": {
@@ -422,7 +476,7 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}}}),
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}}}),
-			ExistingInfraConfig:        fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingInfraConfig:        fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 			ExistingControlPlaneConfig: fixAWSControlPlaneConfig(),
 		},
 		"Update machine image name and version in multiple workers separately": {
@@ -449,7 +503,7 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 				{"main-worker", "m6i.large", "gardenlinux", "1313.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}},
 				{"additional", "m6i.large", "gardenlinux", "1313.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}}}),
 			ExpectedZonesCount:         3,
-			ExistingInfraConfig:        fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingInfraConfig:        fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 			ExistingControlPlaneConfig: fixAWSControlPlaneConfig(),
 		},
 		"Remove worker from existing set of workers networking zones set in infrastructureConfig should not change": {
@@ -474,7 +528,7 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "m6i.large", "gardenlinux", "1313.4.0", 1, 3, []string{"eu-central-1a"}}}),
 			ExpectedZonesCount:         3,
-			ExistingInfraConfig:        fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingInfraConfig:        fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 			ExistingControlPlaneConfig: fixAWSControlPlaneConfig(),
 		},
 		"Edit infrastructure config with value provided externally with 3 zones": {
@@ -484,7 +538,7 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 						Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeAWS, fixMultipleWorkers([]workerConfig{
 							{"main-worker", "m6i.large", "gardenlinux", "1313.4.0", 1, 3, []string{"eu-central-1a"}},
 							{"additional", "m6i.large", "gardenlinux", "1313.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b"}},
-						}), fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}), fixAWSControlPlaneConfig()),
+						}), fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}), fixAWSControlPlaneConfig()),
 						Networking: imv1.Networking{
 							Nodes: "10.250.0.0/22",
 						},
@@ -501,7 +555,7 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 				{"main-worker", "m6i.large", "gardenlinux", "1313.4.0", 1, 3, []string{"eu-central-1a"}},
 				{"additional", "m6i.large", "gardenlinux", "1313.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b"}}}),
 			ExpectedZonesCount:         3,
-			ExistingInfraConfig:        fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingInfraConfig:        fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 			ExistingControlPlaneConfig: fixAWSControlPlaneConfig(),
 		},
 	} {
@@ -518,8 +572,30 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 
 			assertProviderMultipleWorkers(t, tc.Runtime.Spec.Shoot, shoot, tc.EnableIMDSv2, tc.ExpectedShootWorkers)
 			assertProviderSpecificConfigAWS(t, shoot, tc.ExpectedZonesCount)
+			assertExistingZonesInfrastructureNotModified(t, tc.ExistingInfraConfig, shoot.Spec.Provider.InfrastructureConfig)
 		})
 	}
+}
+
+func assertExistingZonesInfrastructureNotModified(t *testing.T, infraConfigBeforeUpdate *runtime.RawExtension, infraConfigToUpdate *runtime.RawExtension) {
+	var existingInfraConfig awsinfra.InfrastructureConfig
+	err := yaml.Unmarshal(infraConfigBeforeUpdate.Raw, &existingInfraConfig)
+	require.NoError(t, err)
+
+	var newInfraConfig awsinfra.InfrastructureConfig
+	err = yaml.Unmarshal(infraConfigBeforeUpdate.Raw, &newInfraConfig)
+	require.NoError(t, err)
+
+	for i := 0; i < len(existingInfraConfig.Networks.Zones); i++ {
+		existingZone := existingInfraConfig.Networks.Zones[i]
+		require.Equal(t, existingZone, newInfraConfig.Networks.Zones[i])
+	}
+	require.Equal(t, existingInfraConfig.EnableECRAccess, newInfraConfig.EnableECRAccess)
+	require.Equal(t, existingInfraConfig.DualStack, newInfraConfig.DualStack)
+	require.Equal(t, existingInfraConfig.IgnoreTags, newInfraConfig.IgnoreTags)
+	require.Equal(t, newInfraConfig.Networks.VPC.ID, existingInfraConfig.Networks.VPC.ID)
+	require.Equal(t, newInfraConfig.Networks.VPC.CIDR, existingInfraConfig.Networks.VPC.CIDR)
+	require.Equal(t, newInfraConfig.Networks.VPC.GatewayEndpoints, existingInfraConfig.Networks.VPC.GatewayEndpoints)
 }
 
 func fixProvider(providerType string, machineImageName, machineImageVersion string, zones []string) imv1.Provider {

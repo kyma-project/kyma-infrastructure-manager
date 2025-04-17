@@ -109,6 +109,30 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAzure, fixMultipleWorkers([]workerConfig{
 							{"main-worker", "azure.small", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
+							{"next-worker", "azure.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "3"}},
+						})),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			DefaultMachineImageName:    "gardenlinux",
+			DefaultMachineImageVersion: "1312.3.0",
+			ExpectedZonesCount:         3,
+			CurrentShootWorkers:        fixWorkers("main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}),
+			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "azure.small", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
+				{"next-worker", "azure.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "3"}}}),
+			ExistingInfraConfig:        fixAzureInfrastructureConfig("10.250.0.0/22", []string{"1", "2", "3"}),
+			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
+		},
+		"Add additional worker with new zone": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAzure, fixMultipleWorkers([]workerConfig{
+							{"main-worker", "azure.small", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
 							{"next-worker", "azure.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "4"}},
 						})),
 						Networking: imv1.Networking{
