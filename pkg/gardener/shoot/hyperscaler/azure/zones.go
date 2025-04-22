@@ -48,7 +48,7 @@ func convertZoneNames(zoneNames []string) []int {
 	var zones []int
 	for _, inputZone := range zoneNames {
 		zone, err := strconv.Atoi(inputZone)
-		if err != nil || zone < 1 || zone > 3 {
+		if err != nil || zone < 1 || zone > 5 {
 			continue
 		}
 		zones = append(zones, zone)

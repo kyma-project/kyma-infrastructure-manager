@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	"slices"
+	"sort"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -44,11 +45,6 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 
 		controlPlaneConf, infraConfig = overrideConfigIfProvided(rt, infraConfig, controlPlaneConf)
 
-		// final validation
-		if err = checkWorkerZonesMatchProviderConfig(rt.Spec.Shoot.Provider.Type, workerZones, controlPlaneConf, infraConfig, false); err != nil {
-			return err
-		}
-
 		provider.ControlPlaneConfig = controlPlaneConf
 		provider.InfrastructureConfig = infraConfig
 
@@ -64,7 +60,7 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 
 // Zones for patching workes are taken from existing shoot workers
 // InfrastructureConfig and ControlPlaneConfig are treated as immutable unless they are specified in the RuntimeCR
-func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, defMachineImgVer string, shootWorkers []gardener.Worker, existingInfraConfig, existingControlPlaneConfig *runtime.RawExtension) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtenderPatchOperationOld(enableIMDSv2 bool, defMachineImgName, defMachineImgVer string, shootWorkers []gardener.Worker, existingInfraConfig, existingControlPlaneConfig *runtime.RawExtension) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
 		provider.Type = rt.Spec.Shoot.Provider.Type
@@ -106,7 +102,107 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 	}
 }
 
-func checkWorkerZonesMatchProviderConfig(providerType string, workerZones []string, ctrlPlaneConfig *runtime.RawExtension, infraConfig *runtime.RawExtension, patchValidation bool) error {
+// Zones for patching workes are taken from existing shoot workers
+// InfrastructureConfig and ControlPlaneConfig are treated as immutable unless they are specified in the RuntimeCR
+func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, defMachineImgVer string, shootWorkers []gardener.Worker, existingInfraConfig, existingControlPlaneConfig *runtime.RawExtension) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+		provider := &shoot.Spec.Provider
+		provider.Type = rt.Spec.Shoot.Provider.Type
+		provider.Workers = rt.Spec.Shoot.Provider.Workers
+
+		if len(rt.Spec.Shoot.Provider.Workers) != 1 {
+			return errors.New("single main worker is required")
+		}
+
+		if rt.Spec.Shoot.Provider.AdditionalWorkers != nil {
+			provider.Workers = append(provider.Workers, *rt.Spec.Shoot.Provider.AdditionalWorkers...)
+		}
+
+		provider.Workers = sortWorkersToShootOrder(provider.Workers, shootWorkers)
+
+		workerZonesFromRuntime, err := getNetworkingZonesFromWorkers(provider.Workers)
+		if err != nil {
+			return err
+		}
+
+		workerZonesFromShoot, err := getNetworkingZonesFromWorkers(shootWorkers)
+		if err != nil {
+			return err
+		}
+
+		if zonesEqual(workerZonesFromShoot, workerZonesFromRuntime) {
+			provider.ControlPlaneConfig = existingControlPlaneConfig
+			provider.InfrastructureConfig = existingInfraConfig
+		} else {
+			infraConfig, controlPlaneConfig, err := getConfig(rt.Spec.Shoot, workerZonesFromRuntime)
+			if err != nil {
+				return err
+			}
+
+			provider.ControlPlaneConfig = controlPlaneConfig
+			provider.InfrastructureConfig = infraConfig
+
+			if err = checkWorkerZonesMatchProviderConfig(rt.Spec.Shoot.Provider.Type, workerZonesFromShoot, controlPlaneConfig, infraConfig, true); err != nil {
+				return err
+			}
+		}
+
+		// final validation
+
+		setMachineImage(provider, defMachineImgName, defMachineImgVer)
+
+		if err := setWorkerConfig(provider, provider.Type, enableIMDSv2); err != nil {
+			return err
+		}
+
+		setWorkerSettings(provider)
+		alignWorkersWithGardener(provider, shootWorkers)
+
+		return nil
+	}
+}
+
+func zonesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for _, zone := range a {
+		if !slices.Contains(b, zone) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func sortWorkersToShootOrder(runtimeWorkers []gardener.Worker, shootWorkers []gardener.Worker) []gardener.Worker {
+	sortedWorkers := make([]gardener.Worker, len(runtimeWorkers))
+	copy(sortedWorkers, runtimeWorkers)
+
+	sort.Slice(sortedWorkers, func(i, j int) bool {
+		index1 := slices.IndexFunc(shootWorkers, func(worker gardener.Worker) bool {
+			return worker.Name == runtimeWorkers[i].Name
+		})
+
+		if index1 == -1 {
+			index1 = len(runtimeWorkers) + 1
+		}
+
+		index2 := slices.IndexFunc(shootWorkers, func(worker gardener.Worker) bool {
+			return worker.Name == runtimeWorkers[j].Name
+		})
+
+		if index2 == -1 {
+			index1 = len(runtimeWorkers) + 1
+		}
+
+		return index1 < index2
+	})
+
+	return sortedWorkers
+}
+func checkWorkerZonesMatchProviderConfig(providerType string, shootZones []string, ctrlPlaneConfig *runtime.RawExtension, infraConfig *runtime.RawExtension, patchValidation bool) error {
 	if providerType == hyperscaler.TypeAzure || providerType == hyperscaler.TypeAWS {
 		infraConfigZones, err := getZonesFromProviderConfig(providerType, infraConfig)
 		if err != nil {
@@ -119,7 +215,7 @@ func checkWorkerZonesMatchProviderConfig(providerType string, workerZones []stri
 			return nil
 		}
 
-		for _, zone := range workerZones {
+		for _, zone := range shootZones {
 			if !slices.Contains(infraConfigZones, zone) {
 				return fmt.Errorf("one of workers is using networking zone not specified in the %s infrastructureConfig: %s", providerType, zone)
 			}
@@ -135,7 +231,7 @@ func checkWorkerZonesMatchProviderConfig(providerType string, workerZones []stri
 			return fmt.Errorf("cannot validate workers zones against GCP controlPlaneConfig, cannot read current networking zone")
 		}
 
-		if !slices.Contains(workerZones, ctrlPlaneZones[0]) {
+		if !slices.Contains(shootZones, ctrlPlaneZones[0]) {
 			return fmt.Errorf("none of workers is using networking zone specified in the controlPlaneConfig: %s", ctrlPlaneZones[0])
 		}
 	}

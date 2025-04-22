@@ -201,7 +201,7 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"2"}}}),
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
-				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"2", "1", "3"}}}),
+				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"2", "1", "4"}}}),
 			ExistingInfraConfig:        fixAzureInfrastructureConfig(t, "10.250.0.0/22", []string{"1", "2", "3"}),
 			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
 		},
@@ -227,7 +227,7 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"2"}}}),
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
-				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"2", "1", "3"}}}),
+				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"2", "1", "4"}}}),
 			ExistingInfraConfig:        fixAzureInfrastructureConfig(t, "10.250.0.0/22", []string{"1", "2", "3"}),
 			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
 		},
