@@ -60,50 +60,6 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 
 // Zones for patching workes are taken from existing shoot workers
 // InfrastructureConfig and ControlPlaneConfig are treated as immutable unless they are specified in the RuntimeCR
-func NewProviderExtenderPatchOperationOld(enableIMDSv2 bool, defMachineImgName, defMachineImgVer string, shootWorkers []gardener.Worker, existingInfraConfig, existingControlPlaneConfig *runtime.RawExtension) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
-	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
-		provider := &shoot.Spec.Provider
-		provider.Type = rt.Spec.Shoot.Provider.Type
-		provider.Workers = rt.Spec.Shoot.Provider.Workers
-
-		if len(rt.Spec.Shoot.Provider.Workers) != 1 {
-			return errors.New("single main worker is required")
-		}
-
-		if rt.Spec.Shoot.Provider.AdditionalWorkers != nil {
-			provider.Workers = append(provider.Workers, *rt.Spec.Shoot.Provider.AdditionalWorkers...)
-		}
-
-		controlPlaneConf, infraConfig := overrideConfigIfProvided(rt, existingInfraConfig, existingControlPlaneConfig)
-
-		workerZones, err := getNetworkingZonesFromWorkers(provider.Workers)
-		if err != nil {
-			return err
-		}
-
-		// final validation
-		if err = checkWorkerZonesMatchProviderConfig(rt.Spec.Shoot.Provider.Type, workerZones, controlPlaneConf, infraConfig, true); err != nil {
-			return err
-		}
-
-		provider.ControlPlaneConfig = controlPlaneConf
-		provider.InfrastructureConfig = infraConfig
-
-		setMachineImage(provider, defMachineImgName, defMachineImgVer)
-
-		if err := setWorkerConfig(provider, provider.Type, enableIMDSv2); err != nil {
-			return err
-		}
-
-		setWorkerSettings(provider)
-		alignWorkersWithGardener(provider, shootWorkers)
-
-		return nil
-	}
-}
-
-// Zones for patching workes are taken from existing shoot workers
-// InfrastructureConfig and ControlPlaneConfig are treated as immutable unless they are specified in the RuntimeCR
 func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, defMachineImgVer string, shootWorkers []gardener.Worker, existingInfraConfig, existingControlPlaneConfig *runtime.RawExtension) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider

@@ -610,7 +610,7 @@ func assertExistingZonesAWSInfrastructureNotModified(t *testing.T, infraConfigBe
 	require.NoError(t, err)
 
 	var newInfraConfig awsinfra.InfrastructureConfig
-	err = yaml.Unmarshal(infraConfigBeforeUpdate.Raw, &newInfraConfig)
+	err = yaml.Unmarshal(infraConfigToUpdate.Raw, &newInfraConfig)
 	require.NoError(t, err)
 
 	for i := 0; i < len(existingInfraConfig.Networks.Zones); i++ {
