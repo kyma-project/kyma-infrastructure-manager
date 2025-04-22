@@ -197,6 +197,31 @@ func TestProviderExtenderForPatchWorkersUpdateGCP(t *testing.T) {
 			ExistingInfraConfig:        fixGCPInfrastructureConfig("10.250.0.0/22"),
 			ExistingControlPlaneConfig: fixGCPControlPlaneConfig([]string{"us-central1-a", "us-central1-b", "us-central1-c"}),
 		},
+		"Add additional worker - extend existing additional worker from non HA setup to HA setup by adding more zones, keep existing order (use zone not specified in the existing shoot, and infrastructure config provided in the Runtime CR)": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeGCP, fixMultipleWorkers([]workerConfig{
+							{"main-worker", "n2-standard-2", "gardenlinux", "1312.4.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-c"}},
+							{"additional", "n2-standard-2", "gardenlinux", "1312.2.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-d"}},
+						}), fixGCPInfrastructureConfig("10.250.0.0/22"), fixGCPControlPlaneConfig([]string{"us-central1-a", "us-central1-b", "us-central1-c"})),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			DefaultMachineImageName:    "gardenlinux",
+			DefaultMachineImageVersion: "1312.3.0",
+			CurrentShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "n2-standard-2", "gardenlinux", "1312.4.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-c"}},
+				{"additional", "n2-standard-2", "gardenlinux", "1312.2.0", 1, 3, []string{"us-central1-b", "us-central1-a"}}}),
+			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "n2-standard-2", "gardenlinux", "1312.4.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-c"}},
+				{"additional", "n2-standard-2", "gardenlinux", "1312.2.0", 1, 3, []string{"us-central1-b", "us-central1-a", "us-central1-d"}}}),
+			ExistingInfraConfig:        fixGCPInfrastructureConfig("10.250.0.0/22"),
+			ExistingControlPlaneConfig: fixGCPControlPlaneConfig([]string{"us-central1-a", "us-central1-b", "us-central1-c"}),
+		},
 		"Remove additional worker from existing set of workers": {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
