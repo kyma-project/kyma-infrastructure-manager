@@ -8,7 +8,7 @@ require (
 	github.com/gardener/gardener v1.117.0
 	github.com/gardener/oidc-webhook-authenticator v0.35.0
 	github.com/go-playground/validator/v10 v10.26.0
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250416084458-8371ca0bcd2a
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250422065024-1345757182ee
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
 	k8s.io/api v0.32.3
@@ -25,7 +25,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
+	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
 	github.com/evanphx/json-patch v5.7.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fxamacker/cbor/v2 v2.8.0 // indirect
@@ -64,7 +64,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.37.0 // indirect
 	golang.org/x/net v0.39.0 // indirect
-	golang.org/x/oauth2 v0.28.0 // indirect
+	golang.org/x/oauth2 v0.29.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/term v0.31.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
@@ -83,7 +83,7 @@ require (
 replace (
 	github.com/kyma-project/infrastructure-manager => ../../
 	golang.org/x/crypto => golang.org/x/crypto v0.37.0
-	golang.org/x/net => golang.org/x/net v0.38.0
+	golang.org/x/net => golang.org/x/net v0.39.0
 	golang.org/x/sys => golang.org/x/sys v0.32.0
 	golang.org/x/text => golang.org/x/text v0.24.0
 	golang.org/x/tools => golang.org/x/tools v0.32.0

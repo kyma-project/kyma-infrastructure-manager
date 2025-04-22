@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.2
 
 require (
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250416084458-8371ca0bcd2a
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250422065024-1345757182ee
 	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.3
 	sigs.k8s.io/controller-runtime v0.20.4
@@ -13,7 +13,7 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
+	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fxamacker/cbor/v2 v2.8.0 // indirect
 	github.com/gardener/gardener v1.117.0 // indirect
@@ -36,7 +36,7 @@ require (
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/net v0.39.0 // indirect
-	golang.org/x/oauth2 v0.28.0 // indirect
+	golang.org/x/oauth2 v0.29.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/term v0.31.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
@@ -56,7 +56,7 @@ require (
 
 replace (
 	golang.org/x/crypto => golang.org/x/crypto v0.37.0
-	golang.org/x/net => golang.org/x/net v0.38.0
+	golang.org/x/net => golang.org/x/net v0.39.0
 	golang.org/x/sys => golang.org/x/sys v0.32.0
 	golang.org/x/text => golang.org/x/text v0.24.0
 	golang.org/x/tools => golang.org/x/tools v0.32.0
