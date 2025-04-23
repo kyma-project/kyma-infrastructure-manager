@@ -1,7 +1,7 @@
 module-name: infrastructure-manager
 kind: kcp
 bdba:
-  - europe-docker.pkg.dev/kyma-project/prod/infrastructure-manager:1.0.3
+  - europe-docker.pkg.dev/kyma-project/prod/infrastructure-manager:latest
 mend:
   language: golang-mod
   exclude:
