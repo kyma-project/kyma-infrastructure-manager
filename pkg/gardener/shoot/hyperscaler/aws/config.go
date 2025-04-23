@@ -17,6 +17,15 @@ func GetInfrastructureConfig(workersCidr string, zones []string) ([]byte, error)
 	return json.Marshal(NewInfrastructureConfig(workersCidr, zones))
 }
 
+func GetInfrastructureConfigForPatch(workersCidr string, zones []string, existingInfrastructureConfigBytes []byte) ([]byte, error) {
+	newConfig, err := NewInfrastructureConfigForPatch(workersCidr, zones, existingInfrastructureConfigBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(newConfig)
+}
+
 func GetControlPlaneConfig(_ []string) ([]byte, error) {
 	return json.Marshal(NewControlPlaneConfig())
 }
@@ -47,6 +56,19 @@ func NewInfrastructureConfig(workersCidr string, zones []string) v1alpha1.Infras
 			},
 		},
 	}
+}
+
+func NewInfrastructureConfigForPatch(workersCidr string, zones []string, existingInfrastructureConfigBytes []byte) (v1alpha1.InfrastructureConfig, error) {
+	newConfig := NewInfrastructureConfig(workersCidr, zones)
+	existingInfrastructureConfig, err := DecodeInfrastructureConfig(existingInfrastructureConfigBytes)
+
+	if err != nil {
+		return v1alpha1.InfrastructureConfig{}, err
+	}
+	existingInfrastructureConfig.Networks.Zones = newConfig.Networks.Zones
+	existingInfrastructureConfig.Networks.VPC.CIDR = newConfig.Networks.VPC.CIDR
+
+	return *existingInfrastructureConfig, nil
 }
 
 func NewControlPlaneConfig() *v1alpha1.ControlPlaneConfig {

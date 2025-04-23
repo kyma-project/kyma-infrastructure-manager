@@ -38,7 +38,7 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 			return err
 		}
 
-		infraConfig, controlPlaneConf, err := getConfig(rt.Spec.Shoot, workerZones)
+		infraConfig, controlPlaneConf, err := getConfig(rt.Spec.Shoot, workerZones, nil)
 		if err != nil {
 			return err
 		}
@@ -90,7 +90,7 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 			provider.ControlPlaneConfig = existingControlPlaneConfig
 			provider.InfrastructureConfig = existingInfraConfig
 		} else {
-			infraConfig, controlPlaneConfig, err := getConfig(rt.Spec.Shoot, workerZonesFromRuntime)
+			infraConfig, controlPlaneConfig, err := getConfig(rt.Spec.Shoot, workerZonesFromRuntime, existingInfraConfig.Raw)
 			if err != nil {
 				return err
 			}
@@ -250,7 +250,7 @@ func getZonesFromProviderConfig(providerType string, extensionConfig *runtime.Ra
 type InfrastructureProviderFunc func(workersCidr string, zones []string) ([]byte, error)
 type ControlPlaneProviderFunc func(zones []string) ([]byte, error)
 
-func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string) (infrastructureConfig *runtime.RawExtension, controlPlaneConfig *runtime.RawExtension, err error) {
+func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, existingInfrastructureConfig []byte) (infrastructureConfig *runtime.RawExtension, controlPlaneConfig *runtime.RawExtension, err error) {
 	getConfigForProvider := func(runtimeShoot imv1.RuntimeShoot, infrastructureConfigFunc InfrastructureProviderFunc, controlPlaneConfigFunc ControlPlaneProviderFunc) (*runtime.RawExtension, *runtime.RawExtension, error) {
 		infrastructureConfigBytes, err := infrastructureConfigFunc(runtimeShoot.Networking.Nodes, zones)
 		if err != nil {
@@ -268,10 +268,20 @@ func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string) (infrastructureCo
 	switch runtimeShoot.Provider.Type {
 	case hyperscaler.TypeAWS:
 		{
+			if existingInfrastructureConfig != nil {
+				return getConfigForProvider(runtimeShoot, func(workersCidr string, zones []string) ([]byte, error) {
+					return aws.GetInfrastructureConfigForPatch(workersCidr, zones, existingInfrastructureConfig)
+				}, aws.GetControlPlaneConfig)
+			}
 			return getConfigForProvider(runtimeShoot, aws.GetInfrastructureConfig, aws.GetControlPlaneConfig)
 		}
 	case hyperscaler.TypeAzure:
 		{
+			if existingInfrastructureConfig != nil {
+				return getConfigForProvider(runtimeShoot, func(workersCidr string, zones []string) ([]byte, error) {
+					return azure.GetInfrastructureConfigForPatch(workersCidr, zones, existingInfrastructureConfig)
+				}, azure.GetControlPlaneConfig)
+			}
 			// Azure shoots are all zoned, put probably it not be validated here.
 			return getConfigForProvider(runtimeShoot, azure.GetInfrastructureConfig, azure.GetControlPlaneConfig)
 		}
