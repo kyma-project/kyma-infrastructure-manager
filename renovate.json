@@ -4,8 +4,11 @@
     "config:recommended",
     "schedule:earlyMondays"
   ],
- "rebaseWhen": "behind-base-branch",
- "gomod": {
+  {
+    "prHourlyLimit": 0
+  },
+  "rebaseWhen": "behind-base-branch",
+  "gomod": {
     "postUpdateOptions": [
       "gomodTidy"
     ],
