@@ -86,11 +86,15 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 			return err
 		}
 
-		if zonesEqual(workerZonesFromShoot, workerZonesFromRuntime) {
+		zonesAdded := newZonesAdded(workerZonesFromShoot, workerZonesFromRuntime)
+
+		if zonesEqual(workerZonesFromShoot, workerZonesFromRuntime) || len(zonesAdded) == 0 {
 			provider.ControlPlaneConfig = existingControlPlaneConfig
 			provider.InfrastructureConfig = existingInfraConfig
 		} else {
-			infraConfig, controlPlaneConfig, err := getConfig(rt.Spec.Shoot, workerZonesFromRuntime, existingInfraConfig.Raw)
+			mergedWorkerZones := append(workerZonesFromShoot, zonesAdded...)
+
+			infraConfig, controlPlaneConfig, err := getConfig(rt.Spec.Shoot, mergedWorkerZones, existingInfraConfig.Raw)
 			if err != nil {
 				return err
 			}
@@ -130,6 +134,17 @@ func zonesEqual(a, b []string) bool {
 	}
 
 	return true
+}
+
+func newZonesAdded(existingZones, newZones []string) []string {
+	var added []string
+	for _, zone := range newZones {
+		if !slices.Contains(existingZones, zone) {
+			added = append(added, zone)
+		}
+	}
+	return added
+
 }
 
 func sortWorkersToShootOrder(runtimeWorkers []gardener.Worker, shootWorkers []gardener.Worker) []gardener.Worker {

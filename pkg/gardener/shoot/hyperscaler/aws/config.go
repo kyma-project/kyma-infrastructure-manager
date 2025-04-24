@@ -81,10 +81,7 @@ func NewInfrastructureConfigForPatch(workersCidr string, zones []string, existin
 		}
 	}
 
-	existingInfrastructureConfig.Networks.Zones = newConfig.Networks.Zones
-	existingInfrastructureConfig.Networks.VPC.CIDR = newConfig.Networks.VPC.CIDR
-
-	return *existingInfrastructureConfig, nil
+	return newConfig, nil
 }
 
 func NewControlPlaneConfig() *v1alpha1.ControlPlaneConfig {
