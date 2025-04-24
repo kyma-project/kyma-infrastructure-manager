@@ -65,6 +65,22 @@ func NewInfrastructureConfigForPatch(workersCidr string, zones []string, existin
 	if err != nil {
 		return v1alpha1.InfrastructureConfig{}, err
 	}
+
+	newConfig.IgnoreTags = existingInfrastructureConfig.IgnoreTags
+	newConfig.EnableECRAccess = existingInfrastructureConfig.EnableECRAccess
+	newConfig.DualStack = existingInfrastructureConfig.DualStack
+	newConfig.Networks.VPC.ID = existingInfrastructureConfig.Networks.VPC.ID
+	newConfig.Networks.VPC.GatewayEndpoints = existingInfrastructureConfig.Networks.VPC.GatewayEndpoints
+
+	for _, zone := range existingInfrastructureConfig.Networks.Zones {
+		for i := 0; i < len(newConfig.Networks.Zones); i++ {
+			newZone := &newConfig.Networks.Zones[i]
+			if newZone.Name == zone.Name {
+				newZone.ElasticIPAllocationID = zone.ElasticIPAllocationID
+			}
+		}
+	}
+
 	existingInfrastructureConfig.Networks.Zones = newConfig.Networks.Zones
 	existingInfrastructureConfig.Networks.VPC.CIDR = newConfig.Networks.VPC.CIDR
 

@@ -261,30 +261,30 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 			ExistingInfraConfig:         fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 			ExistingControlPlaneConfig:  fixAWSControlPlaneConfig(),
 		},
-		"Override data in controlPlaneConfig and InfrastructureConfig - with data from RuntimeCR": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{
-						Provider: fixProviderWithConfig(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a"},
-							fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
-							nil),
-						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
-						},
-					},
-				},
-			},
-			EnableIMDSv2:                false,
-			DefaultMachineImageName:     "gardenlinux",
-			DefaultMachineImageVersion:  "1312.2.0",
-			CurrentShootWorkers:         fixWorkers("worker", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a"}),
-			ExpectedMachineImageVersion: "1312.2.0",
-			ExpectedZonesCount:          3,
-			ExpectedMachineImageName:    "gardenlinux",
-			ExistingInfraConfig:         fixAWSInfrastructureConfig(t, "10.250.0.0/16", []string{"eu-central-1a"}),
-			ExistingControlPlaneConfig:  fixAWSControlPlaneConfig(),
-		},
-		// TODO: Add tests for override of control plane config with values from RuntimeCR
+		// InfrastrctureConfig and ControlPlaneConfig are no longer immutable
+		//"Override data in controlPlaneConfig and InfrastructureConfig - with data from RuntimeCR": {
+		//	Runtime: imv1.Runtime{
+		//		Spec: imv1.RuntimeSpec{
+		//			Shoot: imv1.RuntimeShoot{
+		//				Provider: fixProviderWithConfig(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a"},
+		//					fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+		//					nil),
+		//				Networking: imv1.Networking{
+		//					Nodes: "10.250.0.0/22",
+		//				},
+		//			},
+		//		},
+		//	},
+		//	EnableIMDSv2:                false,
+		//	DefaultMachineImageName:     "gardenlinux",
+		//	DefaultMachineImageVersion:  "1312.2.0",
+		//	CurrentShootWorkers:         fixWorkers("worker", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a"}),
+		//	ExpectedMachineImageVersion: "1312.2.0",
+		//	ExpectedZonesCount:          3,
+		//	ExpectedMachineImageName:    "gardenlinux",
+		//	ExistingInfraConfig:         fixAWSInfrastructureConfig(t, "10.250.0.0/16", []string{"eu-central-1a"}),
+		//	ExistingControlPlaneConfig:  fixAWSControlPlaneConfig(),
+		//},
 	} {
 		t.Run(tname, func(t *testing.T) {
 			// given
