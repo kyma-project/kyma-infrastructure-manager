@@ -128,20 +128,6 @@ func isAzureLiteSetup(providerType string, infraConfigBytes []byte) (bool, error
 	return len(infraConfig.Networks.Zones) == 0, nil
 }
 
-func zonesEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	for _, zone := range a {
-		if !slices.Contains(b, zone) {
-			return false
-		}
-	}
-
-	return true
-}
-
 func newZonesAdded(existingZones, newZones []string) []string {
 	var added []string
 	for _, zone := range newZones {

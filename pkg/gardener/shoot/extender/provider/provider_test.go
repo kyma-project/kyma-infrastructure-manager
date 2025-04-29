@@ -669,26 +669,6 @@ func fixProviderWithMultipleWorkersAndConfig(providerType string, workers []gard
 	return provider
 }
 
-func fixProviderWithConfig(providerType, machineImageName, machineImageVersion string, workerZones []string, infraConfig, ctrlPlaneConfig *runtime.RawExtension) imv1.Provider {
-	return imv1.Provider{
-		Type: providerType,
-		Workers: []gardener.Worker{
-			{
-				Name: "worker",
-				Machine: gardener.Machine{
-					Type:  "m6i.large",
-					Image: fixMachineImage(machineImageName, machineImageVersion),
-				},
-				Minimum: 1,
-				Maximum: 3,
-				Zones:   workerZones,
-			},
-		},
-		InfrastructureConfig: infraConfig,
-		ControlPlaneConfig:   ctrlPlaneConfig,
-	}
-}
-
 func fixMachineImage(machineImageName, machineImageVersion string) *gardener.ShootMachineImage {
 	if machineImageVersion != "" {
 		return &gardener.ShootMachineImage{
