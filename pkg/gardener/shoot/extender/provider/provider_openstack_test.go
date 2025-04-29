@@ -69,29 +69,6 @@ func TestProviderExtenderForCreateOpenstack(t *testing.T) {
 				{"additional", "openstack.big", "gardenlinux", "1311.2.0", 2, 4, []string{"eu-de-1b", "eu-de-1c"}},
 				{"another", "openstack.large", "gardenlinux", "1312.2.0", 3, 5, []string{"eu-de-1c"}}}),
 		},
-		"Create multiple Openstack workers with custom CIDR Infrastructure Config": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{
-						Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeOpenStack, fixMultipleWorkers([]workerConfig{
-							{"main-worker", "openstack.small", "gardenlinux", "1310.4.0", 1, 3, []string{"eu-de-1a"}},
-							{"additional", "openstack.big", "gardenlinux", "1311.2.0", 2, 4, []string{"eu-de-1b", "eu-de-1c"}},
-							{"another", "openstack.large", "gardenlinux", "1312.2.0", 3, 5, []string{"eu-de-1c"}},
-						}), fixOpenstackInfrastructureConfig("10.250.0.0/16"), fixOpenstackControlPlaneConfig()),
-						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
-						},
-					},
-				},
-			},
-			DefaultMachineImageName:    "gardenlinux",
-			DefaultMachineImageVersion: "1312.3.0",
-			ExpectedInfraConfigCIDR:    "10.250.0.0/16",
-			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
-				{"main-worker", "openstack.small", "gardenlinux", "1310.4.0", 1, 3, []string{"eu-de-1a"}},
-				{"additional", "openstack.big", "gardenlinux", "1311.2.0", 2, 4, []string{"eu-de-1b", "eu-de-1c"}},
-				{"another", "openstack.large", "gardenlinux", "1312.2.0", 3, 5, []string{"eu-de-1c"}}}),
-		},
 	} {
 		t.Run(tname, func(t *testing.T) {
 			// given

@@ -213,30 +213,6 @@ func TestProviderExtenderForCreateMultipleWorkersAWS(t *testing.T) {
 				{"additional", "m7i.large", "gardenlinux", "1311.2.0", 2, 4, []string{"eu-central-1b", "eu-central-1c"}},
 				{"another", "m8i.large", "gardenlinux", "1312.2.0", 3, 5, []string{"eu-central-1c"}}}),
 		},
-		"Create provider config for multiple workers with AWS worker config provided externally": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{
-						Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeAWS, fixMultipleWorkers([]workerConfig{
-							{"main-worker", "m6i.large", "gardenlinux", "1310.4.0", 1, 3, []string{"eu-central-1a"}},
-							{"additional", "m7i.large", "gardenlinux", "1311.2.0", 2, 4, []string{"eu-central-1a", "eu-central-1b"}},
-							{"another", "m8i.large", "gardenlinux", "1312.2.0", 3, 5, []string{"eu-central-1a"}},
-						}), fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}), fixAWSControlPlaneConfig()),
-						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
-						},
-					},
-				},
-			},
-			EnableIMDSv2:               true,
-			DefaultMachineImageName:    "gardenlinux",
-			DefaultMachineImageVersion: "1312.3.0",
-			ExpectedZonesCount:         3,
-			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
-				{"main-worker", "m6i.large", "gardenlinux", "1310.4.0", 1, 3, []string{"eu-central-1a"}},
-				{"additional", "m7i.large", "gardenlinux", "1311.2.0", 2, 4, []string{"eu-central-1a", "eu-central-1b"}},
-				{"another", "m8i.large", "gardenlinux", "1312.2.0", 3, 5, []string{"eu-central-1a"}}}),
-		},
 	} {
 		t.Run(tname, func(t *testing.T) {
 			// given

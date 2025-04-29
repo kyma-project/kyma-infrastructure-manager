@@ -42,8 +42,6 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 			return err
 		}
 
-		controlPlaneConf, infraConfig = overrideConfigIfProvided(rt, infraConfig, controlPlaneConf)
-
 		provider.ControlPlaneConfig = controlPlaneConf
 		provider.InfrastructureConfig = infraConfig
 
@@ -186,19 +184,6 @@ func sortWorkersToShootOrder(runtimeWorkers []gardener.Worker, shootWorkers []ga
 	})
 
 	return sortedWorkers
-}
-
-func overrideConfigIfProvided(rt imv1.Runtime, existingInfraConfig, existingControlPlaneConfig *runtime.RawExtension) (*runtime.RawExtension, *runtime.RawExtension) {
-	controlPlaneConf := getConfigOrDefault(rt.Spec.Shoot.Provider.ControlPlaneConfig, existingControlPlaneConfig)
-	infraConfig := getConfigOrDefault(rt.Spec.Shoot.Provider.InfrastructureConfig, existingInfraConfig)
-	return controlPlaneConf, infraConfig
-}
-
-func getConfigOrDefault(config, defaultConfig *runtime.RawExtension) *runtime.RawExtension {
-	if config != nil {
-		return config
-	}
-	return defaultConfig
 }
 
 type InfrastructureProviderFunc func(workersCidr string, zones []string) ([]byte, error)

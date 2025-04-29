@@ -82,22 +82,6 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 			ExpectedMachineImageVersion: "1312.3.0",
 			ExpectedZonesCount:          3,
 		},
-		"Create provider config for AWS with worker config provided externally": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{ //"10.250.0.0/22"
-						Provider: fixProviderWithConfig(hyperscaler.TypeAWS, "gardenlinux", "1312.3.0", []string{"eu-central-1a"},
-							fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
-							fixAWSControlPlaneConfig()),
-					},
-				},
-			},
-			EnableIMDSv2:                false,
-			DefaultMachineImageVersion:  "1312.3.0",
-			ExpectedMachineImageVersion: "1312.3.0",
-			ExpectedMachineImageName:    "gardenlinux",
-			ExpectedZonesCount:          3,
-		},
 	} {
 		t.Run(tname, func(t *testing.T) {
 			// given
