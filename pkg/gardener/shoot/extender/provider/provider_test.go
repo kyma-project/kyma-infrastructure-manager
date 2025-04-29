@@ -119,7 +119,7 @@ func TestFixAlignWorkerZonesWithGardener(t *testing.T) {
 		})
 
 		// when
-		extender := NewProviderExtenderPatchOperation(false, "gardenlinux", "1311.2.0", currentWorkers, nil, nil)
+		extender := NewProviderExtenderPatchOperation(false, "gardenlinux", "1311.2.0", currentWorkers, fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}), fixAWSControlPlaneConfig())
 		err := extender(runtime, &shoot)
 
 		// then

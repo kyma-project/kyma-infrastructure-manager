@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"fmt"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	"slices"
 	"sort"
@@ -87,8 +86,12 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 		}
 
 		zonesAdded := newZonesAdded(workerZonesFromShoot, workerZonesFromRuntime)
+		azureLiteCluster, err := isAzureLiteSetup(rt.Spec.Shoot.Provider.Type, existingInfraConfig.Raw)
+		if err != nil {
+			return err
+		}
 
-		if zonesEqual(workerZonesFromShoot, workerZonesFromRuntime) || len(zonesAdded) == 0 {
+		if len(zonesAdded) == 0 || azureLiteCluster {
 			provider.ControlPlaneConfig = existingControlPlaneConfig
 			provider.InfrastructureConfig = existingInfraConfig
 		} else {
@@ -101,13 +104,7 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 
 			provider.ControlPlaneConfig = controlPlaneConfig
 			provider.InfrastructureConfig = infraConfig
-
-			if err = checkWorkerZonesMatchProviderConfig(rt.Spec.Shoot.Provider.Type, workerZonesFromShoot, controlPlaneConfig, infraConfig, true); err != nil {
-				return err
-			}
 		}
-
-		// final validation
 
 		setMachineImage(provider, defMachineImgName, defMachineImgVer)
 
@@ -120,6 +117,20 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 
 		return nil
 	}
+}
+
+func isAzureLiteSetup(providerType string, infraConfigBytes []byte) (bool, error) {
+	if providerType != hyperscaler.TypeAzure {
+		return false, nil
+	}
+
+	infraConfig, err := azure.DecodeInfrastructureConfig(infraConfigBytes)
+
+	if err != nil {
+		return false, err
+	}
+
+	return len(infraConfig.Networks.Zones) == 0, nil
 }
 
 func zonesEqual(a, b []string) bool {
@@ -173,42 +184,6 @@ func sortWorkersToShootOrder(runtimeWorkers []gardener.Worker, shootWorkers []ga
 
 	return sortedWorkers
 }
-func checkWorkerZonesMatchProviderConfig(providerType string, shootZones []string, ctrlPlaneConfig *runtime.RawExtension, infraConfig *runtime.RawExtension, patchValidation bool) error {
-	if providerType == hyperscaler.TypeAzure || providerType == hyperscaler.TypeAWS {
-		infraConfigZones, err := getZonesFromProviderConfig(providerType, infraConfig)
-		if err != nil {
-			return err
-		}
-
-		// workaround for legacy azure-lite shoots where networking zones are not specified in the infrastructureConfig
-		// such shoots are treated as correct, and we can skipp the validation of worker zones with infrastructureConfig zones
-		if patchValidation && providerType == hyperscaler.TypeAzure && len(infraConfigZones) == 0 {
-			return nil
-		}
-
-		for _, zone := range shootZones {
-			if !slices.Contains(infraConfigZones, zone) {
-				return fmt.Errorf("one of workers is using networking zone not specified in the %s infrastructureConfig: %s", providerType, zone)
-			}
-		}
-	}
-	if providerType == hyperscaler.TypeGCP {
-		ctrlPlaneZones, err := getZonesFromProviderConfig(providerType, ctrlPlaneConfig)
-		if err != nil {
-			return err
-		}
-
-		if len(ctrlPlaneZones) == 0 {
-			return fmt.Errorf("cannot validate workers zones against GCP controlPlaneConfig, cannot read current networking zone")
-		}
-
-		if !slices.Contains(shootZones, ctrlPlaneZones[0]) {
-			return fmt.Errorf("none of workers is using networking zone specified in the controlPlaneConfig: %s", ctrlPlaneZones[0])
-		}
-	}
-
-	return nil
-}
 
 func overrideConfigIfProvided(rt imv1.Runtime, existingInfraConfig, existingControlPlaneConfig *runtime.RawExtension) (*runtime.RawExtension, *runtime.RawExtension) {
 	controlPlaneConf := getConfigOrDefault(rt.Spec.Shoot.Provider.ControlPlaneConfig, existingControlPlaneConfig)
@@ -221,45 +196,6 @@ func getConfigOrDefault(config, defaultConfig *runtime.RawExtension) *runtime.Ra
 		return config
 	}
 	return defaultConfig
-}
-
-// parse infrastructureConfig or controlPlaneConfig to get current set of networking zones
-func getZonesFromProviderConfig(providerType string, extensionConfig *runtime.RawExtension) ([]string, error) {
-	if extensionConfig == nil {
-		return nil, errors.New("infrastructureConfig is nil")
-	}
-
-	var zones []string
-
-	switch providerType {
-	case hyperscaler.TypeAWS:
-		infraConfig, err := aws.DecodeInfrastructureConfig(extensionConfig.Raw)
-		if err != nil {
-			return nil, err
-		}
-		for _, zone := range infraConfig.Networks.Zones {
-			zones = append(zones, zone.Name)
-		}
-	case hyperscaler.TypeAzure:
-		infraConfig, err := azure.DecodeInfrastructureConfig(extensionConfig.Raw)
-		if err != nil {
-			return nil, err
-		}
-		for _, zone := range infraConfig.Networks.Zones {
-			zones = append(zones, fmt.Sprint(zone.Name))
-		}
-	case hyperscaler.TypeGCP:
-		{
-			ctrlPlaneConfig, err := gcp.DecodeControlPlaneConfig(extensionConfig.Raw)
-			if err != nil {
-				return nil, err
-			}
-			zones = append(zones, ctrlPlaneConfig.Zone)
-		}
-	default:
-		return nil, errors.New("read zones from infrastructureConfig - provider not supported")
-	}
-	return zones, nil
 }
 
 type InfrastructureProviderFunc func(workersCidr string, zones []string) ([]byte, error)
