@@ -78,7 +78,6 @@ func TestGetAllWorkersZones(t *testing.T) {
 		name     string
 		workers  []gardener.Worker
 		expected []string
-		wantErr  bool
 	}{
 		{
 			name: "Single worker with zones",
@@ -89,7 +88,6 @@ func TestGetAllWorkersZones(t *testing.T) {
 				},
 			},
 			expected: []string{"zone1", "zone2"},
-			wantErr:  false,
 		},
 		{
 			name: "Multiple workers with same zones",
@@ -104,7 +102,6 @@ func TestGetAllWorkersZones(t *testing.T) {
 				},
 			},
 			expected: []string{"zone1", "zone2"},
-			wantErr:  false,
 		},
 		{
 			name: "Multiple workers with different zones",
@@ -119,25 +116,13 @@ func TestGetAllWorkersZones(t *testing.T) {
 				},
 			},
 			expected: []string{"zone1", "zone2"},
-			wantErr:  false,
-		},
-		{
-			name:     "No workers provided",
-			workers:  []gardener.Worker{},
-			expected: nil,
-			wantErr:  true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			zones, err := getNetworkingZonesFromWorkers(tt.workers)
-			if tt.wantErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				assert.Equal(t, tt.expected, zones)
-			}
+			zones := getNetworkingZonesFromWorkers(tt.workers)
+			assert.Equal(t, tt.expected, zones)
 		})
 	}
 }
