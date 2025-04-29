@@ -321,34 +321,6 @@ func TestProviderExtenderForPatchWorkersUpdateOpenstack(t *testing.T) {
 			ExistingControlPlaneConfig: fixOpenstackControlPlaneConfig(),
 			ExpectedInfraConfigCIDR:    "10.250.0.0/22",
 		},
-		// When the infrastructure config is provided in the runtime CR KIM will just ignore that
-		// TODO: consider leaving this test case to ensure KIM will not take the infrastructure config from the runtime CR
-		//"Modify infrastructure config with value provided externally with own CIDR": {
-		//	Runtime: imv1.Runtime{
-		//		Spec: imv1.RuntimeSpec{
-		//			Shoot: imv1.RuntimeShoot{
-		//				Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeOpenStack, fixMultipleWorkers([]workerConfig{
-		//					{"main-worker", "openstack.small", "gardenlinux", "1313.4.0", 1, 3, []string{"eu-de-1a"}},
-		//					{"next-worker", "openstack.big", "gardenlinux", "1313.2.0", 1, 3, []string{"eu-de-1a", "eu-de-1b"}},
-		//				}), fixOpenstackInfrastructureConfig("10.250.0.0/16"), fixOpenstackControlPlaneConfig()),
-		//				Networking: imv1.Networking{
-		//					Nodes: "10.250.0.0/22",
-		//				},
-		//			},
-		//		},
-		//	},
-		//	DefaultMachineImageName:    "gardenlinux",
-		//	DefaultMachineImageVersion: "1312.3.0",
-		//	CurrentShootWorkers: fixMultipleWorkers([]workerConfig{
-		//		{"main-worker", "openstack.small", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-de-1a"}},
-		//		{"next-worker", "openstack.big", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-de-1a", "eu-de-1b"}}}),
-		//	ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
-		//		{"main-worker", "openstack.small", "gardenlinux", "1313.4.0", 1, 3, []string{"eu-de-1a"}},
-		//		{"next-worker", "openstack.big", "gardenlinux", "1313.2.0", 1, 3, []string{"eu-de-1a", "eu-de-1b"}}}),
-		//	ExistingInfraConfig:        fixOpenstackInfrastructureConfig("10.250.0.0/22"),
-		//	ExistingControlPlaneConfig: fixOpenstackControlPlaneConfig(),
-		//	ExpectedInfraConfigCIDR:    "10.250.0.0/16",
-		//},
 	} {
 		t.Run(tname, func(t *testing.T) {
 			// given
