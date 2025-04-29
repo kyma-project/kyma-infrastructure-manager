@@ -32,10 +32,7 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 			provider.Workers = append(provider.Workers, *rt.Spec.Shoot.Provider.AdditionalWorkers...)
 		}
 
-		workerZones, err := getNetworkingZonesFromWorkers(provider.Workers)
-		if err != nil {
-			return err
-		}
+		workerZones := getNetworkingZonesFromWorkers(provider.Workers)
 
 		infraConfig, controlPlaneConf, err := getConfig(rt.Spec.Shoot, workerZones, nil)
 		if err != nil {
@@ -67,7 +64,11 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 		}
 
 		if len(rt.Spec.Shoot.Provider.Workers) != 1 {
-			return errors.New("single main worker is required")
+			return errors.New("single main worker is required on the Runtime CR")
+		}
+
+		if len(shootWorkers) == 0 {
+			return errors.New("shoot workers are required")
 		}
 
 		if rt.Spec.Shoot.Provider.AdditionalWorkers != nil {
@@ -76,15 +77,8 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 
 		provider.Workers = sortWorkersToShootOrder(provider.Workers, shootWorkers)
 
-		workerZonesFromRuntime, err := getNetworkingZonesFromWorkers(provider.Workers)
-		if err != nil {
-			return err
-		}
-
-		workerZonesFromShoot, err := getNetworkingZonesFromWorkers(shootWorkers)
-		if err != nil {
-			return err
-		}
+		workerZonesFromRuntime := getNetworkingZonesFromWorkers(provider.Workers)
+		workerZonesFromShoot := getNetworkingZonesFromWorkers(shootWorkers)
 
 		zonesAdded := newZonesAdded(workerZonesFromShoot, workerZonesFromRuntime)
 		azureLiteCluster, err := isAzureLiteSetup(rt.Spec.Shoot.Provider.Type, existingInfraConfig.Raw)
@@ -246,12 +240,8 @@ func getAWSWorkerConfig() (*runtime.RawExtension, error) {
 	return &runtime.RawExtension{Raw: workerConfigBytes}, nil
 }
 
-func getNetworkingZonesFromWorkers(workers []gardener.Worker) ([]string, error) {
+func getNetworkingZonesFromWorkers(workers []gardener.Worker) []string {
 	var zones []string
-
-	if len(workers) == 0 {
-		return nil, errors.New("no workers provided")
-	}
 
 	for _, worker := range workers {
 		for _, zone := range worker.Zones {
@@ -261,7 +251,7 @@ func getNetworkingZonesFromWorkers(workers []gardener.Worker) ([]string, error) 
 		}
 	}
 
-	return zones, nil
+	return zones
 }
 
 func setWorkerConfig(provider *gardener.Provider, providerType string, enableIMDSv2 bool) error {
