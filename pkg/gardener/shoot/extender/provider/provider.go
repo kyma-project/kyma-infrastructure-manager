@@ -58,7 +58,6 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 }
 
 // Zones for patching workes are taken from existing shoot workers
-// InfrastructureConfig and ControlPlaneConfig are treated as immutable unless they are specified in the RuntimeCR
 func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, defMachineImgVer string, shootWorkers []gardener.Worker, existingInfraConfig, existingControlPlaneConfig *runtime.RawExtension) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
