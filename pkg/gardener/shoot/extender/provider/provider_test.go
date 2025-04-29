@@ -548,6 +548,64 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 	}
 }
 
+func TestProviderExtenderForPatchWorkersUpdateErrors(t *testing.T) {
+	for tname, tc := range map[string]struct {
+		Runtime                    imv1.Runtime
+		CurrentShootWorkers        []gardener.Worker
+		ExistingInfraConfig        *runtime.RawExtension
+		ExistingControlPlaneConfig *runtime.RawExtension
+	}{
+		"Existing InfrastructureConfig required": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAWS, fixMultipleWorkers([]workerConfig{
+							{"main-worker", "m6i.large", "gardenlinux", "1313.4.0", 1, 3, []string{"eu-central-1a"}},
+						})),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			CurrentShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a"}}}),
+			ExistingInfraConfig:        nil,
+			ExistingControlPlaneConfig: fixAWSControlPlaneConfig(),
+		},
+		"Main worker not defined": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: imv1.Provider{
+							Type: "aws",
+						},
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			CurrentShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a"}}}),
+			ExistingInfraConfig:        fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a"}),
+			ExistingControlPlaneConfig: fixAWSControlPlaneConfig(),
+		},
+	} {
+		t.Run(tname, func(t *testing.T) {
+			// given
+			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
+
+			// when
+			extender := NewProviderExtenderPatchOperation(false, "", "", tc.CurrentShootWorkers, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig)
+			err := extender(tc.Runtime, &shoot)
+
+			// then
+			require.Error(t, err)
+		})
+	}
+}
+
 func assertExistingZonesAWSInfrastructureNotModified(t *testing.T, infraConfigBeforeUpdate *runtime.RawExtension, infraConfigToUpdate *runtime.RawExtension) {
 	var existingInfraConfig awsinfra.InfrastructureConfig
 	err := yaml.Unmarshal(infraConfigBeforeUpdate.Raw, &existingInfraConfig)

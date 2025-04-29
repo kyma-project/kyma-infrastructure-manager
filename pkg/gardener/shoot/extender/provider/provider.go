@@ -64,6 +64,10 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 		provider.Type = rt.Spec.Shoot.Provider.Type
 		provider.Workers = rt.Spec.Shoot.Provider.Workers
 
+		if existingInfraConfig == nil {
+			return errors.New("existing infrastructure config is required")
+		}
+
 		if len(rt.Spec.Shoot.Provider.Workers) != 1 {
 			return errors.New("single main worker is required")
 		}
