@@ -36,62 +36,6 @@ func TestValidations(t *testing.T) {
 		// then
 		require.Error(t, err)
 	})
-
-	//for tname, tc := range map[string]struct {
-	//	Runtime        imv1.Runtime
-	//	CurrentWorkers []gardener.Worker
-	//}{
-	//	"Fail if the worker pool specified in the Runtime CR refers to a zone not specified in Infrastructure Provider Config (AWS)": {
-	//		Runtime: imv1.Runtime{
-	//			Spec: imv1.RuntimeSpec{
-	//				Shoot: imv1.RuntimeShoot{
-	//					Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeAWS, fixMultipleWorkers([]workerConfig{
-	//						{"main-worker", "m6i.large", "gardenlinux", "1310.4.0", 1, 3, []string{"eu-central-1d"}},
-	//						{"additional", "m7i.large", "gardenlinux", "1311.2.0", 2, 4, []string{"eu-central-1a", "eu-central-1b"}},
-	//					}), fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}), fixAWSControlPlaneConfig()),
-	//					Networking: imv1.Networking{
-	//						Nodes: "10.250.0.0/22",
-	//					},
-	//				},
-	//			},
-	//		},
-	//		CurrentWorkers: fixMultipleWorkers([]workerConfig{
-	//			{"main-worker", "m6i.large", "gardenlinux", "1310.4.0", 1, 3, []string{"eu-central-1a"}},
-	//			{"additional", "m7i.large", "gardenlinux", "1311.2.0", 2, 4, []string{"eu-central-1a", "eu-central-1b"}},
-	//		}),
-	//	},
-	//	"Fail if the worker pool specified in the Runtime CR refers to a zone not specified in Infrastructure Provider Config (GCP)": {
-	//		Runtime: imv1.Runtime{
-	//			Spec: imv1.RuntimeSpec{
-	//				Shoot: imv1.RuntimeShoot{
-	//					Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeGCP, fixMultipleWorkers([]workerConfig{
-	//						{"main-worker", "m6i.large", "gardenlinux", "1310.4.0", 1, 3, []string{"us-central1-d"}},
-	//						{"additional", "m7i.large", "gardenlinux", "1311.2.0", 2, 4, []string{"us-central1-a", "us-central1-b"}},
-	//					}), fixGCPInfrastructureConfig("10.250.0.0/22"), fixAWSControlPlaneConfig()),
-	//					Networking: imv1.Networking{
-	//						Nodes: "10.250.0.0/22",
-	//					},
-	//				},
-	//			},
-	//		},
-	//		CurrentWorkers: fixMultipleWorkers([]workerConfig{
-	//			{"main-worker", "m6i.large", "gardenlinux", "1310.4.0", 1, 3, []string{"eu-central-1a"}},
-	//			{"additional", "m7i.large", "gardenlinux", "1311.2.0", 2, 4, []string{"eu-central-1a", "eu-central-1b"}},
-	//		}),
-	//	},
-	//} {
-	//	t.Run(tname, func(t *testing.T) {
-	//		// given
-	//		shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
-	//
-	//		// when
-	//		extender := NewProviderExtenderPatchOperation(false, "gardenlinux", "1311.2.0", tc.CurrentWorkers, nil, nil)
-	//		err := extender(tc.Runtime, &shoot)
-	//
-	//		// then
-	//		require.Error(t, err)
-	//	})
-	//}
 }
 
 func TestFixAlignWorkerZonesWithGardener(t *testing.T) {
