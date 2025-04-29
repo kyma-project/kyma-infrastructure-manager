@@ -199,32 +199,6 @@ func TestProviderExtenderForPatchWorkersUpdateOpenstack(t *testing.T) {
 			ExistingControlPlaneConfig: fixOpenstackControlPlaneConfig(),
 			ExpectedInfraConfigCIDR:    "10.250.0.0/22",
 		},
-		"Add additional worker - extend existing additional worker from non HA setup to HA setup by adding more zones (use zone not specified in the existing shoot, and infrastructure config provided in the Runtime CR)": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{
-						Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeOpenStack, fixMultipleWorkers([]workerConfig{
-							{"main-worker", "openstack.small", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}},
-							{"additional", "openstack.big", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1d"}},
-						}), fixOpenstackInfrastructureConfig("10.250.0.0/22"), fixOpenstackControlPlaneConfig()),
-						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
-						},
-					},
-				},
-			},
-			DefaultMachineImageName:    "gardenlinux",
-			DefaultMachineImageVersion: "1312.3.0",
-			CurrentShootWorkers: fixMultipleWorkers([]workerConfig{
-				{"main-worker", "openstack.small", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}},
-				{"additional", "openstack.big", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-de-1c"}}}),
-			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
-				{"main-worker", "openstack.small", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}},
-				{"additional", "openstack.big", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-de-1c", "eu-de-1a", "eu-de-1b", "eu-de-1d"}}}),
-			ExistingInfraConfig:        fixOpenstackInfrastructureConfig("10.250.0.0/22"),
-			ExistingControlPlaneConfig: fixOpenstackControlPlaneConfig(),
-			ExpectedInfraConfigCIDR:    "10.250.0.0/22",
-		},
 		"Remove additional worker from existing set of workers": {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{

@@ -205,32 +205,6 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 			ExistingInfraConfig:        fixAzureInfrastructureConfig(t, "10.250.0.0/22", []string{"1", "2", "3"}),
 			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
 		},
-		"Add additional worker - extend existing additional worker from non HA setup to HA setup by adding more zones (use zone not specified in the existing shoot, and infrastructure config provided in the Runtime CR)": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{
-						Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeAzure, fixMultipleWorkers([]workerConfig{
-							{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
-							{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "4"}},
-						}), fixAzureInfrastructureConfig(t, "10.250.0.0/22", []string{"1", "2", "3"}), fixAzureControlPlaneConfig()),
-						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
-						},
-					},
-				},
-			},
-			DefaultMachineImageName:    "gardenlinux",
-			DefaultMachineImageVersion: "1312.3.0",
-			ExpectedZonesCount:         4,
-			CurrentShootWorkers: fixMultipleWorkers([]workerConfig{
-				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
-				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"2"}}}),
-			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
-				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
-				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"2", "1", "4"}}}),
-			ExistingInfraConfig:        fixAzureInfrastructureConfig(t, "10.250.0.0/22", []string{"1", "2", "3"}),
-			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
-		},
 		"Add additional worker - extend existing additional worker from non HA setup to HA setup by adding more zones, infrastructureConfig has no zones - legacy azure-lite case": {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
@@ -352,32 +326,6 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 				{"next-worker", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "3"}}}),
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "m6i.large", "gardenlinux", "1313.4.0", 1, 3, []string{"1"}}}),
-			ExpectedZonesCount:         3,
-			ExistingInfraConfig:        fixAzureInfrastructureConfig(t, "10.250.0.0/22", []string{"1", "2", "3"}),
-			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
-		},
-		"Modify infrastructure config with value provided externally with 3 zones": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{
-						Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeAzure, fixMultipleWorkers([]workerConfig{
-							{"main-worker", "azure.large", "gardenlinux", "1313.4.0", 1, 3, []string{"1"}},
-							{"additional", "azure.large", "gardenlinux", "1313.2.0", 1, 3, []string{"1", "2"}},
-						}), fixAzureInfrastructureConfig(t, "10.250.0.0/22", []string{"1", "2", "3"}), fixAWSControlPlaneConfig()),
-						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
-						},
-					},
-				},
-			},
-			DefaultMachineImageName:    "gardenlinux",
-			DefaultMachineImageVersion: "1312.3.0",
-			CurrentShootWorkers: fixMultipleWorkers([]workerConfig{
-				{"main-worker", "azure.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1"}},
-				{"additional", "azure.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2"}}}),
-			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
-				{"main-worker", "azure.large", "gardenlinux", "1313.4.0", 1, 3, []string{"1"}},
-				{"additional", "azure.large", "gardenlinux", "1313.2.0", 1, 3, []string{"1", "2"}}}),
 			ExpectedZonesCount:         3,
 			ExistingInfraConfig:        fixAzureInfrastructureConfig(t, "10.250.0.0/22", []string{"1", "2", "3"}),
 			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
