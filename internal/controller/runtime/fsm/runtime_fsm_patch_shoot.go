@@ -100,6 +100,8 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	if !workersAreEqual(s.shoot.Spec.Provider.Workers, updatedShoot.Spec.Provider.Workers) {
 		copyShoot := s.shoot.DeepCopy()
 		copyShoot.Spec.Provider.Workers = updatedShoot.Spec.Provider.Workers
+		copyShoot.Spec.Provider.ControlPlaneConfig = updatedShoot.Spec.Provider.ControlPlaneConfig
+		copyShoot.Spec.Provider.InfrastructureConfig = updatedShoot.Spec.Provider.InfrastructureConfig
 
 		updateErr := m.ShootClient.Update(ctx, copyShoot,
 			&client.UpdateOptions{
