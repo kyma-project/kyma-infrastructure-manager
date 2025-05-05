@@ -56,7 +56,7 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 	if err := r.Get(ctx, request.NamespacedName, &runtime); err != nil {
 
 		if errors.IsNotFound(err) {
-			r.Cfg.Metrics.CleanUpPendingStateDuration(request.NamespacedName.Name)
+			r.Cfg.Metrics.CleanUpPendingStateDuration(request.Name)
 		}
 
 		return ctrl.Result{
