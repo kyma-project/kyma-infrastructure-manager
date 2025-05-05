@@ -23,7 +23,6 @@ on:
       - .gitignore
       - "**.md"
 env:
-  COVERFILE: true
   GITHUB_BASELINE_WORKFLOW_REF: "tests"
 
 permissions:
