@@ -78,6 +78,13 @@ var (
 		}
 	}
 
+	withStructuredAuthEnabled = func(enabled bool) fakeFSMOpt {
+		return func(fsm *fsm) error {
+			fsm.StructuredAuthEnabled = enabled
+			return nil
+		}
+	}
+
 	withAuditLogConfig = func(provider, region string, data auditlogs.AuditLogData) fakeFSMOpt {
 		return func(fsm *fsm) error {
 			fsm.AuditLogging = auditlogs.Configuration{
@@ -178,6 +185,26 @@ var (
 				Patch:  fsm_testing.GetFakePatchInterceptorFn(true),
 				Update: fsm_testing.GetFakeUpdateInterceptorFnError(err),
 			}).Build()
+
+		return func(fsm *fsm) error {
+			fsm.Client = k8sClient
+			fsm.ShootClient = k8sClient
+			return nil
+		}
+	}
+
+	withFakedK8sClientNoPatchInterceptor = func(
+		scheme *runtime.Scheme,
+		objs ...client.Object) fakeFSMOpt {
+
+		k8sClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(objs...).
+			WithStatusSubresource(objs...).
+			WithInterceptorFuncs(interceptor.Funcs{
+				Patch: fsm_testing.GetFakePatchInterceptorFn(true),
+			}).
+			Build()
 
 		return func(fsm *fsm) error {
 			fsm.Client = k8sClient

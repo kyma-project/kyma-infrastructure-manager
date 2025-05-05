@@ -2,10 +2,10 @@ package fsm
 
 import (
 	"context"
-
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,7 +16,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	if !s.shoot.GetDeletionTimestamp().IsZero() {
 		m.Metrics.SetPendingStateDuration("delete", s.instance)
 		m.log.V(log_level.DEBUG).Info("Waiting for shoot to be deleted", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
-		return requeueAfter(m.RCCfg.RequeueDurationShootDelete)
+		return requeueAfter(m.RequeueDurationShootDelete)
 	}
 
 	// action section
@@ -34,6 +34,23 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		if err != nil {
 			m.log.Error(err, "unable to patch shoot:", "Name", s.shoot.Name)
 			return requeue()
+		}
+	}
+
+	if m.StructuredAuthEnabled {
+		m.log.Info("deleting structured authentication config", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
+		err := structuredauth.DeleteStructuredConfigMap(ctx, m.ShootClient, *s.shoot)
+		if err != nil {
+			// action error handler section
+			m.log.Error(err, "Failed to delete structured authentication configmap")
+			s.instance.UpdateStateDeletion(
+				imv1.ConditionTypeRuntimeDeprovisioned,
+				imv1.ConditionReasonStructuredConfigDeleted,
+				"False",
+				"Gardener API structured authentication configmap delete error",
+			)
+
+			return updateStatusAndRequeueAfter(m.RequeueDurationShootDelete)
 		}
 	}
 
@@ -58,7 +75,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	}
 
 	// out section
-	return updateStatusAndRequeueAfter(m.RCCfg.RequeueDurationShootDelete)
+	return updateStatusAndRequeueAfter(m.RequeueDurationShootDelete)
 }
 
 // workaround

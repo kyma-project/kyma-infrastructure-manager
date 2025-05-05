@@ -21,7 +21,7 @@ func TestSeedSelectorExtender(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.NotNil(t, shoot.Spec.SeedSelector)
-		assert.Equal(t, runtimeShoot.Spec.Shoot.Region, shoot.Spec.SeedSelector.LabelSelector.MatchLabels[seedRegionSelectorLabel])
+		assert.Equal(t, runtimeShoot.Spec.Shoot.Region, shoot.Spec.SeedSelector.MatchLabels[seedRegionSelectorLabel])
 	})
 
 	t.Run("Don't add seed selector field if RuntimeCR has SeedInSameRegionFlag set to false", func(t *testing.T) {

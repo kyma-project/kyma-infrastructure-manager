@@ -21,8 +21,8 @@ func TestControlPlaneConfig(t *testing.T) {
 		err = json.Unmarshal(controlPlaneConfigBytes, &controlPlaneConfig)
 		require.NoError(t, err)
 
-		assert.Equal(t, apiVersion, controlPlaneConfig.TypeMeta.APIVersion)
-		assert.Equal(t, controlPlaneConfigKind, controlPlaneConfig.TypeMeta.Kind)
+		assert.Equal(t, apiVersion, controlPlaneConfig.APIVersion)
+		assert.Equal(t, controlPlaneConfigKind, controlPlaneConfig.Kind)
 		assert.Equal(t, defaultLoadBalancerProvider, controlPlaneConfig.LoadBalancerProvider)
 	})
 }
@@ -39,8 +39,8 @@ func TestInfrastructureConfig(t *testing.T) {
 		err = json.Unmarshal(infrastructureConfigBytes, &infrastructureConfig)
 		require.NoError(t, err)
 
-		assert.Equal(t, apiVersion, infrastructureConfig.TypeMeta.APIVersion)
-		assert.Equal(t, infrastructureConfigKind, infrastructureConfig.TypeMeta.Kind)
+		assert.Equal(t, apiVersion, infrastructureConfig.APIVersion)
+		assert.Equal(t, infrastructureConfigKind, infrastructureConfig.Kind)
 		assert.Equal(t, "10.250.0.0/22", infrastructureConfig.Networks.Workers)
 		assert.Equal(t, defaultFloatingPoolName, infrastructureConfig.FloatingPoolName)
 	})

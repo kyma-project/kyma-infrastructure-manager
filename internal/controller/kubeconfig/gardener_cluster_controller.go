@@ -163,8 +163,8 @@ func (controller *GardenerClusterController) Reconcile(ctx context.Context, req 
 }
 
 func (controller *GardenerClusterController) unsetMetrics(req ctrl.Request) {
-	controller.metrics.CleanUpGardenerClusterGauge(req.NamespacedName.Name)
-	controller.metrics.CleanUpKubeconfigExpiration(req.NamespacedName.Name)
+	controller.metrics.CleanUpGardenerClusterGauge(req.Name)
+	controller.metrics.CleanUpKubeconfigExpiration(req.Name)
 }
 
 func loggingContextFromCluster(cluster *imv1.GardenerCluster) []any {
@@ -392,7 +392,7 @@ func (controller *GardenerClusterController) removeForceRotationAnnotation(ctx c
 		}
 		var clusterToUpdate imv1.GardenerCluster
 
-		err := controller.Client.Get(ctx, key, &clusterToUpdate)
+		err := controller.Get(ctx, key, &clusterToUpdate)
 		if err != nil {
 			return err
 		}

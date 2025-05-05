@@ -39,7 +39,7 @@ func sFnDeleteKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 	// wait section
 	if !cluster.DeletionTimestamp.IsZero() {
 		m.log.V(log_level.DEBUG).Info("Waiting for GardenerCluster CR to be deleted", "Runtime", runtimeID, "Shoot", s.shoot.Name)
-		return requeueAfter(m.RCCfg.ControlPlaneRequeueDuration)
+		return requeueAfter(m.ControlPlaneRequeueDuration)
 	}
 
 	// action section
@@ -64,5 +64,5 @@ func sFnDeleteKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 	}
 
 	// out succeeded section
-	return updateStatusAndRequeueAfter(m.RCCfg.ControlPlaneRequeueDuration)
+	return updateStatusAndRequeueAfter(m.ControlPlaneRequeueDuration)
 }

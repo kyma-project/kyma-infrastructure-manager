@@ -3,6 +3,8 @@ package fsm
 import (
 	"context"
 	"fmt"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
 	"reflect"
 	"time"
 
@@ -29,13 +31,29 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		m.log.Error(err, msgFailedToConfigureAuditlogs)
 	}
 
-	if err != nil && m.RCCfg.AuditLogMandatory {
+	if err != nil && m.AuditLogMandatory {
 		m.Metrics.IncRuntimeFSMStopCounter()
 		return updateStatePendingWithErrorAndStop(
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonAuditLogError,
 			msgFailedToConfigureAuditlogs)
+	}
+
+	if m.StructuredAuthEnabled {
+		oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
+
+		cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
+		err = structuredauth.CreateOrUpdateStructuredAuthConfigMap(ctx, m.ShootClient, types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace}, oidcConfig)
+
+		if err != nil {
+			m.Metrics.IncRuntimeFSMStopCounter()
+			return updateStatePendingWithErrorAndStop(
+				&s.instance,
+				imv1.ConditionTypeRuntimeProvisioned,
+				imv1.ConditionReasonOidcError,
+				msgFailedStructuredConfigMap)
+		}
 	}
 
 	// NOTE: In the future we want to pass the whole shoot object here
@@ -50,6 +68,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		InfrastructureConfig:  s.shoot.Spec.Provider.InfrastructureConfig,
 		ControlPlaneConfig:    s.shoot.Spec.Provider.ControlPlaneConfig,
 		Log:                   ptr.To(m.log),
+		StructuredAuthEnabled: m.StructuredAuthEnabled,
 	})
 
 	if err != nil {
@@ -60,6 +79,19 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	m.log.V(log_level.DEBUG).Info("Shoot converted successfully", "Name", updatedShoot.Name, "Namespace", updatedShoot.Namespace)
 
+	if m.StructuredAuthEnabled {
+		// The additional update operation is required to migrate OIDC to structured authentication. Thr Gardener doesn't support setting spec.kubernetes.kubeAPIServer.OIDCConfig and spec.kubernetes.kubeAPIServer.structuredAuthentication at the same time.
+		// Patch operation is not enough to nil the OIDCConfig field in the shoot object. The OIDCConfig field is marked with omitempty so that the server patch apply cannot remove it.
+		// The attempt to set the empty OIDCConfig field didn't work as the validation code checks if the OIDCConfig is not nil (https://github.com/gardener/gardener/blob/d48ed8610558c98e3a9fd3de963c11c13402c534/pkg/apis/core/validation/shoot.go#L1416).
+		// Once the migration is done this code should be removed
+		err = migrateOIDCToStructuredAuth(ctx, updatedShoot, m, s)
+		nextState, res, err := handleUpdateError(err, m, s, "Failed to migrate shoot object to structured authentication", "Gardener API shoot update error")
+
+		if nextState != nil {
+			return nextState, res, err
+		}
+	}
+
 	// The additional Update function is required to fully replace shoot Workers collection with workers defined in updated runtime object.
 	// This is a workaround for the sigs.k8s.io/controller-runtime/pkg/client, which does not support replacing the Workers collection with client.Patch
 	// This could caused some workers to be not removed from the shoot object during update
@@ -68,6 +100,8 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	if !workersAreEqual(s.shoot.Spec.Provider.Workers, updatedShoot.Spec.Provider.Workers) {
 		copyShoot := s.shoot.DeepCopy()
 		copyShoot.Spec.Provider.Workers = updatedShoot.Spec.Provider.Workers
+		copyShoot.Spec.Provider.ControlPlaneConfig = updatedShoot.Spec.Provider.ControlPlaneConfig
+		copyShoot.Spec.Provider.InfrastructureConfig = updatedShoot.Spec.Provider.InfrastructureConfig
 
 		updateErr := m.ShootClient.Update(ctx, copyShoot,
 			&client.UpdateOptions{
@@ -81,6 +115,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 		nextState, res, err = waitForWorkerPoolUpdate(ctx, m, s, copyShoot)
 		if err != nil {
+
 			return requeue()
 		}
 
@@ -127,7 +162,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		"Shoot is pending for update after patch",
 	)
 
-	return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+	return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
 }
 
 func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg string) (stateFn, *ctrl.Result, error) {
@@ -142,7 +177,7 @@ func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg stri
 				"Shoot is pending for update after conflict error",
 			)
 
-			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+			return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
 		}
 
 		// We're retrying on Forbidden error because Gardener returns them from time too time for operations that are properly authorized.
@@ -156,7 +191,7 @@ func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg stri
 				"Shoot is pending for update after forbidden error",
 			)
 
-			return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+			return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
 		}
 
 		m.log.Error(err, errMsg)
@@ -247,4 +282,32 @@ func updateStatePendingWithErrorAndStop(instance *imv1.Runtime,
 	c imv1.RuntimeConditionType, r imv1.RuntimeConditionReason, msg string) (stateFn, *ctrl.Result, error) {
 	instance.UpdateStatePending(c, r, "False", msg)
 	return updateStatusAndStop()
+}
+
+func migrateOIDCToStructuredAuth(ctx context.Context, shootToUpdate gardener.Shoot, m *fsm, s *systemState) error {
+
+	var err error
+
+	if shootToUpdate.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication != nil &&
+		structuredauth.OIDCConfigured(*s.shoot) {
+		m.log.Info("Migrating OIDC to structured authentication")
+
+		copyShoot := s.shoot.DeepCopy()
+		// nolint: staticcheck
+		copyShoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
+
+		err = m.ShootClient.Update(ctx, copyShoot, &client.UpdateOptions{
+			FieldManager: fieldManagerName,
+		})
+
+		if err == nil {
+			err = m.ShootClient.Get(ctx, types.NamespacedName{
+				Name:      s.instance.Spec.Shoot.Name,
+				Namespace: m.ShootNamesapace,
+			}, s.shoot, &client.GetOptions{})
+		}
+
+	}
+
+	return err
 }
