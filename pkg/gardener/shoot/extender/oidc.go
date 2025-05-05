@@ -1,50 +1,27 @@
 package extender
 
 import (
+	"fmt"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/pkg/config"
 )
 
 const (
-	OidcExtensionType = "shoot-oidc-service"
+	StructuredAuthConfigFmt = "structured-auth-config-%s"
 )
 
-func shouldDefaultOidcConfig(config gardener.OIDCConfig) bool {
-	return config.ClientID == nil && config.IssuerURL == nil
-}
+func NewOidcExtender() func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 
-func NewOidcExtender(oidcProvider config.OidcProvider) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		oidcConfig := runtime.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig
-		if shouldDefaultOidcConfig(oidcConfig) {
-			oidcConfig = gardener.OIDCConfig{
-				ClientID:       &oidcProvider.ClientID,
-				GroupsClaim:    &oidcProvider.GroupsClaim,
-				IssuerURL:      &oidcProvider.IssuerURL,
-				SigningAlgs:    oidcProvider.SigningAlgs,
-				UsernameClaim:  &oidcProvider.UsernameClaim,
-				UsernamePrefix: &oidcProvider.UsernamePrefix,
-			}
+		cmName := fmt.Sprintf(StructuredAuthConfigFmt, runtime.Spec.Shoot.Name)
+
+		shoot.Spec.Kubernetes.KubeAPIServer = &gardener.KubeAPIServerConfig{
+			StructuredAuthentication: &gardener.StructuredAuthentication{
+				ConfigMapName: cmName,
+			},
+			OIDCConfig: nil,
 		}
-		setKubeAPIServerOIDCConfig(shoot, oidcConfig)
 
 		return nil
-	}
-}
-
-func setKubeAPIServerOIDCConfig(shoot *gardener.Shoot, oidcConfig gardener.OIDCConfig) {
-	shoot.Spec.Kubernetes.KubeAPIServer = &gardener.KubeAPIServerConfig{
-		OIDCConfig: &gardener.OIDCConfig{
-			CABundle:       oidcConfig.CABundle,
-			ClientID:       oidcConfig.ClientID,
-			GroupsClaim:    oidcConfig.GroupsClaim,
-			GroupsPrefix:   oidcConfig.GroupsPrefix,
-			IssuerURL:      oidcConfig.IssuerURL,
-			RequiredClaims: oidcConfig.RequiredClaims,
-			SigningAlgs:    oidcConfig.SigningAlgs,
-			UsernameClaim:  oidcConfig.UsernameClaim,
-			UsernamePrefix: oidcConfig.UsernamePrefix,
-		},
 	}
 }

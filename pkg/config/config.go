@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"io"
 )
 
@@ -42,6 +43,17 @@ type OidcProvider struct {
 	SigningAlgs    []string `json:"signingAlgs" validate:"required"`
 	UsernameClaim  string   `json:"usernameClaim" validate:"required"`
 	UsernamePrefix string   `json:"usernamePrefix" validate:"required"`
+}
+
+func (p OidcProvider) ToOIDCConfig() gardener.OIDCConfig {
+	return gardener.OIDCConfig{
+		ClientID:       &p.ClientID,
+		GroupsClaim:    &p.GroupsClaim,
+		IssuerURL:      &p.IssuerURL,
+		SigningAlgs:    p.SigningAlgs,
+		UsernameClaim:  &p.UsernameClaim,
+		UsernamePrefix: &p.UsernamePrefix,
+	}
 }
 
 type AuditLogConfig struct {

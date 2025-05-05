@@ -22,6 +22,7 @@ Run `make test` to see if all tests are passing.
 9. `audit-log-mandatory` - feature flag responsible for enabling the Audit Log strict config. Default value is `true`.
 10. `runtime-ctrl-workers-cnt` - number of workers running in parallel for Runtime Controller. Default value is `25`.
 11. `gardener-cluster-ctrl-workers-cnt` - number of workers running in parallel for GardenerCluster Controller. Default value is `25`.
+12. `structured-auth-enabled` - feature flag responsible for enabling the structured authentication. Default value is `false`.
 
 See [manager_gardener_secret_patch.yaml](../config/default/manager_gardener_secret_patch.yaml) for default values.
 ## Troubleshooting

@@ -5,6 +5,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/restrictions"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -18,14 +19,22 @@ import (
 
 type Extend func(imv1.Runtime, *gardener.Shoot) error
 
-func baseExtenders(cfg config.ConverterConfig) []Extend {
+func baseExtenders(cfg config.ConverterConfig, structuredAuthEnabled bool) []Extend {
+
+	oidcExtender := extender2.NewLegacyOidcExtender(cfg.Kubernetes.DefaultOperatorOidc)
+
+	if structuredAuthEnabled {
+		oidcExtender = extender2.NewOidcExtender()
+	}
+
 	return []Extend{
 		extender2.ExtendWithAnnotations,
 		extender2.ExtendWithLabels,
 		extender2.ExtendWithSeedSelector,
-		extender2.NewOidcExtender(cfg.Kubernetes.DefaultOperatorOidc),
+		oidcExtender,
 		extender2.ExtendWithCloudProfile,
 		extender2.ExtendWithExposureClassName,
+		restrictions.ExtendWithAccessRestriction(),
 	}
 }
 
@@ -45,6 +54,7 @@ type CreateOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
+	StructuredAuthEnabled bool
 }
 
 type WorkerZones struct {
@@ -56,17 +66,18 @@ type PatchOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
-	ShootK8SVersion      string
-	Workers              []gardener.Worker
-	Extensions           []gardener.Extension
-	Resources            []gardener.NamedResourceReference
-	InfrastructureConfig *runtime.RawExtension
-	ControlPlaneConfig   *runtime.RawExtension
-	Log                  *logr.Logger
+	ShootK8SVersion       string
+	Workers               []gardener.Worker
+	Extensions            []gardener.Extension
+	Resources             []gardener.NamedResourceReference
+	InfrastructureConfig  *runtime.RawExtension
+	ControlPlaneConfig    *runtime.RawExtension
+	Log                   *logr.Logger
+	StructuredAuthEnabled bool
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {
-	extendersForCreate := baseExtenders(opts.ConverterConfig)
+	extendersForCreate := baseExtenders(opts.ConverterConfig, opts.StructuredAuthEnabled)
 
 	extendersForCreate = append(extendersForCreate,
 		provider.NewProviderExtenderForCreateOperation(
@@ -84,7 +95,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 	extendersForCreate = append(extendersForCreate,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
 
-	extendersForCreate = append(extendersForCreate, maintenance.NewMaintenanceExtender(opts.ConverterConfig.Kubernetes.EnableKubernetesVersionAutoUpdate, opts.ConverterConfig.Kubernetes.EnableMachineImageVersionAutoUpdate, opts.MaintenanceTimeWindow))
+	extendersForCreate = append(extendersForCreate, maintenance.NewMaintenanceExtender(opts.Kubernetes.EnableKubernetesVersionAutoUpdate, opts.Kubernetes.EnableMachineImageVersionAutoUpdate, opts.MaintenanceTimeWindow))
 
 	if opts.AuditLogData != (auditlogs.AuditLogData{}) {
 		extendersForCreate = append(extendersForCreate,
@@ -97,7 +108,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 }
 
 func NewConverterPatch(opts PatchOpts) Converter {
-	extendersForPatch := baseExtenders(opts.ConverterConfig)
+	extendersForPatch := baseExtenders(opts.ConverterConfig, opts.StructuredAuthEnabled)
 
 	extendersForPatch = append(extendersForPatch,
 		provider.NewProviderExtenderPatchOperation(
@@ -106,8 +117,7 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.MachineImage.DefaultVersion,
 			opts.Workers,
 			opts.InfrastructureConfig,
-			opts.ControlPlaneConfig,
-			opts.Log))
+			opts.ControlPlaneConfig))
 
 	extendersForPatch = append(extendersForPatch,
 		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.Extensions),
@@ -115,11 +125,11 @@ func NewConverterPatch(opts PatchOpts) Converter {
 
 	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
 
-	extendersForPatch = append(extendersForPatch, maintenance.NewMaintenanceExtender(opts.ConverterConfig.Kubernetes.EnableKubernetesVersionAutoUpdate, opts.ConverterConfig.Kubernetes.EnableMachineImageVersionAutoUpdate, opts.MaintenanceTimeWindow))
+	extendersForPatch = append(extendersForPatch, maintenance.NewMaintenanceExtender(opts.Kubernetes.EnableKubernetesVersionAutoUpdate, opts.Kubernetes.EnableMachineImageVersionAutoUpdate, opts.MaintenanceTimeWindow))
 
 	if opts.AuditLogData != (auditlogs.AuditLogData{}) {
 		extendersForPatch = append(extendersForPatch,
-			auditlogs.NewAuditlogExtenderForPatch(opts.ConverterConfig.AuditLog.PolicyConfigMapName))
+			auditlogs.NewAuditlogExtenderForPatch(opts.AuditLog.PolicyConfigMapName))
 	}
 
 	return newConverter(opts.ConverterConfig, extendersForPatch...)

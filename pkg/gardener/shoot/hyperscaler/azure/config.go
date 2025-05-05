@@ -2,7 +2,6 @@ package azure
 
 import (
 	"encoding/json"
-
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -12,6 +11,15 @@ const apiVersion = "azure.provider.extensions.gardener.cloud/v1alpha1"
 
 func GetInfrastructureConfig(workerCIDR string, zones []string) ([]byte, error) {
 	return json.Marshal(NewInfrastructureConfig(workerCIDR, zones))
+}
+
+func GetInfrastructureConfigForPatch(workersCidr string, zones []string, existingInfrastructureConfigBytes []byte) ([]byte, error) {
+	newConfig, err := NewInfrastructureConfigForPatch(workersCidr, zones, existingInfrastructureConfigBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(newConfig)
 }
 
 func GetControlPlaneConfig(_ []string) ([]byte, error) {
@@ -58,4 +66,30 @@ func NewInfrastructureConfig(workerCIDR string, zones []string) InfrastructureCo
 	azureConfig.Networks.Zones = generateAzureZones(workerCIDR, zones)
 
 	return azureConfig
+}
+
+func NewInfrastructureConfigForPatch(workersCidr string, zones []string, existingInfrastructureConfigBytes []byte) (InfrastructureConfig, error) {
+	newConfig := NewInfrastructureConfig(workersCidr, zones)
+	existingInfrastructureConfig, err := DecodeInfrastructureConfig(existingInfrastructureConfigBytes)
+
+	if err != nil {
+		return InfrastructureConfig{}, err
+	}
+	for _, zone := range existingInfrastructureConfig.Networks.Zones {
+		for i := 0; i < len(newConfig.Networks.Zones); i++ {
+			newZone := &newConfig.Networks.Zones[i]
+			if newZone.Name == zone.Name {
+				newZone.NatGateway = zone.NatGateway
+				newZone.ServiceEndpoints = zone.ServiceEndpoints
+			}
+		}
+	}
+
+	newConfig.ResourceGroup = existingInfrastructureConfig.ResourceGroup
+	newConfig.Networks.VNet = existingInfrastructureConfig.Networks.VNet
+	newConfig.Networks.ServiceEndpoints = existingInfrastructureConfig.Networks.ServiceEndpoints
+	newConfig.Networks.NatGateway = existingInfrastructureConfig.Networks.NatGateway
+	newConfig.Networks.Workers = existingInfrastructureConfig.Networks.Workers
+
+	return newConfig, nil
 }

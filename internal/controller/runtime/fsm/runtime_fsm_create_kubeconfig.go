@@ -55,12 +55,12 @@ func sFnHandleKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 		}
 
 		s.instance.UpdateStatePending(imv1.ConditionTypeRuntimeKubeconfigReady, imv1.ConditionReasonGardenerCRCreated, "Unknown", "Gardener Cluster CR created, waiting for readiness")
-		return updateStatusAndRequeueAfter(m.RCCfg.ControlPlaneRequeueDuration)
+		return updateStatusAndRequeueAfter(m.ControlPlaneRequeueDuration)
 	}
 
 	// wait section
 	if cluster.Status.State != imv1.ReadyState {
-		return requeueAfter(m.RCCfg.ControlPlaneRequeueDuration)
+		return requeueAfter(m.ControlPlaneRequeueDuration)
 	}
 
 	m.log.V(log_level.DEBUG).Info("GardenerCluster CR is ready", "name", runtimeID)

@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"testing"
 )
 
@@ -81,22 +82,6 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 			ExpectedMachineImageVersion: "1312.3.0",
 			ExpectedZonesCount:          3,
 		},
-		"Create provider config for AWS with worker config provided externally": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{ //"10.250.0.0/22"
-						Provider: fixProviderWithConfig(hyperscaler.TypeAWS, "gardenlinux", "1312.3.0", []string{"eu-central-1a"},
-							fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
-							fixAWSControlPlaneConfig()),
-					},
-				},
-			},
-			EnableIMDSv2:                false,
-			DefaultMachineImageVersion:  "1312.3.0",
-			ExpectedMachineImageVersion: "1312.3.0",
-			ExpectedMachineImageName:    "gardenlinux",
-			ExpectedZonesCount:          3,
-		},
 	} {
 		t.Run(tname, func(t *testing.T) {
 			// given
@@ -149,7 +134,7 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 			ExpectedZonesCount:          3,
 			ExpectedMachineImageName:    "gardenlinux",
 			CurrentShootWorkers:         fixWorkers("worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
-			ExistingInfraConfig:         fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingInfraConfig:         fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 			ExistingControlPlaneConfig:  fixAWSControlPlaneConfig(),
 		},
 		"Same image name - override current shoot machine image version with new bigger version from RuntimeCR": {
@@ -167,7 +152,7 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 			ExpectedMachineImageVersion: "1312.2.0",
 			ExpectedZonesCount:          3,
 			ExpectedMachineImageName:    "gardenlinux",
-			ExistingInfraConfig:         fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingInfraConfig:         fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 			ExistingControlPlaneConfig:  fixAWSControlPlaneConfig(),
 		},
 		"Same image name - no version is provided override current shoot machine image version with default version": {
@@ -185,7 +170,7 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 			ExpectedMachineImageVersion: "1312.3.0",
 			ExpectedZonesCount:          3,
 			ExpectedMachineImageName:    "gardenlinux",
-			ExistingInfraConfig:         fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingInfraConfig:         fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 			ExistingControlPlaneConfig:  fixAWSControlPlaneConfig(),
 		},
 		"Different image name - override current shoot machine image and version with new data from RuntimeCR": {
@@ -203,7 +188,7 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 			ExpectedZonesCount:          3,
 			ExpectedMachineImageName:    "gardenlinux",
 			ExpectedMachineImageVersion: "1312.2.0",
-			ExistingInfraConfig:         fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingInfraConfig:         fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 			ExistingControlPlaneConfig:  fixAWSControlPlaneConfig(),
 		},
 		"Different image name - no data is provided override current shoot machine image and version with default data": {
@@ -221,7 +206,7 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 			ExpectedMachineImageVersion: "1312.3.0",
 			ExpectedZonesCount:          3,
 			ExpectedMachineImageName:    "gardenlinux",
-			ExistingInfraConfig:         fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingInfraConfig:         fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 			ExistingControlPlaneConfig:  fixAWSControlPlaneConfig(),
 		},
 		"Wrong current image name - use data from RuntimeCR": {
@@ -239,7 +224,7 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 			ExpectedMachineImageVersion: "1312.2.0",
 			ExpectedZonesCount:          3,
 			ExpectedMachineImageName:    "gardenlinux",
-			ExistingInfraConfig:         fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingInfraConfig:         fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 			ExistingControlPlaneConfig:  fixAWSControlPlaneConfig(),
 		},
 		"Wrong current image version - use data from RuntimeCR": {
@@ -257,40 +242,16 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 			ExpectedMachineImageVersion: "1312.2.0",
 			ExpectedZonesCount:          3,
 			ExpectedMachineImageName:    "gardenlinux",
-			ExistingInfraConfig:         fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+			ExistingInfraConfig:         fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 			ExistingControlPlaneConfig:  fixAWSControlPlaneConfig(),
 		},
-		"Override data in controlPlaneConfig and InfrastructureConfig - with data from RuntimeCR": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{
-						Provider: fixProviderWithConfig(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a"},
-							fixAWSInfrastructureConfig("10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
-							nil),
-						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
-						},
-					},
-				},
-			},
-			EnableIMDSv2:                false,
-			DefaultMachineImageName:     "gardenlinux",
-			DefaultMachineImageVersion:  "1312.2.0",
-			CurrentShootWorkers:         fixWorkers("worker", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a"}),
-			ExpectedMachineImageVersion: "1312.2.0",
-			ExpectedZonesCount:          3,
-			ExpectedMachineImageName:    "gardenlinux",
-			ExistingInfraConfig:         fixAWSInfrastructureConfig("10.250.0.0/16", []string{"eu-central-1a"}),
-			ExistingControlPlaneConfig:  fixAWSControlPlaneConfig(),
-		},
-		// TODO: Add tests for override of control plane config with values from RuntimeCR
 	} {
 		t.Run(tname, func(t *testing.T) {
 			// given
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderPatchOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion, tc.CurrentShootWorkers, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig, nil)
+			extender := NewProviderExtenderPatchOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion, tc.CurrentShootWorkers, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig)
 			err := extender(tc.Runtime, &shoot)
 
 			// then
@@ -302,9 +263,26 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 	}
 }
 
-func fixAWSInfrastructureConfig(workersCIDR string, zones []string) *runtime.RawExtension {
-	infraConfig, _ := aws.GetInfrastructureConfig(workersCIDR, zones)
-	return &runtime.RawExtension{Raw: infraConfig}
+func fixAWSInfrastructureConfig(t *testing.T, workersCIDR string, zones []string) *runtime.RawExtension {
+	infraConfig := aws.NewInfrastructureConfig(workersCIDR, zones)
+
+	for i := 0; i < len(zones); i++ {
+		infraConfig.Networks.Zones[i].ElasticIPAllocationID = ptr.To("eipalloc-123456")
+	}
+
+	infraConfig.DualStack = &awsext.DualStack{
+		Enabled: true,
+	}
+	infraConfig.IgnoreTags = &awsext.IgnoreTags{Keys: []string{"key1"}, KeyPrefixes: []string{"key-prefix-1"}}
+	infraConfig.EnableECRAccess = ptr.To(true)
+	infraConfig.Networks.VPC.ID = ptr.To("vpc-123456")
+	infraConfig.Networks.VPC.GatewayEndpoints = []string{"service-1", "service-2"}
+
+	infraConfigBytes, err := json.Marshal(infraConfig)
+
+	assert.NoError(t, err)
+
+	return &runtime.RawExtension{Raw: infraConfigBytes}
 }
 
 func fixAWSControlPlaneConfig() *runtime.RawExtension {

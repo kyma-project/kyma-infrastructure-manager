@@ -1,9 +1,13 @@
 package testing
 
 import (
+	"encoding/json"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/aws"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 )
 
 var (
@@ -220,3 +224,79 @@ var (
 		},
 	}
 )
+
+func TestShootForPatch() *gardener.Shoot {
+	infrastructureConfig := aws.NewInfrastructureConfig("", []string{"europe-west1-d"})
+	infraConfigBytes, _ := json.Marshal(infrastructureConfig)
+
+	return &gardener.Shoot{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-shoot",
+			Namespace: "garden-",
+		},
+		Spec: gardener.ShootSpec{
+			DNS: &gardener.DNS{
+				Domain: ptr.To("test-domain"),
+			},
+			Provider: gardener.Provider{
+				Type:    "aws",
+				Workers: fixWorkers("test-worker", "m5.xlarge", "garden-linux", "1.19.8", 1, 1, []string{"europe-west1-d"}),
+				InfrastructureConfig: &runtime.RawExtension{
+					Raw: infraConfigBytes,
+				},
+			},
+		},
+		Status: gardener.ShootStatus{
+			LastOperation: &gardener.LastOperation{
+				State: gardener.LastOperationStateSucceeded,
+			},
+		},
+	}
+}
+
+func TestShootForUpdate() *gardener.Shoot {
+	infrastructureConfig := aws.NewInfrastructureConfig("", []string{"europe-west1-d"})
+	infraConfigBytes, _ := json.Marshal(infrastructureConfig)
+
+	return &gardener.Shoot{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-shoot",
+			Namespace: "garden-",
+		},
+		Spec: gardener.ShootSpec{
+			DNS: &gardener.DNS{
+				Domain: ptr.To("test-domain"),
+			},
+			Provider: gardener.Provider{
+				Type:    "aws",
+				Workers: fixWorkers("test-worker", "m5.xlarge", "garden-linux", "1.19.8", 2, 5, []string{"europe-west1-d"}),
+				InfrastructureConfig: &runtime.RawExtension{
+					Raw: infraConfigBytes,
+				},
+			},
+		},
+		Status: gardener.ShootStatus{
+			LastOperation: &gardener.LastOperation{
+				State: gardener.LastOperationStateSucceeded,
+			},
+		},
+	}
+}
+
+func fixWorkers(name, machineType, machineImageName, machineImageVersion string, min, max int32, zones []string) []gardener.Worker {
+	return []gardener.Worker{
+		{
+			Name: name,
+			Machine: gardener.Machine{
+				Type: machineType,
+				Image: &gardener.ShootMachineImage{
+					Name:    machineImageName,
+					Version: &machineImageVersion,
+				},
+			},
+			Minimum: min,
+			Maximum: max,
+			Zones:   zones,
+		},
+	}
+}

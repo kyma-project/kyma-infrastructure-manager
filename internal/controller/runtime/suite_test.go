@@ -190,12 +190,13 @@ func setupGardenerTestClientForDelete() {
 func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot, seeds []*gardener_api.SeedList) {
 	clientScheme := runtime.NewScheme()
 	_ = gardener_api.AddToScheme(clientScheme)
+	_ = v12.AddToScheme(clientScheme)
 
 	tracker := clienttesting.NewObjectTracker(clientScheme, serializer.NewCodecFactory(clientScheme).UniversalDecoder())
 	customTracker = NewCustomTracker(tracker, shoots, seeds)
 	gardenerTestClient = fake.NewClientBuilder().WithScheme(clientScheme).WithObjectTracker(customTracker).
 		WithInterceptorFuncs(interceptor.Funcs{
-			Patch: fsm_testing.GetFakePatchInterceptorFn(),
+			Patch: fsm_testing.GetFakePatchInterceptorFn(true),
 		}).Build()
 	runtimeReconciler.ShootClient = gardenerTestClient
 }
@@ -310,7 +311,7 @@ func fixShootsSequenceForUpdate(shoot *gardener_api.Shoot) []*gardener_api.Shoot
 
 	pendingShoot := existingShoot.DeepCopy()
 
-	pendingShoot.ObjectMeta.Annotations["infrastructuremanager.kyma-project.io/runtime-generation"] = "2"
+	pendingShoot.Annotations["infrastructuremanager.kyma-project.io/runtime-generation"] = "2"
 
 	pendingShoot.Status.LastOperation.State = gardener_api.LastOperationStatePending
 
