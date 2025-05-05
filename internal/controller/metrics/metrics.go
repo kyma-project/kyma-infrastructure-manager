@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"k8s.io/apimachinery/pkg/api/meta"
 	"strconv"
 	"time"
 
@@ -22,6 +23,7 @@ const (
 	GardenerClusterStateMetricName = "im_gardener_clusters_state"
 	RuntimeStateMetricName         = "im_runtime_state"
 	RuntimeFSMStopMetricName       = "unexpected_stops_total"
+	PendigStateDurationMetricName  = "im_runtime_pending_state_duration"
 	provider                       = "provider"
 	state                          = "state"
 	reason                         = "reason"
@@ -29,6 +31,7 @@ const (
 	KubeconfigExpirationMetricName = "im_kubeconfig_expiration"
 	expires                        = "expires"
 	lastSyncAnnotation             = "operator.kyma-project.io/last-sync"
+	operation                      = "operation"
 )
 
 //go:generate mockery --name=Metrics
@@ -41,13 +44,16 @@ type Metrics interface {
 	CleanUpGardenerClusterGauge(runtimeID string)
 	CleanUpKubeconfigExpiration(runtimeID string)
 	SetKubeconfigExpiration(secret corev1.Secret, rotationPeriod time.Duration, minimalRotationTimeRatio float64)
+	SetPendingStateDuration(operation string, runtime v1.Runtime)
+	CleanUpPendingStateDuration(runtimeName string)
 }
 
 type metricsImpl struct {
-	gardenerClustersStateGaugeVec *prometheus.GaugeVec
-	kubeconfigExpirationGauge     *prometheus.GaugeVec
-	runtimeStateGauge             *prometheus.GaugeVec
-	runtimeFSMUnexpectedStopsCnt  prometheus.Counter
+	gardenerClustersStateGaugeVec    *prometheus.GaugeVec
+	kubeconfigExpirationGauge        *prometheus.GaugeVec
+	runtimeStateGauge                *prometheus.GaugeVec
+	runtimeFSMUnexpectedStopsCnt     prometheus.Counter
+	runtimePendingStateDurationGauge *prometheus.GaugeVec
 }
 
 func NewMetrics() Metrics {
@@ -75,8 +81,14 @@ func NewMetrics() Metrics {
 				Name: RuntimeFSMStopMetricName,
 				Help: "Exposes the number of unexpected state machine stop events",
 			}),
+		runtimePendingStateDurationGauge: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Subsystem: componentName,
+				Name:      PendigStateDurationMetricName,
+				Help:      "Exposes duration of pending state for Runtime CRs in minutes",
+			}, []string{operation, runtimeIDKeyName, runtimeNameKeyName, shootNameIDKeyName, provider}),
 	}
-	ctrlMetrics.Registry.MustRegister(m.gardenerClustersStateGaugeVec, m.kubeconfigExpirationGauge, m.runtimeStateGauge, m.runtimeFSMUnexpectedStopsCnt)
+	ctrlMetrics.Registry.MustRegister(m.gardenerClustersStateGaugeVec, m.kubeconfigExpirationGauge, m.runtimeStateGauge, m.runtimeFSMUnexpectedStopsCnt, m.runtimePendingStateDurationGauge)
 	return m
 }
 
@@ -172,4 +184,35 @@ func (m metricsImpl) SetKubeconfigExpiration(secret corev1.Secret, rotationPerio
 			).Set(float64(expirationTimeEpoch))
 		}
 	}
+}
+
+func (m metricsImpl) SetPendingStateDuration(operation string, runtime v1.Runtime) {
+	runtimeID := runtime.GetLabels()[RuntimeIDLabel]
+	if runtimeID == "" {
+		return
+	}
+
+	duration := time.Duration(0)
+
+	if runtime.Status.State == v1.RuntimeStatePending {
+		condition := meta.FindStatusCondition(runtime.Status.Conditions, string(v1.ConditionTypeRuntimeProvisioned))
+
+		if condition != nil {
+			duration = time.Since(condition.LastTransitionTime.Time)
+		}
+	}
+
+	if runtime.Status.State == v1.RuntimeStateTerminating {
+		duration = time.Since(runtime.DeletionTimestamp.Time)
+	}
+
+	m.runtimePendingStateDurationGauge.
+		WithLabelValues(operation, runtimeID, runtime.Name, runtime.Spec.Shoot.Name, runtime.Spec.Shoot.Provider.Type).
+		Set(duration.Minutes())
+}
+
+func (m metricsImpl) CleanUpPendingStateDuration(runtimeName string) {
+	m.runtimePendingStateDurationGauge.DeletePartialMatch(prometheus.Labels{
+		runtimeNameKeyName: runtimeName,
+	})
 }
