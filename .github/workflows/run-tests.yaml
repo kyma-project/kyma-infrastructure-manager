@@ -14,7 +14,7 @@ on:
       - .gitignore
       - "**.md"
 
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, reopened]
     paths-ignore:
       - .reuse
@@ -62,18 +62,17 @@ jobs:
         name: "code-coverage"
         path: "coverage.txt"
 
-# Will be uncommented when the code coverage report is ready on main
-#  code_coverage:
-#    name: "Code coverage report"
-#    if: github.event_name == 'pull_request_target'
-#    runs-on: ubuntu-latest
-#    needs: unit-tests
-#    permissions:
-#      contents: read
-#      actions: read
-#      pull-requests: write
-#    steps:
-#      - uses: fgrosse/go-coverage-report@c3951d5d738d8cfe2b24d515f5b7d326c43341e0
-#        with:
-#          coverage-artifact-name: "code-coverage"
-#          coverage-file-name: "coverage.txt"
+  code_coverage:
+    name: "Code coverage report"
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
+    steps:
+      - uses: fgrosse/go-coverage-report@c3951d5d738d8cfe2b24d515f5b7d326c43341e0
+        with:
+          coverage-artifact-name: "code-coverage"
+          coverage-file-name: "coverage.txt"
