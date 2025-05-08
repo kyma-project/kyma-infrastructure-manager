@@ -16,7 +16,11 @@ func sFnWaitForShootReconcile(_ context.Context, m *fsm, s *systemState) (stateF
 	case gardener.LastOperationStateProcessing, gardener.LastOperationStatePending, gardener.LastOperationStateAborted, gardener.LastOperationStateError:
 		m.log.V(log_level.DEBUG).Info(fmt.Sprintf("Shoot %s is in %s state, scheduling for retry", s.shoot.Name, s.shoot.Status.LastOperation.State))
 
-		m.Metrics.SetPendingStateDuration("update", s.instance)
+		s.instance.UpdateStatePending(
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonProcessing,
+			"Unknown",
+			"Shoot update is in progress")
 
 		return updateStatusAndRequeueAfter(m.RequeueDurationShootReconcile)
 
@@ -43,14 +47,11 @@ func sFnWaitForShootReconcile(_ context.Context, m *fsm, s *systemState) (stateF
 			"False",
 			string(reason),
 		)
-		m.Metrics.CleanUpPendingStateDuration(s.instance.Name)
 		m.Metrics.IncRuntimeFSMStopCounter()
 		return updateStatusAndStop()
 
 	case gardener.LastOperationStateSucceeded:
 		m.log.Info(fmt.Sprintf("Shoot %s successfully updated, moving to processing", s.shoot.Name))
-		m.Metrics.CleanUpPendingStateDuration(s.instance.Name)
-
 		return ensureStatusConditionIsSetAndContinue(
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,

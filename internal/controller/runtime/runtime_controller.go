@@ -18,7 +18,6 @@ package runtime
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"sync/atomic"
 
 	"github.com/go-logr/logr"
@@ -54,11 +53,6 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 
 	var runtime imv1.Runtime
 	if err := r.Get(ctx, request.NamespacedName, &runtime); err != nil {
-
-		if errors.IsNotFound(err) {
-			r.Cfg.Metrics.CleanUpPendingStateDuration(request.Name)
-		}
-
 		return ctrl.Result{
 			Requeue: false,
 		}, client.IgnoreNotFound(err)
