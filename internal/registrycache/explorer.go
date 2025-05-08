@@ -2,7 +2,6 @@ package registrycache
 
 import (
 	"context"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
