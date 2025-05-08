@@ -1,8 +1,6 @@
 module github.com/kyma-project/infrastructure-manager
 
-go 1.24.0
-
-toolchain go1.24.2
+go 1.24.2
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
@@ -13,6 +11,7 @@ require (
 	github.com/gardener/oidc-webhook-authenticator v0.35.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-playground/validator/v10 v10.26.0
+	github.com/kyma-project/kim-snatch v0.0.0-20250430122050-3c3bdc3b74bb
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
 	github.com/pkg/errors v0.9.1

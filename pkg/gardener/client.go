@@ -3,7 +3,9 @@ package gardener
 import (
 	"context"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,4 +35,24 @@ func NewRestConfigFromFile(kubeconfigFilePath string) (*restclient.Config, error
 	}
 
 	return restConfig, err
+}
+
+const (
+	kubeconfigSecretKey = "config"
+)
+
+// TODO: Use this function in the Runtime Controller's FSM
+func GetShootClient(secret corev1.Secret) (client.Client, error) {
+
+	restConfig, err := clientcmd.RESTConfigFromKubeConfig(secret.Data[kubeconfigSecretKey])
+	if err != nil {
+		return nil, err
+	}
+
+	shootClientWithAdmin, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		return nil, err
+	}
+
+	return shootClientWithAdmin, nil
 }
