@@ -56,8 +56,8 @@ func TestNewRegistryCacheExtension(t *testing.T) {
 		err = yaml.Unmarshal(registryCacheExtension.ProviderConfig.Raw, &providerConfig)
 		require.NoError(t, err)
 
-		assert.Equal(t, "registry.extensions.gardener.cloud/v1alpha3", providerConfig.TypeMeta.APIVersion)
-		assert.Equal(t, "RegistryConfig", providerConfig.TypeMeta.Kind)
+		assert.Equal(t, "registry.extensions.gardener.cloud/v1alpha3", providerConfig.APIVersion)
+		assert.Equal(t, "RegistryConfig", providerConfig.Kind)
 		assert.Equal(t, "ghcr.io", providerConfig.Caches[0].Upstream)
 		assert.Equal(t, metav1.Duration{Duration: time.Hour * 24}, providerConfig.Caches[0].GarbageCollection.TTL)
 		assert.Equal(t, ptr.To("secret"), providerConfig.Caches[0].SecretReferenceName)

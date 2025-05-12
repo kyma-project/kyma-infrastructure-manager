@@ -482,8 +482,8 @@ func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches 
 	err := yaml.Unmarshal(ext.ProviderConfig.Raw, &registryConfig)
 	require.NoError(t, err)
 
-	assert.Equal(t, "registry.extensions.gardener.cloud/v1alpha3", registryConfig.TypeMeta.APIVersion)
-	assert.Equal(t, "RegistryConfig", registryConfig.TypeMeta.Kind)
+	assert.Equal(t, "registry.extensions.gardener.cloud/v1alpha3", registryConfig.APIVersion)
+	assert.Equal(t, "RegistryConfig", registryConfig.Kind)
 	assert.Equal(t, caches[0].Upstream, registryConfig.Caches[0].Upstream)
 	assert.Nil(t, caches[0].GarbageCollection)
 	assert.Equal(t, caches[0].SecretReferenceName, registryConfig.Caches[0].SecretReferenceName)
