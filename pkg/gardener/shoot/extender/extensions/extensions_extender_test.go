@@ -2,10 +2,13 @@ package extensions
 
 import (
 	"encoding/json"
+	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
+	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/yaml"
 
 	"testing"
 
@@ -24,15 +27,23 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 			ProviderType: "test-provider",
 		},
 	}
+
 	newAuditLogData := auditlogs.AuditLogData{
 		TenantID:   "test-auditlog-tenant",
 		ServiceURL: "test-auditlog-service-url",
 		SecretName: "doesnt matter",
 	}
 
+	caches := []registrycache.RegistryCache{
+		{
+			Upstream: "ghcr.io",
+		},
+	}
+
 	for _, testcase := range []struct {
 		name                 string
 		inputAuditLogData    auditlogs.AuditLogData
+		caches               []registrycache.RegistryCache
 		disableNetworkFilter bool
 		extensionOrderMap    map[string]int
 	}{
@@ -41,17 +52,19 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 			inputAuditLogData:    newAuditLogData,
 			disableNetworkFilter: false,
 			extensionOrderMap:    getExpectedExtensionsOrderMapForCreate(),
+			caches:               caches,
 		},
 		{
 			name:                 "Should create all extensions for new Shoot in the right order, network filter is disabled",
 			inputAuditLogData:    newAuditLogData,
 			disableNetworkFilter: true,
 			extensionOrderMap:    getExpectedExtensionsOrderMapForCreate(),
+			caches:               caches,
 		},
 		{
 			name:              "Should not include AuditLog extension for new Shoot when input auditLogData is empty",
 			inputAuditLogData: auditlogs.AuditLogData{},
-			extensionOrderMap: getExpectedExtensionsOrderMapForCreateWithoutAuditLogs(),
+			extensionOrderMap: getExpectedExtensionsOrderMapForCreateWithoutOptional(),
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
@@ -63,7 +76,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 				},
 			}
 
-			extender := NewExtensionsExtenderForCreate(config, testcase.inputAuditLogData)
+			extender := NewExtensionsExtenderForCreate(config, testcase.inputAuditLogData, testcase.caches)
 
 			err := extender(runtime, shoot)
 			assert.NoError(t, err)
@@ -78,16 +91,23 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 
 				switch ext.Type {
 				case NetworkFilterType:
+
 					verifyNetworkFilterExtension(t, ext, testcase.disableNetworkFilter)
 
 				case CertExtensionType:
+
 					verifyCertExtension(t, ext)
 
 				case DNSExtensionType:
+
 					verifyDNSExtension(t, ext)
 
 				case OidcExtensionType:
+
 					verifyOIDCExtension(t, ext)
+
+				case RegistryCacheExtensionType:
+					verifyRegistryCacheExtension(t, &ext, testcase.caches)
 				}
 			}
 		})
@@ -111,6 +131,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		name                 string
 		inputAuditLogData    auditlogs.AuditLogData
 		expectedAuditLogData auditlogs.AuditLogData
+		caches               []registrycache.RegistryCache
 		disableNetworkFilter bool
 		previousExtensions   []gardener.Extension
 	}{
@@ -169,6 +190,12 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			inputAuditLogData:    auditlogs.AuditLogData{},
 			disableNetworkFilter: false,
 		},
+		{
+			name:                 "Should not add RegistryCache extension to existing shoot extensions when input registryCache is empty",
+			previousExtensions:   fixExtensionsOnTheShootWithoutAuditLogs(),
+			inputAuditLogData:    auditlogs.AuditLogData{},
+			disableNetworkFilter: false,
+		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			runtime := fixRuntimeCRForExtensionExtenderTests(!testCase.disableNetworkFilter)
@@ -181,7 +208,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 
 			isEmptyAuditLogData := testCase.inputAuditLogData == (auditlogs.AuditLogData{})
 
-			extender := NewExtensionsExtenderForPatch(testCase.inputAuditLogData, testCase.previousExtensions)
+			extender := NewExtensionsExtenderForPatch(testCase.inputAuditLogData, testCase.caches, testCase.previousExtensions)
 			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, isEmptyAuditLogData)
 
 			err := extender(runtime, shoot)
@@ -357,11 +384,12 @@ func getExpectedExtensionsOrderMapForCreate() map[string]int {
 	extensionOrderMap[DNSExtensionType] = 2
 	extensionOrderMap[OidcExtensionType] = 3
 	extensionOrderMap[AuditlogExtensionType] = 4
+	extensionOrderMap[RegistryCacheExtensionType] = 5
 
 	return extensionOrderMap
 }
 
-func getExpectedExtensionsOrderMapForCreateWithoutAuditLogs() map[string]int {
+func getExpectedExtensionsOrderMapForCreateWithoutOptional() map[string]int {
 	extensionOrderMap := make(map[string]int)
 
 	extensionOrderMap[NetworkFilterType] = 0
@@ -438,6 +466,28 @@ func verifyCertExtension(t *testing.T, ext gardener.Extension) {
 func verifyNetworkFilterExtension(t *testing.T, ext gardener.Extension, isDisabled bool) {
 	require.NotNil(t, ext.Disabled)
 	assert.Equal(t, isDisabled, *ext.Disabled)
+}
+
+func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches []registrycache.RegistryCache) {
+	require.NotNil(t, ext.Disabled)
+	if len(caches) == 0 {
+		assert.Nil(t, ext.ProviderConfig)
+
+		return
+	}
+	require.Equal(t, ptr.To(false), ext.Disabled)
+
+	var registryConfig registrycacheext.RegistryConfig
+
+	err := yaml.Unmarshal(ext.ProviderConfig.Raw, &registryConfig)
+	require.NoError(t, err)
+
+	assert.Equal(t, "registry.extensions.gardener.cloud/v1alpha3", registryConfig.TypeMeta.APIVersion)
+	assert.Equal(t, "RegistryConfig", registryConfig.TypeMeta.Kind)
+	assert.Equal(t, caches[0].Upstream, registryConfig.Caches[0].Upstream)
+	assert.Nil(t, caches[0].GarbageCollection)
+	assert.Equal(t, caches[0].SecretReferenceName, registryConfig.Caches[0].SecretReferenceName)
+	assert.Nil(t, registryConfig.Caches[0].Proxy)
 }
 
 func fixRuntimeCRForExtensionExtenderTests(networkFilterEnabled bool) imv1.Runtime {
