@@ -13,6 +13,20 @@ func TestAWSZonesWithCustomNodeIPRange(t *testing.T) {
 		givenZoneNames   []string
 		expectedAwsZones []v1alpha1.Zone
 	}{
+		"AWS one zone and 10.250.0.0/16": {
+			givenNodesCidr: "10.250.0.0/16",
+			givenZoneNames: []string{
+				"eu-central-1a",
+			},
+			expectedAwsZones: []v1alpha1.Zone{
+				{
+					Name:     "eu-central-1a",
+					Workers:  "10.250.0.0/19",
+					Public:   "10.250.32.0/20",
+					Internal: "10.250.48.0/20",
+				},
+			},
+		},
 		"AWS three zones and 10.250.0.0/16": {
 			givenNodesCidr: "10.250.0.0/16",
 			givenZoneNames: []string{
@@ -66,6 +80,83 @@ func TestAWSZonesWithCustomNodeIPRange(t *testing.T) {
 					Workers:  "10.180.1.0/26",
 					Public:   "10.180.1.64/27",
 					Internal: "10.180.1.96/27",
+				},
+			},
+		},
+		"AWS four zones and 10.250.0.0/16": {
+			givenNodesCidr: "10.250.0.0/16",
+			givenZoneNames: []string{
+				"eu-central-1a",
+				"eu-central-1b",
+				"eu-central-1c",
+				"eu-central-1d",
+			},
+			expectedAwsZones: []v1alpha1.Zone{
+				{
+					Name:     "eu-central-1a",
+					Workers:  "10.250.0.0/19",
+					Public:   "10.250.32.0/20",
+					Internal: "10.250.48.0/20",
+				},
+				{
+					Name:     "eu-central-1b",
+					Workers:  "10.250.64.0/19",
+					Public:   "10.250.96.0/20",
+					Internal: "10.250.112.0/20",
+				},
+				{
+					Name:     "eu-central-1c",
+					Workers:  "10.250.128.0/19",
+					Public:   "10.250.160.0/20",
+					Internal: "10.250.176.0/20",
+				},
+				{
+					Name:     "eu-central-1d",
+					Workers:  "10.250.192.0/22",
+					Public:   "10.250.196.0/22",
+					Internal: "10.250.200.0/22",
+				},
+			},
+		},
+		"AWS five zones and 10.250.0.0/16": {
+			givenNodesCidr: "10.250.0.0/16",
+			givenZoneNames: []string{
+				"eu-central-1a",
+				"eu-central-1b",
+				"eu-central-1c",
+				"eu-central-1d",
+				"eu-central-1e",
+			},
+			expectedAwsZones: []v1alpha1.Zone{
+				{
+					Name:     "eu-central-1a",
+					Workers:  "10.250.0.0/19",
+					Public:   "10.250.32.0/20",
+					Internal: "10.250.48.0/20",
+				},
+				{
+					Name:     "eu-central-1b",
+					Workers:  "10.250.64.0/19",
+					Public:   "10.250.96.0/20",
+					Internal: "10.250.112.0/20",
+				},
+				{
+					Name:     "eu-central-1c",
+					Workers:  "10.250.128.0/19",
+					Public:   "10.250.160.0/20",
+					Internal: "10.250.176.0/20",
+				},
+				{
+					Name:     "eu-central-1d",
+					Workers:  "10.250.192.0/22",
+					Public:   "10.250.196.0/22",
+					Internal: "10.250.200.0/22",
+				},
+				{
+					Name:     "eu-central-1e",
+					Workers:  "10.250.204.0/22",
+					Public:   "10.250.208.0/22",
+					Internal: "10.250.212.0/22",
 				},
 			},
 		},
