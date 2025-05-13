@@ -137,35 +137,73 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 
 	for _, testCase := range []struct {
 		name                 string
+		previousExtensions   []gardener.Extension
 		inputAuditLogData    auditlogs.AuditLogData
 		expectedAuditLogData auditlogs.AuditLogData
-		caches               []registrycache.RegistryCache
+		registryCaches       []registrycache.RegistryCache
 		enableNetworkFilter  bool
 		enableImageCaching   bool
-		previousExtensions   []gardener.Extension
 	}{
 		{
 			name:                 "Should add AuditLog extension at the end without changing order and data of other extensions",
 			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
+			registryCaches:       nil,
+			enableNetworkFilter:  false,
+			enableImageCaching:   false,
 		},
 		{
-			name:                "Should add Network filter extension at the end without changing order and data of other extensions",
-			previousExtensions:  []gardener.Extension{fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
-			enableNetworkFilter: true,
+			name:                 "Should not add AuditLog extension to existing shoot extensions when input auditLogData is empty",
+			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:    auditlogs.AuditLogData{},
+			expectedAuditLogData: auditlogs.AuditLogData{},
+			registryCaches:       nil,
+			enableNetworkFilter:  false,
+			enableImageCaching:   false,
 		},
 		{
-			name:               "Should add RegistryCache extension at the end without changing order and data of other extensions",
-			previousExtensions: []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
-			caches:             []registrycache.RegistryCache{{Upstream: "quay.io"}},
+			name:                 "Should add Network filter extension at the end without changing order and data of other extensions",
+			previousExtensions:   []gardener.Extension{fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:    auditlogs.AuditLogData{},
+			expectedAuditLogData: auditlogs.AuditLogData{},
+			registryCaches:       nil,
+			enableNetworkFilter:  true,
+			enableImageCaching:   false,
+		},
+		{
+			name:                 "Should add RegistryCache extension at the end without changing order and data of other extensions",
+			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:    auditlogs.AuditLogData{},
+			expectedAuditLogData: auditlogs.AuditLogData{},
+			registryCaches:       newCaches,
+			enableNetworkFilter:  false,
+			enableImageCaching:   true,
+		},
+		{
+			name:                 "Should not add RegistryCache extension when cache list is empty",
+			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:    auditlogs.AuditLogData{},
+			expectedAuditLogData: auditlogs.AuditLogData{},
+			registryCaches:       []registrycache.RegistryCache{},
+			enableNetworkFilter:  false,
+			enableImageCaching:   true,
+		},
+		{
+			name:                 "Should not add RegistryCache extension when cache is not enabled on Runtime CR",
+			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:    auditlogs.AuditLogData{},
+			expectedAuditLogData: auditlogs.AuditLogData{},
+			registryCaches:       newCaches,
+			enableNetworkFilter:  false,
+			enableImageCaching:   true,
 		},
 		{
 			name:                 "Existing extensions should not change order during patching if nothing has changed",
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
-			caches:               newCaches,
+			registryCaches:       newCaches,
 			enableNetworkFilter:  true,
 			enableImageCaching:   true,
 		},
@@ -174,7 +212,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
 			inputAuditLogData:    newAuditLogData,
 			expectedAuditLogData: newAuditLogData,
-			caches:               oldCaches,
+			registryCaches:       oldCaches,
 			enableNetworkFilter:  false,
 			enableImageCaching:   true,
 		},
@@ -183,7 +221,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
-			caches:               oldCaches,
+			registryCaches:       oldCaches,
 			enableNetworkFilter:  true,
 			enableImageCaching:   true,
 		},
@@ -192,31 +230,35 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
-			caches:               newCaches,
+			registryCaches:       newCaches,
 			enableNetworkFilter:  false,
 			enableImageCaching:   true,
+		},
+		{
+			name:                 "Should disable RegistryCache extension without changing order and data of other extensions",
+			previousExtensions:   fixAllExtensionsOnTheShoot(),
+			inputAuditLogData:    oldAuditLogData,
+			expectedAuditLogData: oldAuditLogData,
+			registryCaches:       nil,
+			enableNetworkFilter:  false,
+			enableImageCaching:   false,
 		},
 		{
 			name:                 "Should not update existing AuditLog extension when input auditLogData is empty",
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
 			inputAuditLogData:    auditlogs.AuditLogData{},
 			expectedAuditLogData: oldAuditLogData,
-			caches:               oldCaches,
+			registryCaches:       oldCaches,
 			enableNetworkFilter:  false,
 			enableImageCaching:   true,
 		},
 		{
-			name:                "Should not add AuditLog extension to existing shoot extensions when input auditLogData is empty",
-			previousExtensions:  []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
-			inputAuditLogData:   auditlogs.AuditLogData{},
-			enableNetworkFilter: false,
-		},
-		{
-			name:                "Should not add RegistryCache extension to existing shoot extensions when input registryCache is empty",
-			previousExtensions:  []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
-			inputAuditLogData:   auditlogs.AuditLogData{},
-			enableNetworkFilter: false,
-			enableImageCaching:  true,
+			name:                 "Should not add RegistryCache extension to existing shoot extensions when input registryCache is empty",
+			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:    auditlogs.AuditLogData{},
+			expectedAuditLogData: auditlogs.AuditLogData{},
+			enableNetworkFilter:  false,
+			enableImageCaching:   true,
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -229,9 +271,9 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			}
 
 			auditLogDataProvided := testCase.inputAuditLogData != (auditlogs.AuditLogData{})
-			registryCacheDataProvided := testCase.enableImageCaching && len(testCase.caches) != 0
+			registryCacheDataProvided := testCase.enableImageCaching && len(testCase.registryCaches) != 0
 
-			extender := NewExtensionsExtenderForPatch(testCase.inputAuditLogData, testCase.caches, testCase.previousExtensions)
+			extender := NewExtensionsExtenderForPatch(testCase.inputAuditLogData, testCase.registryCaches, testCase.previousExtensions)
 			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided)
 
 			err := extender(runtime, shoot)
@@ -260,7 +302,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 					verifyAuditLogExtension(t, ext, testCase.expectedAuditLogData)
 
 				case RegistryCacheExtensionType:
-					verifyRegistryCacheExtension(t, &ext, testCase.caches)
+					verifyRegistryCacheExtension(t, &ext, testCase.registryCaches)
 				}
 			}
 		})
