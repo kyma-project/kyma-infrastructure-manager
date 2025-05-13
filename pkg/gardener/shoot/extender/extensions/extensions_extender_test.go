@@ -41,35 +41,39 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 	}
 
 	for _, testcase := range []struct {
-		name                 string
-		inputAuditLogData    auditlogs.AuditLogData
-		caches               []registrycache.RegistryCache
-		disableNetworkFilter bool
-		disableImageCaching  bool
-		extensionOrderMap    map[string]int
+		name                string
+		inputAuditLogData   auditlogs.AuditLogData
+		caches              []registrycache.RegistryCache
+		enableNetworkFilter bool
+		enableImageCaching  bool
+		extensionOrderMap   map[string]int
 	}{
 		{
-			name:                 "Should create all extensions for new Shoot in the right order, network filter is enabled",
-			inputAuditLogData:    newAuditLogData,
-			disableNetworkFilter: false,
-			extensionOrderMap:    getExpectedExtensionsOrderMapForCreate(),
-			caches:               caches,
+			name:                "Should create all extensions for new Shoot in the right order, network filter is enabled",
+			inputAuditLogData:   newAuditLogData,
+			enableNetworkFilter: true,
+			enableImageCaching:  true,
+			extensionOrderMap:   getExpectedExtensionsOrderMapForCreate(),
+			caches:              caches,
 		},
 		{
-			name:                 "Should create all extensions for new Shoot in the right order, network filter is disabled",
-			inputAuditLogData:    newAuditLogData,
-			disableNetworkFilter: true,
-			extensionOrderMap:    getExpectedExtensionsOrderMapForCreate(),
-			caches:               caches,
+			name:                "Should create all extensions for new Shoot in the right order, network filter is disabled",
+			inputAuditLogData:   newAuditLogData,
+			enableNetworkFilter: false,
+			enableImageCaching:  true,
+			extensionOrderMap:   getExpectedExtensionsOrderMapForCreate(),
+			caches:              caches,
 		},
 		{
-			name:              "Should not include AuditLog extension for new Shoot when input auditLogData is empty",
-			inputAuditLogData: auditlogs.AuditLogData{},
-			extensionOrderMap: getExpectedExtensionsOrderMapForCreateWithoutOptional(),
+			name:                "Should not include AuditLog extension for new Shoot when input auditLogData is empty",
+			inputAuditLogData:   auditlogs.AuditLogData{},
+			extensionOrderMap:   getExpectedExtensionsOrderMapForCreateWithoutOptional(),
+			enableNetworkFilter: true,
+			enableImageCaching:  true,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			runtime := fixRuntimeCRForExtensionExtenderTests(!testcase.disableNetworkFilter, !testcase.disableImageCaching)
+			runtime := fixRuntimeCRForExtensionExtenderTests(testcase.enableNetworkFilter, testcase.enableImageCaching)
 
 			shoot := &gardener.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -93,7 +97,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 				switch ext.Type {
 				case NetworkFilterType:
 
-					verifyNetworkFilterExtension(t, ext, testcase.disableNetworkFilter)
+					verifyNetworkFilterExtension(t, ext, testcase.enableNetworkFilter)
 
 				case CertExtensionType:
 
@@ -141,6 +145,22 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		previousExtensions   []gardener.Extension
 	}{
 		{
+			name:                 "Should add AuditLog extension at the end without changing order and data of other extensions",
+			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:    oldAuditLogData,
+			expectedAuditLogData: oldAuditLogData,
+		},
+		{
+			name:                "Should add Network filter extension at the end without changing order and data of other extensions",
+			previousExtensions:  []gardener.Extension{fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			enableNetworkFilter: true,
+		},
+		{
+			name:               "Should add RegistryCache extension at the end without changing order and data of other extensions",
+			previousExtensions: []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			caches:             []registrycache.RegistryCache{{Upstream: "quay.io"}},
+		},
+		{
 			name:                 "Existing extensions should not change order during patching if nothing has changed",
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
 			inputAuditLogData:    oldAuditLogData,
@@ -163,7 +183,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
-			caches:               []registrycache.RegistryCache{{Upstream: "quay.io"}},
+			caches:               oldCaches,
 			enableNetworkFilter:  true,
 			enableImageCaching:   true,
 		},
@@ -172,59 +192,35 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
-			caches:               []registrycache.RegistryCache{{Upstream: "some-registry.io"}},
-			enableNetworkFilter:  true,
+			caches:               newCaches,
+			enableNetworkFilter:  false,
 			enableImageCaching:   true,
-		},
-		{
-			name:                 "Should add Network filter extension at the end without changing order and data of other extensions",
-			previousExtensions:   fixExtensionsOnTheShootWithoutNetworkFilter(),
-			inputAuditLogData:    oldAuditLogData,
-			expectedAuditLogData: oldAuditLogData,
-			enableNetworkFilter:  true,
-		},
-		{
-			name:                 "Should add AuditLog extension at the end without changing order and data of other extensions",
-			previousExtensions:   fixExtensionsOnTheShootWithoutAuditLogs(),
-			inputAuditLogData:    oldAuditLogData,
-			expectedAuditLogData: oldAuditLogData,
-			enableNetworkFilter:  true,
-		},
-		{
-			name:                "Should add RegistryCache extension at the end without changing order and data of other extensions",
-			previousExtensions:  fixExtensionsOnTheShootWithoutAuditLogs(),
-			caches:              []registrycache.RegistryCache{{Upstream: "quay.io"}},
-			enableNetworkFilter: true,
-		},
-		{
-			name:                 "Should add AuditLog and Network filter extensions at the end without changing order and data of other extensions",
-			previousExtensions:   fixExtensionsOnTheShootWithoutAuditLogsAndNetworkFilter(),
-			inputAuditLogData:    oldAuditLogData,
-			expectedAuditLogData: oldAuditLogData,
-			enableNetworkFilter:  true,
 		},
 		{
 			name:                 "Should not update existing AuditLog extension when input auditLogData is empty",
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
 			inputAuditLogData:    auditlogs.AuditLogData{},
 			expectedAuditLogData: oldAuditLogData,
-			enableNetworkFilter:  true,
+			caches:               oldCaches,
+			enableNetworkFilter:  false,
+			enableImageCaching:   true,
 		},
 		{
 			name:                "Should not add AuditLog extension to existing shoot extensions when input auditLogData is empty",
-			previousExtensions:  fixExtensionsOnTheShootWithoutAuditLogs(),
+			previousExtensions:  []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
 			inputAuditLogData:   auditlogs.AuditLogData{},
 			enableNetworkFilter: false,
 		},
 		{
 			name:                "Should not add RegistryCache extension to existing shoot extensions when input registryCache is empty",
-			previousExtensions:  fixExtensionsOnTheShootWithoutAuditLogs(),
+			previousExtensions:  []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
 			inputAuditLogData:   auditlogs.AuditLogData{},
 			enableNetworkFilter: false,
+			enableImageCaching:  true,
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			runtime := fixRuntimeCRForExtensionExtenderTests(!testCase.enableNetworkFilter, testCase.enableImageCaching)
+			runtime := fixRuntimeCRForExtensionExtenderTests(testCase.enableNetworkFilter, testCase.enableImageCaching)
 
 			shoot := &gardener.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -332,78 +328,6 @@ func fixRegistryCacheExtension() gardener.Extension {
 		},
 	}
 
-}
-func fixExtensionsOnTheShootWithoutAuditLogs() []gardener.Extension {
-	return []gardener.Extension{
-		{
-			Type: DNSExtensionType,
-			ProviderConfig: &runtime.RawExtension{
-				Raw: []byte(`{"apiVersion":"service.dns.extensions.gardener.cloud/v1alpha1","dnsProviderReplication":{"enabled":true},"syncProvidersFromShootSpecDNS":true,"providers":[{"domains":{"include":["test-shoot-name.test-domain"],"exclude":null},"secretName":"test-dns-secret","type":"test-provider"}],"kind":"DNSConfig"}`),
-			},
-		},
-		{
-			Type: CertExtensionType,
-			ProviderConfig: &runtime.RawExtension{
-				Raw: []byte(`{"apiVersion":"service.cert.extensions.gardener.cloud/v1alpha1","kind":"CertConfig","shootIssuers":{"enabled":true}}`),
-			},
-		},
-		{
-			Type:     NetworkFilterType,
-			Disabled: ptr.To(true),
-		},
-		{
-			Type:     OidcExtensionType,
-			Disabled: ptr.To(false),
-		},
-	}
-}
-
-func fixExtensionsOnTheShootWithoutNetworkFilter() []gardener.Extension {
-	return []gardener.Extension{
-		{
-			Type: AuditlogExtensionType,
-			ProviderConfig: &runtime.RawExtension{
-				Raw: []byte(`{"apiVersion":"service.auditlog.extensions.gardener.cloud/v1alpha1","kind":"AuditlogConfig","type":"standard","tenantID":"test-auditlog-tenant","serviceURL":"test-auditlog-service-url","secretReferenceName":"auditlog-credentials"}`),
-			},
-		},
-		{
-			Type: DNSExtensionType,
-			ProviderConfig: &runtime.RawExtension{
-				Raw: []byte(`{"apiVersion":"service.dns.extensions.gardener.cloud/v1alpha1","dnsProviderReplication":{"enabled":true},"syncProvidersFromShootSpecDNS":true,"providers":[{"domains":{"include":["test-shoot-name.test-domain"],"exclude":null},"secretName":"test-dns-secret","type":"test-provider"}],"kind":"DNSConfig"}`),
-			},
-		},
-		{
-			Type: CertExtensionType,
-			ProviderConfig: &runtime.RawExtension{
-				Raw: []byte(`{"apiVersion":"service.cert.extensions.gardener.cloud/v1alpha1","kind":"CertConfig","shootIssuers":{"enabled":true}}`),
-			},
-		},
-		{
-			Type:     OidcExtensionType,
-			Disabled: ptr.To(false),
-		},
-	}
-}
-
-func fixExtensionsOnTheShootWithoutAuditLogsAndNetworkFilter() []gardener.Extension {
-	return []gardener.Extension{
-		{
-			Type: DNSExtensionType,
-			ProviderConfig: &runtime.RawExtension{
-				Raw: []byte(`{"apiVersion":"service.dns.extensions.gardener.cloud/v1alpha1","dnsProviderReplication":{"enabled":true},"syncProvidersFromShootSpecDNS":true,"providers":[{"domains":{"include":["test-shoot-name.test-domain"],"exclude":null},"secretName":"test-dns-secret","type":"test-provider"}],"kind":"DNSConfig"}`),
-			},
-		},
-		{
-			Type: CertExtensionType,
-			ProviderConfig: &runtime.RawExtension{
-				Raw: []byte(`{"apiVersion":"service.cert.extensions.gardener.cloud/v1alpha1","kind":"CertConfig","shootIssuers":{"enabled":true}}`),
-			},
-		},
-		{
-			Type:     OidcExtensionType,
-			Disabled: ptr.To(false),
-		},
-	}
 }
 
 func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extension, networkExtAdded bool, auditLogExtAdded bool, registryCacheExtAdded bool) map[string]int {
@@ -528,9 +452,9 @@ func verifyCertExtension(t *testing.T, ext gardener.Extension) {
 	assert.Equal(t, "CertConfig", certConfig.Kind)
 }
 
-func verifyNetworkFilterExtension(t *testing.T, ext gardener.Extension, isDisabled bool) {
+func verifyNetworkFilterExtension(t *testing.T, ext gardener.Extension, isEnabled bool) {
 	require.NotNil(t, ext.Disabled)
-	assert.Equal(t, isDisabled, *ext.Disabled)
+	assert.Equal(t, !isEnabled, *ext.Disabled)
 }
 
 func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches []registrycache.RegistryCache) {
