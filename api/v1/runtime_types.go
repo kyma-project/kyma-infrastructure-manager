@@ -163,9 +163,16 @@ type Kubernetes struct {
 	KubeAPIServer APIServer `json:"kubeAPIServer,omitempty"`
 }
 
+// OIDCConfig contains configuration settings for the OIDC provider.
+// Note: Descriptions were taken from the Kubernetes documentation.
+type OIDCConfig struct {
+	gardener.OIDCConfig `json:",omitempty"`
+	JWKS                string `json:"jwks,omitempty"`
+}
+
 type APIServer struct {
-	OidcConfig           gardener.OIDCConfig    `json:"oidcConfig,omitempty"`
-	AdditionalOidcConfig *[]gardener.OIDCConfig `json:"additionalOidcConfig,omitempty"`
+	OidcConfig           OIDCConfig    `json:"oidcConfig,omitempty"`
+	AdditionalOidcConfig *[]OIDCConfig `json:"additionalOidcConfig,omitempty"`
 }
 
 type Provider struct {

@@ -17,17 +17,19 @@ func shouldDefaultOidcConfig(config gardener.OIDCConfig) bool {
 func NewLegacyOidcExtender(oidcProvider config.OidcProvider) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		oidcConfig := runtime.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig
-		if shouldDefaultOidcConfig(oidcConfig) {
-			oidcConfig = gardener.OIDCConfig{
-				ClientID:       &oidcProvider.ClientID,
-				GroupsClaim:    &oidcProvider.GroupsClaim,
-				IssuerURL:      &oidcProvider.IssuerURL,
-				SigningAlgs:    oidcProvider.SigningAlgs,
-				UsernameClaim:  &oidcProvider.UsernameClaim,
-				UsernamePrefix: &oidcProvider.UsernamePrefix,
+		if shouldDefaultOidcConfig(oidcConfig.OIDCConfig) {
+			oidcConfig = imv1.OIDCConfig{
+				OIDCConfig: gardener.OIDCConfig{
+					ClientID:       &oidcProvider.ClientID,
+					GroupsClaim:    &oidcProvider.GroupsClaim,
+					IssuerURL:      &oidcProvider.IssuerURL,
+					SigningAlgs:    oidcProvider.SigningAlgs,
+					UsernameClaim:  &oidcProvider.UsernameClaim,
+					UsernamePrefix: &oidcProvider.UsernamePrefix,
+				},
 			}
 		}
-		setKubeAPIServerOIDCConfig(shoot, oidcConfig)
+		setKubeAPIServerOIDCConfig(shoot, oidcConfig.OIDCConfig)
 
 		return nil
 	}

@@ -2,8 +2,10 @@ package config
 
 import (
 	"encoding/json"
-	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"io"
+
+	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 )
 
 type Config struct {
@@ -45,14 +47,16 @@ type OidcProvider struct {
 	UsernamePrefix string   `json:"usernamePrefix" validate:"required"`
 }
 
-func (p OidcProvider) ToOIDCConfig() gardener.OIDCConfig {
-	return gardener.OIDCConfig{
-		ClientID:       &p.ClientID,
-		GroupsClaim:    &p.GroupsClaim,
-		IssuerURL:      &p.IssuerURL,
-		SigningAlgs:    p.SigningAlgs,
-		UsernameClaim:  &p.UsernameClaim,
-		UsernamePrefix: &p.UsernamePrefix,
+func (p OidcProvider) ToOIDCConfig() imv1.OIDCConfig {
+	return imv1.OIDCConfig{
+		OIDCConfig: gardener.OIDCConfig{
+			ClientID:       &p.ClientID,
+			GroupsClaim:    &p.GroupsClaim,
+			IssuerURL:      &p.IssuerURL,
+			SigningAlgs:    p.SigningAlgs,
+			UsernameClaim:  &p.UsernameClaim,
+			UsernamePrefix: &p.UsernamePrefix,
+		},
 	}
 }
 

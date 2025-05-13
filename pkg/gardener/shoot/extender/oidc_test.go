@@ -1,8 +1,9 @@
 package extender
 
 import (
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"testing"
+
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -32,12 +33,14 @@ func TestOidcExtender(t *testing.T) {
 					Name: "shoot",
 					Kubernetes: imv1.Kubernetes{
 						KubeAPIServer: imv1.APIServer{
-							OidcConfig: gardener.OIDCConfig{
-								ClientID:      &defaultOidc.ClientID,
-								GroupsClaim:   &defaultOidc.GroupsClaim,
-								IssuerURL:     &defaultOidc.IssuerURL,
-								SigningAlgs:   defaultOidc.SigningAlgs,
-								UsernameClaim: &defaultOidc.UsernameClaim,
+							OidcConfig: imv1.OIDCConfig{
+								OIDCConfig: gardener.OIDCConfig{
+									ClientID:      &defaultOidc.ClientID,
+									GroupsClaim:   &defaultOidc.GroupsClaim,
+									IssuerURL:     &defaultOidc.IssuerURL,
+									SigningAlgs:   defaultOidc.SigningAlgs,
+									UsernameClaim: &defaultOidc.UsernameClaim,
+								},
 							},
 						},
 					},

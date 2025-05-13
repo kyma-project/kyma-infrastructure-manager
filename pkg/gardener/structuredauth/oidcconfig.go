@@ -5,7 +5,7 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 )
 
-func GetOIDCConfigOrDefault(runtime imv1.Runtime, defaultOIDC gardener.OIDCConfig) gardener.OIDCConfig {
+func GetOIDCConfigOrDefault(runtime imv1.Runtime, defaultOIDC imv1.OIDCConfig) imv1.OIDCConfig {
 	oidcConfig := runtime.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig
 
 	if oidcConfig.IssuerURL == nil || oidcConfig.ClientID == nil {

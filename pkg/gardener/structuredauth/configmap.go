@@ -2,7 +2,9 @@ package structuredauth
 
 import (
 	"context"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,7 +40,7 @@ type AuthenticationConfiguration struct {
 	JWT []JWTAuthenticator `json:"jwt"`
 }
 
-func toAuthenticationConfiguration(oidcConfig gardener.OIDCConfig) AuthenticationConfiguration {
+func toAuthenticationConfiguration(oidcConfig imv1.OIDCConfig) AuthenticationConfiguration {
 
 	toJWTAuthenticator := func(oidcConfig gardener.OIDCConfig) JWTAuthenticator {
 		// If Groups prefix is not set by the KEB, default is set as Gardener requires non-empty value
@@ -67,7 +69,7 @@ func toAuthenticationConfiguration(oidcConfig gardener.OIDCConfig) Authenticatio
 	}
 
 	jwtAuthenticators := make([]JWTAuthenticator, 0)
-	jwtAuthenticators = append(jwtAuthenticators, toJWTAuthenticator(oidcConfig))
+	jwtAuthenticators = append(jwtAuthenticators, toJWTAuthenticator(oidcConfig.OIDCConfig))
 
 	return AuthenticationConfiguration{
 		TypeMeta: metav1.TypeMeta{
@@ -78,7 +80,7 @@ func toAuthenticationConfiguration(oidcConfig gardener.OIDCConfig) Authenticatio
 	}
 }
 
-func CreateOrUpdateStructuredAuthConfigMap(ctx context.Context, shootClient client.Client, cmKey types.NamespacedName, oidcConfig gardener.OIDCConfig) error {
+func CreateOrUpdateStructuredAuthConfigMap(ctx context.Context, shootClient client.Client, cmKey types.NamespacedName, oidcConfig imv1.OIDCConfig) error {
 	creteConfigMapObject := func() (v1.ConfigMap, error) {
 		authenticationConfig := toAuthenticationConfiguration(oidcConfig)
 		authConfigBytes, err := yaml.Marshal(authenticationConfig)
