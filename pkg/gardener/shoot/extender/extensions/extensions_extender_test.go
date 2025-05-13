@@ -45,6 +45,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 		inputAuditLogData    auditlogs.AuditLogData
 		caches               []registrycache.RegistryCache
 		disableNetworkFilter bool
+		disableImageCaching  bool
 		extensionOrderMap    map[string]int
 	}{
 		{
@@ -68,7 +69,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			runtime := fixRuntimeCRForExtensionExtenderTests(!testcase.disableNetworkFilter)
+			runtime := fixRuntimeCRForExtensionExtenderTests(!testcase.disableNetworkFilter, !testcase.disableImageCaching)
 
 			shoot := &gardener.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -127,12 +128,15 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		SecretName: "doesnt matter",
 	}
 
+	oldCaches := []registrycache.RegistryCache{{Upstream: "quay.io"}}
+
 	for _, testCase := range []struct {
 		name                 string
 		inputAuditLogData    auditlogs.AuditLogData
 		expectedAuditLogData auditlogs.AuditLogData
 		caches               []registrycache.RegistryCache
 		disableNetworkFilter bool
+		disableImageCaching  bool
 		previousExtensions   []gardener.Extension
 	}{
 		{
@@ -140,13 +144,16 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
+			caches:               []registrycache.RegistryCache{{Upstream: "quay.io"}},
 			disableNetworkFilter: true,
+			disableImageCaching:  false,
 		},
 		{
 			name:                 "Should update Audit Log extension without changing order and data of other extensions",
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
 			inputAuditLogData:    newAuditLogData,
 			expectedAuditLogData: newAuditLogData,
+			caches:               oldCaches,
 			disableNetworkFilter: true,
 		},
 		{
@@ -154,14 +161,23 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
+			caches:               []registrycache.RegistryCache{{Upstream: "quay.io"}},
 			disableNetworkFilter: false,
+		},
+		{
+			name:                 "Should update RegistryCache extension without changing order and data of other extensions",
+			previousExtensions:   fixAllExtensionsOnTheShoot(),
+			inputAuditLogData:    oldAuditLogData,
+			expectedAuditLogData: oldAuditLogData,
+			caches:               []registrycache.RegistryCache{{Upstream: "some-registry.io"}},
+			disableNetworkFilter: true,
 		},
 		{
 			name:                 "Should add Network filter extension at the end without changing order and data of other extensions",
 			previousExtensions:   fixExtensionsOnTheShootWithoutNetworkFilter(),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
-			disableNetworkFilter: true,
+			disableNetworkFilter: false,
 		},
 		{
 			name:                 "Should add AuditLog extension at the end without changing order and data of other extensions",
@@ -171,11 +187,17 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			disableNetworkFilter: true,
 		},
 		{
+			name:                 "Should add RegistryCache extension at the end without changing order and data of other extensions",
+			previousExtensions:   fixExtensionsOnTheShootWithoutAuditLogs(),
+			caches:               []registrycache.RegistryCache{{Upstream: "quay.io"}},
+			disableNetworkFilter: true,
+		},
+		{
 			name:                 "Should add AuditLog and Network filter extensions at the end without changing order and data of other extensions",
 			previousExtensions:   fixExtensionsOnTheShootWithoutAuditLogsAndNetworkFilter(),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
-			disableNetworkFilter: true,
+			disableNetworkFilter: false,
 		},
 		{
 			name:                 "Should not update existing AuditLog extension when input auditLogData is empty",
@@ -198,7 +220,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			runtime := fixRuntimeCRForExtensionExtenderTests(!testCase.disableNetworkFilter)
+			runtime := fixRuntimeCRForExtensionExtenderTests(!testCase.disableNetworkFilter, !testCase.disableImageCaching)
 
 			shoot := &gardener.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -206,10 +228,11 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 				},
 			}
 
-			isEmptyAuditLogData := testCase.inputAuditLogData == (auditlogs.AuditLogData{})
+			auditLogDataProvided := testCase.inputAuditLogData != (auditlogs.AuditLogData{})
+			registryCacheDataProvided := len(testCase.caches) != 0
 
 			extender := NewExtensionsExtenderForPatch(testCase.inputAuditLogData, testCase.caches, testCase.previousExtensions)
-			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, isEmptyAuditLogData)
+			orderMap := getExpectedExtensionsOrderMapForPatch2(testCase.previousExtensions, !testCase.disableNetworkFilter, auditLogDataProvided, registryCacheDataProvided)
 
 			err := extender(runtime, shoot)
 			assert.NoError(t, err)
@@ -235,6 +258,9 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 
 				case AuditlogExtensionType:
 					verifyAuditLogExtension(t, ext, testCase.expectedAuditLogData)
+
+				case RegistryCacheExtensionType:
+					verifyRegistryCacheExtension(t, &ext, testCase.caches)
 				}
 			}
 		})
@@ -268,6 +294,13 @@ func fixAllExtensionsOnTheShoot() []gardener.Extension {
 		{
 			Type:     OidcExtensionType,
 			Disabled: ptr.To(false),
+		},
+		{
+			Type:     RegistryCacheExtensionType,
+			Disabled: ptr.To(false),
+			ProviderConfig: &runtime.RawExtension{
+				Raw: []byte(`apiVersion":"registry.extensions.gardener.cloud/v1alpha3","kind":"RegistryConfig","caches":{"upstream":"quay.io"}`),
+			},
 		},
 	}
 }
@@ -343,6 +376,40 @@ func fixExtensionsOnTheShootWithoutAuditLogsAndNetworkFilter() []gardener.Extens
 			Disabled: ptr.To(false),
 		},
 	}
+}
+
+func getExpectedExtensionsOrderMapForPatch2(previousExtensions []gardener.Extension, networkExtAdded bool, auditLogExtAdded bool, registryCacheExtAdded bool) map[string]int {
+	extensionOrderMap := make(map[string]int)
+
+	for idx, ext := range previousExtensions {
+		extensionOrderMap[ext.Type] = idx
+	}
+
+	if auditLogExtAdded {
+		_, found := extensionOrderMap[AuditlogExtensionType]
+
+		if !found {
+			extensionOrderMap[AuditlogExtensionType] = len(extensionOrderMap)
+		}
+	}
+
+	if networkExtAdded {
+		_, found := extensionOrderMap[NetworkFilterType]
+
+		if !found {
+			extensionOrderMap[NetworkFilterType] = len(extensionOrderMap)
+		}
+	}
+
+	if registryCacheExtAdded {
+		_, found := extensionOrderMap[RegistryCacheExtensionType]
+
+		if !found {
+			extensionOrderMap[RegistryCacheExtensionType] = len(extensionOrderMap)
+		}
+	}
+
+	return extensionOrderMap
 }
 
 // returns a map with the expected index order of extensions for different ExtenderForPatch unit tests
@@ -469,13 +536,14 @@ func verifyNetworkFilterExtension(t *testing.T, ext gardener.Extension, isDisabl
 }
 
 func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches []registrycache.RegistryCache) {
-	require.NotNil(t, ext.Disabled)
 	if len(caches) == 0 {
-		assert.Nil(t, ext.ProviderConfig)
+		assert.True(t, ext != nil || (ext.ProviderConfig == nil && *ext.Disabled))
 
 		return
 	}
-	require.Equal(t, ptr.To(false), ext.Disabled)
+
+	require.NotNil(t, ext.Disabled)
+	require.Equal(t, false, *ext.Disabled)
 
 	var registryConfig registrycacheext.RegistryConfig
 
@@ -490,11 +558,14 @@ func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches 
 	assert.Nil(t, registryConfig.Caches[0].Proxy)
 }
 
-func fixRuntimeCRForExtensionExtenderTests(networkFilterEnabled bool) imv1.Runtime {
+func fixRuntimeCRForExtensionExtenderTests(networkFilterEnabled bool, registryCacheEnabled bool) imv1.Runtime {
 	runtime := imv1.Runtime{
 		Spec: imv1.RuntimeSpec{
 			Shoot: imv1.RuntimeShoot{
 				Name: "myshoot",
+			},
+			Caching: &imv1.ImageRegistryCache{
+				Enabled: registryCacheEnabled,
 			},
 			Security: imv1.Security{
 				Networking: imv1.NetworkingSecurity{

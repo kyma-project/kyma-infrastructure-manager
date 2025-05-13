@@ -118,11 +118,8 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, registry
 		{
 			Type: RegistryCacheExtensionType,
 			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-				if runtime.Spec.Caching == nil {
-					return nil, nil
-				}
 
-				if runtime.Spec.Caching.Enabled {
+				if runtime.Spec.Caching != nil && runtime.Spec.Caching.Enabled && len(registryCache) > 0 {
 					return NewRegistryCacheExtension(registryCache, true)
 				}
 
