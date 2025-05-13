@@ -1,14 +1,18 @@
 package aws
 
 import (
+	"github.com/pkg/errors"
 	"math/big"
 	"net/netip"
 
 	"github.com/gardener/gardener-extension-provider-aws/pkg/apis/aws/v1alpha1"
 )
 
-const workersBits = 3
-const lastBitNumber = 31
+const (
+	workersBits      = 3
+	lastBitNumber    = 31
+	maxNumberOfZones = 8
+)
 
 /*
 *
@@ -28,7 +32,13 @@ cidr: 10.250.0.0/16
     public: 10.250.160.0/20
     internal: 10.250.176.0/20
 */
-func generateAWSZones(workerCidr string, zoneNames []string) []v1alpha1.Zone {
+func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, error) {
+
+	numZones := len(zoneNames)
+	if numZones < 1 || numZones > maxNumberOfZones {
+		return nil, errors.New("Number of networking zones must be between 1 and 8")
+	}
+
 	var zones []v1alpha1.Zone
 
 	cidr, _ := netip.ParsePrefix(workerCidr)
@@ -69,5 +79,5 @@ func generateAWSZones(workerCidr string, zoneNames []string) []v1alpha1.Zone {
 		base.Add(base, delta)
 	}
 
-	return zones
+	return zones, nil
 }

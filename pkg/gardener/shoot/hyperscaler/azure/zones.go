@@ -1,16 +1,25 @@
 package azure
 
 import (
+	"github.com/pkg/errors"
 	"math/big"
 	"net/netip"
 	"strconv"
 )
 
-const defaultConnectionTimeOutMinutes = 4
-const workersBits = 3
-const cidrLength = 32
+const (
+	defaultConnectionTimeOutMinutes = 4
+	workersBits                     = 3
+	cidrLength                      = 32
+	maxNumberOfZones                = 8
+)
 
-func generateAzureZones(workerCidr string, zoneNames []string) []Zone {
+func generateAzureZones(workerCidr string, zoneNames []string) ([]Zone, error) {
+	numZones := len(zoneNames)
+	if numZones < 1 || numZones > maxNumberOfZones {
+		return nil, errors.New("Number of networking zones must be between 1 and 8")
+	}
+
 	var zones []Zone
 
 	cidr, _ := netip.ParsePrefix(workerCidr)
@@ -41,14 +50,14 @@ func generateAzureZones(workerCidr string, zoneNames []string) []Zone {
 			},
 		})
 	}
-	return zones
+	return zones, nil
 }
 
 func convertZoneNames(zoneNames []string) []int {
 	var zones []int
 	for _, inputZone := range zoneNames {
 		zone, err := strconv.Atoi(inputZone)
-		if err != nil || zone < 1 || zone > 5 {
+		if err != nil || zone < 1 || zone > 8 {
 			continue
 		}
 		zones = append(zones, zone)

@@ -13,7 +13,7 @@ func TestAWSZonesWithCustomNodeIPRange(t *testing.T) {
 		givenZoneNames   []string
 		expectedAwsZones []v1alpha1.Zone
 	}{
-		"Regular 10.250.0.0/16": {
+		"AWS three zones and 10.250.0.0/16": {
 			givenNodesCidr: "10.250.0.0/16",
 			givenZoneNames: []string{
 				"eu-central-1a",
@@ -41,7 +41,7 @@ func TestAWSZonesWithCustomNodeIPRange(t *testing.T) {
 				},
 			},
 		},
-		"Regular 10.180.0.0/23": {
+		"AWS three zones 10.180.0.0/23": {
 			givenNodesCidr: "10.180.0.0/23",
 			givenZoneNames: []string{
 				"eu-central-1a",
@@ -71,13 +71,47 @@ func TestAWSZonesWithCustomNodeIPRange(t *testing.T) {
 		},
 	} {
 		t.Run(tname, func(t *testing.T) {
-			zones := generateAWSZones(tcase.givenNodesCidr, tcase.givenZoneNames)
+			zones, err := generateAWSZones(tcase.givenNodesCidr, tcase.givenZoneNames)
 
+			assert.NoError(t, err)
 			assert.Equal(t, len(tcase.expectedAwsZones), len(zones))
 
 			for i, expectedZone := range tcase.expectedAwsZones {
 				assertAWSIpRanges(t, expectedZone, zones[i])
 			}
+		})
+	}
+
+	// error cases
+
+	for tname, tcase := range map[string]struct {
+		givenNodesCidr string
+		givenZoneNames []string
+	}{
+		"AWS should return error when more than 8 zones provided": {
+			givenNodesCidr: "10.250.0.0/16",
+			givenZoneNames: []string{
+				"eu-central-1a",
+				"eu-central-1b",
+				"eu-central-1c",
+				"eu-central-1d",
+				"eu-central-1e",
+				"eu-central-1f",
+				"eu-central-1g",
+				"eu-central-1h",
+				"eu-central-1i",
+			},
+		},
+		"AWS should return error when no zones are provided": {
+			givenNodesCidr: "10.180.0.0/23",
+			givenZoneNames: []string{},
+		},
+	} {
+		t.Run(tname, func(t *testing.T) {
+			zones, err := generateAWSZones(tcase.givenNodesCidr, tcase.givenZoneNames)
+
+			assert.Error(t, err)
+			assert.Equal(t, 0, len(zones))
 		})
 	}
 }

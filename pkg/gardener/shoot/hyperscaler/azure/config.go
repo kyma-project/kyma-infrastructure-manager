@@ -48,6 +48,12 @@ func NewInfrastructureConfig(workerCIDR string, zones []string) InfrastructureCo
 	// All Azure shoots are zoned.
 	// No zones - the shoot configuration is invalid.
 	// We should validate the config before calling this function.
+	azureZones, err := generateAzureZones(workerCIDR, zones)
+	if err != nil {
+		// TODO - pass the error to caller?
+		return InfrastructureConfig{}
+	}
+
 	isZoned := len(zones) > 0
 
 	azureConfig := InfrastructureConfig{
@@ -59,11 +65,10 @@ func NewInfrastructureConfig(workerCIDR string, zones []string) InfrastructureCo
 			VNet: VNet{
 				CIDR: &workerCIDR,
 			},
+			Zones: azureZones,
 		},
 		Zoned: isZoned,
 	}
-
-	azureConfig.Networks.Zones = generateAzureZones(workerCIDR, zones)
 
 	return azureConfig
 }

@@ -2,6 +2,7 @@ package azure
 
 import (
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -12,6 +13,16 @@ func TestAzureZonesWithCustomNodeIPRange(t *testing.T) {
 		givenZoneNames     []string
 		expectedAzureZones []Zone
 	}{
+		"Azure single zone and 10.250.0.0/22": {
+			givenNodesCidr: "10.250.0.0/22",
+			givenZoneNames: []string{"1"},
+			expectedAzureZones: []Zone{
+				{
+					Name: 1,
+					CIDR: "10.250.0.0/25",
+				},
+			},
+		},
 		"Azure three zones and 10.180.0.0/17": {
 			givenNodesCidr: "10.180.0.0/17",
 			givenZoneNames: []string{"1", "2", "3"},
@@ -48,6 +59,24 @@ func TestAzureZonesWithCustomNodeIPRange(t *testing.T) {
 				},
 			},
 		},
+		"Azure three zones reverse order and Default 10.250.0.0/16": {
+			givenNodesCidr: "10.250.0.0/16",
+			givenZoneNames: []string{"3", "2", "1"},
+			expectedAzureZones: []Zone{
+				{
+					Name: 3,
+					CIDR: "10.250.0.0/19",
+				},
+				{
+					Name: 2,
+					CIDR: "10.250.32.0/19",
+				},
+				{
+					Name: 1,
+					CIDR: "10.250.64.0/19",
+				},
+			},
+		},
 		"Azure two zones and Default 10.250.0.0/16": {
 			givenNodesCidr: "10.250.0.0/16",
 			givenZoneNames: []string{"2", "3"},
@@ -64,8 +93,9 @@ func TestAzureZonesWithCustomNodeIPRange(t *testing.T) {
 		},
 	} {
 		t.Run(tname, func(t *testing.T) {
-			zones := generateAzureZones(tcase.givenNodesCidr, tcase.givenZoneNames)
+			zones, err := generateAzureZones(tcase.givenNodesCidr, tcase.givenZoneNames)
 
+			require.NoError(t, err)
 			assert.Equal(t, len(tcase.expectedAzureZones), len(zones))
 
 			for i, expectedZone := range tcase.expectedAzureZones {
@@ -73,9 +103,45 @@ func TestAzureZonesWithCustomNodeIPRange(t *testing.T) {
 			}
 		})
 	}
+
+	// error cases
+
+	for tname, tcase := range map[string]struct {
+		givenNodesCidr string
+		givenZoneNames []string
+	}{
+		"Azure should return error when more than 8 zones provided": {
+			givenNodesCidr: "10.250.0.0/16",
+			givenZoneNames: []string{
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+			},
+		},
+		"Azure should return error when no zones are provided": {
+			givenNodesCidr: "10.180.0.0/23",
+			givenZoneNames: []string{},
+		},
+	} {
+		t.Run(tname, func(t *testing.T) {
+			zones, err := generateAzureZones(tcase.givenNodesCidr, tcase.givenZoneNames)
+
+			assert.Error(t, err)
+			assert.Equal(t, 0, len(zones))
+		})
+	}
 }
 
-func assertAzureZone(t *testing.T, zone Zone, input Zone) {
-	assert.Equal(t, zone.CIDR, input.CIDR)
-	assert.Equal(t, zone.Name, input.Name)
+func assertAzureZone(t *testing.T, expected Zone, verified Zone) {
+	assert.Equal(t, expected.CIDR, verified.CIDR)
+	assert.Equal(t, expected.Name, verified.Name)
+	require.NotNil(t, verified.NatGateway)
+	assert.Equal(t, true, verified.NatGateway.Enabled)
+	assert.Equal(t, defaultConnectionTimeOutMinutes, verified.NatGateway.IdleConnectionTimeoutMinutes)
 }

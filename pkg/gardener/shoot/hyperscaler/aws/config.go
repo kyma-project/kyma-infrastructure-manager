@@ -44,13 +44,19 @@ func DecodeInfrastructureConfig(data []byte) (*v1alpha1.InfrastructureConfig, er
 }
 
 func NewInfrastructureConfig(workersCidr string, zones []string) v1alpha1.InfrastructureConfig {
+	awsZones, err := generateAWSZones(workersCidr, zones)
+	if err != nil {
+		// TODO - pass the error to caller?
+		return v1alpha1.InfrastructureConfig{}
+	}
+
 	return v1alpha1.InfrastructureConfig{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       infrastructureConfigKind,
 			APIVersion: apiVersion,
 		},
 		Networks: v1alpha1.Networks{
-			Zones: generateAWSZones(workersCidr, zones),
+			Zones: awsZones,
 			VPC: v1alpha1.VPC{
 				CIDR: &workersCidr,
 			},
