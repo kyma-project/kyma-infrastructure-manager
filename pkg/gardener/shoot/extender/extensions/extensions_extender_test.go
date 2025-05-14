@@ -112,7 +112,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 					verifyOIDCExtension(t, ext)
 
 				case RegistryCacheExtensionType:
-					verifyRegistryCacheExtension(t, &ext, testcase.caches)
+					verifyRegistryCacheExtension(t, &ext, testcase.caches, testcase.enableImageCaching)
 				}
 			}
 		})
@@ -235,13 +235,22 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			enableImageCaching:   true,
 		},
 		{
-			name:                 "Should disable RegistryCache extension without changing order and data of other extensions",
+			name:                 "Should disable RegistryCache extension when cache is not enabled on Runtime CR without changing order and data of other extensions",
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
-			registryCaches:       nil,
+			registryCaches:       newCaches,
 			enableNetworkFilter:  false,
 			enableImageCaching:   false,
+		},
+		{
+			name:                 "Should disable RegistryCache extension when cache is not enabled on Runtime CR without changing order and data of other extensions",
+			previousExtensions:   fixAllExtensionsOnTheShoot(),
+			inputAuditLogData:    oldAuditLogData,
+			expectedAuditLogData: oldAuditLogData,
+			registryCaches:       []registrycache.RegistryCache{},
+			enableNetworkFilter:  false,
+			enableImageCaching:   true,
 		},
 		{
 			name:                 "Should not update existing AuditLog extension when input auditLogData is empty",
@@ -294,7 +303,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 					verifyAuditLogExtension(t, ext, testCase.expectedAuditLogData)
 
 				case RegistryCacheExtensionType:
-					verifyRegistryCacheExtension(t, &ext, testCase.registryCaches)
+					verifyRegistryCacheExtension(t, &ext, testCase.registryCaches, testCase.enableImageCaching)
 				}
 			}
 		})
@@ -379,12 +388,10 @@ func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extensi
 		}
 	}
 
-	if networkExtAdded {
-		_, found := extensionOrderMap[NetworkFilterType]
+	_, found := extensionOrderMap[NetworkFilterType]
 
-		if !found {
-			extensionOrderMap[NetworkFilterType] = len(extensionOrderMap)
-		}
+	if !found {
+		extensionOrderMap[NetworkFilterType] = len(extensionOrderMap)
 	}
 
 	if registryCacheExtAdded {
@@ -491,8 +498,8 @@ func verifyNetworkFilterExtension(t *testing.T, ext gardener.Extension, isEnable
 	assert.Equal(t, !isEnabled, *ext.Disabled)
 }
 
-func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches []registrycache.RegistryCache) {
-	if len(caches) == 0 {
+func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches []registrycache.RegistryCache, registryCacheEnabled bool) {
+	if len(caches) == 0 || !registryCacheEnabled {
 		assert.True(t, ext != nil || (ext.ProviderConfig == nil && *ext.Disabled))
 
 		return
