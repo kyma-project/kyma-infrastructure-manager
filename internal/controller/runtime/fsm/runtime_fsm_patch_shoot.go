@@ -58,7 +58,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	}
 
 	var registrycache []registrycache.RegistryCache
-	if s.instance.Spec.Caching.Enabled {
+	if s.instance.Spec.Caching != nil && s.instance.Spec.Caching.Enabled {
 		registrycache, err = getRegistryCache(ctx, s, m)
 
 		if err != nil {
