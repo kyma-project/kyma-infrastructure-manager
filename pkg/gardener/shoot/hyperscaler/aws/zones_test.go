@@ -349,6 +349,316 @@ func TestAWSZonesWithCustomNodeIPRange(t *testing.T) {
 				},
 			},
 		},
+
+		// smaller main network
+		"AWS one zone and 10.250.0.0/22": {
+			givenNodesCidr: "10.250.0.0/22",
+			givenZoneNames: []string{
+				"eu-central-1a",
+			},
+			expectedAwsZones: []v1alpha1.Zone{
+				{
+					Name:     "eu-central-1a",
+					Workers:  "10.250.0.0/25",
+					Public:   "10.250.0.128/26",
+					Internal: "10.250.0.192/26",
+				},
+			},
+		},
+		"AWS two zones and 10.250.0.0/22": {
+			givenNodesCidr: "10.250.0.0/22",
+			givenZoneNames: []string{
+				"eu-central-1a",
+				"eu-central-1b",
+			},
+			expectedAwsZones: []v1alpha1.Zone{
+				{
+					Name:     "eu-central-1a",
+					Workers:  "10.250.0.0/25",
+					Public:   "10.250.0.128/26",
+					Internal: "10.250.0.192/26",
+				},
+				{
+					Name:     "eu-central-1b",
+					Workers:  "10.250.1.0/25",
+					Public:   "10.250.1.128/26",
+					Internal: "10.250.1.192/26",
+				},
+			},
+		},
+		"AWS three zones and 10.250.0.0/22": {
+			givenNodesCidr: "10.250.0.0/22",
+			givenZoneNames: []string{
+				"eu-central-1a",
+				"eu-central-1b",
+				"eu-central-1c",
+			},
+			expectedAwsZones: []v1alpha1.Zone{
+				{
+					Name:     "eu-central-1a",
+					Workers:  "10.250.0.0/25",
+					Public:   "10.250.0.128/26",
+					Internal: "10.250.0.192/26",
+				},
+				{
+					Name:     "eu-central-1b",
+					Workers:  "10.250.1.0/25",
+					Public:   "10.250.1.128/26",
+					Internal: "10.250.1.192/26",
+				},
+				{
+					Name:     "eu-central-1c",
+					Workers:  "10.250.2.0/25",
+					Public:   "10.250.2.128/26",
+					Internal: "10.250.2.192/26",
+				},
+			},
+		},
+		"AWS four zones and 10.250.0.0/22": {
+			givenNodesCidr: "10.250.0.0/22",
+			givenZoneNames: []string{
+				"eu-central-1a",
+				"eu-central-1b",
+				"eu-central-1c",
+				"eu-central-1d",
+			},
+			expectedAwsZones: []v1alpha1.Zone{
+				{
+					Name:     "eu-central-1a",
+					Workers:  "10.250.0.0/25",
+					Public:   "10.250.0.128/26",
+					Internal: "10.250.0.192/26",
+				},
+				{
+					Name:     "eu-central-1b",
+					Workers:  "10.250.1.0/25",
+					Public:   "10.250.1.128/26",
+					Internal: "10.250.1.192/26",
+				},
+				{
+					Name:     "eu-central-1c",
+					Workers:  "10.250.2.0/25",
+					Public:   "10.250.2.128/26",
+					Internal: "10.250.2.192/26",
+				},
+				{
+					Name:     "eu-central-1d",
+					Workers:  "10.250.3.0/28",
+					Public:   "10.250.3.16/28",
+					Internal: "10.250.3.32/28",
+				},
+			},
+		},
+		"AWS five zones and 10.250.0.0/22": {
+			givenNodesCidr: "10.250.0.0/22",
+			givenZoneNames: []string{
+				"eu-central-1a",
+				"eu-central-1b",
+				"eu-central-1c",
+				"eu-central-1d",
+				"eu-central-1e",
+			},
+			expectedAwsZones: []v1alpha1.Zone{
+				{
+					Name:     "eu-central-1a",
+					Workers:  "10.250.0.0/25",
+					Public:   "10.250.0.128/26",
+					Internal: "10.250.0.192/26",
+				},
+				{
+					Name:     "eu-central-1b",
+					Workers:  "10.250.1.0/25",
+					Public:   "10.250.1.128/26",
+					Internal: "10.250.1.192/26",
+				},
+				{
+					Name:     "eu-central-1c",
+					Workers:  "10.250.2.0/25",
+					Public:   "10.250.2.128/26",
+					Internal: "10.250.2.192/26",
+				},
+				{
+					Name:     "eu-central-1d",
+					Workers:  "10.250.3.0/28",
+					Public:   "10.250.3.16/28",
+					Internal: "10.250.3.32/28",
+				},
+				{
+					Name:     "eu-central-1e",
+					Workers:  "10.250.3.48/28",
+					Public:   "10.250.3.64/28",
+					Internal: "10.250.3.80/28",
+				},
+			},
+		},
+		"AWS six zones and 10.250.0.0/22": {
+			givenNodesCidr: "10.250.0.0/22",
+			givenZoneNames: []string{
+				"eu-central-1a",
+				"eu-central-1b",
+				"eu-central-1c",
+				"eu-central-1d",
+				"eu-central-1e",
+				"eu-central-1f",
+			},
+			expectedAwsZones: []v1alpha1.Zone{
+				{
+					Name:     "eu-central-1a",
+					Workers:  "10.250.0.0/25",
+					Public:   "10.250.0.128/26",
+					Internal: "10.250.0.192/26",
+				},
+				{
+					Name:     "eu-central-1b",
+					Workers:  "10.250.1.0/25",
+					Public:   "10.250.1.128/26",
+					Internal: "10.250.1.192/26",
+				},
+				{
+					Name:     "eu-central-1c",
+					Workers:  "10.250.2.0/25",
+					Public:   "10.250.2.128/26",
+					Internal: "10.250.2.192/26",
+				},
+				{
+					Name:     "eu-central-1d",
+					Workers:  "10.250.3.0/28",
+					Public:   "10.250.3.16/28",
+					Internal: "10.250.3.32/28",
+				},
+				{
+					Name:     "eu-central-1e",
+					Workers:  "10.250.3.48/28",
+					Public:   "10.250.3.64/28",
+					Internal: "10.250.3.80/28",
+				},
+				{
+					Name:     "eu-central-1f",
+					Workers:  "10.250.3.96/28",
+					Public:   "10.250.3.112/28",
+					Internal: "10.250.3.128/28",
+				},
+			},
+		},
+		"AWS seven zones and 10.250.0.0/22": {
+			givenNodesCidr: "10.250.0.0/22",
+			givenZoneNames: []string{
+				"eu-central-1a",
+				"eu-central-1b",
+				"eu-central-1c",
+				"eu-central-1d",
+				"eu-central-1e",
+				"eu-central-1f",
+				"eu-central-1g",
+			},
+			expectedAwsZones: []v1alpha1.Zone{
+				{
+					Name:     "eu-central-1a",
+					Workers:  "10.250.0.0/25",
+					Public:   "10.250.0.128/26",
+					Internal: "10.250.0.192/26",
+				},
+				{
+					Name:     "eu-central-1b",
+					Workers:  "10.250.1.0/25",
+					Public:   "10.250.1.128/26",
+					Internal: "10.250.1.192/26",
+				},
+				{
+					Name:     "eu-central-1c",
+					Workers:  "10.250.2.0/25",
+					Public:   "10.250.2.128/26",
+					Internal: "10.250.2.192/26",
+				},
+				{
+					Name:     "eu-central-1d",
+					Workers:  "10.250.3.0/28",
+					Public:   "10.250.3.16/28",
+					Internal: "10.250.3.32/28",
+				},
+				{
+					Name:     "eu-central-1e",
+					Workers:  "10.250.3.48/28",
+					Public:   "10.250.3.64/28",
+					Internal: "10.250.3.80/28",
+				},
+				{
+					Name:     "eu-central-1f",
+					Workers:  "10.250.3.96/28",
+					Public:   "10.250.3.112/28",
+					Internal: "10.250.3.128/28",
+				},
+				{
+					Name:     "eu-central-1g",
+					Workers:  "10.250.3.144/28",
+					Public:   "10.250.3.160/28",
+					Internal: "10.250.3.176/28",
+				},
+			},
+		},
+		"AWS eight zones and 10.250.0.0/22": {
+			givenNodesCidr: "10.250.0.0/22",
+			givenZoneNames: []string{
+				"eu-central-1a",
+				"eu-central-1b",
+				"eu-central-1c",
+				"eu-central-1d",
+				"eu-central-1e",
+				"eu-central-1f",
+				"eu-central-1g",
+				"eu-central-1h",
+			},
+			expectedAwsZones: []v1alpha1.Zone{
+				{
+					Name:     "eu-central-1a",
+					Workers:  "10.250.0.0/25",
+					Public:   "10.250.0.128/26",
+					Internal: "10.250.0.192/26",
+				},
+				{
+					Name:     "eu-central-1b",
+					Workers:  "10.250.1.0/25",
+					Public:   "10.250.1.128/26",
+					Internal: "10.250.1.192/26",
+				},
+				{
+					Name:     "eu-central-1c",
+					Workers:  "10.250.2.0/25",
+					Public:   "10.250.2.128/26",
+					Internal: "10.250.2.192/26",
+				},
+				{
+					Name:     "eu-central-1d",
+					Workers:  "10.250.3.0/28",
+					Public:   "10.250.3.16/28",
+					Internal: "10.250.3.32/28",
+				},
+				{
+					Name:     "eu-central-1e",
+					Workers:  "10.250.3.48/28",
+					Public:   "10.250.3.64/28",
+					Internal: "10.250.3.80/28",
+				},
+				{
+					Name:     "eu-central-1f",
+					Workers:  "10.250.3.96/28",
+					Public:   "10.250.3.112/28",
+					Internal: "10.250.3.128/28",
+				},
+				{
+					Name:     "eu-central-1g",
+					Workers:  "10.250.3.144/28",
+					Public:   "10.250.3.160/28",
+					Internal: "10.250.3.176/28",
+				},
+				{
+					Name:     "eu-central-1h",
+					Workers:  "10.250.3.192/28",
+					Public:   "10.250.3.208/28",
+					Internal: "10.250.3.224/28",
+				},
+			},
+		},
 	} {
 		t.Run(tname, func(t *testing.T) {
 			zones, err := generateAWSZones(tcase.givenNodesCidr, tcase.givenZoneNames)

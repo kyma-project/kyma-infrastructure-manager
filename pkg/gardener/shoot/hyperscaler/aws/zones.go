@@ -86,42 +86,62 @@ func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, e
 		var deltaStep *big.Int
 
 		if i < 3 {
-			// first 3 zones are using bigger subnet size 4096 hosts
+			// first 3 zones are using bigger subnet size.
 			workPrefixLength = orgWorkerPrefixLength
 			publicPrefixLength = orgWorkerPrefixLength + 1
 			internalPrefixLength = orgWorkerPrefixLength + 1
 			deltaStep = delta
 		} else {
-			// last 5 zones are using smaller subnet size 1024 hosts
+			// last 5 zones are using smaller subnet size
 			workPrefixLength = smallPrefixLength
 			publicPrefixLength = smallPrefixLength
 			internalPrefixLength = smallPrefixLength
 			deltaStep = small_delta
 		}
 
-		zoneWorkerIP, _ := netip.AddrFromSlice(base.Bytes())
-		zoneWorkerCidr := netip.PrefixFrom(zoneWorkerIP, workPrefixLength)
+		zoneWorkerCIDR, err := getCIDRFromBytes(base.Bytes(), workPrefixLength, cidr)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get worker CIDR for zone %s", name)
+		}
+
 		base.Add(base, deltaStep)
 
 		if i < 3 {
 			base.Add(base, deltaStep)
 		}
 
-		publicIP, _ := netip.AddrFromSlice(base.Bytes())
-		public := netip.PrefixFrom(publicIP, publicPrefixLength)
+		zonePublicCIDR, err := getCIDRFromBytes(base.Bytes(), publicPrefixLength, cidr)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get public CIDR for zone %s", name)
+		}
+
 		base.Add(base, deltaStep)
 
-		internalIP, _ := netip.AddrFromSlice(base.Bytes())
-		internalPrefix := netip.PrefixFrom(internalIP, internalPrefixLength)
+		zoneInternalCIDR, err := getCIDRFromBytes(base.Bytes(), internalPrefixLength, cidr)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get internal CIDR for zone %s", name)
+		}
+
 		base.Add(base, deltaStep)
 
 		zones = append(zones, v1alpha1.Zone{
 			Name:     name,
-			Workers:  zoneWorkerCidr.String(),
-			Public:   public.String(),
-			Internal: internalPrefix.String(),
+			Workers:  zoneWorkerCIDR.String(),
+			Public:   zonePublicCIDR.String(),
+			Internal: zoneInternalCIDR.String(),
 		})
 	}
 
 	return zones, nil
+}
+
+func getCIDRFromBytes(bytes []byte, prefixLength int, mainCIDR netip.Prefix) (netip.Prefix, error) {
+	addr, _ := netip.AddrFromSlice(bytes)
+	resultCIDR := netip.PrefixFrom(addr, prefixLength)
+
+	if !mainCIDR.Contains(resultCIDR.Addr()) {
+		return netip.Prefix{}, errors.Errorf("calculated subnet CIDR %s is not contained in main worker CIDR %s", resultCIDR.String(), mainCIDR.String())
+	}
+
+	return resultCIDR, nil
 }
