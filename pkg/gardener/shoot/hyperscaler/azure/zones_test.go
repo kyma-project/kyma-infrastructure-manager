@@ -23,6 +23,20 @@ func TestAzureZonesWithCustomNodeIPRange(t *testing.T) {
 				},
 			},
 		},
+		"Azure two zones and Default 10.250.0.0/16": {
+			givenNodesCidr: "10.250.0.0/16",
+			givenZoneNames: []string{"2", "3"},
+			expectedAzureZones: []Zone{
+				{
+					Name: 2,
+					CIDR: "10.250.0.0/19",
+				},
+				{
+					Name: 3,
+					CIDR: "10.250.32.0/19",
+				},
+			},
+		},
 		"Azure three zones and 10.180.0.0/17": {
 			givenNodesCidr: "10.180.0.0/17",
 			givenZoneNames: []string{"1", "2", "3"},
@@ -77,17 +91,153 @@ func TestAzureZonesWithCustomNodeIPRange(t *testing.T) {
 				},
 			},
 		},
-		"Azure two zones and Default 10.250.0.0/16": {
+		"Azure four zones and Default 10.250.0.0/16": {
 			givenNodesCidr: "10.250.0.0/16",
-			givenZoneNames: []string{"2", "3"},
+			givenZoneNames: []string{"1", "2", "3", "4"},
 			expectedAzureZones: []Zone{
 				{
-					Name: 2,
+					Name: 1,
 					CIDR: "10.250.0.0/19",
 				},
 				{
-					Name: 3,
+					Name: 2,
 					CIDR: "10.250.32.0/19",
+				},
+				{
+					Name: 3,
+					CIDR: "10.250.64.0/19",
+				},
+				{
+					Name: 4,
+					CIDR: "10.250.96.0/19",
+				},
+			},
+		},
+		"Azure five zones and Default 10.250.0.0/16": {
+			givenNodesCidr: "10.250.0.0/16",
+			givenZoneNames: []string{"1", "2", "3", "4", "5"},
+			expectedAzureZones: []Zone{
+				{
+					Name: 1,
+					CIDR: "10.250.0.0/19",
+				},
+				{
+					Name: 2,
+					CIDR: "10.250.32.0/19",
+				},
+				{
+					Name: 3,
+					CIDR: "10.250.64.0/19",
+				},
+				{
+					Name: 4,
+					CIDR: "10.250.96.0/19",
+				},
+				{
+					Name: 5,
+					CIDR: "10.250.128.0/19",
+				},
+			},
+		},
+		"Azure six zones and Default 10.250.0.0/16": {
+			givenNodesCidr: "10.250.0.0/16",
+			givenZoneNames: []string{"1", "2", "3", "4", "5", "6"},
+			expectedAzureZones: []Zone{
+				{
+					Name: 1,
+					CIDR: "10.250.0.0/19",
+				},
+				{
+					Name: 2,
+					CIDR: "10.250.32.0/19",
+				},
+				{
+					Name: 3,
+					CIDR: "10.250.64.0/19",
+				},
+				{
+					Name: 4,
+					CIDR: "10.250.96.0/19",
+				},
+				{
+					Name: 5,
+					CIDR: "10.250.128.0/19",
+				},
+				{
+					Name: 6,
+					CIDR: "10.250.160.0/19",
+				},
+			},
+		},
+		"Azure seven zones and Default 10.250.0.0/16": {
+			givenNodesCidr: "10.250.0.0/16",
+			givenZoneNames: []string{"1", "2", "3", "4", "5", "6", "7"},
+			expectedAzureZones: []Zone{
+				{
+					Name: 1,
+					CIDR: "10.250.0.0/19",
+				},
+				{
+					Name: 2,
+					CIDR: "10.250.32.0/19",
+				},
+				{
+					Name: 3,
+					CIDR: "10.250.64.0/19",
+				},
+				{
+					Name: 4,
+					CIDR: "10.250.96.0/19",
+				},
+				{
+					Name: 5,
+					CIDR: "10.250.128.0/19",
+				},
+				{
+					Name: 6,
+					CIDR: "10.250.160.0/19",
+				},
+				{
+					Name: 7,
+					CIDR: "10.250.192.0/19",
+				},
+			},
+		},
+		"Azure eight zones and Default 10.250.0.0/16": {
+			givenNodesCidr: "10.250.0.0/16",
+			givenZoneNames: []string{"1", "2", "3", "4", "5", "6", "7", "8"},
+			expectedAzureZones: []Zone{
+				{
+					Name: 1,
+					CIDR: "10.250.0.0/19",
+				},
+				{
+					Name: 2,
+					CIDR: "10.250.32.0/19",
+				},
+				{
+					Name: 3,
+					CIDR: "10.250.64.0/19",
+				},
+				{
+					Name: 4,
+					CIDR: "10.250.96.0/19",
+				},
+				{
+					Name: 5,
+					CIDR: "10.250.128.0/19",
+				},
+				{
+					Name: 6,
+					CIDR: "10.250.160.0/19",
+				},
+				{
+					Name: 7,
+					CIDR: "10.250.192.0/19",
+				},
+				{
+					Name: 8,
+					CIDR: "10.250.224.0/19",
 				},
 			},
 		},
