@@ -50,59 +50,55 @@ func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, e
 	//    PublicCidr:   "10.250.32.0/20",
 	//    InternalCidr: "10.250.48.0/20",
 	// 4 * delta  - difference between two worker (zone) CIDRs
+	// small_delta and smallPrefixLength are used for subnets created for last 4 (4-8) zones
+	smallPrefixLength := workerPrefixLength + 3
+
 	delta := big.NewInt(1)
-	small_delta := big.NewInt(1024)
-	//small_delta.Lsh(small_delta, uint(lastBitNumber-workerPrefixLength-2))
 	delta.Lsh(delta, uint(lastBitNumber-workerPrefixLength))
+	small_delta := big.NewInt(1)
+	small_delta.Rsh(delta, 2)
 
 	// base - it is an integer, which is based on IP bytes
 	base := new(big.Int).SetBytes(workerPrefix.Addr().AsSlice())
 
 	for i, name := range zoneNames {
+		var workerPrefixLength, publicPrefixLength, internalPrefixLength int
+		var deltaStep *big.Int
+
 		if i >= 3 {
-			additional := 3
-			zoneWorkerIP, _ := netip.AddrFromSlice(base.Bytes())
-			zoneWorkerCidr := netip.PrefixFrom(zoneWorkerIP, workerPrefixLength+additional)
-
-			base.Add(base, small_delta)
-
-			publicIP, _ := netip.AddrFromSlice(base.Bytes())
-			public := netip.PrefixFrom(publicIP, workerPrefixLength+additional)
-
-			base.Add(base, small_delta)
-			internalIP, _ := netip.AddrFromSlice(base.Bytes())
-			internalPrefix := netip.PrefixFrom(internalIP, workerPrefixLength+additional)
-
-			zones = append(zones, v1alpha1.Zone{
-				Name:     name,
-				Workers:  zoneWorkerCidr.String(),
-				Public:   public.String(),
-				Internal: internalPrefix.String(),
-			})
-
-			base.Add(base, small_delta)
+			workerPrefixLength = smallPrefixLength
+			publicPrefixLength = smallPrefixLength
+			internalPrefixLength = smallPrefixLength
+			deltaStep = small_delta
 		} else {
-			zoneWorkerIP, _ := netip.AddrFromSlice(base.Bytes())
-			zoneWorkerCidr := netip.PrefixFrom(zoneWorkerIP, workerPrefixLength)
-
-			base.Add(base, delta)
-			base.Add(base, delta)
-			publicIP, _ := netip.AddrFromSlice(base.Bytes())
-			public := netip.PrefixFrom(publicIP, workerPrefixLength+1)
-
-			base.Add(base, delta)
-			internalIP, _ := netip.AddrFromSlice(base.Bytes())
-			internalPrefix := netip.PrefixFrom(internalIP, workerPrefixLength+1)
-
-			zones = append(zones, v1alpha1.Zone{
-				Name:     name,
-				Workers:  zoneWorkerCidr.String(),
-				Public:   public.String(),
-				Internal: internalPrefix.String(),
-			})
-
-			base.Add(base, delta)
+			workerPrefixLength = workerPrefixLength
+			publicPrefixLength = workerPrefixLength + 1
+			internalPrefixLength = workerPrefixLength + 1
+			deltaStep = delta
 		}
+
+		zoneWorkerIP, _ := netip.AddrFromSlice(base.Bytes())
+		zoneWorkerCidr := netip.PrefixFrom(zoneWorkerIP, workerPrefixLength)
+		base.Add(base, deltaStep)
+
+		if i < 3 {
+			base.Add(base, deltaStep)
+		}
+
+		publicIP, _ := netip.AddrFromSlice(base.Bytes())
+		public := netip.PrefixFrom(publicIP, publicPrefixLength)
+		base.Add(base, deltaStep)
+
+		internalIP, _ := netip.AddrFromSlice(base.Bytes())
+		internalPrefix := netip.PrefixFrom(internalIP, internalPrefixLength)
+		base.Add(base, deltaStep)
+
+		zones = append(zones, v1alpha1.Zone{
+			Name:     name,
+			Workers:  zoneWorkerCidr.String(),
+			Public:   public.String(),
+			Internal: internalPrefix.String(),
+		})
 	}
 
 	return zones, nil
