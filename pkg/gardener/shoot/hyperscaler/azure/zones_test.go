@@ -1,7 +1,6 @@
 package azure
 
 import (
-	"github.com/gardener/gardener-extension-provider-aws/pkg/apis/aws/v1alpha1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/networking"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -251,7 +250,7 @@ func TestAzureZonesWithCustomNodeIPRange(t *testing.T) {
 			assert.Equal(t, len(tcase.expectedAzureZones), len(zones))
 
 			for i, expectedZone := range tcase.expectedAzureZones {
-				assertAzureZone(t, expectedZone, zones[i])
+				assertAzureZone(t, tcase.givenNodesCidr, expectedZone, zones[i])
 			}
 		})
 	}
@@ -290,29 +289,14 @@ func TestAzureZonesWithCustomNodeIPRange(t *testing.T) {
 	}
 }
 
-func assertAzureZone(t *testing.T, expected Zone, verified Zone) {
+func assertAzureZone(t *testing.T, nodesCIDR string, expected Zone, verified Zone) {
+	result, err := networking.IsSubnetInsideWorkerCIDR(nodesCIDR, expected.CIDR)
+	assert.NoError(t, err)
+	assert.True(t, result)
+
 	assert.Equal(t, expected.CIDR, verified.CIDR)
 	assert.Equal(t, expected.Name, verified.Name)
 	require.NotNil(t, verified.NatGateway)
 	assert.Equal(t, true, verified.NatGateway.Enabled)
 	assert.Equal(t, defaultConnectionTimeOutMinutes, verified.NatGateway.IdleConnectionTimeoutMinutes)
-}
-
-func assertAWSZoneNetworkIPRanges(t *testing.T, nodesCIDR string, expectedZone v1alpha1.Zone, checked v1alpha1.Zone) {
-	result, err := networking.IsSubnetInsideWorkerCIDR(nodesCIDR, checked.Internal)
-	assert.NoError(t, err)
-	assert.True(t, result)
-
-	result, err = networking.IsSubnetInsideWorkerCIDR(nodesCIDR, checked.Workers)
-	assert.NoError(t, err)
-	assert.True(t, result)
-
-	result, err = networking.IsSubnetInsideWorkerCIDR(nodesCIDR, checked.Public)
-	assert.NoError(t, err)
-	assert.True(t, result)
-
-	assert.Equal(t, expectedZone.Internal, checked.Internal)
-	assert.Equal(t, expectedZone.Workers, checked.Workers)
-	assert.Equal(t, expectedZone.Public, checked.Public)
-	assert.Equal(t, expectedZone.Name, checked.Name)
 }
