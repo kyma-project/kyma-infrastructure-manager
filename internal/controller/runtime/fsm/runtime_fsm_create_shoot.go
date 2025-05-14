@@ -9,13 +9,15 @@ import (
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
+	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 const (
-	msgFailedToConfigureAuditlogs = "Failed to configure audit logs"
-	msgFailedStructuredConfigMap  = "Failed to create structured authentication config map"
+	msgFailedToConfigureAuditlogs     = "Failed to configure audit logs"
+	msgFailedStructuredConfigMap      = "Failed to create structured authentication config map"
+	msgFailedToConfigureRegistryCache = "Failed to configure registry cache"
 )
 
 func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
@@ -79,11 +81,29 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 			msgFailedToConfigureAuditlogs)
 	}
 
+	var registrycache []registrycache.RegistryCache
+
+	if s.instance.Spec.Caching.Enabled {
+		registrycache, err = getRegistryCache(ctx, s, m)
+
+		if err != nil {
+			m.log.Error(err, "Failed to get Registry Cache Config")
+
+			m.Metrics.IncRuntimeFSMStopCounter()
+			return updateStatePendingWithErrorAndStop(
+				&s.instance,
+				imv1.ConditionTypeRuntimeProvisioned,
+				imv1.ConditionReasonRegistryCacheError,
+				msgFailedToConfigureRegistryCache)
+		}
+	}
+
 	shoot, err := convertCreate(&s.instance, gardener_shoot.CreateOpts{
 		ConverterConfig:       m.ConverterConfig,
 		AuditLogData:          data,
 		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
 		StructuredAuthEnabled: m.StructuredAuthEnabled,
+		RegistryCache:         registrycache,
 	})
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object")

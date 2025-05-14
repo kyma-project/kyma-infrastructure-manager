@@ -6,6 +6,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/restrictions"
+	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -55,6 +56,7 @@ type CreateOpts struct {
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
 	StructuredAuthEnabled bool
+	RegistryCache         []registrycache.RegistryCache
 }
 
 type WorkerZones struct {
@@ -74,6 +76,7 @@ type PatchOpts struct {
 	ControlPlaneConfig    *runtime.RawExtension
 	Log                   *logr.Logger
 	StructuredAuthEnabled bool
+	RegistryCache         []registrycache.RegistryCache
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {

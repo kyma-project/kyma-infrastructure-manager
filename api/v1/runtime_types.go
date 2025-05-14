@@ -97,6 +97,7 @@ const (
 	ConditionReasonOidcConfigured           = RuntimeConditionReason("OidcConfigured")
 	ConditionReasonOidcError                = RuntimeConditionReason("OidcConfigurationErr")
 	ConditionReasonSeedNotFound             = RuntimeConditionReason("SeedNotFound")
+	ConditionReasonRegistryCacheError       = RuntimeConditionReason("RegistryCacheConfigurationErr")
 )
 
 //+kubebuilder:object:root=true
