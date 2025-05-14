@@ -2,13 +2,13 @@ module github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app
 
 go 1.24.0
 
-toolchain go1.24.2
+toolchain go1.24.3
 
 require (
 	github.com/gardener/gardener v1.117.2
 	github.com/gardener/oidc-webhook-authenticator v0.35.0
 	github.com/go-playground/validator/v10 v10.26.0
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250506081029-a028c278460a
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250513074002-2c9fd9c44e79
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
 	k8s.io/api v0.33.0
@@ -59,12 +59,12 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/crypto v0.37.0 // indirect
-	golang.org/x/net v0.39.0 // indirect
-	golang.org/x/oauth2 v0.29.0 // indirect
-	golang.org/x/sys v0.32.0 // indirect
-	golang.org/x/term v0.31.0 // indirect
-	golang.org/x/text v0.24.0 // indirect
+	golang.org/x/crypto v0.38.0 // indirect
+	golang.org/x/net v0.40.0 // indirect
+	golang.org/x/oauth2 v0.30.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/term v0.32.0 // indirect
+	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
@@ -80,8 +80,8 @@ require (
 
 replace (
 	github.com/kyma-project/infrastructure-manager => ../../
-	golang.org/x/crypto => golang.org/x/crypto v0.37.0
-	golang.org/x/net => golang.org/x/net v0.39.0
+	golang.org/x/crypto => golang.org/x/crypto v0.38.0
+	golang.org/x/net => golang.org/x/net v0.40.0
 	golang.org/x/sys => golang.org/x/sys v0.32.0
 	golang.org/x/text => golang.org/x/text v0.24.0
 	golang.org/x/tools => golang.org/x/tools v0.32.0
