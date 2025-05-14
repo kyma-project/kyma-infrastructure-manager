@@ -33,4 +33,23 @@ func TestIsSubnetInsideWorkerCIDR(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("Should return error when invalid Nodes CIDR", func(t *testing.T) {
+		givenNodesCidr := "invalidCIDR"
+		givenSubnetCidr := "10.251.0.0/19"
+
+		_, err := IsSubnetInsideWorkerCIDR(givenNodesCidr, givenSubnetCidr)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to parse worker CIDR")
+	})
+
+	t.Run("Should return error when invalid Subnet CIDR", func(t *testing.T) {
+		givenNodesCidr := "10.251.0.0/16"
+		givenSubnetCidr := "invalidCIDR"
+
+		_, err := IsSubnetInsideWorkerCIDR(givenNodesCidr, givenSubnetCidr)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to parse subnet CIDR")
+	})
+
 }
