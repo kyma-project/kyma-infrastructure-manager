@@ -48,8 +48,13 @@ func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, e
 	//    WorkerCidr:   "10.250.0.0/19",
 	//    PublicCidr:   "10.250.32.0/20",
 	//    InternalCidr: "10.250.48.0/20",
-	// 4 * delta  - difference between two worker (zone) CIDRs
-	// small_delta and smallPrefixLength are used for subnets created for last 4 (4-8) zones
+	// 4 * delta  - difference between two worker (zone) CIDRs 4096 hosts
+	// small_delta and smallPrefixLength are used for subnets created for last 5 (from 4th to 8th) zones
+	// small_delta  - difference between two subnetworks CIDRs for last 5 (from 4th to 8th) zones 1024 hosts
+	//    WorkerCidr:   "10.250.192.0/22",
+	//    PublicCidr:   "10.250.196.0/22",
+	//    InternalCidr: "10.250.200.0/22",
+
 	smallPrefixLength := orgWorkerPrefixLength + 3
 
 	delta := big.NewInt(1)
@@ -65,11 +70,13 @@ func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, e
 		var deltaStep *big.Int
 
 		if i < 3 {
+			// first 3 zones are using bigger subnet size 4096 hosts
 			workPrefixLength = orgWorkerPrefixLength
 			publicPrefixLength = orgWorkerPrefixLength + 1
 			internalPrefixLength = orgWorkerPrefixLength + 1
 			deltaStep = delta
 		} else {
+			// first 5 zones are using smaller subnet size 1024 hosts
 			workPrefixLength = smallPrefixLength
 			publicPrefixLength = smallPrefixLength
 			internalPrefixLength = smallPrefixLength
