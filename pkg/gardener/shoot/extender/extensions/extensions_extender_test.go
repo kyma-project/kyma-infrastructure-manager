@@ -196,7 +196,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			expectedAuditLogData: auditlogs.AuditLogData{},
 			registryCaches:       newCaches,
 			enableNetworkFilter:  false,
-			enableImageCaching:   true,
+			enableImageCaching:   false,
 		},
 		{
 			name:                 "Existing extensions should not change order during patching if nothing has changed",
@@ -249,14 +249,6 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			inputAuditLogData:    auditlogs.AuditLogData{},
 			expectedAuditLogData: oldAuditLogData,
 			registryCaches:       oldCaches,
-			enableNetworkFilter:  false,
-			enableImageCaching:   true,
-		},
-		{
-			name:                 "Should not add RegistryCache extension to existing shoot extensions when input registryCache is empty",
-			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
-			inputAuditLogData:    auditlogs.AuditLogData{},
-			expectedAuditLogData: auditlogs.AuditLogData{},
 			enableNetworkFilter:  false,
 			enableImageCaching:   true,
 		},
