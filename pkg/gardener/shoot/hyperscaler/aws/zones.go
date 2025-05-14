@@ -76,7 +76,7 @@ func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, e
 			internalPrefixLength = orgWorkerPrefixLength + 1
 			deltaStep = delta
 		} else {
-			// first 5 zones are using smaller subnet size 1024 hosts
+			// last 5 zones are using smaller subnet size 1024 hosts
 			workPrefixLength = smallPrefixLength
 			publicPrefixLength = smallPrefixLength
 			internalPrefixLength = smallPrefixLength
