@@ -33,7 +33,6 @@ cidr: 10.250.0.0/16
     internal: 10.250.176.0/20
 */
 func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, error) {
-
 	numZones := len(zoneNames)
 	if numZones < 1 || numZones > maxNumberOfZones {
 		return nil, errors.New("Number of networking zones must be between 1 and 8")
@@ -42,8 +41,8 @@ func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, e
 	var zones []v1alpha1.Zone
 
 	cidr, _ := netip.ParsePrefix(workerCidr)
-	workerPrefixLength := cidr.Bits() + workersBits
-	workerPrefix, _ := cidr.Addr().Prefix(workerPrefixLength)
+	orgWorkerPrefixLength := cidr.Bits() + workersBits
+	workerPrefix, _ := cidr.Addr().Prefix(orgWorkerPrefixLength)
 
 	// delta - it is the difference between "public" and "internal" CIDRs, for example:
 	//    WorkerCidr:   "10.250.0.0/19",
@@ -51,10 +50,10 @@ func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, e
 	//    InternalCidr: "10.250.48.0/20",
 	// 4 * delta  - difference between two worker (zone) CIDRs
 	// small_delta and smallPrefixLength are used for subnets created for last 4 (4-8) zones
-	smallPrefixLength := workerPrefixLength + 3
+	smallPrefixLength := orgWorkerPrefixLength + 3
 
 	delta := big.NewInt(1)
-	delta.Lsh(delta, uint(lastBitNumber-workerPrefixLength))
+	delta.Lsh(delta, uint(lastBitNumber-orgWorkerPrefixLength))
 	small_delta := big.NewInt(1)
 	small_delta.Rsh(delta, 2)
 
@@ -62,23 +61,23 @@ func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, e
 	base := new(big.Int).SetBytes(workerPrefix.Addr().AsSlice())
 
 	for i, name := range zoneNames {
-		var workerPrefixLength, publicPrefixLength, internalPrefixLength int
+		var workPrefixLength, publicPrefixLength, internalPrefixLength int
 		var deltaStep *big.Int
 
-		if i >= 3 {
-			workerPrefixLength = smallPrefixLength
+		if i < 3 {
+			workPrefixLength = orgWorkerPrefixLength
+			publicPrefixLength = orgWorkerPrefixLength + 1
+			internalPrefixLength = orgWorkerPrefixLength + 1
+			deltaStep = delta
+		} else {
+			workPrefixLength = smallPrefixLength
 			publicPrefixLength = smallPrefixLength
 			internalPrefixLength = smallPrefixLength
 			deltaStep = small_delta
-		} else {
-			workerPrefixLength = workerPrefixLength
-			publicPrefixLength = workerPrefixLength + 1
-			internalPrefixLength = workerPrefixLength + 1
-			deltaStep = delta
 		}
 
 		zoneWorkerIP, _ := netip.AddrFromSlice(base.Bytes())
-		zoneWorkerCidr := netip.PrefixFrom(zoneWorkerIP, workerPrefixLength)
+		zoneWorkerCidr := netip.PrefixFrom(zoneWorkerIP, workPrefixLength)
 		base.Add(base, deltaStep)
 
 		if i < 3 {
