@@ -56,7 +56,6 @@ type CreateOpts struct {
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
 	StructuredAuthEnabled bool
-	RegistryCache         []registrycache.RegistryCache
 }
 
 type WorkerZones struct {
@@ -123,7 +122,7 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.ControlPlaneConfig))
 
 	extendersForPatch = append(extendersForPatch,
-		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, nil, opts.Extensions),
+		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.RegistryCache, opts.Extensions),
 		extender2.NewResourcesExtenderForPatch(opts.Resources))
 
 	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
