@@ -12,6 +12,7 @@ const (
 	workersBits      = 3
 	lastBitNumber    = 31
 	maxNumberOfZones = 8
+	minNumberOfZones = 1
 )
 
 /*
@@ -32,17 +33,25 @@ cidr: 10.250.0.0/16
     public: 10.250.160.0/20
     internal: 10.250.176.0/20
 */
+
 func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, error) {
 	numZones := len(zoneNames)
-	if numZones < 1 || numZones > maxNumberOfZones {
+	if numZones < minNumberOfZones || numZones > maxNumberOfZones {
 		return nil, errors.New("Number of networking zones must be between 1 and 8")
 	}
 
 	var zones []v1alpha1.Zone
 
-	cidr, _ := netip.ParsePrefix(workerCidr)
+	cidr, err := netip.ParsePrefix(workerCidr)
+	if err != nil {
+		return zones, errors.Wrap(err, "failed to parse worker CIDR")
+	}
+
 	orgWorkerPrefixLength := cidr.Bits() + workersBits
-	workerPrefix, _ := cidr.Addr().Prefix(orgWorkerPrefixLength)
+	workerPrefix, err := cidr.Addr().Prefix(orgWorkerPrefixLength)
+	if err != nil {
+		return zones, errors.Wrap(err, "failed to get worker prefix")
+	}
 
 	// delta - it is the difference between "public" and "internal" CIDRs, for example:
 	//    WorkerCidr:   "10.250.0.0/19",
@@ -65,7 +74,14 @@ func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, e
 	// base - it is an integer, which is based on IP bytes
 	base := new(big.Int).SetBytes(workerPrefix.Addr().AsSlice())
 
+	processed := make(map[string]bool)
+
 	for i, name := range zoneNames {
+		if _, ok := processed[name]; ok {
+			return nil, errors.Errorf("zone name %s is duplicated", name)
+		}
+		processed[name] = true
+
 		var workPrefixLength, publicPrefixLength, internalPrefixLength int
 		var deltaStep *big.Int
 

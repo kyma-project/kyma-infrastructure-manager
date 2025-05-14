@@ -2,12 +2,12 @@ package aws
 
 import (
 	"github.com/gardener/gardener-extension-provider-aws/pkg/apis/aws/v1alpha1"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/networking"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestAWSZonesWithCustomNodeIPRange(t *testing.T) {
-
 	for tname, tcase := range map[string]struct {
 		givenNodesCidr   string
 		givenZoneNames   []string
@@ -357,7 +357,7 @@ func TestAWSZonesWithCustomNodeIPRange(t *testing.T) {
 			assert.Equal(t, len(tcase.expectedAwsZones), len(zones))
 
 			for i, expectedZone := range tcase.expectedAwsZones {
-				assertAWSIpRanges(t, expectedZone, zones[i])
+				assertAWSZoneNetworkIPRanges(t, tcase.givenNodesCidr, expectedZone, zones[i])
 			}
 		})
 	}
@@ -382,9 +382,22 @@ func TestAWSZonesWithCustomNodeIPRange(t *testing.T) {
 				"eu-central-1i",
 			},
 		},
+		"AWS should return error when duplicated zones names are provided": {
+			givenNodesCidr: "10.250.0.0/16",
+			givenZoneNames: []string{
+				"eu-central-1a",
+				"eu-central-1a",
+			},
+		},
 		"AWS should return error when 0 zones are provided": {
 			givenNodesCidr: "10.180.0.0/23",
 			givenZoneNames: []string{},
+		},
+		"AWS should return error when cannot parse nodes CIDR": {
+			givenNodesCidr: "888.888.888.0/77",
+			givenZoneNames: []string{
+				"eu-central-1a",
+			},
 		},
 	} {
 		t.Run(tname, func(t *testing.T) {
@@ -396,9 +409,21 @@ func TestAWSZonesWithCustomNodeIPRange(t *testing.T) {
 	}
 }
 
-func assertAWSIpRanges(t *testing.T, zone v1alpha1.Zone, input v1alpha1.Zone) {
-	assert.Equal(t, zone.Internal, input.Internal)
-	assert.Equal(t, zone.Workers, input.Workers)
-	assert.Equal(t, zone.Public, input.Public)
-	assert.Equal(t, zone.Name, input.Name)
+func assertAWSZoneNetworkIPRanges(t *testing.T, nodesCIDR string, expectedZone v1alpha1.Zone, checked v1alpha1.Zone) {
+	result, err := networking.IsSubnetInsideWorkerCIDR(nodesCIDR, checked.Internal)
+	assert.NoError(t, err)
+	assert.True(t, result)
+
+	result, err = networking.IsSubnetInsideWorkerCIDR(nodesCIDR, checked.Workers)
+	assert.NoError(t, err)
+	assert.True(t, result)
+
+	result, err = networking.IsSubnetInsideWorkerCIDR(nodesCIDR, checked.Public)
+	assert.NoError(t, err)
+	assert.True(t, result)
+
+	assert.Equal(t, expectedZone.Internal, checked.Internal)
+	assert.Equal(t, expectedZone.Workers, checked.Workers)
+	assert.Equal(t, expectedZone.Public, checked.Public)
+	assert.Equal(t, expectedZone.Name, checked.Name)
 }

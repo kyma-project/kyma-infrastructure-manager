@@ -12,6 +12,7 @@ const (
 	workersBits                     = 3
 	cidrLength                      = 32
 	maxNumberOfZones                = 8
+	minNumberOfZones                = 1
 )
 
 func generateAzureZones(workerCidr string, zoneNames []string) ([]Zone, error) {
@@ -57,7 +58,7 @@ func convertZoneNames(zoneNames []string) []int {
 	var zones []int
 	for _, inputZone := range zoneNames {
 		zone, err := strconv.Atoi(inputZone)
-		if err != nil || zone < 1 || zone > 8 {
+		if err != nil || zone < minNumberOfZones || zone > maxNumberOfZones {
 			continue
 		}
 		zones = append(zones, zone)
