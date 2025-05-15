@@ -15,14 +15,9 @@ type ConfigExplorer struct {
 
 type GetSecretFunc func() (corev1.Secret, error)
 
-func NewConfigExplorer(ctx context.Context, secretFunc GetSecretFunc) (ConfigExplorer, error) {
+func NewConfigExplorer(ctx context.Context, kubeconfigSecret corev1.Secret) (ConfigExplorer, error) {
 
-	secret, err := secretFunc()
-	if err != nil {
-		return ConfigExplorer{}, err
-	}
-
-	shootClient, err := gardener.GetShootClient(secret)
+	shootClient, err := gardener.GetShootClient(kubeconfigSecret)
 	if err != nil {
 		return ConfigExplorer{}, err
 	}
