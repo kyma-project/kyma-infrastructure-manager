@@ -167,12 +167,12 @@ type Kubernetes struct {
 // Note: Descriptions were taken from the Kubernetes documentation.
 type OIDCConfig struct {
 	gardener.OIDCConfig `json:",omitempty"`
-	JWKS                string `json:"jwks,omitempty"`
+	JWKS                []byte `json:"jwks,omitempty"`
 }
 
 type APIServer struct {
-	OidcConfig           OIDCConfig    `json:"oidcConfig,omitempty"`
-	AdditionalOidcConfig *[]OIDCConfig `json:"additionalOidcConfig,omitempty"`
+	OidcConfig           gardener.OIDCConfig `json:"oidcConfig,omitempty"`
+	AdditionalOidcConfig *[]OIDCConfig       `json:"additionalOidcConfig,omitempty"`
 }
 
 type Provider struct {

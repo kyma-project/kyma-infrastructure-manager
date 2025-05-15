@@ -33,14 +33,12 @@ func TestOidcExtender(t *testing.T) {
 					Name: "shoot",
 					Kubernetes: imv1.Kubernetes{
 						KubeAPIServer: imv1.APIServer{
-							OidcConfig: imv1.OIDCConfig{
-								OIDCConfig: gardener.OIDCConfig{
-									ClientID:      &defaultOidc.ClientID,
-									GroupsClaim:   &defaultOidc.GroupsClaim,
-									IssuerURL:     &defaultOidc.IssuerURL,
-									SigningAlgs:   defaultOidc.SigningAlgs,
-									UsernameClaim: &defaultOidc.UsernameClaim,
-								},
+							OidcConfig: gardener.OIDCConfig{
+								ClientID:      &defaultOidc.ClientID,
+								GroupsClaim:   &defaultOidc.GroupsClaim,
+								IssuerURL:     &defaultOidc.IssuerURL,
+								SigningAlgs:   defaultOidc.SigningAlgs,
+								UsernameClaim: &defaultOidc.UsernameClaim,
 							},
 						},
 					},

@@ -179,6 +179,7 @@ spec:
                                     the OIDC JSON Web Token (JWT).
                                   type: string
                                 jwks:
+                                  format: byte
                                   type: string
                                 requiredClaims:
                                   additionalProperties:
@@ -262,8 +263,6 @@ spec:
                                 description: The URL of the OpenID issuer, only HTTPS
                                   scheme will be accepted. Used to verify the OIDC
                                   JSON Web Token (JWT).
-                                type: string
-                              jwks:
                                 type: string
                               requiredClaims:
                                 additionalProperties:

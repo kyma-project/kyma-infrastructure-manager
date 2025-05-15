@@ -32,13 +32,12 @@ func TestLegacyOidcExtender(t *testing.T) {
 				Shoot: imv1.RuntimeShoot{
 					Kubernetes: imv1.Kubernetes{
 						KubeAPIServer: imv1.APIServer{
-							OidcConfig: imv1.OIDCConfig{OIDCConfig: gardener.OIDCConfig{
+							OidcConfig: gardener.OIDCConfig{
 								ClientID:      &defaultOidc.ClientID,
 								GroupsClaim:   &defaultOidc.GroupsClaim,
 								IssuerURL:     &defaultOidc.IssuerURL,
 								SigningAlgs:   defaultOidc.SigningAlgs,
 								UsernameClaim: &defaultOidc.UsernameClaim,
-							},
 							},
 						},
 					},
@@ -53,6 +52,6 @@ func TestLegacyOidcExtender(t *testing.T) {
 		// then
 		require.NoError(t, err)
 
-		assert.Equal(t, runtimeShoot.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig.OIDCConfig, *shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig) //nolint:staticcheck
+		assert.Equal(t, runtimeShoot.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig, *shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig) //nolint:staticcheck
 	})
 }

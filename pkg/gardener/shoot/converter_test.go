@@ -421,7 +421,7 @@ func fixRuntime(purpose gardener.ShootPurpose) imv1.Runtime {
 				Kubernetes: imv1.Kubernetes{
 					Version: &kubernetesVersion,
 					KubeAPIServer: imv1.APIServer{
-						OidcConfig: imv1.OIDCConfig{OIDCConfig: gardener.OIDCConfig{
+						OidcConfig: gardener.OIDCConfig{
 							ClientID:    &clientID,
 							GroupsClaim: &groupsClaim,
 							IssuerURL:   &issuerURL,
@@ -429,7 +429,6 @@ func fixRuntime(purpose gardener.ShootPurpose) imv1.Runtime {
 								"RS256",
 							},
 							UsernameClaim: &usernameClaim,
-						},
 						},
 					},
 				},
@@ -486,16 +485,14 @@ func fixRuntimeWithNoVersionsSpecified() imv1.Runtime {
 				},
 				Kubernetes: imv1.Kubernetes{
 					KubeAPIServer: imv1.APIServer{
-						OidcConfig: imv1.OIDCConfig{
-							OIDCConfig: gardener.OIDCConfig{
-								ClientID:    &clientID,
-								GroupsClaim: &groupsClaim,
-								IssuerURL:   &issuerURL,
-								SigningAlgs: []string{
-									"RS256",
-								},
-								UsernameClaim: &usernameClaim,
+						OidcConfig: gardener.OIDCConfig{
+							ClientID:    &clientID,
+							GroupsClaim: &groupsClaim,
+							IssuerURL:   &issuerURL,
+							SigningAlgs: []string{
+								"RS256",
 							},
+							UsernameClaim: &usernameClaim,
 						},
 					},
 				},

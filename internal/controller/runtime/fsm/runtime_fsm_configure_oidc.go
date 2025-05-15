@@ -68,7 +68,7 @@ func defaultAdditionalOidcIfNotPresent(runtime *imv1.Runtime, cfg RCCfg) {
 	if additionalOIDCConfigEmpty() {
 		additionalOidcConfig = &[]imv1.OIDCConfig{}
 		defaultOIDCConfig := cfg.ClusterConfig.DefaultSharedIASTenant.ToOIDCConfig()
-		*additionalOidcConfig = append(*additionalOidcConfig, defaultOIDCConfig)
+		*additionalOidcConfig = append(*additionalOidcConfig, imv1.OIDCConfig{OIDCConfig: defaultOIDCConfig})
 		runtime.Spec.Shoot.Kubernetes.KubeAPIServer.AdditionalOidcConfig = additionalOidcConfig
 	}
 }
