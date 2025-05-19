@@ -85,11 +85,11 @@ func TestOidcState(t *testing.T) {
 
 		for _, tc := range []struct {
 			name                 string
-			additionalOIDCConfig *[]gardener.OIDCConfig
+			additionalOIDCConfig *[]imv1.OIDCConfig
 		}{
 			{"Should configure OIDC using defaults when additional OIDC config is nil", nil},
-			{"Should configure OIDC using defaults when additional OIDC config contains empty array", &[]gardener.OIDCConfig{}},
-			{"Should configure OIDC using defaults when additional OIDC config contains one empty element", &[]gardener.OIDCConfig{{}}},
+			{"Should configure OIDC using defaults when additional OIDC config contains empty array", &[]imv1.OIDCConfig{}},
+			{"Should configure OIDC using defaults when additional OIDC config contains one empty element", &[]imv1.OIDCConfig{{}}},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
 				runtimeStub := runtimeForTest()
@@ -226,7 +226,7 @@ func TestOidcState(t *testing.T) {
 		// end of fake client setup
 
 		runtimeStub := runtimeForTest()
-		additionalOidcConfig := &[]gardener.OIDCConfig{}
+		additionalOidcConfig := &[]imv1.OIDCConfig{}
 		*additionalOidcConfig = append(*additionalOidcConfig, createGardenerOidcConfig("runtime-cr-config0"))
 		*additionalOidcConfig = append(*additionalOidcConfig, createGardenerOidcConfig("runtime-cr-config1"))
 		runtimeStub.Spec.Shoot.Kubernetes.KubeAPIServer.AdditionalOidcConfig = additionalOidcConfig
@@ -374,14 +374,16 @@ func assertEqualConditions(t *testing.T, expectedConditions []metav1.Condition, 
 	return assert.Equal(t, expectedConditions, actualConditions)
 }
 
-func createGardenerOidcConfig(clientId string) gardener.OIDCConfig {
-	return gardener.OIDCConfig{
-		ClientID:       ptr.To(clientId),
-		GroupsClaim:    ptr.To("groups"),
-		IssuerURL:      ptr.To("https://my.cool.tokens.com"),
-		SigningAlgs:    []string{"RS256"},
-		UsernameClaim:  ptr.To("sub"),
-		UsernamePrefix: ptr.To("-"),
+func createGardenerOidcConfig(clientId string) imv1.OIDCConfig {
+	return imv1.OIDCConfig{
+		OIDCConfig: gardener.OIDCConfig{
+			ClientID:       ptr.To(clientId),
+			GroupsClaim:    ptr.To("groups"),
+			IssuerURL:      ptr.To("https://my.cool.tokens.com"),
+			SigningAlgs:    []string{"RS256"},
+			UsernameClaim:  ptr.To("sub"),
+			UsernamePrefix: ptr.To("-"),
+		},
 	}
 }
 
