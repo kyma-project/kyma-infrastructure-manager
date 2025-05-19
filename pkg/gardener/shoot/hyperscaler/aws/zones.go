@@ -47,8 +47,10 @@ func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, e
 		return zones, errors.Wrap(err, "failed to parse worker network CIDR")
 	}
 
-	if cidr.Bits() > 24 {
-		return nil, errors.New("CIDR prefix length must be less than or equal to 24")
+	prefLength := cidr.Bits()
+
+	if prefLength > 24 || prefLength < 16 {
+		return nil, errors.New("CIDR prefix length must be between 16 and 24")
 	}
 
 	orgWorkerPrefixLength := cidr.Bits() + workersBits
