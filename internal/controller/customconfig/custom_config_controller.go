@@ -39,33 +39,37 @@ const fieldManagerName = "customconfigcontroller"
 func (r *CustomSKRConfigReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	r.Log.V(log_level.TRACE).Info(request.String())
 
-	secret, res, err := get[*v1.Secret](r.Client, request.NamespacedName)
-	if err != nil && res != nil {
-		return *res, err
+	var secret v1.Secret
+	if err := r.Get(ctx, request.NamespacedName, &secret); err != nil {
+		return requeueOnError(err)
 	}
 
-	if !secretControlledByKIM(*secret) {
+	if !secretControlledByKIM(secret) {
+		r.Log.V(log_level.TRACE).Info("Secret doesn't contain kubeconfig for runtime", "Name", request.Name, "Namespace", request.Namespace)
 		return ctrl.Result{
 			Requeue: false,
 		}, nil
 	}
 
 	runtimeID := secret.Labels["kyma-project.io/runtime-id"]
-	runtime, res, err := get[*imv1.Runtime](r.Client, types.NamespacedName{
-		Name:      runtimeID,
-		Namespace: request.Namespace,
-	})
 
-	if err != nil && res != nil {
-		return *res, err
+	r.Log.V(log_level.TRACE).Info("Getting runtime", "Name", runtimeID, "Namespace", request.Namespace)
+
+	var runtime imv1.Runtime
+	if err := r.Get(ctx, types.NamespacedName{Name: runtimeID,
+		Namespace: request.Namespace,
+	}, &runtime); err != nil {
+		return requeueOnError(err)
 	}
 
-	return r.reconcileRegistryCacheConfig(ctx, *secret, *runtime)
+	return r.reconcileRegistryCacheConfig(ctx, secret, runtime)
 }
 
 func (r *CustomSKRConfigReconciler) reconcileRegistryCacheConfig(ctx context.Context, secret v1.Secret, runtime imv1.Runtime) (ctrl.Result, error) {
 	enableRegistryCache, err := customConfigExists(ctx, secret)
 	if err != nil {
+		r.Log.V(log_level.TRACE).Error(err, "Failed to check if custom config exists")
+
 		return ctrl.Result{
 			Requeue: true,
 		}, err
@@ -86,7 +90,7 @@ func (r *CustomSKRConfigReconciler) reconcileRegistryCacheConfig(ctx context.Con
 		})
 
 		if err != nil {
-			r.Log.Error(err, "Failed to patch runtime")
+			r.Log.V(log_level.TRACE).Error(err, "Failed to patch runtime with caching enabled")
 			return ctrl.Result{
 				Requeue:      true,
 				RequeueAfter: time.Minute,
@@ -109,22 +113,23 @@ func customConfigExists(ctx context.Context, kubeconfigSecret v1.Secret) (bool, 
 	return customConfigExplorer.RegistryCacheConfigExists()
 }
 
-func get[T client.Object](client client.Client, namespacedName types.NamespacedName) (T, *ctrl.Result, error) {
-	var obj T
-	err := client.Get(context.Background(), namespacedName, obj)
+func requeueOnError(err error) (ctrl.Result, error) {
+
 	if err != nil && !apierrors.IsNotFound(err) {
-		return obj, &ctrl.Result{
+		return ctrl.Result{
 			Requeue: false,
 		}, err
 	}
 
 	if err != nil {
-		return obj, &ctrl.Result{
+		return ctrl.Result{
 			Requeue: true,
 		}, err
 	}
 
-	return obj, nil, nil
+	return ctrl.Result{
+		Requeue: false,
+	}, err
 }
 
 func secretControlledByKIM(secret v1.Secret) bool {

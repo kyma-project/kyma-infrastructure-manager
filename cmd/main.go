@@ -126,7 +126,7 @@ func main() {
 	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "A file path to the gardener shoot converter configuration.")
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration")
 	flag.BoolVar(&structuredAuthEnabled, "structured-auth-enabled", false, "Feature flag to enable structured authentication")
-	flag.BoolVar(&customConfigControllerEnabled, "custom-config-controller-enabled", false, "Feature flag to custom config controller")
+	flag.BoolVar(&customConfigControllerEnabled, "custom-config-controller-enabled", true, "Feature flag to custom config controller")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
