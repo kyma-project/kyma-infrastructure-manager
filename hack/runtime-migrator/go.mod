@@ -82,7 +82,7 @@ replace (
 	github.com/kyma-project/infrastructure-manager => ../../
 	golang.org/x/crypto => golang.org/x/crypto v0.38.0
 	golang.org/x/net => golang.org/x/net v0.40.0
-	golang.org/x/sys => golang.org/x/sys v0.32.0
+	golang.org/x/sys => golang.org/x/sys v0.33.0
 	golang.org/x/text => golang.org/x/text v0.24.0
 	golang.org/x/tools => golang.org/x/tools v0.32.0
 )
