@@ -3,11 +3,11 @@ package fsm
 import (
 	"context"
 	"fmt"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
-	"github.com/kyma-project/kim-snatch/api/v1beta1"
 	"reflect"
 	"time"
+
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -20,6 +20,7 @@ import (
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+  "github.com/kyma-project/kim-snatch/api/v1beta1"
 )
 
 const fieldManagerName = "kim"
@@ -46,7 +47,12 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
 
 		cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
-		err = structuredauth.CreateOrUpdateStructuredAuthConfigMap(ctx, m.ShootClient, types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace}, oidcConfig)
+		err = structuredauth.CreateOrUpdateStructuredAuthConfigMap(
+			ctx,
+			m.ShootClient,
+			types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace},
+			oidcConfig,
+		)
 
 		if err != nil {
 			m.Metrics.IncRuntimeFSMStopCounter()

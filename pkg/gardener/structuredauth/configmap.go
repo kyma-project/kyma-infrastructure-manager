@@ -2,6 +2,7 @@ package structuredauth
 
 import (
 	"context"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"

@@ -66,9 +66,9 @@ func defaultAdditionalOidcIfNotPresent(runtime *imv1.Runtime, cfg RCCfg) {
 	}
 
 	if additionalOIDCConfigEmpty() {
-		additionalOidcConfig = &[]gardener.OIDCConfig{}
+		additionalOidcConfig = &[]imv1.OIDCConfig{}
 		defaultOIDCConfig := cfg.ClusterConfig.DefaultSharedIASTenant.ToOIDCConfig()
-		*additionalOidcConfig = append(*additionalOidcConfig, defaultOIDCConfig)
+		*additionalOidcConfig = append(*additionalOidcConfig, imv1.OIDCConfig{OIDCConfig: defaultOIDCConfig})
 		runtime.Spec.Shoot.Kubernetes.KubeAPIServer.AdditionalOidcConfig = additionalOidcConfig
 	}
 }
@@ -113,7 +113,7 @@ func isOidcExtensionEnabled(shoot gardener.Shoot) bool {
 	return false
 }
 
-func createOpenIDConnectResource(additionalOidcConfig gardener.OIDCConfig, oidcID int) *authenticationv1alpha1.OpenIDConnect {
+func createOpenIDConnectResource(additionalOidcConfig imv1.OIDCConfig, oidcID int) *authenticationv1alpha1.OpenIDConnect {
 	toSupportedSigningAlgs := func(signingAlgs []string) []authenticationv1alpha1.SigningAlgorithm {
 		var supportedSigningAlgs []authenticationv1alpha1.SigningAlgorithm
 		for _, alg := range signingAlgs {
@@ -142,6 +142,10 @@ func createOpenIDConnectResource(additionalOidcConfig gardener.OIDCConfig, oidcI
 			GroupsPrefix:         additionalOidcConfig.GroupsPrefix,
 			RequiredClaims:       additionalOidcConfig.RequiredClaims,
 			SupportedSigningAlgs: toSupportedSigningAlgs(additionalOidcConfig.SigningAlgs),
+			JWKS: authenticationv1alpha1.JWKSSpec{
+				Keys: []byte(additionalOidcConfig.JWKS),
+				// FIXME: Distributed claims?
+			},
 		},
 	}
 
