@@ -49,7 +49,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			ctx,
 			m.ShootClient,
 			types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace},
-			imv1.OIDCConfig{OIDCConfig: oidcConfig},
+			oidcConfig,
 		)
 
 		if err != nil {
