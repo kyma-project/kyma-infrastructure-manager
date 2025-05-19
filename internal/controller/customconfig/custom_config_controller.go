@@ -37,7 +37,7 @@ const fieldManagerName = "customconfigcontroller"
 func (r *CustomSKRConfigReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	r.Log.V(log_level.TRACE).Info(request.String())
 
-	secret, err, res := get[*v1.Secret](r.Client, request.NamespacedName)
+	secret, res, err := get[*v1.Secret](r.Client, request.NamespacedName)
 	if err != nil {
 		return *res, err
 	}
@@ -49,7 +49,7 @@ func (r *CustomSKRConfigReconciler) Reconcile(ctx context.Context, request ctrl.
 	}
 
 	runtimeID := secret.Labels["kyma-project.io/runtime-id"]
-	runtime, err, res := get[*imv1.Runtime](r.Client, types.NamespacedName{
+	runtime, res, err := get[*imv1.Runtime](r.Client, types.NamespacedName{
 		Name:      runtimeID,
 		Namespace: request.Namespace,
 	})
@@ -78,7 +78,7 @@ func (r *CustomSKRConfigReconciler) reconcileRegistryCacheConfig(ctx context.Con
 
 		r.Log.Info(fmt.Sprintf("Updating runtime %s with caching enabled: %t", runtime.Name, enableRegistryCache))
 
-		err := r.Client.Patch(ctx, &runtime, client.Apply, &client.PatchOptions{
+		err := r.Patch(ctx, &runtime, client.Apply, &client.PatchOptions{
 			FieldManager: fieldManagerName,
 			Force:        ptr.To(true),
 		})
@@ -107,19 +107,19 @@ func customConfigExists(ctx context.Context, kubeconfigSecret v1.Secret) (bool, 
 	return customConfigExplorer.RegistryCacheConfigExists()
 }
 
-func get[T client.Object](client client.Client, namespacedName types.NamespacedName) (T, error, *ctrl.Result) {
+func get[T client.Object](client client.Client, namespacedName types.NamespacedName) (T, *ctrl.Result, error) {
 	var obj T
 	err := client.Get(context.Background(), namespacedName, obj)
 	if err != nil && !apierrors.IsNotFound(err) {
-		return obj, err, &ctrl.Result{
+		return obj, &ctrl.Result{
 			Requeue: false,
-		}
+		}, err
 	}
 
 	if err != nil {
-		return obj, err, &ctrl.Result{
+		return obj, &ctrl.Result{
 			Requeue: true,
-		}
+		}, err
 	}
 
 	return obj, nil, nil
