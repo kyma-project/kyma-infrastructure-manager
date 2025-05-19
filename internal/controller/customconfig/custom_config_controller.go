@@ -16,6 +16,8 @@ import (
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sync/atomic"
 	"time"
 )
@@ -133,4 +135,27 @@ func secretControlledByKIM(secret v1.Secret) bool {
 	_, ok := secret.Labels["kyma-project.io/runtime-id"]
 
 	return ok && secret.Labels["operator.kyma-project.io/managed-by"] == "infrastructure-manager"
+}
+
+func NewCustomConfigReconciler(mgr ctrl.Manager, logger logr.Logger) *CustomSKRConfigReconciler {
+	return &CustomSKRConfigReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		EventRecorder: mgr.GetEventRecorderFor("runtime-controller"),
+		Log:           logger,
+	}
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *CustomSKRConfigReconciler) SetupWithManager(mgr ctrl.Manager, numberOfWorkers int) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&v1.Secret{}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: numberOfWorkers}).
+		WithEventFilter(predicate.Or(
+			predicate.GenerationChangedPredicate{},
+			predicate.LabelChangedPredicate{},
+			predicate.AnnotationChangedPredicate{},
+		)).
+		Named("custom-config-controller").
+		Complete(r)
 }

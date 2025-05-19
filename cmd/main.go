@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/kyma-project/infrastructure-manager/internal/controller/customconfig"
 	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"io"
 	"os"
@@ -251,6 +252,12 @@ func main() {
 	}
 
 	refreshRuntimeMetrics(restConfig, logger, metrics)
+
+	customConfigReconciler := customconfig.NewCustomConfigReconciler(mgr, logger)
+	if err = customConfigReconciler.SetupWithManager(mgr, 1); err != nil {
+		setupLog.Error(err, "unable to setup custom config controller with Manager", "controller", "Runtime")
+		os.Exit(1)
+	}
 
 	setupLog.Info("Starting Manager", "kubeconfigExpirationTime", expirationTime, "kubeconfigRotationPeriod", rotationPeriod)
 
