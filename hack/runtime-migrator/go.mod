@@ -1,6 +1,6 @@
 module github.com/kyma-project/infrastructure-manager/hack/runtime-migrator-app
 
-go 1.24.0
+go 1.24.2
 
 toolchain go1.24.3
 

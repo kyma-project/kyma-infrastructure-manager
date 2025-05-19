@@ -52,6 +52,13 @@ spec:
           spec:
             description: RuntimeSpec defines the desired state of Runtime
             properties:
+              imageRegistryCache:
+                properties:
+                  enabled:
+                    type: boolean
+                required:
+                - enabled
+                type: object
               security:
                 properties:
                   administrators:

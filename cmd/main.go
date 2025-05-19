@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"io"
 	"os"
 	"time"
@@ -284,6 +285,11 @@ func initGardenerClients(kubeconfigPath string, namespace string, timeout time.D
 	}
 
 	err = gardener_oidc.AddToScheme(gardenerClient.Scheme())
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "failed to register Gardener schema")
+	}
+
+	err = registrycache.AddToScheme(gardenerClient.Scheme())
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to register Gardener schema")
 	}

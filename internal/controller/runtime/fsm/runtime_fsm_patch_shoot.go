@@ -12,6 +12,7 @@ import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
+	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -19,6 +20,7 @@ import (
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+  "github.com/kyma-project/kim-snatch/api/v1beta1"
 )
 
 const fieldManagerName = "kim"
@@ -62,6 +64,22 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		}
 	}
 
+	var registrycache []v1beta1.RegistryCache
+	if s.instance.Spec.Caching != nil && s.instance.Spec.Caching.Enabled {
+		registrycache, err = getRegistryCache(ctx, m.Client, s.instance)
+
+		if err != nil {
+			m.log.Error(err, "Failed to get Registry Cache Config")
+
+			m.Metrics.IncRuntimeFSMStopCounter()
+			return updateStatePendingWithErrorAndStop(
+				&s.instance,
+				imv1.ConditionTypeRuntimeProvisioned,
+				imv1.ConditionReasonRegistryCacheError,
+				msgFailedToConfigureRegistryCache)
+		}
+	}
+
 	// NOTE: In the future we want to pass the whole shoot object here
 	updatedShoot, err := convertPatch(&s.instance, gardener_shoot.PatchOpts{
 		ConverterConfig:       m.ConverterConfig,
@@ -75,6 +93,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		ControlPlaneConfig:    s.shoot.Spec.Provider.ControlPlaneConfig,
 		Log:                   ptr.To(m.log),
 		StructuredAuthEnabled: m.StructuredAuthEnabled,
+		RegistryCache:         registrycache,
 	})
 
 	if err != nil {
@@ -316,4 +335,18 @@ func migrateOIDCToStructuredAuth(ctx context.Context, shootToUpdate gardener.Sho
 	}
 
 	return err
+}
+
+func getRegistryCache(ctx context.Context, client client.Client, runtime imv1.Runtime) ([]v1beta1.RegistryCache, error) {
+	secret, err := getKubeconfigSecret(ctx, client, runtime.Labels[imv1.LabelKymaRuntimeID], runtime.Namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	configExplorer, err := registrycache.NewConfigExplorer(ctx, secret)
+	if err != nil {
+		return nil, err
+	}
+
+	return configExplorer.GetRegistryCacheConfig()
 }
