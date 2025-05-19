@@ -40,7 +40,7 @@ func (r *CustomSKRConfigReconciler) Reconcile(ctx context.Context, request ctrl.
 	r.Log.V(log_level.TRACE).Info(request.String())
 
 	secret, res, err := get[*v1.Secret](r.Client, request.NamespacedName)
-	if err != nil {
+	if err != nil && res != nil {
 		return *res, err
 	}
 
@@ -56,7 +56,7 @@ func (r *CustomSKRConfigReconciler) Reconcile(ctx context.Context, request ctrl.
 		Namespace: request.Namespace,
 	})
 
-	if err != nil {
+	if err != nil && res != nil {
 		return *res, err
 	}
 
