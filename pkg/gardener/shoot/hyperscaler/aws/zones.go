@@ -13,6 +13,8 @@ const (
 	lastBitNumber    = 31
 	maxNumberOfZones = 8
 	minNumberOfZones = 1
+	maxPrefixSize    = 24
+	minPrefixSize    = 16
 )
 
 /*
@@ -49,7 +51,7 @@ func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, e
 
 	prefixLength := cidr.Bits()
 
-	if prefixLength > 24 || prefixLength < 16 {
+	if prefixLength > maxPrefixSize || prefixLength < minPrefixSize {
 		return nil, errors.New("CIDR prefix length must be between 16 and 24")
 	}
 
@@ -105,7 +107,7 @@ func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, e
 			deltaStep = small_delta
 		}
 
-		zoneWorkerCIDR, err := getCIDRFromBytes(base.Bytes(), workPrefixLength, cidr)
+		zoneWorkerCIDR, err := getCIDRFromBytes(base, workPrefixLength, cidr)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get worker CIDR for zone %s", name)
 		}
@@ -116,14 +118,14 @@ func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, e
 			base.Add(base, deltaStep)
 		}
 
-		zonePublicCIDR, err := getCIDRFromBytes(base.Bytes(), publicPrefixLength, cidr)
+		zonePublicCIDR, err := getCIDRFromBytes(base, publicPrefixLength, cidr)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get public CIDR for zone %s", name)
 		}
 
 		base.Add(base, deltaStep)
 
-		zoneInternalCIDR, err := getCIDRFromBytes(base.Bytes(), internalPrefixLength, cidr)
+		zoneInternalCIDR, err := getCIDRFromBytes(base, internalPrefixLength, cidr)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get internal CIDR for zone %s", name)
 		}
@@ -141,8 +143,8 @@ func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, e
 	return zones, nil
 }
 
-func getCIDRFromBytes(bytes []byte, prefixLength int, mainCIDR netip.Prefix) (netip.Prefix, error) {
-	addr, _ := netip.AddrFromSlice(bytes)
+func getCIDRFromBytes(base *big.Int, prefixLength int, mainCIDR netip.Prefix) (netip.Prefix, error) {
+	addr, _ := netip.AddrFromSlice(base.Bytes())
 	resultCIDR := netip.PrefixFrom(addr, prefixLength)
 
 	if !mainCIDR.Contains(resultCIDR.Addr()) {

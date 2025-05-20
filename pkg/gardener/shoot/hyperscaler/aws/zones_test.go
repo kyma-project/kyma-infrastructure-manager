@@ -1286,7 +1286,6 @@ func TestAWSZonesWithCustomNodeIPRange(t *testing.T) {
 		})
 	}
 
-	//// error cases
 	for tname, tcase := range map[string]struct {
 		givenNodesCidr string
 		givenZoneNames []string
