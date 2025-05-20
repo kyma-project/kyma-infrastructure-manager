@@ -70,9 +70,7 @@ func (r *CustomSKRConfigReconciler) reconcileRegistryCacheConfig(ctx context.Con
 	if err != nil {
 		r.Log.V(log_level.TRACE).Error(err, "Failed to check if custom config exists")
 
-		return ctrl.Result{
-			Requeue: true,
-		}, err
+		return ctrl.Result{}, err
 	}
 
 	cachingAlreadyEnabled := runtime.Spec.Caching != nil && runtime.Spec.Caching.Enabled
@@ -84,6 +82,8 @@ func (r *CustomSKRConfigReconciler) reconcileRegistryCacheConfig(ctx context.Con
 
 		r.Log.Info(fmt.Sprintf("Updating runtime %s with caching enabled: %t", runtime.Name, enableRegistryCache))
 
+		runtime.ManagedFields = nil
+
 		err := r.Patch(ctx, &runtime, client.Apply, &client.PatchOptions{
 			FieldManager: fieldManagerName,
 			Force:        ptr.To(true),
@@ -91,10 +91,7 @@ func (r *CustomSKRConfigReconciler) reconcileRegistryCacheConfig(ctx context.Con
 
 		if err != nil {
 			r.Log.V(log_level.TRACE).Error(err, "Failed to patch runtime with caching enabled")
-			return ctrl.Result{
-				Requeue:      true,
-				RequeueAfter: time.Minute,
-			}, err
+			return ctrl.Result{}, err
 		}
 	}
 
@@ -115,21 +112,13 @@ func customConfigExists(ctx context.Context, kubeconfigSecret v1.Secret) (bool, 
 
 func requeueOnError(err error) (ctrl.Result, error) {
 
-	if err != nil && !apierrors.IsNotFound(err) {
+	if err != nil && apierrors.IsNotFound(err) {
 		return ctrl.Result{
 			Requeue: false,
-		}, err
+		}, nil
 	}
 
-	if err != nil {
-		return ctrl.Result{
-			Requeue: true,
-		}, err
-	}
-
-	return ctrl.Result{
-		Requeue: false,
-	}, err
+	return ctrl.Result{}, err
 }
 
 func secretControlledByKIM(secret v1.Secret) bool {
