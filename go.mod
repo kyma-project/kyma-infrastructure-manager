@@ -8,7 +8,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/gardener/gardener v1.117.5
 	github.com/gardener/gardener-extension-provider-aws v1.61.2
-	github.com/gardener/gardener-extension-provider-gcp v1.43.2
+	github.com/gardener/gardener-extension-provider-gcp v1.43.3
 	github.com/gardener/gardener-extension-provider-openstack v1.47.0
 	github.com/gardener/gardener-extension-registry-cache v0.13.0
 	github.com/gardener/oidc-webhook-authenticator v0.35.0
