@@ -6,11 +6,11 @@ toolchain go1.24.3
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
-	github.com/gardener/gardener v1.117.5
-	github.com/gardener/gardener-extension-provider-aws v1.61.1
-	github.com/gardener/gardener-extension-provider-gcp v1.43.2
+	github.com/gardener/gardener v1.119.0
+	github.com/gardener/gardener-extension-provider-aws v1.61.2
+	github.com/gardener/gardener-extension-provider-gcp v1.43.3
 	github.com/gardener/gardener-extension-provider-openstack v1.47.0
-	github.com/gardener/gardener-extension-registry-cache v0.13.0
+	github.com/gardener/gardener-extension-registry-cache v0.16.0
 	github.com/gardener/oidc-webhook-authenticator v0.35.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-playground/validator/v10 v10.26.0
@@ -79,7 +79,7 @@ require (
 	golang.org/x/term v0.32.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
-	golang.org/x/tools v0.32.0 // indirect
+	golang.org/x/tools v0.33.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect

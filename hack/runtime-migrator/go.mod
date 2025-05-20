@@ -5,7 +5,7 @@ go 1.24.2
 toolchain go1.24.3
 
 require (
-	github.com/gardener/gardener v1.117.5
+	github.com/gardener/gardener v1.119.0
 	github.com/gardener/oidc-webhook-authenticator v0.35.0
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/kyma-project/infrastructure-manager v0.0.0-20250513074002-2c9fd9c44e79
