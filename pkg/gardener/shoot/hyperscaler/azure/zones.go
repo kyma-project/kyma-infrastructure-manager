@@ -57,6 +57,11 @@ func generateAzureZones(workerCidr string, zoneNames []string) ([]Zone, error) {
 
 		zoneWorkerIP, _ := netip.AddrFromSlice(zoneIPValue.Bytes())
 		zoneWorkerCidr := netip.PrefixFrom(zoneWorkerIP, workerNetworkPrefixLength)
+
+		if !cidr.Contains(zoneWorkerCidr.Addr()) {
+			return []Zone{}, errors.Errorf("calculated subnet CIDR %s is not contained in main worker CIDR %s", zoneWorkerCidr.String(), cidr.String())
+		}
+
 		zoneIPValue.Add(zoneIPValue, delta)
 		zones = append(zones, Zone{
 			Name: name,
