@@ -9,7 +9,7 @@ import (
 
 const (
 	defaultConnectionTimeOutMinutes = 4
-	workersBits                     = 3
+	subNetworkBitsSize              = 3
 	cidrLength                      = 32
 	maxNumberOfZones                = 8
 	minNumberOfZones                = 1
@@ -35,13 +35,13 @@ func generateAzureZones(workerCidr string, zoneNames []string) ([]Zone, error) {
 		return nil, errors.New("CIDR prefix length must be between 16 and 24")
 	}
 
-	workerPrefixLength := cidr.Bits() + workersBits
-	workerPrefix, _ := cidr.Addr().Prefix(workerPrefixLength)
+	workerNetworkPrefixLength := cidr.Bits() + subNetworkBitsSize
+	workerPrefix, _ := cidr.Addr().Prefix(workerNetworkPrefixLength)
 	// delta - it is the difference between CIDRs of two zones:
 	//    zone1:   "10.250.0.0/19",
 	//    zone2:   "10.250.32.0/19",
 	delta := big.NewInt(1)
-	delta.Lsh(delta, uint(cidrLength-workerPrefixLength))
+	delta.Lsh(delta, uint(cidrLength-workerNetworkPrefixLength))
 
 	// zoneIPValue - it is an integer, which is based on IP bytes
 	zoneIPValue := new(big.Int).SetBytes(workerPrefix.Addr().AsSlice())
@@ -56,7 +56,7 @@ func generateAzureZones(workerCidr string, zoneNames []string) ([]Zone, error) {
 		processed[name] = true
 
 		zoneWorkerIP, _ := netip.AddrFromSlice(zoneIPValue.Bytes())
-		zoneWorkerCidr := netip.PrefixFrom(zoneWorkerIP, workerPrefixLength)
+		zoneWorkerCidr := netip.PrefixFrom(zoneWorkerIP, workerNetworkPrefixLength)
 		zoneIPValue.Add(zoneIPValue, delta)
 		zones = append(zones, Zone{
 			Name: name,

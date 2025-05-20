@@ -9,16 +9,18 @@ import (
 )
 
 const (
-	workersBits      = 3
-	lastBitNumber    = 31
-	maxNumberOfZones = 8
-	minNumberOfZones = 1
-	maxPrefixSize    = 24
-	minPrefixSize    = 16
+	subNetworkBitsSize   = 3
+	lastBitNumber        = 31
+	maxNumberOfZones     = 8
+	minNumberOfZones     = 1
+	maxPrefixSize        = 24
+	minPrefixSize        = 16
+	addSmallSubnetPrefix = 3
+	kymaWorkerPoolAZs    = 3 //first 3 zones are reserved for Kyma worker pool and bigger dimensioned than later added AZs
 )
 
 /*
-*
+
 generateAWSZones - creates a list of AWSZoneInput objects which contains a proper IP ranges.
 It generates subnets - the subnets in AZ must be inside of the cidr block and non overlapping. example values:
 cidr: 10.250.0.0/16
@@ -34,6 +36,10 @@ cidr: 10.250.0.0/16
     workers: 10.250.128.0/19
     public: 10.250.160.0/20
     internal: 10.250.176.0/20
+
+As we use 3 bits for the workers, we have max 8 AZ available, each one allocating 3 non-overlapping subnets (public, private and internal).
+The first 3 AZs are using the bigger subnet size for kyma Worker pool (4096 hosts).
+The last 5 subnets are using the smaller subnet size (1024 hosts).
 */
 
 func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, error) {
@@ -49,17 +55,20 @@ func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, e
 		return zones, errors.Wrap(err, "failed to parse worker network CIDR")
 	}
 
+	// CIDR prefix length ex from "10.250.0.0/16" is 16
 	prefixLength := cidr.Bits()
 
 	if prefixLength > maxPrefixSize || prefixLength < minPrefixSize {
 		return nil, errors.New("CIDR prefix length must be between 16 and 24")
 	}
 
-	orgWorkerPrefixLength := prefixLength + workersBits
-	workerPrefix, err := cidr.Addr().Prefix(orgWorkerPrefixLength)
+	kymaWorkerNetworkPrefixLength := prefixLength + subNetworkBitsSize
+	workerPrefix, err := cidr.Addr().Prefix(kymaWorkerNetworkPrefixLength)
 	if err != nil {
 		return zones, errors.Wrap(err, "failed to get worker prefix")
 	}
+	// base - it is an integer, which is based on IP bytes
+	base := new(big.Int).SetBytes(workerPrefix.Addr().AsSlice())
 
 	// delta - it is the difference between "public" and "internal" CIDRs, for example:
 	//    WorkerCidr:   "10.250.0.0/19",
@@ -72,15 +81,16 @@ func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, e
 	//    PublicCidr:   "10.250.196.0/22",
 	//    InternalCidr: "10.250.200.0/22",
 
-	smallPrefixLength := orgWorkerPrefixLength + 3
+	kymaWorkerNetworkDelta := big.NewInt(1)
+	kymaWorkerNetworkDelta.Lsh(kymaWorkerNetworkDelta, uint(lastBitNumber-kymaWorkerNetworkPrefixLength))
 
-	delta := big.NewInt(1)
-	delta.Lsh(delta, uint(lastBitNumber-orgWorkerPrefixLength))
-	small_delta := big.NewInt(1)
-	small_delta.Rsh(delta, 2)
-
-	// base - it is an integer, which is based on IP bytes
-	base := new(big.Int).SetBytes(workerPrefix.Addr().AsSlice())
+	// initialize for additional Networks for last 5 zones
+	// additionalWorkerNetworkPrefixLength - prefix length for additional networks for last 5 zones,
+	// addSmallSubnetPrefix is used to calculate prefix length for additional networks as small subnet
+	// additionalWorkerNetworkDelta - difference between two subnetworks CIDRs for last 5 zones
+	additionalWorkerNetworkPrefixLength := kymaWorkerNetworkPrefixLength + addSmallSubnetPrefix
+	additionalWorkerNetworkDelta := big.NewInt(1)
+	additionalWorkerNetworkDelta.Rsh(kymaWorkerNetworkDelta, 2)
 
 	processed := make(map[string]bool)
 
@@ -93,39 +103,39 @@ func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, e
 		var workPrefixLength, publicPrefixLength, internalPrefixLength int
 		var deltaStep *big.Int
 
-		if i < 3 {
-			// first 3 zones are using bigger subnet size.
-			workPrefixLength = orgWorkerPrefixLength
-			publicPrefixLength = orgWorkerPrefixLength + 1
-			internalPrefixLength = orgWorkerPrefixLength + 1
-			deltaStep = delta
+		if i < kymaWorkerPoolAZs {
+			// first 3 zones are using bigger subnet sizes.
+			workPrefixLength = kymaWorkerNetworkPrefixLength
+			publicPrefixLength = kymaWorkerNetworkPrefixLength + 1
+			internalPrefixLength = kymaWorkerNetworkPrefixLength + 1
+			deltaStep = kymaWorkerNetworkDelta
 		} else {
-			// last 5 zones are using smaller subnet size
-			workPrefixLength = smallPrefixLength
-			publicPrefixLength = smallPrefixLength
-			internalPrefixLength = smallPrefixLength
-			deltaStep = small_delta
+			// last 5 zones are using smaller subnet sizes
+			workPrefixLength = additionalWorkerNetworkPrefixLength
+			publicPrefixLength = additionalWorkerNetworkPrefixLength
+			internalPrefixLength = additionalWorkerNetworkPrefixLength
+			deltaStep = additionalWorkerNetworkDelta
 		}
 
-		zoneWorkerCIDR, err := getCIDRFromBytes(base, workPrefixLength, cidr)
+		zoneWorkerCIDR, err := getCIDRFromInt(base, workPrefixLength, cidr)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get worker CIDR for zone %s", name)
 		}
 
 		base.Add(base, deltaStep)
 
-		if i < 3 {
+		if i < kymaWorkerPoolAZs { // additional step for the first 3 AZs
 			base.Add(base, deltaStep)
 		}
 
-		zonePublicCIDR, err := getCIDRFromBytes(base, publicPrefixLength, cidr)
+		zonePublicCIDR, err := getCIDRFromInt(base, publicPrefixLength, cidr)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get public CIDR for zone %s", name)
 		}
 
 		base.Add(base, deltaStep)
 
-		zoneInternalCIDR, err := getCIDRFromBytes(base, internalPrefixLength, cidr)
+		zoneInternalCIDR, err := getCIDRFromInt(base, internalPrefixLength, cidr)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get internal CIDR for zone %s", name)
 		}
@@ -143,7 +153,7 @@ func generateAWSZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, e
 	return zones, nil
 }
 
-func getCIDRFromBytes(base *big.Int, prefixLength int, mainCIDR netip.Prefix) (netip.Prefix, error) {
+func getCIDRFromInt(base *big.Int, prefixLength int, mainCIDR netip.Prefix) (netip.Prefix, error) {
 	addr, _ := netip.AddrFromSlice(base.Bytes())
 	resultCIDR := netip.PrefixFrom(addr, prefixLength)
 
