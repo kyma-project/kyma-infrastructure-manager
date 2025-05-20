@@ -14,7 +14,12 @@ const workerConfigKind = "WorkerConfig"
 const awsIMDSv2HTTPPutResponseHopLimit int64 = 2
 
 func GetInfrastructureConfig(workersCidr string, zones []string) ([]byte, error) {
-	return json.Marshal(NewInfrastructureConfig(workersCidr, zones))
+	config, err := NewInfrastructureConfig(workersCidr, zones)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(config)
 }
 
 func GetInfrastructureConfigForPatch(workersCidr string, zones []string, existingInfrastructureConfigBytes []byte) ([]byte, error) {
@@ -43,23 +48,32 @@ func DecodeInfrastructureConfig(data []byte) (*v1alpha1.InfrastructureConfig, er
 	return infrastructureConfig, nil
 }
 
-func NewInfrastructureConfig(workersCidr string, zones []string) v1alpha1.InfrastructureConfig {
+func NewInfrastructureConfig(workersCidr string, zones []string) (v1alpha1.InfrastructureConfig, error) {
+	awsZones, err := generateAWSZones(workersCidr, zones)
+	if err != nil {
+		return v1alpha1.InfrastructureConfig{}, err
+	}
+
 	return v1alpha1.InfrastructureConfig{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       infrastructureConfigKind,
 			APIVersion: apiVersion,
 		},
 		Networks: v1alpha1.Networks{
-			Zones: generateAWSZones(workersCidr, zones),
+			Zones: awsZones,
 			VPC: v1alpha1.VPC{
 				CIDR: &workersCidr,
 			},
 		},
-	}
+	}, nil
 }
 
 func NewInfrastructureConfigForPatch(workersCidr string, zones []string, existingInfrastructureConfigBytes []byte) (v1alpha1.InfrastructureConfig, error) {
-	newConfig := NewInfrastructureConfig(workersCidr, zones)
+	newConfig, err := NewInfrastructureConfig(workersCidr, zones)
+	if err != nil {
+		return v1alpha1.InfrastructureConfig{}, err
+	}
+
 	existingInfrastructureConfig, err := DecodeInfrastructureConfig(existingInfrastructureConfigBytes)
 
 	if err != nil {

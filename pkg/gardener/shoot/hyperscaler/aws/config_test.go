@@ -114,6 +114,65 @@ func TestInfrastructureConfig(t *testing.T) {
 	}
 }
 
+func TestFailedInfrastructureConfig(t *testing.T) {
+	for tname, tcase := range map[string]struct {
+		givenNodesCidr string
+		givenZoneNames []string
+	}{
+		"Error when too big prefix 10.250.0.0/25": {
+			givenNodesCidr: "10.250.0.0/25",
+			givenZoneNames: []string{
+				"eu-central-1a",
+				"eu-central-1b",
+				"eu-central-1c",
+			},
+		},
+		"Error when too many zones": {
+			givenNodesCidr: "10.250.0.0/16",
+			givenZoneNames: []string{
+				"eu-central-1a",
+				"eu-central-1b",
+				"eu-central-1c",
+				"eu-central-1d",
+				"eu-central-1e",
+				"eu-central-1f",
+				"eu-central-1g",
+				"eu-central-1h",
+				"eu-central-1i",
+			},
+		},
+		"Error when invalid nodes CIDR": {
+			givenNodesCidr: "123.25070/12",
+			givenZoneNames: []string{
+				"eu-central-1a",
+				"eu-central-1b",
+				"eu-central-1c",
+			},
+		},
+		"Error empty nodes CIDR": {
+			givenNodesCidr: "",
+			givenZoneNames: []string{
+				"eu-central-1a",
+				"eu-central-1b",
+				"eu-central-1c",
+			},
+		},
+		"Error when no zone": {
+			givenNodesCidr: "10.250.0.0/16",
+			givenZoneNames: []string{},
+		},
+	} {
+		t.Run(tname, func(t *testing.T) {
+			// when
+			bytes, err := GetInfrastructureConfig(tcase.givenNodesCidr, tcase.givenZoneNames)
+
+			// then
+			assert.Error(t, err)
+			assert.Nil(t, bytes)
+		})
+	}
+}
+
 func TestInfrastructureConfigPatch(t *testing.T) {
 	// given
 	existingInfrastructureConfig := v1alpha1.InfrastructureConfig{
@@ -147,6 +206,12 @@ func TestInfrastructureConfigPatch(t *testing.T) {
 		"eu-central-1a",
 		"eu-central-1b",
 		"eu-central-1c",
+	}
+
+	givenDuplicatedZoneNames := []string{
+		"eu-central-1a",
+		"eu-central-1a",
+		"eu-central-1a",
 	}
 
 	expectedAwsZones := []v1alpha1.Zone{
@@ -206,6 +271,18 @@ func TestInfrastructureConfigPatch(t *testing.T) {
 		assert.Equal(t, existingInfrastructureConfig.Networks.Zones[0].Internal, infrastructureConfig.Networks.Zones[0].Internal)
 		assert.Equal(t, existingInfrastructureConfig.Networks.Zones[0].Public, infrastructureConfig.Networks.Zones[0].Public)
 		assert.Equal(t, existingInfrastructureConfig.Networks.Zones[0].Workers, infrastructureConfig.Networks.Zones[0].Workers)
+	})
+
+	t.Run("Fail to create Infrastructure config for patch", func(t *testing.T) {
+		existingInfrastructureConfigBytes, err := json.Marshal(existingInfrastructureConfig)
+		require.NoError(t, err)
+
+		// when
+		infrastructureConfigBytes, err := GetInfrastructureConfigForPatch(givenNodesCidr, givenDuplicatedZoneNames, existingInfrastructureConfigBytes)
+
+		// then
+		assert.Error(t, err)
+		assert.Nil(t, infrastructureConfigBytes)
 	})
 }
 

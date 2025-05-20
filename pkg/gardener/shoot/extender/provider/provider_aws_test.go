@@ -32,6 +32,9 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a"}),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
 					},
 				},
 			},
@@ -46,6 +49,9 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b"}),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
 					},
 				},
 			},
@@ -60,6 +66,9 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
 					},
 				},
 			},
@@ -74,6 +83,9 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAWS, "", "", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
 					},
 				},
 			},
@@ -264,7 +276,9 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 }
 
 func fixAWSInfrastructureConfig(t *testing.T, workersCIDR string, zones []string) *runtime.RawExtension {
-	infraConfig := aws.NewInfrastructureConfig(workersCIDR, zones)
+	infraConfig, err := aws.NewInfrastructureConfig(workersCIDR, zones)
+
+	assert.NoError(t, err)
 
 	for i := 0; i < len(zones); i++ {
 		infraConfig.Networks.Zones[i].ElasticIPAllocationID = ptr.To("eipalloc-123456")
