@@ -97,6 +97,7 @@ const (
 	ConditionReasonOidcConfigured           = RuntimeConditionReason("OidcConfigured")
 	ConditionReasonOidcError                = RuntimeConditionReason("OidcConfigurationErr")
 	ConditionReasonSeedNotFound             = RuntimeConditionReason("SeedNotFound")
+	ConditionReasonRegistryCacheError       = RuntimeConditionReason("RegistryCacheConfigurationErr")
 )
 
 //+kubebuilder:object:root=true
@@ -126,8 +127,13 @@ type RuntimeList struct {
 
 // RuntimeSpec defines the desired state of Runtime
 type RuntimeSpec struct {
-	Shoot    RuntimeShoot `json:"shoot"`
-	Security Security     `json:"security"`
+	Shoot    RuntimeShoot        `json:"shoot"`
+	Security Security            `json:"security"`
+	Caching  *ImageRegistryCache `json:"imageRegistryCache,omitempty"`
+}
+
+type ImageRegistryCache struct {
+	Enabled bool `json:"enabled"`
 }
 
 // RuntimeStatus defines the observed state of Runtime
@@ -163,9 +169,16 @@ type Kubernetes struct {
 	KubeAPIServer APIServer `json:"kubeAPIServer,omitempty"`
 }
 
+// OIDCConfig contains configuration settings for the OIDC provider.
+// Note: Descriptions were taken from the Kubernetes documentation.
+type OIDCConfig struct {
+	gardener.OIDCConfig `json:",omitempty"`
+	JWKS                []byte `json:"jwks,omitempty"`
+}
+
 type APIServer struct {
-	OidcConfig           gardener.OIDCConfig    `json:"oidcConfig,omitempty"`
-	AdditionalOidcConfig *[]gardener.OIDCConfig `json:"additionalOidcConfig,omitempty"`
+	OidcConfig           gardener.OIDCConfig `json:"oidcConfig,omitempty"`
+	AdditionalOidcConfig *[]OIDCConfig       `json:"additionalOidcConfig,omitempty"`
 }
 
 type Provider struct {

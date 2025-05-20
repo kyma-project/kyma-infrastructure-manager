@@ -1,6 +1,6 @@
 module github.com/kyma-project/infrastructure-manager
 
-go 1.24.0
+go 1.24.2
 
 toolchain go1.24.3
 
@@ -10,9 +10,11 @@ require (
 	github.com/gardener/gardener-extension-provider-aws v1.61.1
 	github.com/gardener/gardener-extension-provider-gcp v1.43.2
 	github.com/gardener/gardener-extension-provider-openstack v1.47.0
+	github.com/gardener/gardener-extension-registry-cache v0.13.0
 	github.com/gardener/oidc-webhook-authenticator v0.35.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-playground/validator/v10 v10.26.0
+	github.com/kyma-project/kim-snatch v0.0.0-20250430122050-3c3bdc3b74bb
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
 	github.com/pkg/errors v0.9.1

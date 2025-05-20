@@ -3,6 +3,7 @@ package fsm
 import (
 	"context"
 	"fmt"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
@@ -14,8 +15,9 @@ import (
 )
 
 const (
-	msgFailedToConfigureAuditlogs = "Failed to configure audit logs"
-	msgFailedStructuredConfigMap  = "Failed to create structured authentication config map"
+	msgFailedToConfigureAuditlogs     = "Failed to configure audit logs"
+	msgFailedStructuredConfigMap      = "Failed to create structured authentication config map"
+	msgFailedToConfigureRegistryCache = "Failed to configure registry cache"
 )
 
 func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {

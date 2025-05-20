@@ -6,6 +6,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/restrictions"
+	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -74,6 +75,7 @@ type PatchOpts struct {
 	ControlPlaneConfig    *runtime.RawExtension
 	Log                   *logr.Logger
 	StructuredAuthEnabled bool
+	RegistryCache         []registrycache.RegistryCache
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {
@@ -91,7 +93,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 	if !opts.DNS.IsGardenerInternal() {
 		extendersForCreate = append(extendersForCreate, extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType))
 	}
-	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.ConverterConfig, opts.AuditLogData))
+	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.ConverterConfig, opts.AuditLogData, nil))
 	extendersForCreate = append(extendersForCreate,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
 
@@ -120,7 +122,7 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.ControlPlaneConfig))
 
 	extendersForPatch = append(extendersForPatch,
-		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.Extensions),
+		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.RegistryCache, opts.Extensions),
 		extender2.NewResourcesExtenderForPatch(opts.Resources))
 
 	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))

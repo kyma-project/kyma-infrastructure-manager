@@ -2,8 +2,9 @@ package config
 
 import (
 	"encoding/json"
-	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"io"
+
+	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 type Config struct {

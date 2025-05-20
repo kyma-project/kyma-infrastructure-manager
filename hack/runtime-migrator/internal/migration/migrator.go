@@ -76,7 +76,7 @@ func (m Migrator) Do(ctx context.Context, shoot v1beta1.Shoot) (v1.Runtime, erro
 					Version: &shoot.Spec.Kubernetes.Version,
 					KubeAPIServer: v1.APIServer{
 						OidcConfig:           oidcConfig,
-						AdditionalOidcConfig: &[]v1beta1.OIDCConfig{oidcConfig},
+						AdditionalOidcConfig: &[]v1.OIDCConfig{v1.OIDCConfig{OIDCConfig: oidcConfig}},
 					},
 				},
 				Provider: v1.Provider{
