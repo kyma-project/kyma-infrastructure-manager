@@ -8,7 +8,7 @@ require (
 	github.com/gardener/gardener v1.117.5
 	github.com/gardener/oidc-webhook-authenticator v0.35.0
 	github.com/go-playground/validator/v10 v10.26.0
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250513074002-2c9fd9c44e79
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250520145649-64a6d4a5de02
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
 	k8s.io/api v0.33.1
