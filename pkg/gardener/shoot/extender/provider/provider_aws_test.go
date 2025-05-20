@@ -276,7 +276,9 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 }
 
 func fixAWSInfrastructureConfig(t *testing.T, workersCIDR string, zones []string) *runtime.RawExtension {
-	infraConfig := aws.NewInfrastructureConfig(workersCIDR, zones)
+	infraConfig, err := aws.NewInfrastructureConfig(workersCIDR, zones)
+
+	assert.NoError(t, err)
 
 	for i := 0; i < len(zones); i++ {
 		infraConfig.Networks.Zones[i].ElasticIPAllocationID = ptr.To("eipalloc-123456")

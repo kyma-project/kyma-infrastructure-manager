@@ -14,6 +14,11 @@ func TestAzureZonesWithCustomNodeIPRange(t *testing.T) {
 		givenZoneNames     []string
 		expectedAzureZones []Zone
 	}{
+		"Azure no zone (azure lite) and 10.250.0.0/22": {
+			givenNodesCidr:     "10.250.0.0/22",
+			givenZoneNames:     []string{},
+			expectedAzureZones: []Zone{},
+		},
 		"Azure single zone and 10.250.0.0/22": {
 			givenNodesCidr: "10.250.0.0/22",
 			givenZoneNames: []string{"1"},
@@ -274,10 +279,6 @@ func TestAzureZonesWithCustomNodeIPRange(t *testing.T) {
 				"8",
 				"9",
 			},
-		},
-		"Azure should return error when no zones are provided": {
-			givenNodesCidr: "10.180.0.0/23",
-			givenZoneNames: []string{},
 		},
 	} {
 		t.Run(tname, func(t *testing.T) {

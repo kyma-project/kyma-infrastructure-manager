@@ -226,7 +226,7 @@ var (
 )
 
 func TestShootForPatch() *gardener.Shoot {
-	infrastructureConfig := aws.NewInfrastructureConfig("", []string{"europe-west1-d"})
+	infrastructureConfig, _ := aws.NewInfrastructureConfig("10.250.0.0/22", []string{"europe-west1-d"})
 	infraConfigBytes, _ := json.Marshal(infrastructureConfig)
 
 	return &gardener.Shoot{
@@ -255,7 +255,7 @@ func TestShootForPatch() *gardener.Shoot {
 }
 
 func TestShootForUpdate() *gardener.Shoot {
-	infrastructureConfig := aws.NewInfrastructureConfig("", []string{"europe-west1-d"})
+	infrastructureConfig, _ := aws.NewInfrastructureConfig("10.250.0.0/22", []string{"europe-west1-d"})
 	infraConfigBytes, _ := json.Marshal(infrastructureConfig)
 
 	return &gardener.Shoot{

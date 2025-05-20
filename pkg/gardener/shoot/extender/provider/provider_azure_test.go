@@ -424,7 +424,9 @@ func TestProviderExtenderForCreateMultipleWorkersAzure(t *testing.T) {
 }
 
 func fixAzureInfrastructureConfig(t *testing.T, workersCIDR string, zones []string) *runtime.RawExtension {
-	infraConfig := azure.NewInfrastructureConfig(workersCIDR, zones)
+	infraConfig, err := azure.NewInfrastructureConfig(workersCIDR, zones)
+
+	require.NoError(t, err)
 
 	infraConfig.ResourceGroup = &azure.ResourceGroup{
 		Name: "resource-group",

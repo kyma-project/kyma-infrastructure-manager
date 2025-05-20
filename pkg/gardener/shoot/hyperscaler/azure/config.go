@@ -10,7 +10,13 @@ const controlPlaneConfigKind = "ControlPlaneConfig"
 const apiVersion = "azure.provider.extensions.gardener.cloud/v1alpha1"
 
 func GetInfrastructureConfig(workerCIDR string, zones []string) ([]byte, error) {
-	return json.Marshal(NewInfrastructureConfig(workerCIDR, zones))
+	config, err := NewInfrastructureConfig(workerCIDR, zones)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(config)
 }
 
 func GetInfrastructureConfigForPatch(workersCidr string, zones []string, existingInfrastructureConfigBytes []byte) ([]byte, error) {
@@ -44,14 +50,13 @@ func DecodeInfrastructureConfig(data []byte) (*InfrastructureConfig, error) {
 	return infrastructureConfig, nil
 }
 
-func NewInfrastructureConfig(workerCIDR string, zones []string) InfrastructureConfig {
-	// All Azure shoots are zoned.
-	// No zones - the shoot configuration is invalid.
-	// We should validate the config before calling this function.
+func NewInfrastructureConfig(workerCIDR string, zones []string) (InfrastructureConfig, error) {
+	// All standard Azure shoots are zoned.
+	// No zones - old Azure lite shoots where config should be preserved.
+
 	azureZones, err := generateAzureZones(workerCIDR, zones)
 	if err != nil {
-		// TODO - pass the error to caller?
-		return InfrastructureConfig{}
+		return InfrastructureConfig{}, err
 	}
 
 	isZoned := len(zones) > 0
@@ -70,11 +75,15 @@ func NewInfrastructureConfig(workerCIDR string, zones []string) InfrastructureCo
 		Zoned: isZoned,
 	}
 
-	return azureConfig
+	return azureConfig, nil
 }
 
 func NewInfrastructureConfigForPatch(workersCidr string, zones []string, existingInfrastructureConfigBytes []byte) (InfrastructureConfig, error) {
-	newConfig := NewInfrastructureConfig(workersCidr, zones)
+	newConfig, err := NewInfrastructureConfig(workersCidr, zones)
+	if err != nil {
+		return InfrastructureConfig{}, err
+	}
+
 	existingInfrastructureConfig, err := DecodeInfrastructureConfig(existingInfrastructureConfigBytes)
 
 	if err != nil {

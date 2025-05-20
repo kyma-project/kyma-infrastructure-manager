@@ -17,13 +17,24 @@ const (
 
 func generateAzureZones(workerCidr string, zoneNames []string) ([]Zone, error) {
 	numZones := len(zoneNames)
-	if numZones < 1 || numZones > maxNumberOfZones {
-		return nil, errors.New("Number of networking zones must be between 1 and 8")
+	// old Azure lite clusters have no zones in InfrastructureConfig
+	if numZones > maxNumberOfZones {
+		return nil, errors.New("Number of networking zones must be between 0 and 8")
 	}
 
 	var zones []Zone
 
-	cidr, _ := netip.ParsePrefix(workerCidr)
+	cidr, err := netip.ParsePrefix(workerCidr)
+	if err != nil {
+		return zones, errors.Wrap(err, "failed to parse worker network CIDR")
+	}
+
+	prefixLength := cidr.Bits()
+
+	if prefixLength > 24 || prefixLength < 16 {
+		return nil, errors.New("CIDR prefix length must be between 16 and 24")
+	}
+
 	workerPrefixLength := cidr.Bits() + workersBits
 	workerPrefix, _ := cidr.Addr().Prefix(workerPrefixLength)
 	// delta - it is the difference between CIDRs of two zones:
@@ -35,7 +46,15 @@ func generateAzureZones(workerCidr string, zoneNames []string) ([]Zone, error) {
 	// zoneIPValue - it is an integer, which is based on IP bytes
 	zoneIPValue := new(big.Int).SetBytes(workerPrefix.Addr().AsSlice())
 
+	processed := make(map[int]bool)
+
 	for _, name := range convertZoneNames(zoneNames) {
+
+		if _, ok := processed[name]; ok {
+			return nil, errors.Errorf("zone name %d is duplicated", name)
+		}
+		processed[name] = true
+
 		zoneWorkerIP, _ := netip.AddrFromSlice(zoneIPValue.Bytes())
 		zoneWorkerCidr := netip.PrefixFrom(zoneWorkerIP, workerPrefixLength)
 		zoneIPValue.Add(zoneIPValue, delta)
