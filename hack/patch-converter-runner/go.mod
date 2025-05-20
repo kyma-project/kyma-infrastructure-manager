@@ -21,7 +21,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fxamacker/cbor/v2 v2.8.0 // indirect
 	github.com/gardener/gardener-extension-provider-aws v1.61.2 // indirect
-	github.com/gardener/gardener-extension-provider-gcp v1.43.2 // indirect
+	github.com/gardener/gardener-extension-provider-gcp v1.43.3 // indirect
 	github.com/gardener/gardener-extension-provider-openstack v1.47.0 // indirect
 	github.com/gardener/gardener-extension-registry-cache v0.13.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
