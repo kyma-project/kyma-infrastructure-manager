@@ -31,11 +31,15 @@ func generateAzureZones(workerCidr string, zoneNames []string) ([]Zone, error) {
 
 	prefixLength := cidr.Bits()
 
-	if prefixLength > 24 || prefixLength < 16 {
-		return nil, errors.New("CIDR prefix length must be between 16 and 24")
+	if prefixLength > 24 {
+		return nil, errors.New("CIDR prefix length must be less than or equal to 24")
 	}
 
-	workerNetworkPrefixLength := cidr.Bits() + subNetworkBitsSize
+	if prefixLength < 16 {
+		return nil, errors.New("CIDR prefix length must be bigger than or equal to 16")
+	}
+
+	workerNetworkPrefixLength := prefixLength + subNetworkBitsSize
 	workerPrefix, _ := cidr.Addr().Prefix(workerNetworkPrefixLength)
 	// delta - it is the difference between CIDRs of two zones:
 	//    zone1:   "10.250.0.0/19",
@@ -48,8 +52,12 @@ func generateAzureZones(workerCidr string, zoneNames []string) ([]Zone, error) {
 
 	processed := make(map[int]bool)
 
-	for _, name := range convertZoneNames(zoneNames) {
+	convertedZones, err := convertZoneNames(zoneNames)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to convert zone names")
+	}
 
+	for _, name := range convertedZones {
 		if _, ok := processed[name]; ok {
 			return nil, errors.Errorf("zone name %d is duplicated", name)
 		}
@@ -59,7 +67,7 @@ func generateAzureZones(workerCidr string, zoneNames []string) ([]Zone, error) {
 		zoneWorkerCidr := netip.PrefixFrom(zoneWorkerIP, workerNetworkPrefixLength)
 
 		if !cidr.Contains(zoneWorkerCidr.Addr()) {
-			return []Zone{}, errors.Errorf("calculated subnet CIDR %s is not contained in main worker CIDR %s", zoneWorkerCidr.String(), cidr.String())
+			return nil, errors.Errorf("calculated subnet CIDR %s is not contained in main worker CIDR %s", zoneWorkerCidr.String(), cidr.String())
 		}
 
 		zoneIPValue.Add(zoneIPValue, delta)
@@ -78,15 +86,19 @@ func generateAzureZones(workerCidr string, zoneNames []string) ([]Zone, error) {
 	return zones, nil
 }
 
-func convertZoneNames(zoneNames []string) []int {
+func convertZoneNames(zoneNames []string) ([]int, error) {
 	var zones []int
 	for _, inputZone := range zoneNames {
 		zone, err := strconv.Atoi(inputZone)
-		if err != nil || zone < minNumberOfZones || zone > maxNumberOfZones {
-			continue
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to convert zone name %s to int", inputZone)
+		}
+
+		if zone < minNumberOfZones || zone > maxNumberOfZones {
+			return nil, errors.Errorf("zone name %s is not valid, must be between 1 and 8", inputZone)
 		}
 		zones = append(zones, zone)
 	}
 
-	return zones
+	return zones, nil
 }

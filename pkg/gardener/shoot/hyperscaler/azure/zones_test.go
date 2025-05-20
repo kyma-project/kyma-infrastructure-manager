@@ -411,14 +411,14 @@ func TestAzureZonesWithCustomNodeIPRange(t *testing.T) {
 		},
 		"Azure should return error when when prefix is too big for ex 10.250.0.0/25": {
 			givenNodesCidr: "10.250.0.0/25",
-			message:        "CIDR prefix length must be between 16 and 24",
+			message:        "CIDR prefix length must be less than or equal to 24",
 			givenZoneNames: []string{
 				"1",
 			},
 		},
 		"Azure should return error when when prefix is too small for ex 10.250.0.0/15": {
 			givenNodesCidr: "10.250.0.0/15",
-			message:        "CIDR prefix length must be between 16 and 24",
+			message:        "CIDR prefix length must be bigger than or equal to 16",
 			givenZoneNames: []string{
 				"1",
 			},
@@ -426,9 +426,24 @@ func TestAzureZonesWithCustomNodeIPRange(t *testing.T) {
 		"Azure should return error when cannot parse nodes CIDR": {
 			givenNodesCidr: "888.888.888.0/77",
 			givenZoneNames: []string{
-				"eu-central-1a",
+				"1",
 			},
 			message: "failed to parse worker network CIDR",
+		},
+		"Azure should return error when cannot parse zone names as numbers": {
+			givenNodesCidr: "10.250.0.0/16",
+			givenZoneNames: []string{
+				"1",
+				"not-number",
+			},
+			message: "failed to convert zone name not-number to int",
+		},
+		"Azure should return error when zone names is too big": {
+			givenNodesCidr: "10.250.0.0/16",
+			givenZoneNames: []string{
+				"9",
+			},
+			message: "zone name 9 is not valid, must be between 1 and 8",
 		},
 	} {
 		t.Run(tname, func(t *testing.T) {
