@@ -35,7 +35,6 @@ type CustomSKRConfigReconciler struct {
 
 const fieldManagerName = "customconfigcontroller"
 
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list,namespace=kcp-system
 func (r *CustomSKRConfigReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	r.Log.V(log_level.TRACE).Info(request.String())
 
