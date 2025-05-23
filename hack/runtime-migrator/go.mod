@@ -5,16 +5,16 @@ go 1.24.2
 toolchain go1.24.3
 
 require (
-	github.com/gardener/gardener v1.117.2
+	github.com/gardener/gardener v1.117.5
 	github.com/gardener/oidc-webhook-authenticator v0.35.0
 	github.com/go-playground/validator/v10 v10.26.0
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250513074002-2c9fd9c44e79
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250520145649-64a6d4a5de02
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
-	k8s.io/api v0.33.0
-	k8s.io/apiextensions-apiserver v0.33.0
-	k8s.io/apimachinery v0.33.0
-	k8s.io/client-go v0.33.0
+	k8s.io/api v0.33.1
+	k8s.io/apiextensions-apiserver v0.33.1
+	k8s.io/apimachinery v0.33.1
+	k8s.io/client-go v0.33.1
 	k8s.io/utils v0.0.0-20250502105355-0f33e8f1c979
 	sigs.k8s.io/controller-runtime v0.20.4
 	sigs.k8s.io/yaml v1.4.0
@@ -53,7 +53,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_golang v1.22.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.63.0 // indirect
+	github.com/prometheus/common v0.64.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/x448/float16 v0.8.4 // indirect

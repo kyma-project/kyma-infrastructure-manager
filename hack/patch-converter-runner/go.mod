@@ -5,11 +5,11 @@ go 1.24.2
 toolchain go1.24.3
 
 require (
-	github.com/gardener/gardener v1.117.2
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250513074002-2c9fd9c44e79
-	k8s.io/api v0.33.0
-	k8s.io/apimachinery v0.33.0
-	k8s.io/client-go v0.33.0
+	github.com/gardener/gardener v1.117.5
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250520145649-64a6d4a5de02
+	k8s.io/api v0.33.1
+	k8s.io/apimachinery v0.33.1
+	k8s.io/client-go v0.33.1
 	sigs.k8s.io/controller-runtime v0.20.4
 	sigs.k8s.io/yaml v1.4.0
 )
@@ -20,8 +20,8 @@ require (
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fxamacker/cbor/v2 v2.8.0 // indirect
-	github.com/gardener/gardener-extension-provider-aws v1.61.1 // indirect
-	github.com/gardener/gardener-extension-provider-gcp v1.43.2 // indirect
+	github.com/gardener/gardener-extension-provider-aws v1.61.2 // indirect
+	github.com/gardener/gardener-extension-provider-gcp v1.43.3 // indirect
 	github.com/gardener/gardener-extension-provider-openstack v1.47.0 // indirect
 	github.com/gardener/gardener-extension-registry-cache v0.13.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
@@ -51,7 +51,7 @@ require (
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.33.0 // indirect
+	k8s.io/apiextensions-apiserver v0.33.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
 	k8s.io/utils v0.0.0-20250502105355-0f33e8f1c979 // indirect

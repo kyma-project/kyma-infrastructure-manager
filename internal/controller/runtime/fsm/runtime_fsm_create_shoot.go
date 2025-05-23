@@ -94,7 +94,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonConversionError,
-			"Runtime conversion error")
+			fmt.Sprintf("Runtime conversion error %v", err))
 	}
 
 	err = m.ShootClient.Create(ctx, &shoot)

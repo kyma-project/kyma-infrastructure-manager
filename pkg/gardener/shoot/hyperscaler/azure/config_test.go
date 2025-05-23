@@ -11,6 +11,7 @@ import (
 
 const (
 	DefaultNodesCIDR = "10.250.0.0/22"
+	InvalidNodesCIDR = "999.999.999.999/22"
 )
 
 func TestControlPlaneConfig(t *testing.T) {
@@ -37,6 +38,12 @@ func TestInfrastructureConfig(t *testing.T) {
 		expectedAzureZones []Zone
 		expectedIsZoned    bool
 	}{
+		"Setup for no zone with default CIDR 10.250.0.0/22": {
+			expectedIsZoned:    false,
+			givenVnetCidr:      DefaultNodesCIDR,
+			givenZoneNames:     []string{},
+			expectedAzureZones: []Zone{},
+		},
 		"Zoned setup for 1 zone with default CIDR 10.250.0.0/22": {
 			expectedIsZoned: true,
 			givenVnetCidr:   DefaultNodesCIDR,
@@ -133,13 +140,62 @@ func TestInfrastructureConfig(t *testing.T) {
 			assert.Equal(t, infrastructureConfigKind, infrastructureConfig.Kind)
 
 			assert.Equal(t, tcase.givenVnetCidr, *infrastructureConfig.Networks.VNet.CIDR)
-
-			assert.Equal(t, tcase.givenVnetCidr, *infrastructureConfig.Networks.VNet.CIDR)
-			assert.Equal(t, true, infrastructureConfig.Zoned)
+			assert.Equal(t, tcase.expectedIsZoned, infrastructureConfig.Zoned)
 
 			for i, actualZone := range infrastructureConfig.Networks.Zones {
 				assertAzureZoneCidrs(t, tcase.expectedAzureZones[i], actualZone)
 			}
+		})
+	}
+}
+
+func TestFailedInfrastructureConfig(t *testing.T) {
+	for tname, tcase := range map[string]struct {
+		givenVnetCidr  string
+		givenZoneNames []string
+	}{
+		"Error when setup for 1 zone with invalid CIDR": {
+			givenVnetCidr: InvalidNodesCIDR,
+			givenZoneNames: []string{
+				"1",
+			},
+		},
+		"Error when setup with duplicated zone Ids": {
+			givenVnetCidr: DefaultNodesCIDR,
+			givenZoneNames: []string{
+				"1",
+				"1",
+			},
+		},
+		"Error when too big prefix 10.250.0.0/25": {
+			givenVnetCidr: "10.250.0.0/25",
+			givenZoneNames: []string{
+				"1",
+				"2",
+			},
+		},
+		"Error when too small prefix 10.250.0.0/15": {
+			givenVnetCidr: "10.250.0.0/15",
+			givenZoneNames: []string{
+				"1",
+				"2",
+			},
+		},
+		"Error when empty Vnet CIDR": {
+			givenVnetCidr: "",
+			givenZoneNames: []string{
+				"1",
+				"2",
+			},
+		},
+	} {
+		t.Run(tname, func(t *testing.T) {
+			// when
+			infrastructureConfigBytes, err := GetInfrastructureConfig(tcase.givenVnetCidr, tcase.givenZoneNames)
+
+			// then
+			assert.Error(t, err)
+			assert.Nil(t, infrastructureConfigBytes)
 		})
 	}
 }
@@ -256,6 +312,57 @@ func TestInfrastructureConfigPatch(t *testing.T) {
 		assert.Equal(t, existingInfrastructureConfig.Networks.Zones[0].Name, infrastructureConfig.Networks.Zones[0].Name)
 		assert.Equal(t, existingInfrastructureConfig.Networks.Zones[0].CIDR, infrastructureConfig.Networks.Zones[0].CIDR)
 	})
+
+	for tname, tcase := range map[string]struct {
+		givenVnetCidr  string
+		givenZoneNames []string
+	}{
+		"Error when setup for 1 zone with invalid CIDR": {
+			givenVnetCidr: InvalidNodesCIDR,
+			givenZoneNames: []string{
+				"1",
+			},
+		},
+		"Error when setup with duplicated zone Ids": {
+			givenVnetCidr: DefaultNodesCIDR,
+			givenZoneNames: []string{
+				"1",
+				"1",
+			},
+		},
+		"Error when too big prefix 10.250.0.0/25": {
+			givenVnetCidr: "10.250.0.0/25",
+			givenZoneNames: []string{
+				"1",
+				"2",
+			},
+		},
+		"Error when too small prefix 10.250.0.0/15": {
+			givenVnetCidr: "10.250.0.0/15",
+			givenZoneNames: []string{
+				"1",
+				"2",
+			},
+		},
+		"Error when empty Vnet CIDR": {
+			givenVnetCidr: "",
+			givenZoneNames: []string{
+				"1",
+				"2",
+			},
+		},
+	} {
+		t.Run(tname, func(t *testing.T) {
+			// when
+			existingInfrastructureConfigBytes, err := json.Marshal(existingInfrastructureConfig)
+			require.NoError(t, err)
+			infrastructureConfigBytes, err := GetInfrastructureConfigForPatch(tcase.givenVnetCidr, tcase.givenZoneNames, existingInfrastructureConfigBytes)
+
+			// then
+			assert.Error(t, err)
+			assert.Nil(t, infrastructureConfigBytes)
+		})
+	}
 }
 
 func assertAzureZoneCidrs(t *testing.T, expectedZone Zone, actualZone Zone) {
