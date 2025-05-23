@@ -13,10 +13,10 @@ projects: ["kyma-project/24"]
 **Description**
 <!-- Provide a clear and concise description of the feature. -->
 This is a Proof of Concept. Here's a checklist that should help you consider often neglected aspects:-
-- [ ] should we implement a feature flag from the start?
-- [ ] should the PoC include any documentation such as ADR?
-- [ ] is it clear who will benefit from the PoC and how?
-- [ ] will the final implementation require any migration steps?
+- [ ] Should we implement a feature flag from the start?
+- [ ] Should the PoC include any documentation, such as ADR?
+- [ ] Is it clear who will benefit from the PoC and how?
+- [ ] Will the final implementation require any migration steps?
 - [ ] is there a need for alignment with KEB/SRE/other teams? 
 - [ ] usually it's worth timeboxing such PoC tasks. What would be a good timebox in this case?
 - [ ] will the final solution need a new repository or any pipelines adjustments?
