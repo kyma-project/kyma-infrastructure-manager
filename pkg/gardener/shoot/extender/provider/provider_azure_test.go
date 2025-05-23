@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/yaml"
 	"testing"
 )
 
@@ -124,10 +126,34 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "azure.small", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
 				{"next-worker", "azure.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "3"}}}),
-			ExistingInfraConfig:        fixAzureInfrastructureConfig("10.250.0.0/22", []string{"1", "2", "3"}),
+			ExistingInfraConfig:        fixAzureInfrastructureConfig(t, "10.250.0.0/22", []string{"1", "2", "3"}),
 			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
 		},
-		"Add additional worker - extend existing additional worker from non HA setup to HA setup by adding more zones, infrastructureConfig already has three zones": {
+		"Add additional worker with new zone": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAzure, fixMultipleWorkers([]workerConfig{
+							{"main-worker", "azure.small", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
+							{"next-worker", "azure.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "4"}},
+						})),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			DefaultMachineImageName:    "gardenlinux",
+			DefaultMachineImageVersion: "1312.3.0",
+			ExpectedZonesCount:         4,
+			CurrentShootWorkers:        fixWorkers("main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}),
+			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "azure.small", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
+				{"next-worker", "azure.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "4"}}}),
+			ExistingInfraConfig:        fixAzureInfrastructureConfig(t, "10.250.0.0/22", []string{"1", "2", "3"}),
+			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
+		},
+		"Add additional worker - extend existing additional worker from non HA setup to HA setup by adding more zones (use zone already specified in the existing shoot)": {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
@@ -150,7 +176,33 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
 				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"2", "1", "3"}}}),
-			ExistingInfraConfig:        fixAzureInfrastructureConfig("10.250.0.0/22", []string{"1", "2", "3"}),
+			ExistingInfraConfig:        fixAzureInfrastructureConfig(t, "10.250.0.0/22", []string{"1", "2", "3"}),
+			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
+		},
+		"Add additional worker - extend existing additional worker from non HA setup to HA setup by adding more zones (use zone not specified in the existing shoot)": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAzure, fixMultipleWorkers([]workerConfig{
+							{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
+							{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "4"}},
+						})),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			DefaultMachineImageName:    "gardenlinux",
+			DefaultMachineImageVersion: "1312.3.0",
+			ExpectedZonesCount:         4,
+			CurrentShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
+				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"2"}}}),
+			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
+				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"2", "1", "4"}}}),
+			ExistingInfraConfig:        fixAzureInfrastructureConfig(t, "10.250.0.0/22", []string{"1", "2", "3"}),
 			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
 		},
 		"Add additional worker - extend existing additional worker from non HA setup to HA setup by adding more zones, infrastructureConfig has no zones - legacy azure-lite case": {
@@ -176,7 +228,33 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
 				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"2", "1", "3"}}}),
-			ExistingInfraConfig:        fixAzureInfrastructureConfig("10.250.0.0/22", []string{}),
+			ExistingInfraConfig:        fixAzureInfrastructureConfig(t, "10.250.0.0/22", []string{}),
+			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
+		},
+		"Add additional worker - extend existing additional worker from non HA setup to HA setup by adding zone not specified in the shoot, infrastructureConfig has no zones - legacy azure-lite case": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAzure, fixMultipleWorkers([]workerConfig{
+							{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
+							{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "3", "4"}},
+						})),
+						Networking: imv1.Networking{
+							Nodes: "10.250.0.0/22",
+						},
+					},
+				},
+			},
+			DefaultMachineImageName:    "gardenlinux",
+			DefaultMachineImageVersion: "1312.3.0",
+			ExpectedZonesCount:         0,
+			CurrentShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
+				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"2"}}}),
+			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
+				{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}},
+				{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"2", "1", "3", "4"}}}),
+			ExistingInfraConfig:        fixAzureInfrastructureConfig(t, "10.250.0.0/22", []string{}),
 			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
 		},
 		"Remove additional worker from existing set of workers": {
@@ -199,7 +277,7 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 				{"next-worker", "azure.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "3"}}}),
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "azure.small", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}}}),
-			ExistingInfraConfig:        fixAzureInfrastructureConfig("10.250.0.0/22", []string{"1", "2", "3"}),
+			ExistingInfraConfig:        fixAzureInfrastructureConfig(t, "10.250.0.0/22", []string{"1", "2", "3"}),
 			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
 		},
 		"Update machine type and image name and version in multiple workers separately": {
@@ -225,7 +303,7 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 				{"main-worker", "azure.large", "gardenlinux", "1313.4.0", 1, 3, []string{"1", "2", "3"}},
 				{"next-worker", "azure.big", "gardenlinux", "1313.2.0", 1, 3, []string{"1", "2", "3"}}}),
 			ExpectedZonesCount:         3,
-			ExistingInfraConfig:        fixAzureInfrastructureConfig("10.250.0.0/22", []string{"1", "2", "3"}),
+			ExistingInfraConfig:        fixAzureInfrastructureConfig(t, "10.250.0.0/22", []string{"1", "2", "3"}),
 			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
 		},
 		"Remove worker from existing set of workers networking zones set in infrastructureConfig should not change": {
@@ -249,33 +327,7 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
 				{"main-worker", "m6i.large", "gardenlinux", "1313.4.0", 1, 3, []string{"1"}}}),
 			ExpectedZonesCount:         3,
-			ExistingInfraConfig:        fixAzureInfrastructureConfig("10.250.0.0/22", []string{"1", "2", "3"}),
-			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
-		},
-		"Modify infrastructure config with value provided externally with 3 zones": {
-			Runtime: imv1.Runtime{
-				Spec: imv1.RuntimeSpec{
-					Shoot: imv1.RuntimeShoot{
-						Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeAzure, fixMultipleWorkers([]workerConfig{
-							{"main-worker", "azure.large", "gardenlinux", "1313.4.0", 1, 3, []string{"1"}},
-							{"additional", "azure.large", "gardenlinux", "1313.2.0", 1, 3, []string{"1", "2"}},
-						}), fixAzureInfrastructureConfig("10.250.0.0/22", []string{"1", "2", "3"}), fixAWSControlPlaneConfig()),
-						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
-						},
-					},
-				},
-			},
-			DefaultMachineImageName:    "gardenlinux",
-			DefaultMachineImageVersion: "1312.3.0",
-			CurrentShootWorkers: fixMultipleWorkers([]workerConfig{
-				{"main-worker", "azure.large", "gardenlinux", "1312.4.0", 1, 3, []string{"1"}},
-				{"additional", "azure.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2"}}}),
-			ExpectedShootWorkers: fixMultipleWorkers([]workerConfig{
-				{"main-worker", "azure.large", "gardenlinux", "1313.4.0", 1, 3, []string{"1"}},
-				{"additional", "azure.large", "gardenlinux", "1313.2.0", 1, 3, []string{"1", "2"}}}),
-			ExpectedZonesCount:         3,
-			ExistingInfraConfig:        fixAzureInfrastructureConfig("10.250.0.0/22", []string{"1", "2", "3"}),
+			ExistingInfraConfig:        fixAzureInfrastructureConfig(t, "10.250.0.0/22", []string{"1", "2", "3"}),
 			ExistingControlPlaneConfig: fixAzureControlPlaneConfig(),
 		},
 	} {
@@ -292,8 +344,30 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 
 			assertProviderMultipleWorkers(t, tc.Runtime.Spec.Shoot, shoot, false, tc.ExpectedShootWorkers)
 			assertProviderSpecificConfigAzure(t, shoot, tc.ExpectedZonesCount)
+			assertExistingZonesAzureInfrastructureNotModified(t, tc.ExistingInfraConfig, shoot.Spec.Provider.InfrastructureConfig)
 		})
 	}
+}
+
+func assertExistingZonesAzureInfrastructureNotModified(t *testing.T, infraConfigBeforeUpdate *runtime.RawExtension, infraConfigToUpdate *runtime.RawExtension) {
+	var existingInfraConfig azure.InfrastructureConfig
+	err := yaml.Unmarshal(infraConfigBeforeUpdate.Raw, &existingInfraConfig)
+	require.NoError(t, err)
+
+	var newInfraConfig azure.InfrastructureConfig
+	err = yaml.Unmarshal(infraConfigToUpdate.Raw, &newInfraConfig)
+	require.NoError(t, err)
+
+	for i := 0; i < len(existingInfraConfig.Networks.Zones); i++ {
+		existingZone := existingInfraConfig.Networks.Zones[i]
+		require.Equal(t, existingZone, newInfraConfig.Networks.Zones[i])
+	}
+	require.Equal(t, existingInfraConfig.ResourceGroup, newInfraConfig.ResourceGroup)
+	require.Equal(t, existingInfraConfig.Zoned, newInfraConfig.Zoned)
+	require.Equal(t, existingInfraConfig.Networks.Workers, newInfraConfig.Networks.Workers)
+	require.Equal(t, existingInfraConfig.Networks.NatGateway, newInfraConfig.Networks.NatGateway)
+	require.Equal(t, existingInfraConfig.Networks.ServiceEndpoints, newInfraConfig.Networks.ServiceEndpoints)
+	require.Equal(t, existingInfraConfig.Networks.VNet, newInfraConfig.Networks.VNet)
 }
 
 func TestProviderExtenderForCreateMultipleWorkersAzure(t *testing.T) {
@@ -349,9 +423,45 @@ func TestProviderExtenderForCreateMultipleWorkersAzure(t *testing.T) {
 	}
 }
 
-func fixAzureInfrastructureConfig(workersCIDR string, zones []string) *runtime.RawExtension {
-	infraConfig, _ := azure.GetInfrastructureConfig(workersCIDR, zones)
-	return &runtime.RawExtension{Raw: infraConfig}
+func fixAzureInfrastructureConfig(t *testing.T, workersCIDR string, zones []string) *runtime.RawExtension {
+	infraConfig, err := azure.NewInfrastructureConfig(workersCIDR, zones)
+
+	require.NoError(t, err)
+
+	infraConfig.ResourceGroup = &azure.ResourceGroup{
+		Name: "resource-group",
+	}
+	infraConfig.Networks.VNet.ResourceGroup = ptr.To("resource-group")
+	infraConfig.Networks.VNet.Name = ptr.To("vnet")
+	infraConfig.Networks.Workers = ptr.To("workers")
+	infraConfig.Networks.NatGateway = &azure.NatGateway{
+		Enabled:                      true,
+		IdleConnectionTimeoutMinutes: 1,
+		Zone:                         1,
+		IPAddresses: []azure.PublicIPReference{{
+			Name:          "public-ip",
+			ResourceGroup: "resource-group",
+			Zone:          1,
+		},
+		},
+	}
+
+	for i := 0; i < len(zones); i++ {
+		infraConfig.Networks.Zones[i].ServiceEndpoints = []string{"service-endpoint"}
+		infraConfig.Networks.Zones[i].NatGateway.Zone = 1
+		infraConfig.Networks.Zones[i].NatGateway.IPAddresses = []azure.PublicIPReference{
+			{
+				Name:          "public-ip",
+				ResourceGroup: "resource-group",
+				Zone:          1,
+			},
+		}
+	}
+
+	infraConfigBytes, err := json.Marshal(infraConfig)
+	require.NoError(t, err)
+
+	return &runtime.RawExtension{Raw: infraConfigBytes}
 }
 
 func fixAzureControlPlaneConfig() *runtime.RawExtension {

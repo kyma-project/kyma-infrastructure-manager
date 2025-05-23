@@ -32,8 +32,8 @@ func TestDNSExtender(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "myshoot.dev.mydomain.com", *shoot.Spec.DNS.Domain)
 		assert.Equal(t, []string{"myshoot.dev.mydomain.com"}, shoot.Spec.DNS.Providers[0].Domains.Include) //nolint:staticcheck
-		assert.Equal(t, dnsProviderType, *shoot.Spec.DNS.Providers[0].Type) //nolint:staticcheck
-		assert.Equal(t, secretName, *shoot.Spec.DNS.Providers[0].SecretName) //nolint:staticcheck
-		assert.Equal(t, true, *shoot.Spec.DNS.Providers[0].Primary) //nolint:staticcheck
+		assert.Equal(t, dnsProviderType, *shoot.Spec.DNS.Providers[0].Type)                                //nolint:staticcheck
+		assert.Equal(t, secretName, *shoot.Spec.DNS.Providers[0].SecretName)                               //nolint:staticcheck
+		assert.Equal(t, true, *shoot.Spec.DNS.Providers[0].Primary)                                        //nolint:staticcheck
 	})
 }
