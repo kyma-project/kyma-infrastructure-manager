@@ -82,14 +82,17 @@ var _ = BeforeSuite(func() {
 func fixRegistryCacheCreator() func(secret v1.Secret) (RegistryCache, error) {
 	clusterWithCustomConfig := "kubeconfig-cluster-1"
 	clusterWithoutCustomConfig := "kubeconfig-cluster-2"
+	secretNotManagedByKIM := "kubeconfig-cluster-3"
 
 	callsMap := map[string]int{}
 	callsMap[clusterWithCustomConfig] = 0
 	callsMap[clusterWithoutCustomConfig] = 0
+	callsMap[secretNotManagedByKIM] = 0
 
 	resultsMap := map[string]bool{}
 	resultsMap[clusterWithCustomConfig] = true
 	resultsMap[clusterWithoutCustomConfig] = false
+	resultsMap[secretNotManagedByKIM] = true
 
 	return func(secret v1.Secret) (RegistryCache, error) {
 
