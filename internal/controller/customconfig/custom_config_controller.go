@@ -7,7 +7,6 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
-	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	"k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,6 +30,7 @@ type CustomSKRConfigReconciler struct {
 	Cfg           fsm.RCCfg
 	EventRecorder record.EventRecorder
 	RequestID     atomic.Uint64
+	Creator       RegistryCacheCreator ``
 }
 
 const fieldManagerName = "customconfigcontroller"
@@ -65,7 +65,13 @@ func (r *CustomSKRConfigReconciler) Reconcile(ctx context.Context, request ctrl.
 }
 
 func (r *CustomSKRConfigReconciler) reconcileRegistryCacheConfig(ctx context.Context, secret v1.Secret, runtime imv1.Runtime) (ctrl.Result, error) {
-	enableRegistryCache, err := customConfigExists(ctx, secret)
+
+	registryCache, err := r.Creator(secret)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	enableRegistryCache, err := registryCache.RegistryCacheConfigExists()
 	if err != nil {
 		r.Log.V(log_level.TRACE).Error(err, "Failed to check if custom config exists")
 
@@ -100,15 +106,6 @@ func (r *CustomSKRConfigReconciler) reconcileRegistryCacheConfig(ctx context.Con
 	}, err
 }
 
-func customConfigExists(ctx context.Context, kubeconfigSecret v1.Secret) (bool, error) {
-	customConfigExplorer, err := registrycache.NewConfigExplorer(ctx, kubeconfigSecret)
-	if err != nil {
-		return false, err
-	}
-
-	return customConfigExplorer.RegistryCacheConfigExists()
-}
-
 func requeueOnError(err error) (ctrl.Result, error) {
 
 	if err != nil && apierrors.IsNotFound(err) {
@@ -130,12 +127,20 @@ func secretControlledByKIM(secret v1.Secret) bool {
 	return ok && secret.Labels["operator.kyma-project.io/managed-by"] == "infrastructure-manager"
 }
 
-func NewCustomConfigReconciler(mgr ctrl.Manager, logger logr.Logger) *CustomSKRConfigReconciler {
+//go:generate mockery --name=RegistryCache
+type RegistryCache interface {
+	RegistryCacheConfigExists() (bool, error)
+}
+
+type RegistryCacheCreator func(secret v1.Secret) (RegistryCache, error)
+
+func NewCustomConfigReconciler(mgr ctrl.Manager, logger logr.Logger, creator RegistryCacheCreator) *CustomSKRConfigReconciler {
 	return &CustomSKRConfigReconciler{
 		Client:        mgr.GetClient(),
 		Scheme:        mgr.GetScheme(),
 		EventRecorder: mgr.GetEventRecorderFor("runtime-controller"),
 		Log:           logger,
+		Creator:       creator,
 	}
 }
 
