@@ -16,7 +16,7 @@ var _ = Describe("Custom Config Controller", func() {
 	Context("When reconciling a Secret resource", func() {
 		ctx := context.Background()
 
-		It("Should enable registry cache configuration when custom config exists", func() {
+		It("Should enable registry cache property on Runtime CR when custom config exists", func() {
 			const RuntimeName = "test-runtime-1"
 			const SecretName = "kubeconfig-cluster-1"
 			const ShootName = "shoot-cluster-1"
@@ -63,7 +63,7 @@ var _ = Describe("Custom Config Controller", func() {
 			})
 			Expect(k8sClient.Create(ctx, secret)).To(Succeed())
 
-			By("Check if Runtime CR has registry cache enabled")
+			By("Check if Runtime CR has registry cache disabled")
 			Eventually(func() bool {
 				runtime := imv1.Runtime{}
 				if err := k8sClient.Get(ctx, types.NamespacedName{

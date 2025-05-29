@@ -61,7 +61,7 @@ var _ = BeforeSuite(func() {
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: k8sClient.Scheme(),
 		Metrics: server.Options{
-			BindAddress: ":8084",
+			BindAddress: ":8083",
 		},
 	})
 	Expect(err).ToNot(HaveOccurred())
@@ -80,36 +80,37 @@ var _ = BeforeSuite(func() {
 })
 
 func fixRegistryCacheCreator() func(secret v1.Secret) (RegistryCache, error) {
-	clusterWithCustomConfig := "kubeconfig-cluster-1"
-	clusterWithoutCustomConfig := "kubeconfig-cluster-2"
-	secretNotManagedByKIM := "kubeconfig-cluster-3"
+	const clusterWithCustomConfig = "kubeconfig-cluster-1"
+	const clusterWithoutCustomConfig = "kubeconfig-cluster-2"
+	const secretNotManagedByKIM = "kubeconfig-cluster-3"
 
-	callsMap := map[string]int{}
-	callsMap[clusterWithCustomConfig] = 0
-	callsMap[clusterWithoutCustomConfig] = 0
-	callsMap[secretNotManagedByKIM] = 0
+	callsMap := map[string]int{
+		clusterWithCustomConfig:    0,
+		clusterWithoutCustomConfig: 0,
+		secretNotManagedByKIM:      0,
+	}
 
-	resultsMap := map[string]bool{}
-	resultsMap[clusterWithCustomConfig] = true
-	resultsMap[clusterWithoutCustomConfig] = false
-	resultsMap[secretNotManagedByKIM] = true
+	resultsMap := map[string]bool{
+		clusterWithCustomConfig:    true,
+		clusterWithoutCustomConfig: false,
+		secretNotManagedByKIM:      true,
+	}
 
 	return func(secret v1.Secret) (RegistryCache, error) {
 
-		clusterCallName, found := callsMap[secret.Name]
-		if !found {
+		if _, found := callsMap[secret.Name]; !found {
 			return nil, errors.Errorf("unexpected secret name %s", secret.Name)
 		}
 
-		if clusterCallName == 0 {
+		if callsMap[secret.Name] == 0 {
 			callsMap[secret.Name]++
 			return nil, errors.New("failed to get registry cache config")
-		} else {
-			registryCacheMock := &mocks.RegistryCache{}
-			registryCacheMock.On("RegistryCacheConfigExists").Return(resultsMap[secret.Name], nil)
-
-			return registryCacheMock, nil
 		}
+
+		registryCacheMock := &mocks.RegistryCache{}
+		registryCacheMock.On("RegistryCacheConfigExists").Return(resultsMap[secret.Name], nil)
+
+		return registryCacheMock, nil
 	}
 }
 
