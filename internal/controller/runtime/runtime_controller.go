@@ -70,9 +70,10 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		log,
 		r.Cfg,
 		fsm.K8s{
-			Client:        r.Client,
-			ShootClient:   r.ShootClient,
-			EventRecorder: r.EventRecorder,
+			Client:              r.Client,
+			ShootClient:         r.ShootClient,
+			EventRecorder:       r.EventRecorder,
+			RuntimeClientGetter: fsm.NewRuntimeClientGetter(r.Client),
 		})
 
 	return stateFSM.Run(ctx, runtime)

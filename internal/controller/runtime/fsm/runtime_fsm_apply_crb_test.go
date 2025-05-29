@@ -179,12 +179,13 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 	Expect(err).ShouldNot(HaveOccurred())
 
 	defaultSetup := func(f *fsm) error {
-		GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
+		runtimeClientGetterFunc := func(ctx context.Context, runtime imv1.Runtime) (client.Client, error) {
+			// This is a stub function to satisfy the interface, it does not need to do anything for this test.
+			// In a real scenario, it would return a client for the shoot cluster.
 			return f.Client, nil
 		}
+
+		f.RuntimeClientGetter = GetRuntimeClientFunc(runtimeClientGetterFunc)
 		return nil
 	}
 
@@ -254,12 +255,10 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 				withDefaultReconcileDuration(),
 			),
 			setup: func(f *fsm) error {
-				GetShootClient = func(
-					_ context.Context,
-					_ client.Client,
-					_ imv1.Runtime) (client.Client, error) {
+				runtimeClientGetterFunc := func(ctx context.Context, runtime imv1.Runtime) (client.Client, error) {
 					return nil, testErr
 				}
+				f.RuntimeClientGetter = GetRuntimeClientFunc(runtimeClientGetterFunc)
 				return nil
 
 			},

@@ -74,7 +74,7 @@ func defaultAdditionalOidcIfNotPresent(runtime *imv1.Runtime, cfg RCCfg) {
 }
 
 func recreateOpenIDConnectResources(ctx context.Context, m *fsm, s *systemState) error {
-	shootAdminClient, shootClientError := GetShootClient(ctx, m.Client, s.instance)
+	shootAdminClient, shootClientError := m.RuntimeClientGetter.GetRuntimeClient(ctx, s.instance)
 	if shootClientError != nil {
 		return shootClientError
 	}
@@ -143,8 +143,7 @@ func createOpenIDConnectResource(additionalOidcConfig imv1.OIDCConfig, oidcID in
 			RequiredClaims:       additionalOidcConfig.RequiredClaims,
 			SupportedSigningAlgs: toSupportedSigningAlgs(additionalOidcConfig.SigningAlgs),
 			JWKS: authenticationv1alpha1.JWKSSpec{
-				Keys: []byte(additionalOidcConfig.JWKS),
-				// FIXME: Distributed claims?
+				Keys: additionalOidcConfig.JWKS,
 			},
 		},
 	}

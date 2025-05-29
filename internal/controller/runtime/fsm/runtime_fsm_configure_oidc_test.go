@@ -63,9 +63,16 @@ func TestOidcState(t *testing.T) {
 		var fakeClient = fake.NewClientBuilder().
 			WithScheme(scheme).
 			Build()
+
+		runtimeClientGetterFunc := func(ctx context.Context, runtime imv1.Runtime) (client.Client, error) {
+			// This is a stub function to satisfy the interface, it does not need to do anything for this test.
+			// In a real scenario, it would return a client for the shoot cluster.
+			return fakeClient, nil
+		}
 		testFsm := &fsm{K8s: K8s{
-			ShootClient: fakeClient,
-			Client:      fakeClient,
+			ShootClient:         fakeClient,
+			Client:              fakeClient,
+			RuntimeClientGetter: GetRuntimeClientFunc(runtimeClientGetterFunc),
 		},
 			RCCfg: RCCfg{
 				Config: config.Config{
@@ -75,12 +82,7 @@ func TestOidcState(t *testing.T) {
 				},
 			},
 		}
-		GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
-			return fakeClient, nil
-		}
+
 		// end of fake client setup
 
 		for _, tc := range []struct {
@@ -145,9 +147,17 @@ func TestOidcState(t *testing.T) {
 		var fakeClient = fake.NewClientBuilder().
 			WithScheme(scheme).
 			Build()
+
+		runtimeClientGetterFunc := func(ctx context.Context, runtime imv1.Runtime) (client.Client, error) {
+			// This is a stub function to satisfy the interface, it does not need to do anything for this test.
+			// In a real scenario, it would return a client for the shoot cluster.
+			return fakeClient, nil
+		}
+
 		testFsm := &fsm{K8s: K8s{
-			ShootClient: fakeClient,
-			Client:      fakeClient,
+			ShootClient:         fakeClient,
+			Client:              fakeClient,
+			RuntimeClientGetter: GetRuntimeClientFunc(runtimeClientGetterFunc),
 		},
 			RCCfg: RCCfg{
 				Config: config.Config{
@@ -156,12 +166,6 @@ func TestOidcState(t *testing.T) {
 					},
 				},
 			},
-		}
-		GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
-			return fakeClient, nil
 		}
 		// end of fake client setup
 
@@ -213,17 +217,18 @@ func TestOidcState(t *testing.T) {
 		var fakeClient = fake.NewClientBuilder().
 			WithScheme(scheme).
 			Build()
-		testFsm := &fsm{K8s: K8s{
-			ShootClient: fakeClient,
-			Client:      fakeClient,
-		}}
-		GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
+
+		runtimeClientGetterFunc := func(ctx context.Context, runtime imv1.Runtime) (client.Client, error) {
+			// This is a stub function to satisfy the interface, it does not need to do anything for this test.
+			// In a real scenario, it would return a client for the shoot cluster.
 			return fakeClient, nil
 		}
-		// end of fake client setup
+
+		testFsm := &fsm{K8s: K8s{
+			ShootClient:         fakeClient,
+			Client:              fakeClient,
+			RuntimeClientGetter: GetRuntimeClientFunc(runtimeClientGetterFunc),
+		}}
 
 		runtimeStub := runtimeForTest()
 		additionalOidcConfig := &[]imv1.OIDCConfig{}
@@ -280,16 +285,18 @@ func TestOidcState(t *testing.T) {
 		var fakeClient = fake.NewClientBuilder().
 			WithScheme(scheme).
 			Build()
-		testFSM := &fsm{K8s: K8s{
-			ShootClient: fakeClient,
-			Client:      fakeClient,
-		}}
-		GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
+
+		runtimeClientGetterFunc := func(ctx context.Context, runtime imv1.Runtime) (client.Client, error) {
+			// This is a stub function to satisfy the interface, it does not need to do anything for this test.
+			// In a real scenario, it would return a client for the shoot cluster.
 			return fakeClient, nil
 		}
+
+		testFSM := &fsm{K8s: K8s{
+			ShootClient:         fakeClient,
+			Client:              fakeClient,
+			RuntimeClientGetter: GetRuntimeClientFunc(runtimeClientGetterFunc),
+		}}
 		// end of fake client setup
 
 		kymaOpenIDConnectCR := createOpenIDConnectCR("old-kyma-oidc", "operator.kyma-project.io/managed-by", "infrastructure-manager")
