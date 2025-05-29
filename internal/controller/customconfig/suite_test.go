@@ -61,7 +61,7 @@ var _ = BeforeSuite(func() {
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: k8sClient.Scheme(),
 		Metrics: server.Options{
-			BindAddress: ":8083",
+			BindAddress: ":8084",
 		},
 	})
 	Expect(err).ToNot(HaveOccurred())

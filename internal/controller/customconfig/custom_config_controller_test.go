@@ -16,67 +16,34 @@ var _ = Describe("Custom Config Controller", func() {
 	Context("When reconciling a Secret resource", func() {
 		ctx := context.Background()
 
-		It("Should enable registry cache property on Runtime CR when custom config exists", func() {
-			const RuntimeName = "test-runtime-1"
-			const SecretName = "kubeconfig-cluster-1"
-			const ShootName = "shoot-cluster-1"
+		DescribeTable("Should update Runtime CR", func(newRuntime *imv1.Runtime, newSecret *v1.Secret, expectedEnable bool) {
 
-			By("Creating a Runtime resource")
-			runtime := createRuntimeStub(RuntimeName, ShootName, false)
-			Expect(k8sClient.Create(ctx, runtime)).To(Succeed())
+			Expect(k8sClient.Create(ctx, newRuntime)).To(Succeed())
 
-			By("Creating a Secret with custom config")
-			secret := createSecretStub(SecretName, RuntimeName, map[string]string{
-				"kyma-project.io/runtime-id":          RuntimeName,
-				"operator.kyma-project.io/managed-by": "infrastructure-manager",
-			})
-			Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+			Expect(k8sClient.Create(ctx, newSecret)).To(Succeed())
 
-			By("Check if Runtime CR has registry cache enabled")
+			// Check if Runtime CR has registry cache enabled
 			Eventually(func() bool {
 				runtime := imv1.Runtime{}
 				if err := k8sClient.Get(ctx, types.NamespacedName{
-					Name:      RuntimeName,
-					Namespace: "default",
+					Name:      newRuntime.Name,
+					Namespace: newRuntime.Namespace,
 				}, &runtime); err != nil {
 					return false
 				}
 
-				return runtime.Spec.Caching != nil && runtime.Spec.Caching.Enabled
+				return runtime.Spec.Caching != nil && runtime.Spec.Caching.Enabled == expectedEnable
 
 			}, time.Second*300, time.Second*3).Should(BeTrue())
-		})
-
-		It("Should disable registry cache configuration when custom config doesn't exist", func() {
-			const RuntimeName = "test-runtime-2"
-			const SecretName = "kubeconfig-cluster-2"
-			const ShootName = "shoot-cluster-2"
-
-			By("Creating a Runtime resource")
-			runtime := createRuntimeStub(RuntimeName, ShootName, true)
-			Expect(k8sClient.Create(ctx, runtime)).To(Succeed())
-
-			By("Creating a Secret with custom config")
-			secret := createSecretStub(SecretName, RuntimeName, map[string]string{
-				"kyma-project.io/runtime-id":          RuntimeName,
+		},
+			Entry("with registry cache enabled", createRuntimeStub("test-runtime-1", "shoot-cluster-1", false), createSecretStub("kubeconfig-cluster-1", "test-runtime-1", map[string]string{
+				"kyma-project.io/runtime-id":          "test-runtime-1",
 				"operator.kyma-project.io/managed-by": "infrastructure-manager",
-			})
-			Expect(k8sClient.Create(ctx, secret)).To(Succeed())
-
-			By("Check if Runtime CR has registry cache disabled")
-			Eventually(func() bool {
-				runtime := imv1.Runtime{}
-				if err := k8sClient.Get(ctx, types.NamespacedName{
-					Name:      RuntimeName,
-					Namespace: "default",
-				}, &runtime); err != nil {
-					return false
-				}
-
-				return runtime.Spec.Caching != nil && !runtime.Spec.Caching.Enabled
-
-			}, time.Second*300, time.Second*3).Should(BeTrue())
-		})
+			}), true),
+			Entry("with registry cache disabled", createRuntimeStub("test-runtime-2", "shoot-cluster-2", true), createSecretStub("kubeconfig-cluster-2", "test-runtime-2", map[string]string{
+				"kyma-project.io/runtime-id":          "test-runtime-2",
+				"operator.kyma-project.io/managed-by": "infrastructure-manager",
+			}), false))
 
 		It("Should not update runtime when secret is not managed by KIM", func() {
 			const RuntimeName = "test-runtime-3"
