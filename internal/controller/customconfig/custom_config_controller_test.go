@@ -36,11 +36,11 @@ var _ = Describe("Custom Config Controller", func() {
 
 			}, time.Second*300, time.Second*3).Should(BeTrue())
 		},
-			Entry("with registry cache enabled", createRuntimeStub("test-runtime-1", "shoot-cluster-1", false), createSecretStub("kubeconfig-cluster-1", "test-runtime-1", map[string]string{
+			Entry("with registry cache enabled", createRuntimeStub("test-runtime-1", "shoot-cluster-1", false), createSecretStub("kubeconfig-cluster-1", map[string]string{
 				"kyma-project.io/runtime-id":          "test-runtime-1",
 				"operator.kyma-project.io/managed-by": "infrastructure-manager",
 			}), true),
-			Entry("with registry cache disabled", createRuntimeStub("test-runtime-2", "shoot-cluster-2", true), createSecretStub("kubeconfig-cluster-2", "test-runtime-2", map[string]string{
+			Entry("with registry cache disabled", createRuntimeStub("test-runtime-2", "shoot-cluster-2", true), createSecretStub("kubeconfig-cluster-2", map[string]string{
 				"kyma-project.io/runtime-id":          "test-runtime-2",
 				"operator.kyma-project.io/managed-by": "infrastructure-manager",
 			}), false))
@@ -56,13 +56,13 @@ var _ = Describe("Custom Config Controller", func() {
 			Expect(k8sClient.Create(ctx, runtime)).To(Succeed())
 
 			By("Creating a Secret with custom config but not managed by KIM")
-			secret := createSecretStub(SecretName, RuntimeName, map[string]string{
+			secret := createSecretStub(SecretName, map[string]string{
 				"kyma-project.io/runtime-id": RuntimeName,
 			})
 			Expect(k8sClient.Create(ctx, secret)).To(Succeed())
 
 			By("Creating a Secret that does not contain kubeconfig")
-			secretNotManaged := createSecretStub(SecretNotContainingKubeconfig, RuntimeName, map[string]string{})
+			secretNotManaged := createSecretStub(SecretNotContainingKubeconfig, map[string]string{})
 			Expect(k8sClient.Create(ctx, secretNotManaged)).To(Succeed())
 
 			By("Check if Runtime CR has registry cache enabled")
@@ -83,7 +83,7 @@ var _ = Describe("Custom Config Controller", func() {
 	})
 })
 
-func createSecretStub(name, runtimeName string, labels map[string]string) *v1.Secret {
+func createSecretStub(name string, labels map[string]string) *v1.Secret {
 	return &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
