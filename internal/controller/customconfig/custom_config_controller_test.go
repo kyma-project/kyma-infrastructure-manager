@@ -92,7 +92,7 @@ var _ = Describe("Custom Config Controller", func() {
 
 				return runtime.Spec.Caching == nil
 
-			}, time.Second*60, time.Second*3).Should(BeTrue())
+			}, time.Second*30, time.Second*3).Should(BeTrue())
 		})
 	})
 })
