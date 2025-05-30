@@ -30,7 +30,7 @@ type CustomSKRConfigReconciler struct {
 	Cfg           fsm.RCCfg
 	EventRecorder record.EventRecorder
 	RequestID     atomic.Uint64
-	Creator       RegistryCacheCreator ``
+	Creator       RegistryCacheCreator
 }
 
 const fieldManagerName = "customconfigcontroller"
