@@ -5,7 +5,7 @@ go 1.24.2
 toolchain go1.24.3
 
 require (
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250520145649-64a6d4a5de02
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250530125852-d14265f70a2c
 	k8s.io/apimachinery v0.33.1
 	k8s.io/client-go v0.33.1
 	sigs.k8s.io/controller-runtime v0.20.4
@@ -50,6 +50,7 @@ require (
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v6 v6.1.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
@@ -57,6 +58,6 @@ replace (
 	golang.org/x/crypto => golang.org/x/crypto v0.38.0
 	golang.org/x/net => golang.org/x/net v0.40.0
 	golang.org/x/sys => golang.org/x/sys v0.33.0
-	golang.org/x/text => golang.org/x/text v0.24.0
-	golang.org/x/tools => golang.org/x/tools v0.32.0
+	golang.org/x/text => golang.org/x/text v0.25.0
+	golang.org/x/tools => golang.org/x/tools v0.33.0
 )

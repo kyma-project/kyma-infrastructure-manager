@@ -15,14 +15,14 @@ type ConfigExplorer struct {
 
 type GetSecretFunc func() (corev1.Secret, error)
 
-func NewConfigExplorer(ctx context.Context, kubeconfigSecret corev1.Secret) (ConfigExplorer, error) {
+func NewConfigExplorer(ctx context.Context, kubeconfigSecret corev1.Secret) (*ConfigExplorer, error) {
 
 	shootClient, err := gardener.GetShootClient(kubeconfigSecret)
 	if err != nil {
-		return ConfigExplorer{}, err
+		return nil, err
 	}
 
-	return ConfigExplorer{
+	return &ConfigExplorer{
 		shootClient: shootClient,
 		Context:     ctx,
 	}, nil

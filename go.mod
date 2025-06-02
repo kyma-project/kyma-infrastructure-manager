@@ -10,7 +10,7 @@ require (
 	github.com/gardener/gardener-extension-provider-aws v1.61.2
 	github.com/gardener/gardener-extension-provider-gcp v1.43.3
 	github.com/gardener/gardener-extension-provider-openstack v1.47.0
-	github.com/gardener/gardener-extension-registry-cache v0.13.0
+	github.com/gardener/gardener-extension-registry-cache v0.16.0
 	github.com/gardener/oidc-webhook-authenticator v0.35.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-playground/validator/v10 v10.26.0
@@ -79,10 +79,12 @@ require (
 	golang.org/x/term v0.32.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
-	golang.org/x/tools v0.32.0 // indirect
+	golang.org/x/tools v0.33.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
+	gomodules.xyz/jsonpatch/v3 v3.0.1 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
+	gopkg.in/evanphx/json-patch.v5 v5.9.11 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.33.1 // indirect
@@ -90,13 +92,14 @@ require (
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v6 v6.1.0 // indirect
 )
 
 replace (
 	golang.org/x/crypto => golang.org/x/crypto v0.38.0
 	golang.org/x/net => golang.org/x/net v0.40.0
 	golang.org/x/sys => golang.org/x/sys v0.33.0
-	golang.org/x/text => golang.org/x/text v0.24.0
-	golang.org/x/tools => golang.org/x/tools v0.32.0
+	golang.org/x/text => golang.org/x/text v0.25.0
+	golang.org/x/tools => golang.org/x/tools v0.33.0
 )

@@ -6,7 +6,7 @@ toolchain go1.24.3
 
 require (
 	github.com/gardener/gardener v1.117.5
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250520145649-64a6d4a5de02
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250530125852-d14265f70a2c
 	k8s.io/api v0.33.1
 	k8s.io/apimachinery v0.33.1
 	k8s.io/client-go v0.33.1
@@ -23,7 +23,7 @@ require (
 	github.com/gardener/gardener-extension-provider-aws v1.61.2 // indirect
 	github.com/gardener/gardener-extension-provider-gcp v1.43.3 // indirect
 	github.com/gardener/gardener-extension-provider-openstack v1.47.0 // indirect
-	github.com/gardener/gardener-extension-registry-cache v0.13.0 // indirect
+	github.com/gardener/gardener-extension-registry-cache v0.16.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-openapi/jsonpointer v0.21.1 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
@@ -57,13 +57,14 @@ require (
 	k8s.io/utils v0.0.0-20250502105355-0f33e8f1c979 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v6 v6.1.0 // indirect
 )
 
 replace (
 	github.com/kyma-project/infrastructure-manager => ../../
 	golang.org/x/net => golang.org/x/net v0.40.0
 	golang.org/x/sys => golang.org/x/sys v0.33.0
-	golang.org/x/text => golang.org/x/text v0.24.0
-	golang.org/x/tools => golang.org/x/tools v0.32.0
+	golang.org/x/text => golang.org/x/text v0.25.0
+	golang.org/x/tools => golang.org/x/tools v0.33.0
 )

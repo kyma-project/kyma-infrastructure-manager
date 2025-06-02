@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/kyma-project/infrastructure-manager/internal/controller/customconfig"
+	registrycache2 "github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"io"
 	"os"
@@ -105,6 +107,7 @@ func main() {
 	var converterConfigFilepath string
 	var auditLogMandatory bool
 	var structuredAuthEnabled bool
+	var customConfigControllerEnabled bool
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -124,6 +127,7 @@ func main() {
 	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "A file path to the gardener shoot converter configuration.")
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration")
 	flag.BoolVar(&structuredAuthEnabled, "structured-auth-enabled", false, "Feature flag to enable structured authentication")
+	flag.BoolVar(&customConfigControllerEnabled, "custom-config-controller-enabled", false, "Feature flag to custom config controller")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
@@ -251,6 +255,16 @@ func main() {
 	}
 
 	refreshRuntimeMetrics(restConfig, logger, metrics)
+
+	if customConfigControllerEnabled {
+		customConfigReconciler := customconfig.NewCustomConfigReconciler(mgr, logger, func(secret corev1.Secret) (customconfig.RegistryCache, error) {
+			return registrycache2.NewConfigExplorer(context.Background(), secret)
+		})
+		if err = customConfigReconciler.SetupWithManager(mgr, 1); err != nil {
+			setupLog.Error(err, "unable to setup custom config controller with Manager", "controller", "Runtime")
+			os.Exit(1)
+		}
+	}
 
 	setupLog.Info("Starting Manager", "kubeconfigExpirationTime", expirationTime, "kubeconfigRotationPeriod", rotationPeriod)
 
