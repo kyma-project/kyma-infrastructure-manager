@@ -88,7 +88,6 @@ func TestOidcState(t *testing.T) {
 			additionalOIDCConfig *[]imv1.OIDCConfig
 		}{
 			{"Should configure OIDC using defaults when additional OIDC config is nil", nil},
-			{"Should configure OIDC using defaults when additional OIDC config contains empty array", &[]imv1.OIDCConfig{}},
 			{"Should configure OIDC using defaults when additional OIDC config contains one empty element", &[]imv1.OIDCConfig{{}}},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
@@ -349,6 +348,70 @@ func TestOidcState(t *testing.T) {
 		assert.Equal(t, "kyma-oidc-0", openIdConnects.Items[0].Name)
 		assertEqualConditions(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)
 		assert.Equal(t, imv1.State("Pending"), systemState.instance.Status.State)
+	})
+
+	t.Run("Should delete existing OpenIDConnect CRs from SKR when additional OIDC config contains empty array", func(t *testing.T) {
+		// given
+		ctx := context.Background()
+
+		emptyAdditionalOIDCConfig := &[]imv1.OIDCConfig{}
+
+		// start of fake client setup
+		scheme, err := newOIDCTestScheme()
+		require.NoError(t, err)
+		var fakeClient = fake.NewClientBuilder().
+			WithScheme(scheme).
+			Build()
+		testFSM := &fsm{K8s: K8s{
+			ShootClient: fakeClient,
+			Client:      fakeClient,
+		}}
+		GetShootClient = func(
+			_ context.Context,
+			_ client.Client,
+			_ imv1.Runtime) (client.Client, error) {
+			return fakeClient, nil
+		}
+		// end of fake client setup
+
+		runtimeStub := runtimeForTest()
+
+		runtimeStub.Spec.Shoot.Kubernetes.KubeAPIServer.AdditionalOidcConfig = emptyAdditionalOIDCConfig
+
+		shootStub := shootForTest()
+		oidcService := gardener.Extension{
+			Type:     "shoot-oidc-service",
+			Disabled: ptr.To(false),
+		}
+		shootStub.Spec.Extensions = append(shootStub.Spec.Extensions, oidcService)
+
+		systemState := &systemState{
+			instance: runtimeStub,
+			shoot:    shootStub,
+		}
+
+		expectedRuntimeConditions := []metav1.Condition{
+			{
+				Type:    string(imv1.ConditionTypeOidcConfigured),
+				Reason:  string(imv1.ConditionReasonOidcConfigured),
+				Status:  "True",
+				Message: "OIDC configuration completed",
+			},
+		}
+
+		// when
+		stateFn, _, _ := sFnConfigureOidc(ctx, testFSM, systemState)
+
+		// then
+		require.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
+
+		var openIdConnects authenticationv1alpha1.OpenIDConnectList
+
+		err = fakeClient.List(ctx, &openIdConnects)
+		require.NoError(t, err)
+		assert.Len(t, openIdConnects.Items, 0)
+
+		assertEqualConditions(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)
 	})
 }
 
