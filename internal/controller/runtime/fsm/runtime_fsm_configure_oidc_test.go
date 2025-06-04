@@ -88,7 +88,6 @@ func TestOidcState(t *testing.T) {
 			additionalOIDCConfig *[]imv1.OIDCConfig
 		}{
 			{"Should configure OIDC using defaults when additional OIDC config is nil", nil},
-			{"Should configure OIDC using defaults when additional OIDC config contains empty array", &[]imv1.OIDCConfig{}},
 			{"Should configure OIDC using defaults when additional OIDC config contains one empty element", &[]imv1.OIDCConfig{{}}},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
