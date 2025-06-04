@@ -22,6 +22,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/customconfig"
+	registrycache2 "github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"io"
 	"os"
@@ -256,7 +257,9 @@ func main() {
 	refreshRuntimeMetrics(restConfig, logger, metrics)
 
 	if customConfigControllerEnabled {
-		customConfigReconciler := customconfig.NewCustomConfigReconciler(mgr, logger)
+		customConfigReconciler := customconfig.NewCustomConfigReconciler(mgr, logger, func(secret corev1.Secret) (customconfig.RegistryCache, error) {
+			return registrycache2.NewConfigExplorer(context.Background(), secret)
+		})
 		if err = customConfigReconciler.SetupWithManager(mgr, 1); err != nil {
 			setupLog.Error(err, "unable to setup custom config controller with Manager", "controller", "Runtime")
 			os.Exit(1)

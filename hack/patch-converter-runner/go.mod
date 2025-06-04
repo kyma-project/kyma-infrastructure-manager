@@ -6,7 +6,7 @@ toolchain go1.24.3
 
 require (
 	github.com/gardener/gardener v1.117.5
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250523105811-5f42f77c6efc
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250530125852-d14265f70a2c
 	k8s.io/api v0.33.1
 	k8s.io/apimachinery v0.33.1
 	k8s.io/client-go v0.33.1
@@ -57,7 +57,8 @@ require (
 	k8s.io/utils v0.0.0-20250502105355-0f33e8f1c979 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v6 v6.1.0 // indirect
 )
 
 replace (
