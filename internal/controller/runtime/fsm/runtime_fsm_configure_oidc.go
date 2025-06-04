@@ -54,6 +54,19 @@ func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ct
 func additionalOidcEmptyOrUndefined(runtime *imv1.Runtime, cfg RCCfg) additionalOIDCState {
 	additionalOidcConfig := runtime.Spec.Shoot.Kubernetes.KubeAPIServer.AdditionalOidcConfig
 
+	additionalOIDCConfigUndefined := func() bool {
+		if additionalOidcConfig == nil {
+			return true
+		}
+		for _, oidcConfig := range *additionalOidcConfig {
+			if oidcConfig.ClientID != nil && oidcConfig.IssuerURL != nil {
+				return false
+			}
+		}
+
+		return true
+	}
+
 	additionalOIDCConfigEmpty := func() bool {
 		if len(*additionalOidcConfig) == 0 {
 			return true
@@ -61,7 +74,7 @@ func additionalOidcEmptyOrUndefined(runtime *imv1.Runtime, cfg RCCfg) additional
 		return false
 	}
 
-	if additionalOidcConfig == nil {
+	if additionalOIDCConfigUndefined() {
 		additionalOidcConfig = &[]imv1.OIDCConfig{}
 		defaultOIDCConfig := cfg.ClusterConfig.DefaultSharedIASTenant.ToOIDCConfig()
 		*additionalOidcConfig = append(*additionalOidcConfig, imv1.OIDCConfig{OIDCConfig: defaultOIDCConfig})
