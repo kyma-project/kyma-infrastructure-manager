@@ -64,7 +64,7 @@ func additionalOidcEmptyOrUndefined(runtime *imv1.Runtime, cfg RCCfg) additional
 			}
 		}
 
-		return true
+		return false
 	}
 
 	additionalOIDCConfigEmpty := func() bool {
