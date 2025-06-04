@@ -59,11 +59,10 @@ func additionalOidcEmptyOrUndefined(runtime *imv1.Runtime, cfg RCCfg) additional
 			return true
 		}
 		for _, oidcConfig := range *additionalOidcConfig {
-			if oidcConfig.ClientID != nil && oidcConfig.IssuerURL != nil {
-				return false
+			if oidcConfig.ClientID == nil || oidcConfig.IssuerURL == nil {
+				return true
 			}
 		}
-
 		return false
 	}
 
