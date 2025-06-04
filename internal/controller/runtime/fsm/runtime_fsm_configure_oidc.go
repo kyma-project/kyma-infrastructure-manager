@@ -67,10 +67,7 @@ func additionalOidcEmptyOrUndefined(runtime *imv1.Runtime, cfg RCCfg) additional
 	}
 
 	additionalOIDCConfigEmpty := func() bool {
-		if len(*additionalOidcConfig) == 0 {
-			return true
-		}
-		return false
+		return len(*additionalOidcConfig) == 0
 	}
 
 	if additionalOIDCConfigUndefined() {
