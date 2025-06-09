@@ -2,7 +2,7 @@ module github.com/kyma-project/infrastructure-manager/hack/performance
 
 go 1.24.2
 
-toolchain go1.24.3
+toolchain go1.24.4
 
 require (
 	github.com/kyma-project/infrastructure-manager v0.0.0-20250530125852-d14265f70a2c
@@ -50,7 +50,6 @@ require (
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v6 v6.1.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
