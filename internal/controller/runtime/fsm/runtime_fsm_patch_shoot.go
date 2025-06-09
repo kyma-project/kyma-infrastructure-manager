@@ -3,10 +3,12 @@ package fsm
 import (
 	"context"
 	"fmt"
+	k8s "k8s.io/api/core/v1"
 	"reflect"
 	"time"
 
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/skrdetails"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -63,6 +65,26 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 				msgFailedStructuredConfigMap)
 		}
 	}
+
+	//////
+	configMap := skrdetails.CreateSKRDetailsConfigMap(s.instance, s.shoot)
+
+	err = recreateSKRDetails(ctx, configMap, m, s)
+	if err != nil {
+		m.log.Error(err, "Failed to create SKR details config map")
+		return nil, nil, err
+	}
+
+	if err != nil {
+		m.Metrics.IncRuntimeFSMStopCounter()
+		return updateStatePendingWithErrorAndStop(
+			&s.instance,
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonOidcError,
+			msgFailedStructuredConfigMap)
+	}
+	//////
+
 
 	var registrycache []v1beta1.RegistryCache
 	if s.instance.Spec.Caching != nil && s.instance.Spec.Caching.Enabled {
@@ -188,6 +210,20 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	)
 
 	return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
+}
+
+func recreateSKRDetails(ctx context.Context, skrDetailsConfigMap k8s.ConfigMap, m *fsm, s *systemState) error {
+	shootAdminClient, shootClientError := GetShootClient(ctx, m.Client, s.instance)
+	if shootClientError != nil {
+		return shootClientError
+	}
+
+	errResourceCreation := shootAdminClient.Patch(ctx, &skrDetailsConfigMap, client.Apply, &client.PatchOptions{
+		FieldManager: fieldManagerName,
+		Force:        ptr.To(true),
+	})
+
+	return errResourceCreation
 }
 
 func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg string) (stateFn, *ctrl.Result, error) {
