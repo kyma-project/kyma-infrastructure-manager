@@ -61,8 +61,8 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			return updateStatePendingWithErrorAndStop(
 				&s.instance,
 				imv1.ConditionTypeRuntimeProvisioned,
-				imv1.ConditionReasonOidcError,
-				msgFailedStructuredConfigMap)
+				imv1.ConditionReasonConfigurationErr,
+				msgFailedProvisioningInfoConfigMap)
 		}
 	}
 

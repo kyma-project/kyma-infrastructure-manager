@@ -16,8 +16,9 @@ import (
 
 const (
 	msgFailedToConfigureAuditlogs     = "Failed to configure audit logs"
-	msgFailedStructuredConfigMap      = "Failed to create structured authentication config map"
-	msgFailedToConfigureRegistryCache = "Failed to configure registry cache"
+	msgFailedStructuredConfigMap       = "Failed to create structured authentication config map"
+	msgFailedProvisioningInfoConfigMap = "Failed to create kyma-provisioning-info config map"
+	msgFailedToConfigureRegistryCache  = "Failed to configure registry cache"
 )
 
 func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
