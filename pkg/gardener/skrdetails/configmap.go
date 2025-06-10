@@ -32,7 +32,7 @@ type NetworkDetails struct {
 	Infrastructure runtime.RawExtension `json:"infrastructure"`
 }
 
-func toSKRDetails(runtime imv1.Runtime, shoot *gardener.Shoot) SKRDetails {
+func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) SKRDetails {
 
 	var kymaWorkerPool WorkerPool
 	var customWorkerPools []WorkerPool
@@ -78,12 +78,12 @@ func toSKRDetails(runtime imv1.Runtime, shoot *gardener.Shoot) SKRDetails {
 	}
 }
 
-func CreateSKRDetailsConfigMap(runtime imv1.Runtime, shoot *gardener.Shoot) v1.ConfigMap {
-	details := toSKRDetails(runtime, shoot) // Replace with actual seed cluster region
+func ToKymaProvisioningInfoCM(runtime imv1.Runtime, shoot *gardener.Shoot) (v1.ConfigMap, error) {
+	details := ToKymaProvisioningInfo(runtime, shoot)
 	authConfigBytes, err := yaml.Marshal(details)
 
 	if err != nil {
-		panic("Failed to marshal SKR details to YAML: " + err.Error())
+		return v1.ConfigMap{}, err
 	}
 
 	return v1.ConfigMap{
@@ -98,5 +98,5 @@ func CreateSKRDetailsConfigMap(runtime imv1.Runtime, shoot *gardener.Shoot) v1.C
 		Data: map[string]string{
 			"details": string(authConfigBytes),
 		},
-	}
+	}, nil
 }

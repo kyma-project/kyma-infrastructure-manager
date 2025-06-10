@@ -3,8 +3,6 @@ package fsm
 import (
 	"context"
 	"fmt"
-	k8s "k8s.io/api/core/v1"
-
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
@@ -67,20 +65,9 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		}
 	}
 
-	configMap := skrdetails.CreateSKRDetailsConfigMap(s.instance, s.shoot)
-	skrDetailsErr := createSKRDetails(ctx, configMap, m, s)
+	skrDetailsErr:= createKymaProvisioningInfoCM(ctx, m, s)
 	if skrDetailsErr != nil {
-		m.log.Error(skrDetailsErr, "Failed to create SKR details config map")
-		return nil, nil, skrDetailsErr
-	}
-
-	if skrDetailsErr != nil {
-		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(
-			&s.instance,
-			imv1.ConditionTypeRuntimeProvisioned,
-			imv1.ConditionReasonConfigurationErr,
-			msgFailedProvisioningInfoConfigMap)
+		return handleConfigMapCreationError(m, skrDetailsErr, s)
 	}
 
 	data, err := m.AuditLogging.GetAuditLogData(
@@ -144,6 +131,16 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
 }
 
+func handleConfigMapCreationError(m *fsm, skrDetailsErr error, s *systemState) (stateFn, *ctrl.Result, error) {
+	m.log.Error(skrDetailsErr, "Failed to create SKR details config map")
+	m.Metrics.IncRuntimeFSMStopCounter()
+	return updateStatePendingWithErrorAndStop(
+		&s.instance,
+		imv1.ConditionTypeRuntimeProvisioned,
+		imv1.ConditionReasonConfigurationErr,
+		msgFailedProvisioningInfoConfigMap)
+}
+
 func convertCreate(instance *imv1.Runtime, opts gardener_shoot.CreateOpts) (gardener.Shoot, error) {
 	if err := instance.ValidateRequiredLabels(); err != nil {
 		return gardener.Shoot{}, err
@@ -158,13 +155,19 @@ func convertCreate(instance *imv1.Runtime, opts gardener_shoot.CreateOpts) (gard
 	return newShoot, nil
 }
 
-func createSKRDetails(ctx context.Context, skrDetailsConfigMap k8s.ConfigMap, m *fsm, s *systemState) error {
+func createKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) error {
+	configMap, skrDetailsErr := skrdetails.ToKymaProvisioningInfoCM(s.instance, s.shoot)
+
+	if skrDetailsErr != nil {
+		return skrDetailsErr
+	}
+
 	shootAdminClient, shootClientError := GetShootClient(ctx, m.Client, s.instance)
 	if shootClientError != nil {
 		return shootClientError
 	}
 
-	errResourceCreation := shootAdminClient.Create(ctx, &skrDetailsConfigMap)
+	errResourceCreation := shootAdminClient.Create(ctx, &configMap)
 
 	return errResourceCreation
 }

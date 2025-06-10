@@ -3,7 +3,7 @@ package fsm
 import (
 	"context"
 	"fmt"
-	k8s "k8s.io/api/core/v1"
+	"github.com/pkg/errors"
 	"k8s.io/client-go/tools/clientcmd"
 	"reflect"
 	"time"
@@ -67,9 +67,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		}
 	}
 
-	configMap := skrdetails.CreateSKRDetailsConfigMap(s.instance, s.shoot)
-
-	skrDetailsErr := updateSKRDetails(ctx, configMap, m, s)
+	skrDetailsErr := applyKymaProvisioningInfoCM(ctx, m, s)
 	if skrDetailsErr != nil {
 		m.log.Error(skrDetailsErr, "Failed to create SKR details config map")
 		return nil, nil, skrDetailsErr
@@ -231,21 +229,18 @@ var GetShootClientPatch = func(ctx context.Context, cnt client.Client, runtime i
 	return shootClientWithAdmin, nil
 }
 
-func updateSKRDetails(ctx context.Context, skrDetailsConfigMap k8s.ConfigMap, m *fsm, s *systemState) error {
+func applyKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) error {
+	configMap, conversionErr := skrdetails.ToKymaProvisioningInfoCM(s.instance, s.shoot)
+	if conversionErr != nil {
+		return errors.Wrap(conversionErr, "failed to convert RuntimeCR and Shoot spec to ToKymaProvisioningInfo config map")
+	}
+
 	shootAdminClient, shootClientError := GetShootClientPatch(ctx, m.Client, s.instance)
 	if shootClientError != nil {
 		return shootClientError
 	}
 
-	//var testGetCM k8s.ConfigMap
-	//namespacedName := types.NamespacedName{Name: "kyma-provisioning-info", Namespace: "kyma-system"}
-
-	//getErr := shootAdminClient.Get(ctx,
-	//	namespacedName,
-	//	&testGetCM)
-	//m.log.Error(getErr, "Failed to get kyma-provisioning-info configmap")
-
-	errResourceCreation := shootAdminClient.Patch(ctx, &skrDetailsConfigMap, client.Apply, &client.PatchOptions{})
+	errResourceCreation := shootAdminClient.Patch(ctx, &configMap, client.Apply, &client.PatchOptions{})
 
 	return errResourceCreation
 }
