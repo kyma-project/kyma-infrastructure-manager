@@ -17,10 +17,6 @@ import (
 	"time"
 )
 
-const (
-	kubeconfigSecretKey = "config"
-)
-
 func addToScheme(s *runtime.Scheme) error {
 	for _, add := range []func(s *runtime.Scheme) error{
 		corev1.AddToScheme,

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
-	"k8s.io/client-go/tools/clientcmd"
 	"reflect"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
@@ -208,34 +208,13 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
 }
 
-var GetShootClientPatch = func(ctx context.Context, cnt client.Client, runtime imv1.Runtime) (client.Client, error) {
-	runtimeID := runtime.Labels[imv1.LabelKymaRuntimeID]
-
-	secret, err := getKubeconfigSecret(ctx, cnt, runtimeID, runtime.Namespace)
-	if err != nil {
-		return nil, err
-	}
-
-	restConfig, err := clientcmd.RESTConfigFromKubeConfig(secret.Data[kubeconfigSecretKey])
-	if err != nil {
-		return nil, err
-	}
-
-	shootClientWithAdmin, err := client.New(restConfig, client.Options{})
-	if err != nil {
-		return nil, err
-	}
-
-	return shootClientWithAdmin, nil
-}
-
 func applyKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) error {
 	configMap, conversionErr := skrdetails.ToKymaProvisioningInfoConfigMap(s.instance, s.shoot)
 	if conversionErr != nil {
 		return errors.Wrap(conversionErr, "failed to convert RuntimeCR and Shoot spec to ToKymaProvisioningInfo config map")
 	}
 
-	shootAdminClient, shootClientError := GetShootClientPatch(ctx, m.Client, s.instance)
+	shootAdminClient, shootClientError := imv1_client.GetShootClientPatch(ctx, m.Client, s.instance)
 	if shootClientError != nil {
 		return shootClientError
 	}
@@ -393,7 +372,7 @@ func migrateOIDCToStructuredAuth(ctx context.Context, shootToUpdate gardener.Sho
 }
 
 func getRegistryCache(ctx context.Context, client client.Client, runtime imv1.Runtime) ([]v1beta1.RegistryCache, error) {
-	secret, err := getKubeconfigSecret(ctx, client, runtime.Labels[imv1.LabelKymaRuntimeID], runtime.Namespace)
+	secret, err := imv1_client.GetKubeconfigSecret(ctx, client, runtime.Labels[imv1.LabelKymaRuntimeID], runtime.Namespace)
 	if err != nil {
 		return nil, err
 	}

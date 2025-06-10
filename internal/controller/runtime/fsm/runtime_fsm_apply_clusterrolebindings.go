@@ -2,16 +2,14 @@ package fsm
 
 import (
 	"context"
-	"fmt"
 	"slices"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
-	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -82,7 +80,7 @@ func logDeletedClusterRoleBindings(removed []rbacv1.ClusterRoleBinding, m *fsm, 
 var GetShootClient = func(ctx context.Context, cnt client.Client, runtime imv1.Runtime) (client.Client, error) {
 	runtimeID := runtime.Labels[imv1.LabelKymaRuntimeID]
 
-	secret, err := getKubeconfigSecret(ctx, cnt, runtimeID, runtime.Namespace)
+	secret, err := imv1_client.GetKubeconfigSecret(ctx, cnt, runtimeID, runtime.Namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -98,24 +96,6 @@ var GetShootClient = func(ctx context.Context, cnt client.Client, runtime imv1.R
 	}
 
 	return shootClientWithAdmin, nil
-}
-
-func getKubeconfigSecret(ctx context.Context, cnt client.Client, runtimeID, namespace string) (corev1.Secret, error) {
-	secretName := fmt.Sprintf("kubeconfig-%s", runtimeID)
-
-	var kubeconfigSecret corev1.Secret
-	secretKey := types.NamespacedName{Name: secretName, Namespace: namespace}
-
-	err := cnt.Get(ctx, secretKey, &kubeconfigSecret)
-
-	if err != nil {
-		return corev1.Secret{}, err
-	}
-
-	if kubeconfigSecret.Data == nil {
-		return corev1.Secret{}, fmt.Errorf("kubeconfig secret `%s` does not contain kubeconfig data", kubeconfigSecret.Name)
-	}
-	return kubeconfigSecret, nil
 }
 
 func isRBACUserKind() func(rbacv1.Subject) bool {
