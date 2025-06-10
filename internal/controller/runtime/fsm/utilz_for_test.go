@@ -222,7 +222,7 @@ var (
 			WithObjects(objs...).
 			WithStatusSubresource(objs...).
 			WithInterceptorFuncs(interceptor.Funcs{
-				Patch: fsm_testing.GetFakePatchInterceptorFn(true),
+				Patch: fsm_testing.GetFakePatchInterceptorForConfigMap(true),
 			}).
 			Build()
 

@@ -2,30 +2,62 @@ package testing
 
 import (
 	"context"
-	"errors"
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	core_v1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func GetFakePatchInterceptorFn(incGeneration bool) func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+func GetFakePatchInterceptorFn(incShootGeneration bool) func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
 	return func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
 		// Apply patches are supposed to upsert, but fake client fails if the object doesn't exist,
 		// Update the generation to simulate the object being updated using interceptor function.
 		if patch.Type() != types.ApplyPatchType {
 			return client.Patch(ctx, obj, patch, opts...)
 		}
-		shoot, ok := obj.(*gardener_api.Shoot)
-		if !ok {
-			return errors.New("failed to cast object to shoot")
-		}
-		if incGeneration {
-			shoot.Generation++
+		if incShootGeneration {
+			shoot, ok := obj.(*gardener_api.Shoot)
+			if ok {
+				//return errors.New("failed to cast object to shoot")
+				shoot.Generation++
+			}
 		}
 		return nil
 	}
 }
+
+func GetFakePatchInterceptorForConfigMap(incShootGeneration bool) func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+	return func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+		// Apply patches are supposed to upsert, but fake client fails if the object doesn't exist,
+		// Update the generation to simulate the object being updated using interceptor function.
+		if patch.Type() != types.ApplyPatchType {
+			return client.Patch(ctx, obj, patch, opts...)
+		}
+		if incShootGeneration {
+			shoot, ok := obj.(*gardener_api.Shoot)
+			if ok {
+				//return errors.New("failed to cast object to shoot")
+				shoot.Generation++
+			} else {
+				cm, ok_cm := obj.(*core_v1.ConfigMap)
+				if ok_cm {
+					// workaround for https://github.com/kubernetes-sigs/controller-runtime/issues/2341
+					// As the Patch with Apply type does not work with fake client, I'm doing an Update instead which is good enough in my case
+					err := client.Update(ctx, cm )
+					if err != nil {
+						return err
+					}
+
+				} else {
+					return client.Patch(ctx, obj, patch, opts...) // If not shoot or configmap, use default patch
+				}
+			}
+		}
+		return nil
+	}
+}
+
 
 func GetFakePatchInterceptorFnError(returnedError *k8s_errors.StatusError) func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
 	return func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
