@@ -63,7 +63,7 @@ var _ = Describe("KIM patch2", func() {
 				Data: nil,
 			}
 
-			cmCreationErr := testFsm.Client.Create(ctx, detailsConfigMap)
+			cmCreationErr := testFsm.Create(ctx, detailsConfigMap)
 			Expect(cmCreationErr).To(BeNil(), "Failed to create kyma-provisioning-info configmap")
 
 			// when

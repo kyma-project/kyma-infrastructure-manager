@@ -34,7 +34,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 
 	util.Must(imv1.AddToScheme(testScheme))
 	util.Must(gardener.AddToScheme(testScheme))
-	util.Must(core_v1.AddToScheme(testScheme))
+	//util.Must(core_v1.AddToScheme(testScheme))
 
 	expectedAnnotations := map[string]string{"operator.kyma-project.io/existing-annotation": "true"}
 	inputRuntimeWithForceAnnotation := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/force-patch-reconciliation": "true", "operator.kyma-project.io/existing-annotation": "true"})
@@ -292,7 +292,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 	Context("When patching...", func() {
 		ctx := context.Background()
 
-		It("Should successfully patch kyma-provisioning-info configmap", func() {
+		It("Should successfully patch kyma-provisioning-info configmap1", func() {
 			runtime := *inputRuntime.DeepCopy()
 			shoot := fsm_testing.TestShootForPatch().DeepCopy()
 
@@ -315,7 +315,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 				Data: nil,
 			}
 
-			cmCreationErr := fakeFSM2.Client.Create(ctx, detailsConfigMap)
+			cmCreationErr := fakeFSM2.Create(ctx, detailsConfigMap)
 			Expect(cmCreationErr).To(BeNil(), "Failed to create kyma-provisioning-info ConfigMap")
 
 			systemState := &systemState{
@@ -340,7 +340,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 				Name: "kyma-provisioning-info",
 				Namespace: "kyma-system",
 			}
-			err := fakeFSM2.Client.Get(ctx, key, &detailsCM)
+			err := fakeFSM2.Get(ctx, key, &detailsCM)
 			Expect(err).To(BeNil())
 
 			//err = fakeClient.Get(ctx, key, &openIdConnect)
@@ -496,8 +496,7 @@ func setupFakeFSMForTestWithKymaProvisioningInfo(scheme *api.Scheme, runtime *im
 		withMockedMetrics(),
 		withShootNamespace("garden-"),
 		withTestFinalizer,
-		//withFakedK8sClient(scheme, runtime),
-		withFakedK8sClientNoPatchInterceptor(scheme, runtime),
+		withFakedK8sClientProvisioningDetails(scheme, runtime),
 		withFakeEventRecorder(1),
 		withDefaultReconcileDuration(),
 		withStructuredAuthEnabled(false),

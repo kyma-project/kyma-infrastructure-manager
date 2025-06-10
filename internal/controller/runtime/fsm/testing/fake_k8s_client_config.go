@@ -37,7 +37,6 @@ func GetFakePatchInterceptorForConfigMap(incShootGeneration bool) func(ctx conte
 		if incShootGeneration {
 			shoot, ok := obj.(*gardener_api.Shoot)
 			if ok {
-				//return errors.New("failed to cast object to shoot")
 				shoot.Generation++
 			} else {
 				cm, ok_cm := obj.(*core_v1.ConfigMap)
