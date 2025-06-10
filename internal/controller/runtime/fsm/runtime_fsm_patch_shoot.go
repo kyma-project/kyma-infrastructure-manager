@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	k8s "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/clientcmd"
 	"reflect"
 	"time"
 
@@ -209,8 +210,29 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
 }
 
+var GetShootClientPatch = func(ctx context.Context, cnt client.Client, runtime imv1.Runtime) (client.Client, error) {
+	runtimeID := runtime.Labels[imv1.LabelKymaRuntimeID]
+
+	secret, err := getKubeconfigSecret(ctx, cnt, runtimeID, runtime.Namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	restConfig, err := clientcmd.RESTConfigFromKubeConfig(secret.Data[kubeconfigSecretKey])
+	if err != nil {
+		return nil, err
+	}
+
+	shootClientWithAdmin, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		return nil, err
+	}
+
+	return shootClientWithAdmin, nil
+}
+
 func updateSKRDetails(ctx context.Context, skrDetailsConfigMap k8s.ConfigMap, m *fsm, s *systemState) error {
-	shootAdminClient, shootClientError := GetShootClient(ctx, m.Client, s.instance)
+	shootAdminClient, shootClientError := GetShootClientPatch(ctx, m.Client, s.instance)
 	if shootClientError != nil {
 		return shootClientError
 	}
