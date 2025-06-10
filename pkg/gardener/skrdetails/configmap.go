@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-type SKRDetails struct {
+type KymaProvisioningInfo struct {
 	WorkerPools          WorkerPools          `json:"workerPools"`
 	GlobalAccountID      string               `json:"globalAccountID,omitzero"`
 	SubaccountID         string               `json:"subaccountID,omitzero"`
@@ -32,8 +32,7 @@ type NetworkDetails struct {
 	Infrastructure runtime.RawExtension `json:"infrastructure"`
 }
 
-func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) SKRDetails {
-
+func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaProvisioningInfo {
 	var kymaWorkerPool WorkerPool
 	var customWorkerPools []WorkerPool
 
@@ -67,7 +66,7 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) SKRDeta
 		}
 	}
 
-	return SKRDetails{
+	return KymaProvisioningInfo{
 		WorkerPools: WorkerPools{
 			Kyma:   kymaWorkerPool,
 			Custom: customWorkerPools,
@@ -78,7 +77,7 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) SKRDeta
 	}
 }
 
-func ToKymaProvisioningInfoCM(runtime imv1.Runtime, shoot *gardener.Shoot) (v1.ConfigMap, error) {
+func ToKymaProvisioningInfoConfigMap(runtime imv1.Runtime, shoot *gardener.Shoot) (v1.ConfigMap, error) {
 	details := ToKymaProvisioningInfo(runtime, shoot)
 	authConfigBytes, err := yaml.Marshal(details)
 

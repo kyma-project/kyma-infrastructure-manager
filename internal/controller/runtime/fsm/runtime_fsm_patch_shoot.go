@@ -230,7 +230,7 @@ var GetShootClientPatch = func(ctx context.Context, cnt client.Client, runtime i
 }
 
 func applyKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) error {
-	configMap, conversionErr := skrdetails.ToKymaProvisioningInfoCM(s.instance, s.shoot)
+	configMap, conversionErr := skrdetails.ToKymaProvisioningInfoConfigMap(s.instance, s.shoot)
 	if conversionErr != nil {
 		return errors.Wrap(conversionErr, "failed to convert RuntimeCR and Shoot spec to ToKymaProvisioningInfo config map")
 	}

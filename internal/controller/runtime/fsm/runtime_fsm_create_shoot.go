@@ -156,7 +156,7 @@ func convertCreate(instance *imv1.Runtime, opts gardener_shoot.CreateOpts) (gard
 }
 
 func createKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) error {
-	configMap, skrDetailsErr := skrdetails.ToKymaProvisioningInfoCM(s.instance, s.shoot)
+	configMap, skrDetailsErr := skrdetails.ToKymaProvisioningInfoConfigMap(s.instance, s.shoot)
 
 	if skrDetailsErr != nil {
 		return skrDetailsErr
