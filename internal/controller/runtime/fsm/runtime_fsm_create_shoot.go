@@ -3,19 +3,21 @@ package fsm
 import (
 	"context"
 	"fmt"
+	k8s "k8s.io/api/core/v1"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/skrdetails"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 const (
-	msgFailedToConfigureAuditlogs     = "Failed to configure audit logs"
+	msgFailedToConfigureAuditlogs      = "Failed to configure audit logs"
 	msgFailedStructuredConfigMap       = "Failed to create structured authentication config map"
 	msgFailedProvisioningInfoConfigMap = "Failed to create kyma-provisioning-info config map"
 	msgFailedToConfigureRegistryCache  = "Failed to configure registry cache"
@@ -63,6 +65,22 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 				imv1.ConditionReasonOidcError,
 				msgFailedStructuredConfigMap)
 		}
+	}
+
+	configMap := skrdetails.CreateSKRDetailsConfigMap(s.instance, s.shoot)
+	skrDetailsErr := createSKRDetails(ctx, configMap, m, s)
+	if skrDetailsErr != nil {
+		m.log.Error(skrDetailsErr, "Failed to create SKR details config map")
+		return nil, nil, skrDetailsErr
+	}
+
+	if skrDetailsErr != nil {
+		m.Metrics.IncRuntimeFSMStopCounter()
+		return updateStatePendingWithErrorAndStop(
+			&s.instance,
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonConfigurationErr,
+			msgFailedProvisioningInfoConfigMap)
 	}
 
 	data, err := m.AuditLogging.GetAuditLogData(
@@ -138,4 +156,15 @@ func convertCreate(instance *imv1.Runtime, opts gardener_shoot.CreateOpts) (gard
 	}
 
 	return newShoot, nil
+}
+
+func createSKRDetails(ctx context.Context, skrDetailsConfigMap k8s.ConfigMap, m *fsm, s *systemState) error {
+	shootAdminClient, shootClientError := GetShootClient(ctx, m.Client, s.instance)
+	if shootClientError != nil {
+		return shootClientError
+	}
+
+	errResourceCreation := shootAdminClient.Create(ctx, &skrDetailsConfigMap)
+
+	return errResourceCreation
 }

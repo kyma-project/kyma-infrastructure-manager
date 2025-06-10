@@ -6,7 +6,7 @@ import (
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
-	v1 "k8s.io/api/core/v1"
+	core_v1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	api "k8s.io/apimachinery/pkg/runtime"
 	util "k8s.io/apimachinery/pkg/util/runtime"
 )
 
@@ -30,11 +30,11 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 	testCtx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	testScheme := runtime.NewScheme()
+	testScheme := api.NewScheme()
 
 	util.Must(imv1.AddToScheme(testScheme))
 	util.Must(gardener.AddToScheme(testScheme))
-	util.Must(v1.AddToScheme(testScheme))
+	util.Must(core_v1.AddToScheme(testScheme))
 
 	expectedAnnotations := map[string]string{"operator.kyma-project.io/existing-annotation": "true"}
 	inputRuntimeWithForceAnnotation := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/force-patch-reconciliation": "true", "operator.kyma-project.io/existing-annotation": "true"})
@@ -213,7 +213,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 				status:      fsm_testing.PendingStatusShootPatched(),
 			}
 
-			newConfigMap := &v1.ConfigMap{
+			newConfigMap := &core_v1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "structured-auth-config-" + fakeSystemState.shoot.Name,
 					Namespace: fakeSystemState.shoot.Namespace,
@@ -234,7 +234,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			Expect(err).To(BeNil())
 			Expect(shootAfterUpdate.Spec.Kubernetes.KubeAPIServer.OIDCConfig).To(BeNil()) //nolint:staticcheck
 
-			var updatedConfigMap v1.ConfigMap
+			var updatedConfigMap core_v1.ConfigMap
 
 			err = fakeFSM.ShootClient.Get(ctx, types.NamespacedName{
 				Name:      newConfigMap.Name,
@@ -286,9 +286,84 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 
 		})
 	})
+
+	//////
+
+	Context("When patching...", func() {
+		ctx := context.Background()
+
+		It("Should successfully patch kyma-provisioning-info configmap", func() {
+			runtime := *inputRuntime.DeepCopy()
+			shoot := fsm_testing.TestShootForPatch().DeepCopy()
+
+			testScheme2 := api.NewScheme()
+			util.Must(imv1.AddToScheme(testScheme2))
+			util.Must(gardener.AddToScheme(testScheme2))
+			util.Must(core_v1.AddToScheme(testScheme2))
+
+			fakeFSM2 := setupFakeFSMForTestWithKymaProvisioningInfo(testScheme2, &runtime)
+
+			detailsConfigMap := &core_v1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ConfigMap",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "kyma-provisioning-info",
+					Namespace: "kyma-system",
+				},
+				Data: nil,
+			}
+
+			cmCreationErr := fakeFSM2.Client.Create(ctx, detailsConfigMap)
+			Expect(cmCreationErr).To(BeNil(), "Failed to create kyma-provisioning-info ConfigMap")
+
+			systemState := &systemState{
+				instance: runtime,
+				shoot:    shoot,
+			}
+
+			expectedFnState := outputFnState{
+				nextStep:    haveName("sFnUpdateStatus"),
+				annotations: expectedAnnotations,
+				result:      nil,
+				status:      fsm_testing.PendingStatusShootPatched(),
+			}
+
+			// when
+			testFunc2 := buildPatchTestFunction(sFnPatchExistingShoot)
+			testFunc2(ctx, fakeFSM2, systemState, expectedFnState)
+
+			// then
+			var detailsCM core_v1.ConfigMap
+			key := client.ObjectKey{
+				Name: "kyma-provisioning-info",
+				Namespace: "kyma-system",
+			}
+			err := fakeFSM2.Client.Get(ctx, key, &detailsCM)
+			Expect(err).To(BeNil())
+
+			//err = fakeClient.Get(ctx, key, &openIdConnect)
+			//require.NoError(t, err)
+			//assert.Equal(t, openIdConnect.Name, "old-non-kyma-oidc")
+			//
+			//var openIdConnects authenticationv1alpha1.OpenIDConnectList
+			//err = fakeClient.List(ctx, &openIdConnects)
+			//require.NoError(t, err)
+			//assert.Len(t, openIdConnects.Items, 2)
+			//assert.Equal(t, "kyma-oidc-0", openIdConnects.Items[0].Name)
+			//assertEqualConditions(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)
+			//assert.Equal(t, imv1.State("Pending"), systemState.instance.Status.State)
+
+		})
+	})
+
+
+	//////
 })
 
-func setupFakeFSMForTest(scheme *runtime.Scheme, objs ...client.Object) *fsm {
+
+func setupFakeFSMForTest(scheme *api.Scheme, objs ...client.Object) *fsm {
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withTestFinalizer,
@@ -299,7 +374,7 @@ func setupFakeFSMForTest(scheme *runtime.Scheme, objs ...client.Object) *fsm {
 	)
 }
 
-func setupFakeFSMForTestKeepGeneration(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestKeepGeneration(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withShootNamespace("garden-"),
@@ -310,7 +385,7 @@ func setupFakeFSMForTestKeepGeneration(scheme *runtime.Scheme, runtime *imv1.Run
 	)
 }
 
-func setupFakeFSMForTestWithFailingPatchWithInConflictError(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestWithFailingPatchWithInConflictError(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	gr := schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoot"}
 	err := k8s_errors.NewConflict(gr, "test-shoot", errors.New("test conflict"))
 
@@ -324,7 +399,7 @@ func setupFakeFSMForTestWithFailingPatchWithInConflictError(scheme *runtime.Sche
 	)
 }
 
-func setupFakeFSMForTestWithFailingUpdateWithInConflictError(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestWithFailingUpdateWithInConflictError(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	gr := schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoot"}
 	err := k8s_errors.NewConflict(gr, "test-shoot", errors.New("test conflict"))
 
@@ -338,7 +413,7 @@ func setupFakeFSMForTestWithFailingUpdateWithInConflictError(scheme *runtime.Sch
 	)
 }
 
-func setupFakeFSMForTestWithFailingPatchWithForbiddenError(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestWithFailingPatchWithForbiddenError(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	gr := schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoot"}
 	err := k8s_errors.NewForbidden(gr, "test-shoot", errors.New("test forbidden"))
 
@@ -352,7 +427,7 @@ func setupFakeFSMForTestWithFailingPatchWithForbiddenError(scheme *runtime.Schem
 	)
 }
 
-func setupFakeFSMForTestWithFailingUpdateWithForbiddenError(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestWithFailingUpdateWithForbiddenError(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	gr := schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoot"}
 	err := k8s_errors.NewForbidden(gr, "test-shoot", errors.New("test forbidden"))
 
@@ -366,7 +441,7 @@ func setupFakeFSMForTestWithFailingUpdateWithForbiddenError(scheme *runtime.Sche
 	)
 }
 
-func setupFakeFSMForTestWithFailingPatchWithOtherError(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestWithFailingPatchWithOtherError(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	err := k8s_errors.NewUnauthorized("test unauthorized")
 
 	return must(newFakeFSM,
@@ -379,7 +454,7 @@ func setupFakeFSMForTestWithFailingPatchWithOtherError(scheme *runtime.Scheme, r
 	)
 }
 
-func setupFakeFSMForTestWithFailingUpdateWithOtherError(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestWithFailingUpdateWithOtherError(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	err := k8s_errors.NewUnauthorized("test unauthorized")
 
 	return must(newFakeFSM,
@@ -392,7 +467,7 @@ func setupFakeFSMForTestWithFailingUpdateWithOtherError(scheme *runtime.Scheme, 
 	)
 }
 
-func setupFakeFSMForTestWithAuditLogMandatory(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestWithAuditLogMandatory(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withShootNamespace("garden-"),
@@ -404,7 +479,7 @@ func setupFakeFSMForTestWithAuditLogMandatory(scheme *runtime.Scheme, runtime *i
 	)
 }
 
-func setupFakeFSMForTestWithStructuredAuthEnabled(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestWithStructuredAuthEnabled(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withShootNamespace("garden-"),
@@ -416,7 +491,22 @@ func setupFakeFSMForTestWithStructuredAuthEnabled(scheme *runtime.Scheme, runtim
 	)
 }
 
-func setupFakeFSMForTestWithAuditLogMandatoryAndConfig(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestWithKymaProvisioningInfo(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
+	return must(newFakeFSM,
+		withMockedMetrics(),
+		withShootNamespace("garden-"),
+		withTestFinalizer,
+		//withFakedK8sClient(scheme, runtime),
+		withFakedK8sClientNoPatchInterceptor(scheme, runtime),
+		withFakeEventRecorder(1),
+		withDefaultReconcileDuration(),
+		withStructuredAuthEnabled(false),
+		withAuditLogMandatory(false),
+	)
+}
+
+
+func setupFakeFSMForTestWithAuditLogMandatoryAndConfig(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withShootNamespace("garden-"),

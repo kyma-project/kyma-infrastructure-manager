@@ -11,14 +11,14 @@ import (
 
 type SKRDetails struct {
 	WorkerPools          WorkerPools          `json:"workerPools"`
-	GlobalAccountID      string               `json:"globalAccountID,omitempty"`
-	SubaccountID         string               `json:"subaccountID,omitempty"`
-	InfrastructureConfig runtime.RawExtension `json:"infrastructureConfig,omitempty"`
+	GlobalAccountID      string               `json:"globalAccountID,omitzero"`
+	SubaccountID         string               `json:"subaccountID,omitzero"`
+	InfrastructureConfig runtime.RawExtension `json:"infrastructureConfig,omitzero"`
 }
 
 type WorkerPools struct {
 	Kyma   WorkerPool   `json:"kyma"`
-	Custom []WorkerPool `json:"custom,omitempty"`
+	Custom []WorkerPool `json:"custom,omitzero"`
 }
 type WorkerPool struct {
 	Name                  string `json:"name"`

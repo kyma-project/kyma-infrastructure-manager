@@ -213,6 +213,26 @@ var (
 		}
 	}
 
+	withFakedK8sClientProvisioningDetails = func(
+		scheme *runtime.Scheme,
+		objs ...client.Object) fakeFSMOpt {
+
+		k8sClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(objs...).
+			WithStatusSubresource(objs...).
+			WithInterceptorFuncs(interceptor.Funcs{
+				Patch: fsm_testing.GetFakePatchInterceptorFn(true),
+			}).
+			Build()
+
+		return func(fsm *fsm) error {
+			fsm.Client = k8sClient
+			fsm.ShootClient = k8sClient
+			return nil
+		}
+	}
+
 	withFn = func(fn stateFn) fakeFSMOpt {
 		return func(fsm *fsm) error {
 			fsm.fn = fn

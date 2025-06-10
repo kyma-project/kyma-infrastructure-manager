@@ -66,16 +66,15 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		}
 	}
 
-	//////
 	configMap := skrdetails.CreateSKRDetailsConfigMap(s.instance, s.shoot)
 
-	err = recreateSKRDetails(ctx, configMap, m, s)
-	if err != nil {
-		m.log.Error(err, "Failed to create SKR details config map")
-		return nil, nil, err
+	skrDetailsErr := updateSKRDetails(ctx, configMap, m, s)
+	if skrDetailsErr != nil {
+		m.log.Error(skrDetailsErr, "Failed to create SKR details config map")
+		return nil, nil, skrDetailsErr
 	}
 
-	if err != nil {
+	if skrDetailsErr != nil {
 		m.Metrics.IncRuntimeFSMStopCounter()
 		return updateStatePendingWithErrorAndStop(
 			&s.instance,
@@ -83,8 +82,6 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			imv1.ConditionReasonConfigurationErr,
 			msgFailedProvisioningInfoConfigMap)
 	}
-	//////
-
 
 	var registrycache []v1beta1.RegistryCache
 	if s.instance.Spec.Caching != nil && s.instance.Spec.Caching.Enabled {
@@ -212,16 +209,21 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
 }
 
-func recreateSKRDetails(ctx context.Context, skrDetailsConfigMap k8s.ConfigMap, m *fsm, s *systemState) error {
+func updateSKRDetails(ctx context.Context, skrDetailsConfigMap k8s.ConfigMap, m *fsm, s *systemState) error {
 	shootAdminClient, shootClientError := GetShootClient(ctx, m.Client, s.instance)
 	if shootClientError != nil {
 		return shootClientError
 	}
 
-	errResourceCreation := shootAdminClient.Patch(ctx, &skrDetailsConfigMap, client.Apply, &client.PatchOptions{
-		FieldManager: fieldManagerName,
-		Force:        ptr.To(true),
-	})
+	//var testGetCM k8s.ConfigMap
+	//namespacedName := types.NamespacedName{Name: "kyma-provisioning-info", Namespace: "kyma-system"}
+
+	//getErr := shootAdminClient.Get(ctx,
+	//	namespacedName,
+	//	&testGetCM)
+	//m.log.Error(getErr, "Failed to get kyma-provisioning-info configmap")
+
+	errResourceCreation := shootAdminClient.Patch(ctx, &skrDetailsConfigMap, client.Apply, &client.PatchOptions{})
 
 	return errResourceCreation
 }
