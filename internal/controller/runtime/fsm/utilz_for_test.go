@@ -7,6 +7,7 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
+	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
@@ -123,6 +124,12 @@ var (
 				Patch:  fsm_testing.GetFakePatchInterceptorFn(true),
 				Update: fsm_testing.GetFakeUpdateInterceptorFn(true),
 			}).Build()
+		imv1_client.GetShootClientPatch = func(
+			_ context.Context,
+			_ client.Client,
+			_ imv1.Runtime) (client.Client, error) {
+			return k8sClient, nil
+		}
 
 		return func(fsm *fsm) error {
 			fsm.Client = k8sClient

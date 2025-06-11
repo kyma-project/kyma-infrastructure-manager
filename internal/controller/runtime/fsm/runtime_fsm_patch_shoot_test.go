@@ -34,7 +34,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 
 	util.Must(imv1.AddToScheme(testScheme))
 	util.Must(gardener.AddToScheme(testScheme))
-	//util.Must(core_v1.AddToScheme(testScheme))
+	util.Must(core_v1.AddToScheme(testScheme))
 
 	expectedAnnotations := map[string]string{"operator.kyma-project.io/existing-annotation": "true"}
 	inputRuntimeWithForceAnnotation := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/force-patch-reconciliation": "true", "operator.kyma-project.io/existing-annotation": "true"})
@@ -286,82 +286,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 
 		})
 	})
-
-	//////
-
-	Context("When patching...", func() {
-		ctx := context.Background()
-
-		It("Should successfully patch kyma-provisioning-info configmap1", func() {
-			runtime := *inputRuntime.DeepCopy()
-			shoot := fsm_testing.TestShootForPatch().DeepCopy()
-
-			testScheme2 := api.NewScheme()
-			util.Must(imv1.AddToScheme(testScheme2))
-			util.Must(gardener.AddToScheme(testScheme2))
-			util.Must(core_v1.AddToScheme(testScheme2))
-
-			fakeFSM2 := setupFakeFSMForTestWithKymaProvisioningInfo(testScheme2, &runtime)
-
-			detailsConfigMap := &core_v1.ConfigMap{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ConfigMap",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "kyma-provisioning-info",
-					Namespace: "kyma-system",
-				},
-				Data: nil,
-			}
-
-			cmCreationErr := fakeFSM2.Create(ctx, detailsConfigMap)
-			Expect(cmCreationErr).To(BeNil(), "Failed to create kyma-provisioning-info ConfigMap")
-
-			systemState := &systemState{
-				instance: runtime,
-				shoot:    shoot,
-			}
-
-			expectedFnState := outputFnState{
-				nextStep:    haveName("sFnUpdateStatus"),
-				annotations: expectedAnnotations,
-				result:      nil,
-				status:      fsm_testing.PendingStatusShootPatched(),
-			}
-
-			// when
-			testFunc2 := buildPatchTestFunction(sFnPatchExistingShoot)
-			testFunc2(ctx, fakeFSM2, systemState, expectedFnState)
-
-			// then
-			var detailsCM core_v1.ConfigMap
-			key := client.ObjectKey{
-				Name: "kyma-provisioning-info",
-				Namespace: "kyma-system",
-			}
-			err := fakeFSM2.Get(ctx, key, &detailsCM)
-			Expect(err).To(BeNil())
-
-			//err = fakeClient.Get(ctx, key, &openIdConnect)
-			//require.NoError(t, err)
-			//assert.Equal(t, openIdConnect.Name, "old-non-kyma-oidc")
-			//
-			//var openIdConnects authenticationv1alpha1.OpenIDConnectList
-			//err = fakeClient.List(ctx, &openIdConnects)
-			//require.NoError(t, err)
-			//assert.Len(t, openIdConnects.Items, 2)
-			//assert.Equal(t, "kyma-oidc-0", openIdConnects.Items[0].Name)
-			//assertEqualConditions(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)
-			//assert.Equal(t, imv1.State("Pending"), systemState.instance.Status.State)
-
-		})
-	})
-
-
-	//////
 })
-
 
 func setupFakeFSMForTest(scheme *api.Scheme, objs ...client.Object) *fsm {
 	return must(newFakeFSM,
