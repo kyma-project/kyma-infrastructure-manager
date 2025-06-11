@@ -4,6 +4,7 @@ import (
 	"context"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
@@ -34,7 +35,7 @@ var _ = Describe("KIM sFnCreateShoot", func() {
 				ShootClient: fakeClient,
 				Client:      fakeClient,
 			}}
-			GetShootClient = func(
+			imv1_client.GetShootClientPatch = func(
 				_ context.Context,
 				_ client.Client,
 				_ imv1.Runtime) (client.Client, error) {
