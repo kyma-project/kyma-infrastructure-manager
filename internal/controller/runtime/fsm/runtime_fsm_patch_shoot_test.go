@@ -481,20 +481,6 @@ func setupFakeFSMForTestWithStructuredAuthEnabled(scheme *api.Scheme, runtime *i
 	)
 }
 
-func setupFakeFSMForTestWithKymaProvisioningInfo(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
-	return must(newFakeFSM,
-		withMockedMetrics(),
-		withShootNamespace("garden-"),
-		withTestFinalizer,
-		withFakedK8sClientProvisioningDetails(scheme, runtime),
-		withFakeEventRecorder(1),
-		withDefaultReconcileDuration(),
-		withStructuredAuthEnabled(false),
-		withAuditLogMandatory(false),
-	)
-}
-
-
 func setupFakeFSMForTestWithAuditLogMandatoryAndConfig(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	return must(newFakeFSM,
 		withMockedMetrics(),
