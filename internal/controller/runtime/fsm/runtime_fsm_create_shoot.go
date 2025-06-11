@@ -5,6 +5,7 @@ import (
 	"fmt"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
@@ -163,7 +164,7 @@ func createKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) e
 		return skrDetailsErr
 	}
 
-	shootAdminClient, shootClientError := GetShootClient(ctx, m.Client, s.instance)
+	shootAdminClient, shootClientError := imv1_client.GetShootClientPatch(ctx, m.Client, s.instance)
 	if shootClientError != nil {
 		return shootClientError
 	}

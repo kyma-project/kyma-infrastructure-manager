@@ -107,7 +107,6 @@ var _ = BeforeSuite(func() {
 	clientScheme := runtime.NewScheme()
 	_ = gardener_api.AddToScheme(clientScheme)
 	_ = imv1.AddToScheme(clientScheme)
-	_ = v12.AddToScheme(clientScheme)
 
 	// tracker will be updated with different shoot sequence for each test case
 	tracker := clienttesting.NewObjectTracker(clientScheme, serializer.NewCodecFactory(clientScheme).UniversalDecoder())
@@ -148,10 +147,6 @@ var _ = BeforeSuite(func() {
 	_ = v12.AddToScheme(shootClientScheme)
 	err = gardener_oidc.AddToScheme(shootClientScheme)
 	k8sFakeClientRoleBindings = fake.NewClientBuilder().WithScheme(shootClientScheme).Build()
-
-	fsm.GetShootClient = func(_ context.Context, _ client.Client, _ imv1.Runtime) (client.Client, error) {
-		return k8sFakeClientRoleBindings, nil
-	}
 
 	var fakeClient = fake.NewClientBuilder().
 		WithScheme(shootClientScheme).
