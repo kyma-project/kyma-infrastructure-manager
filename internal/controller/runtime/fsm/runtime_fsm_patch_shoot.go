@@ -210,23 +210,16 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 }
 
 func applyKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) error {
-	m.log.V(log_level.DEBUG).Info("kyma-provisioning-info - ToKymaProvisioningInfoConfigMap() conversion")
 	configMap, conversionErr := skrdetails.ToKymaProvisioningInfoConfigMap(s.instance, s.shoot)
 	if conversionErr != nil {
-		m.log.V(log_level.DEBUG).Info("kyma-provisioning-info - ToKymaProvisioningInfoConfigMap() returned an error")
 		return errors.Wrap(conversionErr, "failed to convert RuntimeCR and Shoot spec to ToKymaProvisioningInfo config map")
 	}
 
-	m.log.V(log_level.DEBUG).Info("kyma-provisioning-info - ToKymaProvisioningInfoConfigMap() returned a valid config map",)
-
-	m.log.V(log_level.DEBUG).Info("kyma-provisioning-info - GetShootClientPatch()",)
 	shootAdminClient, shootClientError := imv1_client.GetShootClientPatch(ctx, m.Client, s.instance)
 	if shootClientError != nil {
-		m.log.V(log_level.DEBUG).Info("kyma-provisioning-info - GetShootClientPatch() returned an error",)
 		return shootClientError
 	}
 
-	m.log.V(log_level.DEBUG).Info("kyma-provisioning-info - shootAdminClient.Patch()",)
 	errResourceCreation := shootAdminClient.Patch(ctx, &configMap, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
