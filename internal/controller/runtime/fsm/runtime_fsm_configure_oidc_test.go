@@ -7,7 +7,6 @@ import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -76,7 +75,7 @@ func TestOidcState(t *testing.T) {
 				},
 			},
 		}
-		imv1_client.GetShootClientPatch = func(
+		GetShootClient = func(
 			_ context.Context,
 			_ client.Client,
 			_ imv1.Runtime) (client.Client, error) {
@@ -158,7 +157,7 @@ func TestOidcState(t *testing.T) {
 				},
 			},
 		}
-		imv1_client.GetShootClientPatch = func(
+		GetShootClient = func(
 			_ context.Context,
 			_ client.Client,
 			_ imv1.Runtime) (client.Client, error) {
@@ -218,7 +217,7 @@ func TestOidcState(t *testing.T) {
 			ShootClient: fakeClient,
 			Client:      fakeClient,
 		}}
-		imv1_client.GetShootClientPatch = func(
+		GetShootClient = func(
 			_ context.Context,
 			_ client.Client,
 			_ imv1.Runtime) (client.Client, error) {
@@ -285,7 +284,7 @@ func TestOidcState(t *testing.T) {
 			ShootClient: fakeClient,
 			Client:      fakeClient,
 		}}
-		imv1_client.GetShootClientPatch = func(
+		GetShootClient = func(
 			_ context.Context,
 			_ client.Client,
 			_ imv1.Runtime) (client.Client, error) {
