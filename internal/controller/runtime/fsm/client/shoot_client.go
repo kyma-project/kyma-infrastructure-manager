@@ -7,6 +7,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// GetShootClientPatch Client that can be used to operate on the `Shoot` cluster
 var GetShootClientPatch = func(ctx context.Context, cnt client.Client, runtime imv1.Runtime) (client.Client, error) {
 	runtimeID := runtime.Labels[imv1.LabelKymaRuntimeID]
 

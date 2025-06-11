@@ -12,7 +12,7 @@ const (
 	KubeconfigSecretKey = "config"
 )
 
-
+// Retrieves the `Secret` from a Kubeconfig
 func GetKubeconfigSecret(ctx context.Context, cnt client.Client, runtimeID, namespace string) (corev1.Secret, error) {
 	secretName := fmt.Sprintf("kubeconfig-%s", runtimeID)
 

@@ -69,6 +69,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	if skrDetailsErr != nil {
 		return handleConfigMapCreationError(m, skrDetailsErr, s)
 	}
+	m.log.V(log_level.DEBUG).Info("kyma-provisioning-info config map is created")
 
 	data, err := m.AuditLogging.GetAuditLogData(
 		s.instance.Spec.Shoot.Provider.Type,

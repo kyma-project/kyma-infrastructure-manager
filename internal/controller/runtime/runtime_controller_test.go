@@ -59,7 +59,7 @@ var _ = Describe("Runtime Controller", func() {
 
 				return controllerutil.ContainsFinalizer(&runtime, imv1.Finalizer)
 
-			}, time.Second*300, time.Second*3).Should(BeTrue())
+			}, time.Second*60, time.Second*3).Should(BeTrue())
 
 			By("Wait for Runtime to process shoot creation process and finish processing in Ready State")
 
@@ -80,7 +80,7 @@ var _ = Describe("Runtime Controller", func() {
 				}
 
 				return true
-			}, time.Second*300, time.Second*3).Should(BeTrue())
+			}, time.Second*60, time.Second*3).Should(BeTrue())
 
 			// and end as Ready state with ConfigurationCompleted condition == True
 			Eventually(func() bool {
@@ -161,7 +161,7 @@ var _ = Describe("Runtime Controller", func() {
 				}
 
 				return true
-			}, time.Second*300, time.Second*3).Should(BeTrue())
+			}, time.Second*60, time.Second*3).Should(BeTrue())
 
 			// and end as Ready state with ConfigurationCompleted condition == True
 			Eventually(func() bool {
@@ -184,7 +184,7 @@ var _ = Describe("Runtime Controller", func() {
 				}
 
 				return true
-			}, time.Second*300, time.Second*3).Should(BeTrue())
+			}, time.Second*60, time.Second*3).Should(BeTrue())
 
 			Expect(customTracker.IsSequenceFullyUsed()).To(BeTrue())
 
@@ -222,7 +222,7 @@ var _ = Describe("Runtime Controller", func() {
 				}
 
 				return true
-			}, time.Second*300, time.Second*3).Should(BeTrue())
+			}, time.Second*60, time.Second*3).Should(BeTrue())
 
 			// should delete Shoot and go into RuntimeStateTerminating state with condition GardenerClusterCRDeleted
 			Eventually(func() bool {
@@ -239,7 +239,7 @@ var _ = Describe("Runtime Controller", func() {
 					return false
 				}
 				return true
-			}, time.Second*300, time.Second*3).Should(BeTrue())
+			}, time.Second*60, time.Second*3).Should(BeTrue())
 
 			// Make sure the instance is finally deleted
 			Eventually(func() bool {
@@ -248,7 +248,7 @@ var _ = Describe("Runtime Controller", func() {
 					return false
 				}
 				return true
-			}, time.Second*300, time.Second*3).Should(BeTrue())
+			}, time.Second*60, time.Second*3).Should(BeTrue())
 
 			Expect(customTracker.IsSequenceFullyUsed()).To(BeTrue())
 		})
