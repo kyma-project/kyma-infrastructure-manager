@@ -12,12 +12,15 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/yaml"
 	"testing"
 	"time"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -285,6 +288,68 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			testFunc(ctx, fakeFSM, fakeSystemState, outputFsmState)
 
 		})
+
+		It("Should successfully patch kyma-provisioning-info configmap", func() {
+			runtime := *inputRuntime.DeepCopy()
+			shoot := fsm_testing.TestShootForPatch()
+
+			// start of fake client setup
+			var fakeClient = fake.NewClientBuilder().
+				WithScheme(testScheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Patch: fsm_testing.GetFakePatchInterceptorForConfigMap(true),
+				}).
+				Build()
+			testFsm := &fsm{K8s: K8s{
+				ShootClient: fakeClient,
+				Client:      fakeClient,
+			}}
+			imv1_client.GetShootClientPatch = func(
+				_ context.Context,
+				_ client.Client,
+				_ imv1.Runtime) (client.Client, error) {
+				return fakeClient, nil
+			}
+
+			// end of fake client setup
+
+			systemState := &systemState{
+				instance: runtime,
+				shoot:    shoot,
+			}
+
+			detailsConfigMap := &core_v1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ConfigMap",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "kyma-provisioning-info",
+					Namespace: "kyma-system",
+				},
+				Data: nil,
+			}
+
+			cmCreationErr := testFsm.Create(ctx, detailsConfigMap)
+			Expect(cmCreationErr).To(BeNil(), "Failed to create kyma-provisioning-info configmap")
+
+			// when
+			stateFn, _, _ := sFnPatchExistingShoot(ctx, testFsm, systemState)
+
+			// then
+			Expect(stateFn.name()).To(ContainSubstring("sFnUpdateStatus"))
+
+			var detailsCM core_v1.ConfigMap
+			key := client.ObjectKey{
+				Name: "kyma-provisioning-info",
+				Namespace: "kyma-system",
+			}
+			err := fakeClient.Get(ctx, key, &detailsCM)
+			Expect(err).To(BeNil())
+			Expect(detailsCM.Data).To(HaveKey("details"))
+			Expect(detailsCM.Data["details"]).To(Equal("globalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n"))
+		})
+
 	})
 })
 
