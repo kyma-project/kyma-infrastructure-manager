@@ -5,7 +5,7 @@ go 1.24.2
 toolchain go1.24.4
 
 require (
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250530125852-d14265f70a2c
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250611093638-c8409f30d72e
 	k8s.io/apimachinery v0.33.1
 	k8s.io/client-go v0.33.1
 	sigs.k8s.io/controller-runtime v0.20.4
