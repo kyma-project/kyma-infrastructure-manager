@@ -3,12 +3,10 @@ package fsm
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
 	"reflect"
 	"time"
 
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/skrdetails"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -66,22 +64,6 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 				msgFailedStructuredConfigMap)
 		}
 	}
-
-	skrDetailsErr := applyKymaProvisioningInfoCM(ctx, m, s)
-	if skrDetailsErr != nil {
-		m.log.Error(skrDetailsErr, "Failed to patch kyma-provisioning-info config map")
-		return nil, nil, skrDetailsErr
-	}
-
-	if skrDetailsErr != nil {
-		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(
-			&s.instance,
-			imv1.ConditionTypeRuntimeProvisioned,
-			imv1.ConditionReasonConfigurationErr,
-			msgFailedProvisioningInfoConfigMap)
-	}
-	m.log.V(log_level.DEBUG).Info("kyma-provisioning-info config map is updated")
 
 	var registrycache []v1beta1.RegistryCache
 	if s.instance.Spec.Caching != nil && s.instance.Spec.Caching.Enabled {
@@ -207,25 +189,6 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	)
 
 	return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
-}
-
-func applyKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) error {
-	configMap, conversionErr := skrdetails.ToKymaProvisioningInfoConfigMap(s.instance, s.shoot)
-	if conversionErr != nil {
-		return errors.Wrap(conversionErr, "failed to convert RuntimeCR and Shoot spec to ToKymaProvisioningInfo config map")
-	}
-
-	shootAdminClient, shootClientError := imv1_client.GetShootClientPatch(ctx, m.Client, s.instance)
-	if shootClientError != nil {
-		return shootClientError
-	}
-
-	errResourceCreation := shootAdminClient.Patch(ctx, &configMap, client.Apply, &client.PatchOptions{
-		FieldManager: fieldManagerName,
-		Force:        ptr.To(true),
-	})
-
-	return errResourceCreation
 }
 
 func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg string) (stateFn, *ctrl.Result, error) {

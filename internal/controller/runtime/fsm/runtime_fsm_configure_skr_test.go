@@ -2,16 +2,22 @@ package fsm
 
 import (
 	"context"
+	core_v1 "k8s.io/api/core/v1"
+	util "k8s.io/apimachinery/pkg/util/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"testing"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
+	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	api "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -46,7 +52,7 @@ func TestOidcState(t *testing.T) {
 		}
 
 		// when
-		stateFn, _, _ := sFnConfigureOidc(ctx, fsm, systemState)
+		stateFn, _, _ := sFnConfigureSKR(ctx, fsm, systemState)
 
 		// then
 		require.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
@@ -118,7 +124,7 @@ func TestOidcState(t *testing.T) {
 				}
 
 				// when
-				stateFn, _, _ := sFnConfigureOidc(ctx, testFsm, systemState)
+				stateFn, _, _ := sFnConfigureSKR(ctx, testFsm, systemState)
 
 				// then
 				require.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
@@ -188,7 +194,7 @@ func TestOidcState(t *testing.T) {
 		}
 
 		// when
-		stateFn, _, _ := sFnConfigureOidc(ctx, testFsm, systemState)
+		stateFn, _, _ := sFnConfigureSKR(ctx, testFsm, systemState)
 
 		// then
 		require.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
@@ -253,7 +259,7 @@ func TestOidcState(t *testing.T) {
 		}
 
 		// when
-		stateFn, _, _ := sFnConfigureOidc(ctx, testFsm, systemState)
+		stateFn, _, _ := sFnConfigureSKR(ctx, testFsm, systemState)
 
 		// then
 		require.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
@@ -323,7 +329,7 @@ func TestOidcState(t *testing.T) {
 		}
 
 		// when
-		stateFn, _, _ := sFnConfigureOidc(ctx, testFSM, systemState)
+		stateFn, _, _ := sFnConfigureSKR(ctx, testFSM, systemState)
 
 		// then
 		require.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
@@ -350,6 +356,88 @@ func TestOidcState(t *testing.T) {
 		assertEqualConditions(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)
 		assert.Equal(t, imv1.State("Pending"), systemState.instance.Status.State)
 	})
+
+	t.Run("Should apply kyma-provisioning-info config map", func(t *testing.T) {
+		ctx := context.Background()
+		testScheme := api.NewScheme()
+
+		util.Must(imv1.AddToScheme(testScheme))
+		util.Must(gardener.AddToScheme(testScheme))
+		util.Must(core_v1.AddToScheme(testScheme))
+		util.Must(authenticationv1alpha1.AddToScheme(testScheme))
+
+		runtime := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
+		shootStub := fsm_testing.TestShootForPatch()
+		oidcService := gardener.Extension{
+			Type:     "shoot-oidc-service",
+			Disabled: ptr.To(false),
+		}
+		shootStub.Spec.Extensions = append(shootStub.Spec.Extensions, oidcService)
+
+		// start of fake client setup
+		var fakeClient = fake.NewClientBuilder().
+			WithScheme(testScheme).
+			WithInterceptorFuncs(interceptor.Funcs{
+				Patch: fsm_testing.GetFakePatchInterceptorForConfigMap(true),
+			}).
+			Build()
+		testFsm := &fsm{K8s: K8s{
+			ShootClient: fakeClient,
+			Client:      fakeClient,
+		}}
+		GetShootClient = func(
+			_ context.Context,
+			_ client.Client,
+			_ imv1.Runtime) (client.Client, error) {
+			return fakeClient, nil
+		}
+		imv1_client.GetShootClientPatch = func(
+			_ context.Context,
+			_ client.Client,
+			_ imv1.Runtime) (client.Client, error) {
+			return fakeClient, nil
+		}
+
+		// end of fake client setup
+
+		systemState := &systemState{
+			instance: *runtime,
+			shoot:    shootStub,
+		}
+
+		detailsConfigMap := &core_v1.ConfigMap{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ConfigMap",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kyma-provisioning-info",
+				Namespace: "kyma-system",
+			},
+			Data: nil,
+		}
+
+		cmCreationErr := testFsm.Create(ctx, detailsConfigMap)
+		assert.NoError(t, cmCreationErr)
+
+		// when
+		stateFn, _, _ := sFnConfigureSKR(ctx, testFsm, systemState)
+
+		// then
+
+		var detailsCM core_v1.ConfigMap
+		key := client.ObjectKey{
+			Name: "kyma-provisioning-info",
+			Namespace: "kyma-system",
+		}
+		err := fakeClient.Get(ctx, key, &detailsCM)
+		assert.NoError(t, err)
+		assert.NotNil(t, detailsCM.Data)
+		assert.NotNil(t, detailsCM.Data["details"])
+		assert.Equal(t, detailsCM.Data["details"], "globalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
+		assert.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
+	})
+
 }
 
 func newOIDCTestScheme() (*runtime.Scheme, error) {

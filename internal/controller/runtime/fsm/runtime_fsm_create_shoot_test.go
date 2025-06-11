@@ -19,7 +19,7 @@ var _ = Describe("KIM sFnCreateShoot", func() {
 	Context("When creating a shoot", func() {
 		ctx := context.Background()
 
-		It("Should successfully create kyma-provisioning-info configmap", func() {
+		It("Should successfully swithc status to sFnUpdateStatus", func() {
 			runtime := *inputRuntime.DeepCopy()
 			shoot := fsm_testing.TestShootForUpdate().DeepCopy()
 
@@ -52,16 +52,6 @@ var _ = Describe("KIM sFnCreateShoot", func() {
 
 			// then
 			Expect(stateFn.name()).To(ContainSubstring("sFnUpdateStatus"))
-
-			var detailsCM v1.ConfigMap
-			key := client.ObjectKey{
-				Name: "kyma-provisioning-info",
-				Namespace: "kyma-system",
-			}
-			err := fakeClient.Get(ctx, key, &detailsCM)
-			Expect(err).To(BeNil())
-			Expect(detailsCM.Data).To(HaveKey("details"))
-			Expect(detailsCM.Data["details"]).To(Equal("globalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n"))
 		})
 	})
 })

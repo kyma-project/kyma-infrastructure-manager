@@ -3,19 +3,24 @@ package fsm
 import (
 	"context"
 	"fmt"
+	"k8s.io/utils/ptr"
 
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/skrdetails"
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	k8s_client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	if !isOidcExtensionEnabled(*s.shoot) {
 		m.log.V(log_level.DEBUG).Info("OIDC extension is disabled")
 		s.instance.UpdateStatePending(
@@ -30,14 +35,26 @@ func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ct
 
 	defaultAdditionalOidcIfNotPresent(&s.instance, m.RCCfg)
 	err := recreateOpenIDConnectResources(ctx, m, s)
-
 	if err != nil {
 		updateConditionFailed(&s.instance)
 		m.log.Error(err, "Failed to create OpenIDConnect resource. Scheduling for retry")
 		return requeue()
 	}
-
 	m.log.V(log_level.DEBUG).Info("OIDC has been configured", "name", s.shoot.Name)
+
+	skrDetailsErr := applyKymaProvisioningInfoCM(ctx, m, s)
+	if skrDetailsErr != nil {
+		m.log.Error(skrDetailsErr, "Failed to patch kyma-provisioning-info config map")
+		m.Metrics.IncRuntimeFSMStopCounter()
+		return updateStatePendingWithErrorAndStop(
+			&s.instance,
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonConfigurationErr,
+			msgFailedProvisioningInfoConfigMap)
+	}
+	m.log.V(log_level.DEBUG).Info("kyma-provisioning-info config map is updated")
+
+	//TODO: Update stare/reason to be more accurate
 	s.instance.UpdateStatePending(
 		imv1.ConditionTypeOidcConfigured,
 		imv1.ConditionReasonOidcConfigured,
@@ -159,4 +176,23 @@ func updateConditionFailed(rt *imv1.Runtime) {
 		string(metav1.ConditionFalse),
 		"failed to configure OIDC",
 	)
+}
+
+func applyKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) error {
+	configMap, conversionErr := skrdetails.ToKymaProvisioningInfoConfigMap(s.instance, s.shoot)
+	if conversionErr != nil {
+		return errors.Wrap(conversionErr, "failed to convert RuntimeCR and Shoot spec to ToKymaProvisioningInfo config map")
+	}
+
+	shootAdminClient, shootClientError := imv1_client.GetShootClientPatch(ctx, m.Client, s.instance)
+	if shootClientError != nil {
+		return shootClientError
+	}
+
+	errResourceCreation := shootAdminClient.Patch(ctx, &configMap, client.Apply, &client.PatchOptions{
+		FieldManager: fieldManagerName,
+		Force:        ptr.To(true),
+	})
+
+	return errResourceCreation
 }
