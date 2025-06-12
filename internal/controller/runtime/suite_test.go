@@ -63,7 +63,6 @@ import (
 var (
 	cfg                       *rest.Config         //nolint:gochecknoglobals
 	k8sClient                 client.Client        //nolint:gochecknoglobals
-	k8sFakeClientRoleBindings client.Client        //nolint:gochecknoglobals
 	gardenerTestClient        client.Client        //nolint:gochecknoglobals
 	testEnv                   *envtest.Environment //nolint:gochecknoglobals
 	suiteCtx                  context.Context      //nolint:gochecknoglobals
