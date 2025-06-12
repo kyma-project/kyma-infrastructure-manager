@@ -22,8 +22,8 @@ func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctr
 	if !isOidcExtensionEnabled(*s.shoot) {
 		m.log.V(log_level.DEBUG).Info("OIDC extension is disabled")
 		s.instance.UpdateStatePending(
-			imv1.ConditionTypeOidcConfigured,
-			imv1.ConditionReasonOidcConfigured,
+			imv1.ConditionTypeOidcAndCMsConfigured,
+			imv1.ConditionReasonOidcAndCMsConfigured,
 			"True",
 			"OIDC extension disabled",
 		)
@@ -54,10 +54,10 @@ func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctr
 
 	//TODO: Update stare/reason to be more accurate
 	s.instance.UpdateStatePending(
-		imv1.ConditionTypeOidcConfigured,
-		imv1.ConditionReasonOidcConfigured,
+		imv1.ConditionTypeOidcAndCMsConfigured,
+		imv1.ConditionReasonOidcAndCMsConfigured,
 		"True",
-		"OIDC configuration completed",
+		"OIDC and kyma-provisioning-info configuration completed",
 	)
 
 	return switchState(sFnApplyClusterRoleBindings)
@@ -169,7 +169,7 @@ func createOpenIDConnectResource(additionalOidcConfig imv1.OIDCConfig, oidcID in
 
 func updateConditionFailed(rt *imv1.Runtime) {
 	rt.UpdateStatePending(
-		imv1.ConditionTypeOidcConfigured,
+		imv1.ConditionTypeOidcAndCMsConfigured,
 		imv1.ConditionReasonOidcError,
 		string(metav1.ConditionFalse),
 		"failed to configure OIDC",

@@ -110,11 +110,11 @@ var _ = Describe("Runtime Controller", func() {
 					return false
 				}
 
-				if !runtime.IsConditionSet(imv1.ConditionTypeOidcConfigured, imv1.ConditionReasonOidcConfigured) {
+				if !runtime.IsConditionSet(imv1.ConditionTypeOidcAndCMsConfigured, imv1.ConditionReasonOidcAndCMsConfigured) {
 					return false
 				}
 
-				if !runtime.IsConditionSetWithStatus(imv1.ConditionTypeOidcConfigured, imv1.ConditionReasonOidcConfigured, metav1.ConditionTrue) {
+				if !runtime.IsConditionSetWithStatus(imv1.ConditionTypeOidcAndCMsConfigured, imv1.ConditionReasonOidcAndCMsConfigured, metav1.ConditionTrue) {
 					return false
 				}
 

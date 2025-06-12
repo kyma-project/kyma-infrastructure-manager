@@ -63,7 +63,7 @@ type RuntimeConditionType string
 const (
 	ConditionTypeRuntimeProvisioned     RuntimeConditionType = "Provisioned"
 	ConditionTypeRuntimeKubeconfigReady RuntimeConditionType = "KubeconfigReady"
-	ConditionTypeOidcConfigured         RuntimeConditionType = "OidcConfigured"
+	ConditionTypeOidcAndCMsConfigured   RuntimeConditionType = "OidcAndConfigMapConfigured"
 	ConditionTypeRuntimeConfigured      RuntimeConditionType = "Configured"
 	ConditionTypeRuntimeDeprovisioned   RuntimeConditionType = "Deprovisioned"
 )
@@ -94,7 +94,7 @@ const (
 	ConditionReasonAuditLogError = RuntimeConditionReason("AuditLogErr")
 
 	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
-	ConditionReasonOidcConfigured           = RuntimeConditionReason("OidcConfigured")
+	ConditionReasonOidcAndCMsConfigured     = RuntimeConditionReason("OidcAndConfigMapsConfigured")
 	ConditionReasonOidcError                = RuntimeConditionReason("OidcConfigurationErr")
 	ConditionReasonSeedNotFound             = RuntimeConditionReason("SeedNotFound")
 	ConditionReasonRegistryCacheError       = RuntimeConditionReason("RegistryCacheConfigurationErr")

@@ -43,8 +43,8 @@ func TestOidcState(t *testing.T) {
 
 		expectedRuntimeConditions := []metav1.Condition{
 			{
-				Type:    string(imv1.ConditionTypeOidcConfigured),
-				Reason:  string(imv1.ConditionReasonOidcConfigured),
+				Type:    string(imv1.ConditionTypeOidcAndCMsConfigured),
+				Reason:  string(imv1.ConditionReasonOidcAndCMsConfigured),
 				Status:  "True",
 				Message: "OIDC extension disabled",
 			},
@@ -91,8 +91,8 @@ func TestOidcState(t *testing.T) {
 
 				expectedRuntimeConditions := []metav1.Condition{
 					{
-						Type:    string(imv1.ConditionTypeOidcConfigured),
-						Reason:  string(imv1.ConditionReasonOidcConfigured),
+						Type:    string(imv1.ConditionTypeOidcAndCMsConfigured),
+						Reason:  string(imv1.ConditionReasonOidcAndCMsConfigured),
 						Status:  "True",
 						Message: "OIDC configuration completed",
 					},
@@ -137,8 +137,8 @@ func TestOidcState(t *testing.T) {
 
 		expectedRuntimeConditions := []metav1.Condition{
 			{
-				Type:    string(imv1.ConditionTypeOidcConfigured),
-				Reason:  string(imv1.ConditionReasonOidcConfigured),
+				Type:    string(imv1.ConditionTypeOidcAndCMsConfigured),
+				Reason:  string(imv1.ConditionReasonOidcAndCMsConfigured),
 				Status:  "True",
 				Message: "OIDC configuration completed",
 			},
@@ -186,8 +186,8 @@ func TestOidcState(t *testing.T) {
 
 		expectedRuntimeConditions := []metav1.Condition{
 			{
-				Type:    string(imv1.ConditionTypeOidcConfigured),
-				Reason:  string(imv1.ConditionReasonOidcConfigured),
+				Type:    string(imv1.ConditionTypeOidcAndCMsConfigured),
+				Reason:  string(imv1.ConditionReasonOidcAndCMsConfigured),
 				Status:  "True",
 				Message: "OIDC configuration completed",
 			},
@@ -240,8 +240,8 @@ func TestOidcState(t *testing.T) {
 
 		expectedRuntimeConditions := []metav1.Condition{
 			{
-				Type:    string(imv1.ConditionTypeOidcConfigured),
-				Reason:  string(imv1.ConditionReasonOidcConfigured),
+				Type:    string(imv1.ConditionTypeOidcAndCMsConfigured),
+				Reason:  string(imv1.ConditionReasonOidcAndCMsConfigured),
 				Status:  "True",
 				Message: "OIDC configuration completed",
 			},
