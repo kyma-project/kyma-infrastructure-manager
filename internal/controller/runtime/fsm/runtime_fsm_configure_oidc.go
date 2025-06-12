@@ -15,7 +15,7 @@ import (
 )
 
 type additionalOIDCState struct {
-	haveEmptyArray bool
+	hasEmptyArray bool
 }
 
 func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
@@ -79,7 +79,7 @@ func additionalOidcEmptyOrUndefined(runtime *imv1.Runtime, cfg RCCfg) additional
 	}
 
 	if additionalOIDCConfigEmpty() {
-		return additionalOIDCState{haveEmptyArray: true}
+		return additionalOIDCState{hasEmptyArray: true}
 	}
 
 	return additionalOIDCState{}
@@ -97,7 +97,7 @@ func recreateOpenIDConnectResources(ctx context.Context, m *fsm, s *systemState,
 		return err
 	}
 
-	if additionalOIDC.haveEmptyArray {
+	if additionalOIDC.hasEmptyArray {
 		return nil
 	}
 
