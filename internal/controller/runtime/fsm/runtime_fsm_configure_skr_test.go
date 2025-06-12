@@ -82,13 +82,7 @@ func TestOidcState(t *testing.T) {
 				},
 			},
 		}
-		GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
-			return fakeClient, nil
-		}
-		imv1_client.GetShootClientPatch = func(
+		imv1_client.GetShootClient = func(
 			_ context.Context,
 			_ client.Client,
 			_ imv1.Runtime) (client.Client, error) {
@@ -172,13 +166,7 @@ func TestOidcState(t *testing.T) {
 				},
 			},
 		}
-		GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
-			return fakeClient, nil
-		}
-		imv1_client.GetShootClientPatch = func(
+		imv1_client.GetShootClient = func(
 			_ context.Context,
 			_ client.Client,
 			_ imv1.Runtime) (client.Client, error) {
@@ -240,13 +228,7 @@ func TestOidcState(t *testing.T) {
 			ShootClient: fakeClient,
 			Client:      fakeClient,
 		}}
-		GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
-			return fakeClient, nil
-		}
-		imv1_client.GetShootClientPatch = func(
+		imv1_client.GetShootClient = func(
 			_ context.Context,
 			_ client.Client,
 			_ imv1.Runtime) (client.Client, error) {
@@ -315,13 +297,7 @@ func TestOidcState(t *testing.T) {
 			ShootClient: fakeClient,
 			Client:      fakeClient,
 		}}
-		GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
-			return fakeClient, nil
-		}
-		imv1_client.GetShootClientPatch = func(
+		imv1_client.GetShootClient = func(
 			_ context.Context,
 			_ client.Client,
 			_ imv1.Runtime) (client.Client, error) {
@@ -411,13 +387,7 @@ func TestOidcState(t *testing.T) {
 			ShootClient: fakeClient,
 			Client:      fakeClient,
 		}}
-		GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
-			return fakeClient, nil
-		}
-		imv1_client.GetShootClientPatch = func(
+		imv1_client.GetShootClient = func(
 			_ context.Context,
 			_ client.Client,
 			_ imv1.Runtime) (client.Client, error) {

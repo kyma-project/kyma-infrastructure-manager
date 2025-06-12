@@ -7,6 +7,7 @@ import (
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
+	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
@@ -179,7 +180,7 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 	Expect(err).ShouldNot(HaveOccurred())
 
 	defaultSetup := func(f *fsm) error {
-		GetShootClient = func(
+		imv1_client.GetShootClient = func(
 			_ context.Context,
 			_ client.Client,
 			_ imv1.Runtime) (client.Client, error) {
@@ -254,7 +255,7 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 				withDefaultReconcileDuration(),
 			),
 			setup: func(f *fsm) error {
-				GetShootClient = func(
+				imv1_client.GetShootClient = func(
 					_ context.Context,
 					_ client.Client,
 					_ imv1.Runtime) (client.Client, error) {

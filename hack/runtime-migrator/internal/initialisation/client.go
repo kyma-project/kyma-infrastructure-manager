@@ -1,7 +1,6 @@
 package initialisation
 
 import (
-	"context"
 	"fmt"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_types "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
@@ -11,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
@@ -106,24 +104,4 @@ func SetupGardenerShootClients(kubeconfigPath, gardenerNamespace string) (garden
 	}
 
 	return shootClient, dynamicClient, err
-}
-
-func getKubeconfigSecret(ctx context.Context, cnt client.Client, runtimeID, namespace string) (corev1.Secret, error) {
-	secretName := fmt.Sprintf("kubeconfig-%s", runtimeID)
-
-	var kubeconfigSecret corev1.Secret
-	secretKey := types.NamespacedName{Name: secretName, Namespace: namespace}
-	getCtx, cancel := context.WithTimeout(ctx, timeoutK8sOperation)
-	defer cancel()
-
-	err := cnt.Get(getCtx, secretKey, &kubeconfigSecret)
-
-	if err != nil {
-		return corev1.Secret{}, err
-	}
-
-	if kubeconfigSecret.Data == nil {
-		return corev1.Secret{}, fmt.Errorf("kubeconfig secret `%s` does not contain kubeconfig data", kubeconfigSecret.Name)
-	}
-	return kubeconfigSecret, nil
 }

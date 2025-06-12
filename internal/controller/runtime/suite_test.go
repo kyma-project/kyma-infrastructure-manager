@@ -159,7 +159,7 @@ var _ = BeforeSuite(func() {
 			Patch: fsm_testing.GetFakePatchInterceptorForConfigMap(true),
 		}).
 		Build()
-	imv1_client.GetShootClientPatch = func(_ context.Context, _ client.Client, _ imv1.Runtime) (client.Client, error) {
+	imv1_client.GetShootClient = func(_ context.Context, _ client.Client, _ imv1.Runtime) (client.Client, error) {
 		return fakeClient, nil
 	}
 

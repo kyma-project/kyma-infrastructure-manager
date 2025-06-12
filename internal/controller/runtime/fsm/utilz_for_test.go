@@ -124,7 +124,7 @@ var (
 				Patch:  fsm_testing.GetFakePatchInterceptorFn(true),
 				Update: fsm_testing.GetFakeUpdateInterceptorFn(true),
 			}).Build()
-		imv1_client.GetShootClientPatch = func(
+		imv1_client.GetShootClient = func(
 			_ context.Context,
 			_ client.Client,
 			_ imv1.Runtime) (client.Client, error) {

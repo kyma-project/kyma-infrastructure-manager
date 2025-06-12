@@ -7,8 +7,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// GetShootClientPatch Client that can be used to operate on the `Shoot` cluster
-var GetShootClientPatch = func(ctx context.Context, cnt client.Client, runtime imv1.Runtime) (client.Client, error) {
+// GetShootClient returns a Kubernetes client for the shoot cluster associated with the given runtime.
+//nolint:gochecknoglobals
+var GetShootClient = func(ctx context.Context, cnt client.Client, runtime imv1.Runtime) (client.Client, error) {
 	runtimeID := runtime.Labels[imv1.LabelKymaRuntimeID]
 
 	secret, err := GetKubeconfigSecret(ctx, cnt, runtimeID, runtime.Namespace)

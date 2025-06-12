@@ -89,7 +89,7 @@ func defaultAdditionalOidcIfNotPresent(runtime *imv1.Runtime, cfg RCCfg) {
 }
 
 func recreateOpenIDConnectResources(ctx context.Context, m *fsm, s *systemState) error {
-	shootAdminClient, shootClientError := GetShootClient(ctx, m.Client, s.instance)
+	shootAdminClient, shootClientError := imv1_client.GetShootClient(ctx, m.Client, s.instance)
 	if shootClientError != nil {
 		return shootClientError
 	}
@@ -182,7 +182,7 @@ func applyKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) er
 		return errors.Wrap(conversionErr, "failed to convert RuntimeCR and Shoot spec to ToKymaProvisioningInfo config map")
 	}
 
-	shootAdminClient, shootClientError := imv1_client.GetShootClientPatch(ctx, m.Client, s.instance)
+	shootAdminClient, shootClientError := imv1_client.GetShootClient(ctx, m.Client, s.instance)
 	if shootClientError != nil {
 		return shootClientError
 	}
