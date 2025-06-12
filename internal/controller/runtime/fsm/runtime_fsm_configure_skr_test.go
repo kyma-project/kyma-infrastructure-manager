@@ -62,33 +62,7 @@ func TestOidcState(t *testing.T) {
 		// given
 		ctx := context.Background()
 
-		// start of fake client setup
-		scheme := createConfigureSKRScheme()
-		var fakeClient = fake.NewClientBuilder().
-			WithInterceptorFuncs(interceptor.Funcs{
-				Patch: fsm_testing.GetFakePatchInterceptorForConfigMap(true),
-			}).
-			WithScheme(scheme).
-			Build()
-		testFsm := &fsm{K8s: K8s{
-			ShootClient: fakeClient,
-			Client:      fakeClient,
-		},
-			RCCfg: RCCfg{
-				Config: config.Config{
-					ClusterConfig: config.ClusterConfig{
-						DefaultSharedIASTenant: createConverterOidcConfig("defaut-client-id"),
-					},
-				},
-			},
-		}
-		imv1_client.GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
-			return fakeClient, nil
-		}
-		// end of fake client setup
+		fakeClient, testFsm := setupFakeClient()
 
 		for _, tc := range []struct {
 			name                 string
@@ -146,33 +120,7 @@ func TestOidcState(t *testing.T) {
 		// given
 		ctx := context.Background()
 
-		// start of fake client setup
-		scheme := createConfigureSKRScheme()
-		var fakeClient = fake.NewClientBuilder().
-			WithInterceptorFuncs(interceptor.Funcs{
-				Patch: fsm_testing.GetFakePatchInterceptorForConfigMap(true),
-			}).
-			WithScheme(scheme).
-			Build()
-		testFsm := &fsm{K8s: K8s{
-			ShootClient: fakeClient,
-			Client:      fakeClient,
-		},
-			RCCfg: RCCfg{
-				Config: config.Config{
-					ClusterConfig: config.ClusterConfig{
-						DefaultSharedIASTenant: createConverterOidcConfig("defaut-client-id"),
-					},
-				},
-			},
-		}
-		imv1_client.GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
-			return fakeClient, nil
-		}
-		// end of fake client setup
+		fakeClient, testFsm := setupFakeClient()
 
 		runtimeStub := runtimeForTest()
 		shootStub := fsm_testing.TestShootForPatch()
@@ -216,25 +164,7 @@ func TestOidcState(t *testing.T) {
 		// given
 		ctx := context.Background()
 
-		// start of fake client setup
-		scheme := createConfigureSKRScheme()
-		var fakeClient = fake.NewClientBuilder().
-			WithInterceptorFuncs(interceptor.Funcs{
-				Patch: fsm_testing.GetFakePatchInterceptorForConfigMap(true),
-			}).
-			WithScheme(scheme).
-			Build()
-		testFsm := &fsm{K8s: K8s{
-			ShootClient: fakeClient,
-			Client:      fakeClient,
-		}}
-		imv1_client.GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
-			return fakeClient, nil
-		}
-		// end of fake client setup
+		fakeClient, testFsm := setupFakeClient()
 
 		runtimeStub := runtimeForTest()
 		additionalOidcConfig := &[]imv1.OIDCConfig{}
@@ -285,25 +215,7 @@ func TestOidcState(t *testing.T) {
 		// given
 		ctx := context.Background()
 
-		// start of fake client setup
-		scheme := createConfigureSKRScheme()
-		var fakeClient = fake.NewClientBuilder().
-			WithInterceptorFuncs(interceptor.Funcs{
-				Patch: fsm_testing.GetFakePatchInterceptorForConfigMap(true),
-			}).
-			WithScheme(scheme).
-			Build()
-		testFSM := &fsm{K8s: K8s{
-			ShootClient: fakeClient,
-			Client:      fakeClient,
-		}}
-		imv1_client.GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
-			return fakeClient, nil
-		}
-		// end of fake client setup
+		fakeClient, testFsm := setupFakeClient()
 
 		kymaOpenIDConnectCR := createOpenIDConnectCR("old-kyma-oidc", "operator.kyma-project.io/managed-by", "infrastructure-manager")
 		err := fakeClient.Create(ctx, kymaOpenIDConnectCR)
@@ -336,7 +248,7 @@ func TestOidcState(t *testing.T) {
 		}
 
 		// when
-		stateFn, _, _ := sFnConfigureSKR(ctx, testFSM, systemState)
+		stateFn, _, _ := sFnConfigureSKR(ctx, testFsm, systemState)
 
 		// then
 		require.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
@@ -366,7 +278,6 @@ func TestOidcState(t *testing.T) {
 
 	t.Run("Should apply kyma-provisioning-info config map", func(t *testing.T) {
 		ctx := context.Background()
-		testScheme := createConfigureSKRScheme()
 
 		runtime := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
 		shootStub := fsm_testing.TestShootForPatch()
@@ -376,25 +287,7 @@ func TestOidcState(t *testing.T) {
 		}
 		shootStub.Spec.Extensions = append(shootStub.Spec.Extensions, oidcService)
 
-		// start of fake client setup
-		var fakeClient = fake.NewClientBuilder().
-			WithScheme(testScheme).
-			WithInterceptorFuncs(interceptor.Funcs{
-				Patch: fsm_testing.GetFakePatchInterceptorForConfigMap(true),
-			}).
-			Build()
-		testFsm := &fsm{K8s: K8s{
-			ShootClient: fakeClient,
-			Client:      fakeClient,
-		}}
-		imv1_client.GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
-			return fakeClient, nil
-		}
-
-		// end of fake client setup
+		fakeClient, testFsm := setupFakeClient()
 
 		systemState := &systemState{
 			instance: *runtime,
@@ -434,6 +327,37 @@ func TestOidcState(t *testing.T) {
 		assert.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
 	})
 
+}
+
+func setupFakeClient() (client.WithWatch, *fsm) {
+	// start of fake client setup
+	scheme := createConfigureSKRScheme()
+	var fakeClient = fake.NewClientBuilder().
+		WithInterceptorFuncs(interceptor.Funcs{
+			Patch: fsm_testing.GetFakePatchInterceptorForConfigMap(true),
+		}).
+		WithScheme(scheme).
+		Build()
+	testFsm := &fsm{K8s: K8s{
+		ShootClient: fakeClient,
+		Client:      fakeClient,
+	},
+		RCCfg: RCCfg{
+			Config: config.Config{
+				ClusterConfig: config.ClusterConfig{
+					DefaultSharedIASTenant: createConverterOidcConfig("defaut-client-id"),
+				},
+			},
+		},
+	}
+	imv1_client.GetShootClient = func(
+		_ context.Context,
+		_ client.Client,
+		_ imv1.Runtime) (client.Client, error) {
+		return fakeClient, nil
+	}
+	// end of fake client setup
+	return fakeClient, testFsm
 }
 
 func createConfigureSKRScheme() *api.Scheme {
