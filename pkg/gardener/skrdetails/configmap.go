@@ -42,14 +42,15 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 
 	// There is an existing check if number of workers != 1 in pkg/gardener/shoot/extender/provider/provider.go:27
 	// that will be later moved to validator webhook
-	mainRuntimeCRWorker := runtime.Spec.Shoot.Provider.Workers[0]
-
-	kymaWorkerPool = WorkerPool{
-		Name:                  mainRuntimeCRWorker.Name,
-		MachiteType:           mainRuntimeCRWorker.Machine.Type,
-		HighAvailabilityZones: isHighAvailability(mainRuntimeCRWorker.Zones),
-		AutoScalerMin:         mainRuntimeCRWorker.Minimum,
-		AutoScalerMax:         mainRuntimeCRWorker.Maximum,
+	if len(runtime.Spec.Shoot.Provider.Workers) > 0 {
+		mainRuntimeCRWorker := runtime.Spec.Shoot.Provider.Workers[0]
+		kymaWorkerPool = WorkerPool{
+			Name:                  mainRuntimeCRWorker.Name,
+			MachiteType:           mainRuntimeCRWorker.Machine.Type,
+			HighAvailabilityZones: isHighAvailability(mainRuntimeCRWorker.Zones),
+			AutoScalerMin:         mainRuntimeCRWorker.Minimum,
+			AutoScalerMax:         mainRuntimeCRWorker.Maximum,
+		}
 	}
 
 	additionalWorkers := runtime.Spec.Shoot.Provider.AdditionalWorkers

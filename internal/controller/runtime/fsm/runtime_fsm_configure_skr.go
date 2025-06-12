@@ -3,9 +3,8 @@ package fsm
 import (
 	"context"
 	"fmt"
-	"k8s.io/utils/ptr"
-
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
+	"k8s.io/utils/ptr"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
@@ -193,6 +192,9 @@ func applyKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) er
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
 	})
+
+	//errResourceCreation := shootAdminClient.Create(ctx, &configMap)
+
 
 	return errResourceCreation
 }

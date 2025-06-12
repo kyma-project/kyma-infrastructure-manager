@@ -8,7 +8,6 @@ import (
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/skrdetails"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -148,21 +147,4 @@ func convertCreate(instance *imv1.Runtime, opts gardener_shoot.CreateOpts) (gard
 	}
 
 	return newShoot, nil
-}
-
-func createKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) error {
-	configMap, skrDetailsErr := skrdetails.ToKymaProvisioningInfoConfigMap(s.instance, s.shoot)
-
-	if skrDetailsErr != nil {
-		return skrDetailsErr
-	}
-
-	shootAdminClient, shootClientError := GetShootClient(ctx, m.Client, s.instance)
-	if shootClientError != nil {
-		return shootClientError
-	}
-
-	errResourceCreation := shootAdminClient.Create(ctx, &configMap)
-
-	return errResourceCreation
 }

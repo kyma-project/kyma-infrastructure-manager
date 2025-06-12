@@ -43,9 +43,9 @@ func GetFakePatchInterceptorForConfigMap(incShootGeneration bool) func(ctx conte
 				if ok_cm {
 					// workaround for https://github.com/kubernetes-sigs/controller-runtime/issues/2341
 					// As the Patch with Apply type does not work with fake client, I'm doing an Update instead which is good enough in my case
-					err := client.Update(ctx, cm )
-					if err != nil {
-						return err
+					err := client.Create(ctx, cm )
+					if err != nil && k8s_errors.IsAlreadyExists(err) {
+						client.Update(ctx, cm )
 					}
 
 				} else {

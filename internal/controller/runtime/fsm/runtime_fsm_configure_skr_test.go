@@ -64,9 +64,11 @@ func TestOidcState(t *testing.T) {
 		ctx := context.Background()
 
 		// start of fake client setup
-		scheme, err := newOIDCTestScheme()
-		require.NoError(t, err)
+		scheme := createConfigureSKRScheme()
 		var fakeClient = fake.NewClientBuilder().
+			WithInterceptorFuncs(interceptor.Funcs{
+				Patch: fsm_testing.GetFakePatchInterceptorForConfigMap(true),
+			}).
 			WithScheme(scheme).
 			Build()
 		testFsm := &fsm{K8s: K8s{
@@ -87,6 +89,12 @@ func TestOidcState(t *testing.T) {
 			_ imv1.Runtime) (client.Client, error) {
 			return fakeClient, nil
 		}
+		imv1_client.GetShootClientPatch = func(
+			_ context.Context,
+			_ client.Client,
+			_ imv1.Runtime) (client.Client, error) {
+			return fakeClient, nil
+		}
 		// end of fake client setup
 
 		for _, tc := range []struct {
@@ -102,7 +110,7 @@ func TestOidcState(t *testing.T) {
 
 				runtimeStub.Spec.Shoot.Kubernetes.KubeAPIServer.AdditionalOidcConfig = tc.additionalOIDCConfig
 
-				shootStub := shootForTest()
+				shootStub := fsm_testing.TestShootForPatch()
 				oidcService := gardener.Extension{
 					Type:     "shoot-oidc-service",
 					Disabled: ptr.To(false),
@@ -131,7 +139,7 @@ func TestOidcState(t *testing.T) {
 
 				var openIdConnects authenticationv1alpha1.OpenIDConnectList
 
-				err = fakeClient.List(ctx, &openIdConnects)
+				err := fakeClient.List(ctx, &openIdConnects)
 				require.NoError(t, err)
 				assert.Len(t, openIdConnects.Items, 1)
 
@@ -146,9 +154,11 @@ func TestOidcState(t *testing.T) {
 		ctx := context.Background()
 
 		// start of fake client setup
-		scheme, err := newOIDCTestScheme()
-		require.NoError(t, err)
+		scheme := createConfigureSKRScheme()
 		var fakeClient = fake.NewClientBuilder().
+			WithInterceptorFuncs(interceptor.Funcs{
+				Patch: fsm_testing.GetFakePatchInterceptorForConfigMap(true),
+			}).
 			WithScheme(scheme).
 			Build()
 		testFsm := &fsm{K8s: K8s{
@@ -169,10 +179,16 @@ func TestOidcState(t *testing.T) {
 			_ imv1.Runtime) (client.Client, error) {
 			return fakeClient, nil
 		}
+		imv1_client.GetShootClientPatch = func(
+			_ context.Context,
+			_ client.Client,
+			_ imv1.Runtime) (client.Client, error) {
+			return fakeClient, nil
+		}
 		// end of fake client setup
 
 		runtimeStub := runtimeForTest()
-		shootStub := shootForTest()
+		shootStub := fsm_testing.TestShootForPatch()
 		oidcService := gardener.Extension{
 			Type:     "shoot-oidc-service",
 			Disabled: nil,
@@ -201,7 +217,7 @@ func TestOidcState(t *testing.T) {
 
 		var openIdConnects authenticationv1alpha1.OpenIDConnectList
 
-		err = fakeClient.List(ctx, &openIdConnects)
+		err := fakeClient.List(ctx, &openIdConnects)
 		require.NoError(t, err)
 		assert.Len(t, openIdConnects.Items, 1)
 
@@ -214,9 +230,11 @@ func TestOidcState(t *testing.T) {
 		ctx := context.Background()
 
 		// start of fake client setup
-		scheme, err := newOIDCTestScheme()
-		require.NoError(t, err)
+		scheme := createConfigureSKRScheme()
 		var fakeClient = fake.NewClientBuilder().
+			WithInterceptorFuncs(interceptor.Funcs{
+				Patch: fsm_testing.GetFakePatchInterceptorForConfigMap(true),
+			}).
 			WithScheme(scheme).
 			Build()
 		testFsm := &fsm{K8s: K8s{
@@ -224,6 +242,12 @@ func TestOidcState(t *testing.T) {
 			Client:      fakeClient,
 		}}
 		GetShootClient = func(
+			_ context.Context,
+			_ client.Client,
+			_ imv1.Runtime) (client.Client, error) {
+			return fakeClient, nil
+		}
+		imv1_client.GetShootClientPatch = func(
 			_ context.Context,
 			_ client.Client,
 			_ imv1.Runtime) (client.Client, error) {
@@ -237,7 +261,7 @@ func TestOidcState(t *testing.T) {
 		*additionalOidcConfig = append(*additionalOidcConfig, createGardenerOidcConfig("runtime-cr-config1"))
 		runtimeStub.Spec.Shoot.Kubernetes.KubeAPIServer.AdditionalOidcConfig = additionalOidcConfig
 
-		shootStub := shootForTest()
+		shootStub := fsm_testing.TestShootForPatch()
 		oidcService := gardener.Extension{
 			Type:     "shoot-oidc-service",
 			Disabled: ptr.To(false),
@@ -266,7 +290,7 @@ func TestOidcState(t *testing.T) {
 
 		var openIdConnects authenticationv1alpha1.OpenIDConnectList
 
-		err = fakeClient.List(ctx, &openIdConnects)
+		err := fakeClient.List(ctx, &openIdConnects)
 		require.NoError(t, err)
 		assert.Len(t, openIdConnects.Items, 2)
 		assert.Equal(t, "kyma-oidc-0", openIdConnects.Items[0].Name)
@@ -281,9 +305,11 @@ func TestOidcState(t *testing.T) {
 		ctx := context.Background()
 
 		// start of fake client setup
-		scheme, err := newOIDCTestScheme()
-		require.NoError(t, err)
+		scheme := createConfigureSKRScheme()
 		var fakeClient = fake.NewClientBuilder().
+			WithInterceptorFuncs(interceptor.Funcs{
+				Patch: fsm_testing.GetFakePatchInterceptorForConfigMap(true),
+			}).
 			WithScheme(scheme).
 			Build()
 		testFSM := &fsm{K8s: K8s{
@@ -296,10 +322,16 @@ func TestOidcState(t *testing.T) {
 			_ imv1.Runtime) (client.Client, error) {
 			return fakeClient, nil
 		}
+		imv1_client.GetShootClientPatch = func(
+			_ context.Context,
+			_ client.Client,
+			_ imv1.Runtime) (client.Client, error) {
+			return fakeClient, nil
+		}
 		// end of fake client setup
 
 		kymaOpenIDConnectCR := createOpenIDConnectCR("old-kyma-oidc", "operator.kyma-project.io/managed-by", "infrastructure-manager")
-		err = fakeClient.Create(ctx, kymaOpenIDConnectCR)
+		err := fakeClient.Create(ctx, kymaOpenIDConnectCR)
 		require.NoError(t, err)
 
 		existingOpenIDConnectCR := createOpenIDConnectCR("old-non-kyma-oidc", "customer-label", "should-not-be-deleted")
@@ -307,7 +339,7 @@ func TestOidcState(t *testing.T) {
 		require.NoError(t, err)
 
 		runtimeStub := runtimeForTest()
-		shootStub := shootForTest()
+		shootStub := fsm_testing.TestShootForPatch()
 		oidcService := gardener.Extension{
 			Type:     "shoot-oidc-service",
 			Disabled: ptr.To(false),
@@ -359,12 +391,7 @@ func TestOidcState(t *testing.T) {
 
 	t.Run("Should apply kyma-provisioning-info config map", func(t *testing.T) {
 		ctx := context.Background()
-		testScheme := api.NewScheme()
-
-		util.Must(imv1.AddToScheme(testScheme))
-		util.Must(gardener.AddToScheme(testScheme))
-		util.Must(core_v1.AddToScheme(testScheme))
-		util.Must(authenticationv1alpha1.AddToScheme(testScheme))
+		testScheme := createConfigureSKRScheme()
 
 		runtime := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
 		shootStub := fsm_testing.TestShootForPatch()
@@ -427,7 +454,7 @@ func TestOidcState(t *testing.T) {
 
 		var detailsCM core_v1.ConfigMap
 		key := client.ObjectKey{
-			Name: "kyma-provisioning-info",
+			Name:      "kyma-provisioning-info",
 			Namespace: "kyma-system",
 		}
 		err := fakeClient.Get(ctx, key, &detailsCM)
@@ -438,6 +465,16 @@ func TestOidcState(t *testing.T) {
 		assert.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
 	})
 
+}
+
+func createConfigureSKRScheme() *api.Scheme {
+	testScheme := api.NewScheme()
+
+	util.Must(imv1.AddToScheme(testScheme))
+	util.Must(gardener.AddToScheme(testScheme))
+	util.Must(core_v1.AddToScheme(testScheme))
+	util.Must(authenticationv1alpha1.AddToScheme(testScheme))
+	return testScheme
 }
 
 func newOIDCTestScheme() (*runtime.Scheme, error) {
