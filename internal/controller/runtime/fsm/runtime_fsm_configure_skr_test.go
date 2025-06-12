@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	api "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -475,19 +474,6 @@ func createConfigureSKRScheme() *api.Scheme {
 	util.Must(core_v1.AddToScheme(testScheme))
 	util.Must(authenticationv1alpha1.AddToScheme(testScheme))
 	return testScheme
-}
-
-func newOIDCTestScheme() (*runtime.Scheme, error) {
-	schema := runtime.NewScheme()
-
-	for _, fn := range []func(*runtime.Scheme) error{
-		authenticationv1alpha1.AddToScheme,
-	} {
-		if err := fn(schema); err != nil {
-			return nil, err
-		}
-	}
-	return schema, nil
 }
 
 // sets the time to its zero value for comparison purposes

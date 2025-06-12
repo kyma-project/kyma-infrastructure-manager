@@ -45,7 +45,10 @@ func GetFakePatchInterceptorForConfigMap(incShootGeneration bool) func(ctx conte
 					// As the Patch with Apply type does not work with fake client, I'm doing an Update instead which is good enough in my case
 					err := client.Create(ctx, cm )
 					if err != nil && k8s_errors.IsAlreadyExists(err) {
-						client.Update(ctx, cm )
+						err := client.Update(ctx, cm)
+						if err != nil {
+							return err
+						}
 					}
 
 				} else {

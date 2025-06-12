@@ -125,16 +125,6 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
 }
 
-func handleConfigMapCreationError(m *fsm, skrDetailsErr error, s *systemState) (stateFn, *ctrl.Result, error) {
-	m.log.Error(skrDetailsErr, "Failed to create SKR details config map")
-	m.Metrics.IncRuntimeFSMStopCounter()
-	return updateStatePendingWithErrorAndStop(
-		&s.instance,
-		imv1.ConditionTypeRuntimeProvisioned,
-		imv1.ConditionReasonConfigurationErr,
-		msgFailedProvisioningInfoConfigMap)
-}
-
 func convertCreate(instance *imv1.Runtime, opts gardener_shoot.CreateOpts) (gardener.Shoot, error) {
 	if err := instance.ValidateRequiredLabels(); err != nil {
 		return gardener.Shoot{}, err

@@ -15,7 +15,6 @@ import (
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	k8s_client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -188,7 +187,7 @@ func applyKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) er
 		return shootClientError
 	}
 
-	errResourceCreation := shootAdminClient.Patch(ctx, &configMap, client.Apply, &client.PatchOptions{
+	errResourceCreation := shootAdminClient.Patch(ctx, &configMap, k8s_client.Apply, &k8s_client.PatchOptions{
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
 	})
