@@ -149,7 +149,7 @@ var _ = BeforeSuite(func() {
 	err = gardener_oidc.AddToScheme(shootClientScheme)
 	k8sFakeClientRoleBindings = fake.NewClientBuilder().WithScheme(shootClientScheme).Build()
 
-	fsm.GetShootClient = func(_ context.Context, _ client.Client, _ imv1.Runtime) (client.Client, error) {
+	imv1_client.GetShootClient = func(_ context.Context, _ client.Client, _ imv1.Runtime) (client.Client, error) {
 		return k8sFakeClientRoleBindings, nil
 	}
 
