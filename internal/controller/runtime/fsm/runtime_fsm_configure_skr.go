@@ -52,7 +52,6 @@ func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctr
 	}
 	m.log.V(log_level.DEBUG).Info("kyma-provisioning-info config map is updated")
 
-	//TODO: Update stare/reason to be more accurate
 	s.instance.UpdateStatePending(
 		imv1.ConditionTypeOidcAndCMsConfigured,
 		imv1.ConditionReasonOidcAndCMsConfigured,
@@ -191,9 +190,6 @@ func applyKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) er
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
 	})
-
-	//errResourceCreation := shootAdminClient.Create(ctx, &configMap)
-
 
 	return errResourceCreation
 }

@@ -94,7 +94,7 @@ func TestOidcState(t *testing.T) {
 						Type:    string(imv1.ConditionTypeOidcAndCMsConfigured),
 						Reason:  string(imv1.ConditionReasonOidcAndCMsConfigured),
 						Status:  "True",
-						Message: "OIDC configuration completed",
+						Message: "OIDC and kyma-provisioning-info configuration completed",
 					},
 				}
 
@@ -140,7 +140,7 @@ func TestOidcState(t *testing.T) {
 				Type:    string(imv1.ConditionTypeOidcAndCMsConfigured),
 				Reason:  string(imv1.ConditionReasonOidcAndCMsConfigured),
 				Status:  "True",
-				Message: "OIDC configuration completed",
+				Message: "OIDC and kyma-provisioning-info configuration completed",
 			},
 		}
 
@@ -189,7 +189,7 @@ func TestOidcState(t *testing.T) {
 				Type:    string(imv1.ConditionTypeOidcAndCMsConfigured),
 				Reason:  string(imv1.ConditionReasonOidcAndCMsConfigured),
 				Status:  "True",
-				Message: "OIDC configuration completed",
+				Message: "OIDC and kyma-provisioning-info configuration completed",
 			},
 		}
 
@@ -243,7 +243,7 @@ func TestOidcState(t *testing.T) {
 				Type:    string(imv1.ConditionTypeOidcAndCMsConfigured),
 				Reason:  string(imv1.ConditionReasonOidcAndCMsConfigured),
 				Status:  "True",
-				Message: "OIDC configuration completed",
+				Message: "OIDC and kyma-provisioning-info configuration completed",
 			},
 		}
 
