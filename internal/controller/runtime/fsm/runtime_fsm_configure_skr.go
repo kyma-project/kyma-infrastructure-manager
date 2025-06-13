@@ -18,16 +18,19 @@ import (
 	k8s_client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	msgFailedProvisioningInfoConfigMap = "Failed to apply kyma-provisioning-info config map, scheduling for retry"
+)
+
 func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	skrDetailsErr := applyKymaProvisioningInfoCM(ctx, m, s)
 	if skrDetailsErr != nil {
-		const failedApplyMsg = "Failed to apply kyma-provisioning-info config map, scheduling for retry"
-		m.log.Error(skrDetailsErr, failedApplyMsg)
+		m.log.Error(skrDetailsErr, msgFailedProvisioningInfoConfigMap)
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeOidcAndCMsConfigured,
 			imv1.ConditionReasonOidcAndCMsConfigured,
 			"False",
-			failedApplyMsg,
+			msgFailedProvisioningInfoConfigMap,
 		)
 		return requeue()
 	}
