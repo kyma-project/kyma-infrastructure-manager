@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func TestOidcState(t *testing.T) {
+func TestSkrConfigState(t *testing.T) {
 	t.Run("Should switch state to ApplyClusterRoleBindings when OIDC extension is disabled", func(t *testing.T) {
 		// given
 		ctx := context.Background()
