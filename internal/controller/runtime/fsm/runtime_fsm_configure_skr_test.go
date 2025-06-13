@@ -334,7 +334,7 @@ func setupFakeClient() (client.WithWatch, *fsm) {
 	scheme := createConfigureSKRScheme()
 	var fakeClient = fake.NewClientBuilder().
 		WithInterceptorFuncs(interceptor.Funcs{
-			Patch: fsm_testing.GetFakePatchInterceptorForConfigMap(true),
+			Patch: fsm_testing.GetFakePatchInterceptorForShootsAndConfigMaps(true),
 		}).
 		WithScheme(scheme).
 		Build()

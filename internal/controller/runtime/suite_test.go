@@ -150,7 +150,7 @@ var _ = BeforeSuite(func() {
 	var fakeClient = fake.NewClientBuilder().
 		WithScheme(shootClientScheme).
 		WithInterceptorFuncs(interceptor.Funcs{
-			Patch: fsm_testing.GetFakePatchInterceptorForConfigMap(true),
+			Patch: fsm_testing.GetFakePatchInterceptorForShootsAndConfigMaps(true),
 		}).
 		Build()
 	imv1_client.GetShootClient = func(_ context.Context, _ client.Client, _ imv1.Runtime) (client.Client, error) {
@@ -217,7 +217,7 @@ func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot, seeds []*gard
 	customTracker = NewCustomTracker(tracker, shoots, seeds)
 	gardenerTestClient = fake.NewClientBuilder().WithScheme(clientScheme).WithObjectTracker(customTracker).
 		WithInterceptorFuncs(interceptor.Funcs{
-			Patch: fsm_testing.GetFakePatchInterceptorForConfigMap(true),
+			Patch: fsm_testing.GetFakePatchInterceptorForShootsAndConfigMaps(true),
 		}).Build()
 	runtimeReconciler.ShootClient = gardenerTestClient
 }
