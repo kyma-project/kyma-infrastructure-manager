@@ -445,15 +445,3 @@ func runtimeForTest() imv1.Runtime {
 		},
 	}
 }
-
-func shootForTest() *gardener.Shoot {
-	return &gardener.Shoot{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-shoot",
-			Namespace: "namespace",
-		},
-		Spec: gardener.ShootSpec{
-			Region:   "region",
-			Provider: gardener.Provider{Type: "aws"}},
-	}
-}
