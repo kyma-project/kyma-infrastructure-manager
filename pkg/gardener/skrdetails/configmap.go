@@ -94,6 +94,9 @@ func ToKymaProvisioningInfoConfigMap(runtime imv1.Runtime, shoot *gardener.Shoot
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "kyma-provisioning-info",
 			Namespace: "kyma-system",
+			Labels: map[string]string{
+				"reconciler.kyma-project.io/managed-by": "infrastructure-manager",
+			},
 		},
 		Data: map[string]string{
 			"details": string(authConfigBytes),
