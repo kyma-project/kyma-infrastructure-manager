@@ -19,6 +19,18 @@ import (
 )
 
 func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+	skrDetailsErr := applyKymaProvisioningInfoCM(ctx, m, s)
+	if skrDetailsErr != nil {
+		m.log.Error(skrDetailsErr, "Failed to patch kyma-provisioning-info config map")
+		m.Metrics.IncRuntimeFSMStopCounter()
+		return updateStatePendingWithErrorAndStop(
+			&s.instance,
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonConfigurationErr,
+			msgFailedProvisioningInfoConfigMap)
+	}
+	m.log.V(log_level.DEBUG).Info("kyma-provisioning-info config map is updated")
+
 	if !isOidcExtensionEnabled(*s.shoot) {
 		m.log.V(log_level.DEBUG).Info("OIDC extension is disabled")
 		s.instance.UpdateStatePending(
@@ -39,18 +51,6 @@ func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctr
 		return requeue()
 	}
 	m.log.V(log_level.DEBUG).Info("OIDC has been configured", "name", s.shoot.Name)
-
-	skrDetailsErr := applyKymaProvisioningInfoCM(ctx, m, s)
-	if skrDetailsErr != nil {
-		m.log.Error(skrDetailsErr, "Failed to patch kyma-provisioning-info config map")
-		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(
-			&s.instance,
-			imv1.ConditionTypeRuntimeProvisioned,
-			imv1.ConditionReasonConfigurationErr,
-			msgFailedProvisioningInfoConfigMap)
-	}
-	m.log.V(log_level.DEBUG).Info("kyma-provisioning-info config map is updated")
 
 	s.instance.UpdateStatePending(
 		imv1.ConditionTypeOidcAndCMsConfigured,
