@@ -36,9 +36,6 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 	var kymaWorkerPool WorkerPool
 	var customWorkerPools []WorkerPool
 
-	isHighAvailability := func(zones []string) bool {
-		return len(zones) >= 3
-	}
 
 	// There is an existing check if number of workers != 1 in pkg/gardener/shoot/extender/provider/provider.go:27
 	// that will be later moved to validator webhook
@@ -47,7 +44,7 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 		kymaWorkerPool = WorkerPool{
 			Name:                  mainRuntimeCRWorker.Name,
 			MachiteType:           mainRuntimeCRWorker.Machine.Type,
-			HighAvailabilityZones: isHighAvailability(mainRuntimeCRWorker.Zones),
+			HighAvailabilityZones: IsHighAvailability(mainRuntimeCRWorker.Zones),
 			AutoScalerMin:         mainRuntimeCRWorker.Minimum,
 			AutoScalerMax:         mainRuntimeCRWorker.Maximum,
 		}
@@ -60,7 +57,7 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 			customWorkerPools = append(customWorkerPools, WorkerPool{
 				Name:                  worker.Name,
 				MachiteType:           worker.Machine.Type,
-				HighAvailabilityZones: isHighAvailability(worker.Zones),
+				HighAvailabilityZones: IsHighAvailability(worker.Zones),
 				AutoScalerMin:         worker.Minimum,
 				AutoScalerMax:         worker.Maximum,
 			})
