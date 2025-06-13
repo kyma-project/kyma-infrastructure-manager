@@ -26,10 +26,10 @@ func TestSkrConfigState(t *testing.T) {
 	t.Run("Should switch state to ApplyClusterRoleBindings when OIDC extension is disabled", func(t *testing.T) {
 		// given
 		ctx := context.Background()
-		fsm := &fsm{}
+		_, testFsm := setupFakeClient()
 
 		runtimeStub := runtimeForTest()
-		shootStub := shootForTest()
+		shootStub := fsm_testing.TestShootForPatch()
 		oidcService := gardener.Extension{
 			Type:     "shoot-oidc-service",
 			Disabled: ptr.To(true),
@@ -51,7 +51,7 @@ func TestSkrConfigState(t *testing.T) {
 		}
 
 		// when
-		stateFn, _, _ := sFnConfigureSKR(ctx, fsm, systemState)
+		stateFn, _, _ := sFnConfigureSKR(ctx, testFsm, systemState)
 
 		// then
 		require.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
