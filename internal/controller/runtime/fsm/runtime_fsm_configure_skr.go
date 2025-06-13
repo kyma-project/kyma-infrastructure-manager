@@ -21,13 +21,15 @@ import (
 func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	skrDetailsErr := applyKymaProvisioningInfoCM(ctx, m, s)
 	if skrDetailsErr != nil {
-		m.log.Error(skrDetailsErr, "Failed to patch kyma-provisioning-info config map")
-		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(
-			&s.instance,
-			imv1.ConditionTypeRuntimeProvisioned,
-			imv1.ConditionReasonConfigurationErr,
-			msgFailedProvisioningInfoConfigMap)
+		const failedApplyMsg = "Failed to apply kyma-provisioning-info config map, scheduling for retry"
+		m.log.Error(skrDetailsErr, failedApplyMsg)
+		s.instance.UpdateStatePending(
+			imv1.ConditionTypeOidcAndCMsConfigured,
+			imv1.ConditionReasonOidcAndCMsConfigured,
+			"False",
+			failedApplyMsg,
+		)
+		return requeue()
 	}
 	m.log.V(log_level.DEBUG).Info("kyma-provisioning-info config map is updated")
 
