@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
+	v1 "k8s.io/api/core/v1"
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -20,9 +22,16 @@ import (
 
 const (
 	msgFailedProvisioningInfoConfigMap = "Failed to apply kyma-provisioning-info config map, scheduling for retry - %s"
+	oidcErrorMessage = "Failed to create OpenIDConnect resource. Scheduling for retry"
+	kymaNamespaceCreationErrorMessage = "Failed to create kyma-system namespace. Scheduling for retry"
 )
 
 func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+	kymaNsCreationErr := createKymaSystemNamespace(ctx, m, s)
+	if kymaNsCreationErr != nil {
+		updateConditionFailed(&s.instance, kymaNamespaceCreationErrorMessage)
+	}
+
 	skrDetailsErr := applyKymaProvisioningInfoCM(ctx, m, s)
 	if skrDetailsErr != nil {
 		finalErrorMsg := fmt.Sprintf(msgFailedProvisioningInfoConfigMap, skrDetailsErr.Error())
@@ -52,8 +61,8 @@ func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctr
 	defaultAdditionalOidcIfNotPresent(&s.instance, m.RCCfg)
 	err := recreateOpenIDConnectResources(ctx, m, s)
 	if err != nil {
-		updateConditionFailed(&s.instance)
-		m.log.Error(err, "Failed to create OpenIDConnect resource. Scheduling for retry")
+		updateConditionFailed(&s.instance, oidcErrorMessage)
+		m.log.Error(err, oidcErrorMessage)
 		return requeue()
 	}
 	m.log.V(log_level.DEBUG).Info("OIDC has been configured", "name", s.shoot.Name)
@@ -66,6 +75,29 @@ func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctr
 	)
 
 	return switchState(sFnApplyClusterRoleBindings)
+}
+
+func createKymaSystemNamespace(ctx context.Context, m *fsm, s *systemState) error {
+	kymaSystemNs := v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "kyma-system",
+			Namespace: "",
+		},
+	}
+
+	shootAdminClient, shootClientError := imv1_client.GetShootClient(ctx, m.Client, s.instance)
+	if shootClientError != nil {
+		return shootClientError
+	}
+	kymaNsCreationErr := shootAdminClient.Create(ctx, &kymaSystemNs)
+
+	if kymaNsCreationErr != nil {
+		if k8s_errors.IsAlreadyExists(kymaNsCreationErr) {
+			// we're expecting the namespace to already exist after first reconciliation, so we can ignore this error
+			return nil
+		}
+	}
+	return kymaNsCreationErr
 }
 
 func defaultAdditionalOidcIfNotPresent(runtime *imv1.Runtime, cfg RCCfg) {
@@ -172,12 +204,12 @@ func createOpenIDConnectResource(additionalOidcConfig imv1.OIDCConfig, oidcID in
 	return cr
 }
 
-func updateConditionFailed(rt *imv1.Runtime) {
+func updateConditionFailed(rt *imv1.Runtime, message string) {
 	rt.UpdateStatePending(
 		imv1.ConditionTypeOidcAndCMsConfigured,
 		imv1.ConditionReasonOidcError,
 		string(metav1.ConditionFalse),
-		"failed to configure OIDC",
+		message,
 	)
 }
 

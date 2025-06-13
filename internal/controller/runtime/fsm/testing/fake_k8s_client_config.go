@@ -39,6 +39,7 @@ func GetFakePatchInterceptorForConfigMap(incShootGeneration bool) func(ctx conte
 			shoot, ok := obj.(*gardener_api.Shoot)
 			if ok {
 				shoot.Generation++
+				return nil
 			} else {
 				cm, ok_cm := obj.(*core_v1.ConfigMap)
 				if ok_cm {
