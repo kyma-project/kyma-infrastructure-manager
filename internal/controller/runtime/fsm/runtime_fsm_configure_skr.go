@@ -19,18 +19,19 @@ import (
 )
 
 const (
-	msgFailedProvisioningInfoConfigMap = "Failed to apply kyma-provisioning-info config map, scheduling for retry"
+	msgFailedProvisioningInfoConfigMap = "Failed to apply kyma-provisioning-info config map, scheduling for retry - %s"
 )
 
 func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	skrDetailsErr := applyKymaProvisioningInfoCM(ctx, m, s)
 	if skrDetailsErr != nil {
-		m.log.Error(skrDetailsErr, msgFailedProvisioningInfoConfigMap)
+		finalErrorMsg := fmt.Sprintf(msgFailedProvisioningInfoConfigMap, skrDetailsErr.Error())
+		m.log.Error(skrDetailsErr, finalErrorMsg)
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeOidcAndCMsConfigured,
 			imv1.ConditionReasonOidcAndCMsConfigured,
 			"False",
-			msgFailedProvisioningInfoConfigMap,
+			finalErrorMsg,
 		)
 		return requeue()
 	}
