@@ -24,8 +24,6 @@ import (
 )
 
 func TestSkrConfigState(t *testing.T) {
-	//TODO: test case for kyma-system namespace creation + failure (should not block reconciliation)
-
 	t.Run("Should switch state to ApplyClusterRoleBindings when OIDC extension is disabled", func(t *testing.T) {
 		// given
 		ctx := context.Background()
@@ -72,7 +70,6 @@ func TestSkrConfigState(t *testing.T) {
 			additionalOIDCConfig *[]imv1.OIDCConfig
 		}{
 			{"Should configure OIDC using defaults when additional OIDC config is nil", nil},
-			{"Should configure OIDC using defaults when additional OIDC config contains empty array", &[]imv1.OIDCConfig{}},
 			{"Should configure OIDC using defaults when additional OIDC config contains one empty element", &[]imv1.OIDCConfig{{}}},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
@@ -310,7 +307,6 @@ func TestSkrConfigState(t *testing.T) {
 		err := fakeClient.Get(ctx, nsKey, &kymaSystemNs)
 		assert.NoError(t, err)
 
-
 		var detailsCM core_v1.ConfigMap
 		cmKey := client.ObjectKey{
 			Name:      "kyma-provisioning-info",
@@ -322,6 +318,7 @@ func TestSkrConfigState(t *testing.T) {
 		assert.NotNil(t, detailsCM.Data["details"])
 		assert.Equal(t, detailsCM.Data["details"], "globalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
 		assert.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
+		assertSuccesfullStatusConditions(t, systemState)
 	})
 
 	t.Run("Should apply kyma-provisioning-info config map - update scenario", func(t *testing.T) {
@@ -376,7 +373,6 @@ func TestSkrConfigState(t *testing.T) {
 		err = fakeClient.Get(ctx, nsKey, &kymaSystemNs)
 		assert.NoError(t, err)
 
-
 		var detailsCM core_v1.ConfigMap
 		cmKey := client.ObjectKey{
 			Name:      "kyma-provisioning-info",
@@ -388,6 +384,7 @@ func TestSkrConfigState(t *testing.T) {
 		assert.NotNil(t, detailsCM.Data["details"])
 		assert.Equal(t, detailsCM.Data["details"], "globalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
 		assert.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
+		assertSuccesfullStatusConditions(t, systemState)
 	})
 
 	t.Run("Error in kyma-provisioning-info creation will not stop the reconciliation", func(t *testing.T) {
@@ -404,7 +401,7 @@ func TestSkrConfigState(t *testing.T) {
 		scheme := createConfigureSKRScheme()
 		var fakeClient = fake.NewClientBuilder().
 			WithInterceptorFuncs(interceptor.Funcs{
-				Patch: fsm_testing.GetFakeInterceptorThatThrowsErrorOnCMPatch(),
+				Patch:  fsm_testing.GetFakeInterceptorThatThrowsErrorOnCMPatch(),
 				Create: fsm_testing.GetFakeInterceptorThatThrowsErrorOnNSCreation(),
 			}).
 			WithScheme(scheme).
@@ -455,7 +452,64 @@ func TestSkrConfigState(t *testing.T) {
 		cmErr := fakeClient.Get(ctx, cmKey, &detailsCM)
 		assert.True(t, errors.IsNotFound(cmErr))
 		assert.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
+		assertSuccesfullStatusConditions(t, systemState)
 	})
+
+	t.Run("Should delete existing OpenIDConnect CRs from SKR when additional OIDC config contains empty array", func(t *testing.T) {
+		// given
+		ctx := context.Background()
+
+		emptyAdditionalOIDCConfig := &[]imv1.OIDCConfig{}
+
+		fakeClient, testFSM := setupFakeClient()
+		imv1_client.GetShootClient = func(
+			_ context.Context,
+			_ client.Client,
+			_ imv1.Runtime) (client.Client, error) {
+			return fakeClient, nil
+		}
+
+		runtimeStub := runtimeForTest()
+
+		runtimeStub.Spec.Shoot.Kubernetes.KubeAPIServer.AdditionalOidcConfig = emptyAdditionalOIDCConfig
+
+		shootStub := fsm_testing.TestShootForPatch()
+		oidcService := gardener.Extension{
+			Type:     "shoot-oidc-service",
+			Disabled: ptr.To(false),
+		}
+		shootStub.Spec.Extensions = append(shootStub.Spec.Extensions, oidcService)
+
+		systemState := &systemState{
+			instance: runtimeStub,
+			shoot:    shootStub,
+		}
+
+		// when
+		stateFn, _, _ := sFnConfigureSKR(ctx, testFSM, systemState)
+
+		// then
+		require.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
+
+		var openIdConnects authenticationv1alpha1.OpenIDConnectList
+
+		err := fakeClient.List(ctx, &openIdConnects)
+		require.NoError(t, err)
+		assert.Len(t, openIdConnects.Items, 0)
+		assertSuccesfullStatusConditions(t, systemState)
+	})
+}
+
+func assertSuccesfullStatusConditions(t *testing.T, systemState *systemState) {
+	expectedRuntimeConditions := []metav1.Condition{
+		{
+			Type:    string(imv1.ConditionTypeOidcAndCMsConfigured),
+			Reason:  string(imv1.ConditionReasonOidcAndCMsConfigured),
+			Status:  "True",
+			Message: "OIDC and kyma-provisioning-info configuration completed",
+		},
+	}
+	assertEqualConditions(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)
 }
 
 func setupFakeClient() (client.WithWatch, *fsm) {
