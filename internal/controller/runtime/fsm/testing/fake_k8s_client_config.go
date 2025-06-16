@@ -58,7 +58,7 @@ func GetFakePatchInterceptorForShootsAndConfigMaps(incShootGeneration bool) func
 					return err
 				}
 			}
-
+			return nil
 		}
 
 		return client.Patch(ctx, obj, patch, opts...) // If not shoot or configmap, use default patch
