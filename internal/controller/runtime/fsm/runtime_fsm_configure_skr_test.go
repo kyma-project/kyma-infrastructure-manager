@@ -3,6 +3,7 @@ package fsm
 import (
 	"context"
 	core_v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	util "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"testing"
@@ -278,7 +279,52 @@ func TestSkrConfigState(t *testing.T) {
 		assert.Equal(t, imv1.State("Pending"), systemState.instance.Status.State)
 	})
 
-	t.Run("Should apply kyma-provisioning-info config map", func(t *testing.T) {
+	t.Run("Should apply kyma-provisioning-info config map - create scenario", func(t *testing.T) {
+		ctx := context.Background()
+
+		runtime := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
+		shootStub := fsm_testing.TestShootForPatch()
+		oidcService := gardener.Extension{
+			Type:     "shoot-oidc-service",
+			Disabled: ptr.To(false),
+		}
+		shootStub.Spec.Extensions = append(shootStub.Spec.Extensions, oidcService)
+
+		fakeClient, testFsm := setupFakeClient()
+
+		systemState := &systemState{
+			instance: *runtime,
+			shoot:    shootStub,
+		}
+
+		// when
+		stateFn, _, fsmErr := sFnConfigureSKR(ctx, testFsm, systemState)
+		assert.NoError(t, fsmErr)
+
+		// then
+		var kymaSystemNs core_v1.Namespace
+		nsKey := client.ObjectKey{
+			Name:      "kyma-system",
+			Namespace: "",
+		}
+		err := fakeClient.Get(ctx, nsKey, &kymaSystemNs)
+		assert.NoError(t, err)
+
+
+		var detailsCM core_v1.ConfigMap
+		cmKey := client.ObjectKey{
+			Name:      "kyma-provisioning-info",
+			Namespace: "kyma-system",
+		}
+		err = fakeClient.Get(ctx, cmKey, &detailsCM)
+		assert.NoError(t, err)
+		assert.NotNil(t, detailsCM.Data)
+		assert.NotNil(t, detailsCM.Data["details"])
+		assert.Equal(t, detailsCM.Data["details"], "globalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
+		assert.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
+	})
+
+	t.Run("Should apply kyma-provisioning-info config map - update scenario", func(t *testing.T) {
 		ctx := context.Background()
 
 		runtime := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
@@ -307,21 +353,36 @@ func TestSkrConfigState(t *testing.T) {
 			},
 			Data: nil,
 		}
-
 		cmCreationErr := testFsm.Create(ctx, detailsConfigMap)
 		assert.NoError(t, cmCreationErr)
+		kymaSystemNs := core_v1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kyma-system",
+				Namespace: "",
+			},
+		}
+		err := fakeClient.Create(ctx, &kymaSystemNs)
+		assert.NoError(t, err)
 
 		// when
-		stateFn, _, _ := sFnConfigureSKR(ctx, testFsm, systemState)
+		stateFn, _, fsmErr := sFnConfigureSKR(ctx, testFsm, systemState)
+		assert.NoError(t, fsmErr)
 
 		// then
+		nsKey := client.ObjectKey{
+			Name:      "kyma-system",
+			Namespace: "",
+		}
+		err = fakeClient.Get(ctx, nsKey, &kymaSystemNs)
+		assert.NoError(t, err)
+
 
 		var detailsCM core_v1.ConfigMap
-		key := client.ObjectKey{
+		cmKey := client.ObjectKey{
 			Name:      "kyma-provisioning-info",
 			Namespace: "kyma-system",
 		}
-		err := fakeClient.Get(ctx, key, &detailsCM)
+		err = fakeClient.Get(ctx, cmKey, &detailsCM)
 		assert.NoError(t, err)
 		assert.NotNil(t, detailsCM.Data)
 		assert.NotNil(t, detailsCM.Data["details"])
@@ -329,6 +390,72 @@ func TestSkrConfigState(t *testing.T) {
 		assert.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
 	})
 
+	t.Run("Error in kyma-provisioning-info creation will not stop the reconciliation", func(t *testing.T) {
+		ctx := context.Background()
+
+		runtime := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
+		shootStub := fsm_testing.TestShootForPatch()
+		oidcService := gardener.Extension{
+			Type:     "shoot-oidc-service",
+			Disabled: ptr.To(false),
+		}
+		shootStub.Spec.Extensions = append(shootStub.Spec.Extensions, oidcService)
+
+		scheme := createConfigureSKRScheme()
+		var fakeClient = fake.NewClientBuilder().
+			WithInterceptorFuncs(interceptor.Funcs{
+				Patch: fsm_testing.GetFakeInterceptorThatThrowsErrorOnCMPatch(),
+				Create: fsm_testing.GetFakeInterceptorThatThrowsErrorOnNSCreation(),
+			}).
+			WithScheme(scheme).
+			Build()
+		testFsm := &fsm{K8s: K8s{
+			ShootClient: fakeClient,
+			Client:      fakeClient,
+		},
+			RCCfg: RCCfg{
+				Config: config.Config{
+					ClusterConfig: config.ClusterConfig{
+						DefaultSharedIASTenant: createConverterOidcConfig("defaut-client-id"),
+					},
+				},
+			},
+		}
+		imv1_client.GetShootClient = func(
+			_ context.Context,
+			_ client.Client,
+			_ imv1.Runtime) (client.Client, error) {
+			return fakeClient, nil
+		}
+
+		systemState := &systemState{
+			instance: *runtime,
+			shoot:    shootStub,
+		}
+
+		var kymaSystemNs core_v1.Namespace
+
+		// when
+		stateFn, _, fsmErr := sFnConfigureSKR(ctx, testFsm, systemState)
+		assert.NoError(t, fsmErr)
+
+		// then
+		nsKey := client.ObjectKey{
+			Name:      "kyma-system",
+			Namespace: "",
+		}
+		err := fakeClient.Get(ctx, nsKey, &kymaSystemNs)
+		assert.True(t, errors.IsNotFound(err))
+
+		var detailsCM core_v1.ConfigMap
+		cmKey := client.ObjectKey{
+			Name:      "kyma-provisioning-info",
+			Namespace: "kyma-system",
+		}
+		cmErr := fakeClient.Get(ctx, cmKey, &detailsCM)
+		assert.True(t, errors.IsNotFound(cmErr))
+		assert.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
+	})
 }
 
 func setupFakeClient() (client.WithWatch, *fsm) {

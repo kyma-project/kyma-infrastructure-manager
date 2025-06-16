@@ -29,20 +29,14 @@ const (
 func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	kymaNsCreationErr := createKymaSystemNamespace(ctx, m, s)
 	if kymaNsCreationErr != nil {
-		updateConditionFailed(&s.instance, kymaNamespaceCreationErrorMessage)
+		updateConditionFailed(&s.instance, imv1.ConditionReasonKymaSystemNSError, kymaNamespaceCreationErrorMessage)
 	}
 
 	skrDetailsErr := applyKymaProvisioningInfoCM(ctx, m, s)
 	if skrDetailsErr != nil {
 		finalErrorMsg := fmt.Sprintf(msgFailedProvisioningInfoConfigMap, skrDetailsErr.Error())
 		m.log.Error(skrDetailsErr, finalErrorMsg)
-		s.instance.UpdateStatePending(
-			imv1.ConditionTypeOidcAndCMsConfigured,
-			imv1.ConditionReasonOidcAndCMsConfigured,
-			"False",
-			finalErrorMsg,
-		)
-		return requeue()
+		updateConditionFailed(&s.instance, imv1.ConditionReasonOidcAndCMsConfigured, finalErrorMsg)
 	}
 	m.log.V(log_level.DEBUG).Info("kyma-provisioning-info config map is updated")
 
@@ -61,7 +55,7 @@ func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctr
 	defaultAdditionalOidcIfNotPresent(&s.instance, m.RCCfg)
 	err := recreateOpenIDConnectResources(ctx, m, s)
 	if err != nil {
-		updateConditionFailed(&s.instance, oidcErrorMessage)
+		updateConditionFailed(&s.instance, imv1.ConditionReasonOidcError , oidcErrorMessage)
 		m.log.Error(err, oidcErrorMessage)
 		return requeue()
 	}
@@ -204,10 +198,10 @@ func createOpenIDConnectResource(additionalOidcConfig imv1.OIDCConfig, oidcID in
 	return cr
 }
 
-func updateConditionFailed(rt *imv1.Runtime, message string) {
+func updateConditionFailed(rt *imv1.Runtime, reason imv1.RuntimeConditionReason, message string) {
 	rt.UpdateStatePending(
 		imv1.ConditionTypeOidcAndCMsConfigured,
-		imv1.ConditionReasonOidcError,
+		reason,
 		string(metav1.ConditionFalse),
 		message,
 	)

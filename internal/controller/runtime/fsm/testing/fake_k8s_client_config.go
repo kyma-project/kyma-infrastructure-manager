@@ -65,6 +65,42 @@ func GetFakePatchInterceptorForShootsAndConfigMaps(incShootGeneration bool) func
 	}
 }
 
+func GetFakeInterceptorThatThrowsErrorOnCMPatch() func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+	return func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+		// Apply patches are supposed to upsert, but fake client fails if the object doesn't exist,
+		// Update the generation to simulate the object being updated using interceptor function.
+		if patch.Type() != types.ApplyPatchType {
+			return client.Patch(ctx, obj, patch, opts...)
+		}
+
+		// workaround for shoot
+		shoot, isShoot := obj.(*gardener_api.Shoot)
+		if isShoot {
+			shoot.Generation++
+			return nil
+		}
+
+		// workaround for configmaps
+		_, isConfigMap := obj.(*core_v1.ConfigMap)
+		if isConfigMap {
+			return errors.New("simulated error to for tests that expect an error when applying a configmap")
+		}
+
+		return client.Patch(ctx, obj, patch, opts...) // If not shoot or configmap, use default patch
+	}
+}
+
+func GetFakeInterceptorThatThrowsErrorOnNSCreation() func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+	return func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+		_, isNamespace := obj.(*core_v1.Namespace)
+		if isNamespace {
+			return errors.New("simulated error to for tests that expect an error when creating a namespace")
+		}
+
+		return client.Create(ctx, obj, opts...)
+	}
+}
+
 func GetFakePatchInterceptorFnError(returnedError *k8s_errors.StatusError) func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
 	return func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
 		return returnedError
