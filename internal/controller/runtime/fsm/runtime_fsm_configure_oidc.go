@@ -3,7 +3,6 @@ package fsm
 import (
 	"context"
 	"fmt"
-
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -14,6 +13,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	k8s_client "sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+type additionalOIDCState struct {
+	hasEmptyArray bool
+}
 
 func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	if !isOidcExtensionEnabled(*s.shoot) {
@@ -28,8 +31,8 @@ func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ct
 		return switchState(sFnApplyClusterRoleBindings)
 	}
 
-	defaultAdditionalOidcIfNotPresent(&s.instance, m.RCCfg)
-	err := recreateOpenIDConnectResources(ctx, m, s)
+	additionalOIDCStatus := additionalOidcEmptyOrUndefined(&s.instance, m.RCCfg)
+	err := recreateOpenIDConnectResources(ctx, m, s, additionalOIDCStatus)
 
 	if err != nil {
 		updateConditionFailed(&s.instance)
@@ -48,32 +51,42 @@ func sFnConfigureOidc(ctx context.Context, m *fsm, s *systemState) (stateFn, *ct
 	return switchState(sFnApplyClusterRoleBindings)
 }
 
-func defaultAdditionalOidcIfNotPresent(runtime *imv1.Runtime, cfg RCCfg) {
+func additionalOidcEmptyOrUndefined(runtime *imv1.Runtime, cfg RCCfg) additionalOIDCState {
 	additionalOidcConfig := runtime.Spec.Shoot.Kubernetes.KubeAPIServer.AdditionalOidcConfig
 
-	additionalOIDCConfigEmpty := func() bool {
+	additionalOIDCConfigUndefined := func() bool {
 		if additionalOidcConfig == nil {
 			return true
 		}
-
 		for _, oidcConfig := range *additionalOidcConfig {
-			if oidcConfig.ClientID != nil && oidcConfig.IssuerURL != nil {
-				return false
+			if oidcConfig.ClientID == nil || oidcConfig.IssuerURL == nil {
+				return true
 			}
 		}
-
-		return true
+		return false
 	}
 
-	if additionalOIDCConfigEmpty() {
+	additionalOIDCConfigEmpty := func() bool {
+		return len(*additionalOidcConfig) == 0
+	}
+
+	if additionalOIDCConfigUndefined() {
 		additionalOidcConfig = &[]imv1.OIDCConfig{}
 		defaultOIDCConfig := cfg.ClusterConfig.DefaultSharedIASTenant.ToOIDCConfig()
 		*additionalOidcConfig = append(*additionalOidcConfig, imv1.OIDCConfig{OIDCConfig: defaultOIDCConfig})
 		runtime.Spec.Shoot.Kubernetes.KubeAPIServer.AdditionalOidcConfig = additionalOidcConfig
+		return additionalOIDCState{}
 	}
+
+	if additionalOIDCConfigEmpty() {
+		return additionalOIDCState{hasEmptyArray: true}
+	}
+
+	return additionalOIDCState{}
+
 }
 
-func recreateOpenIDConnectResources(ctx context.Context, m *fsm, s *systemState) error {
+func recreateOpenIDConnectResources(ctx context.Context, m *fsm, s *systemState, additionalOIDC additionalOIDCState) error {
 	shootAdminClient, shootClientError := GetShootClient(ctx, m.Client, s.instance)
 	if shootClientError != nil {
 		return shootClientError
@@ -82,6 +95,10 @@ func recreateOpenIDConnectResources(ctx context.Context, m *fsm, s *systemState)
 	err := deleteExistingKymaOpenIDConnectResources(ctx, shootAdminClient)
 	if err != nil {
 		return err
+	}
+
+	if additionalOIDC.hasEmptyArray {
+		return nil
 	}
 
 	additionalOidcConfigs := *s.instance.Spec.Shoot.Kubernetes.KubeAPIServer.AdditionalOidcConfig
