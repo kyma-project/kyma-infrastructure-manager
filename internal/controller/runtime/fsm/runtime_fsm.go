@@ -53,7 +53,13 @@ type Watch = func(src source.Source, eventhandler handler.EventHandler, predicat
 type K8s struct {
 	client.Client
 	record.EventRecorder
-	ShootClient client.Client
+	ShootClient         client.Client
+	RuntimeClientGetter RuntimeClientGetter
+}
+
+//go:generate mockery --name=RuntimeClientGetter
+type RuntimeClientGetter interface {
+	GetRuntimeClient(ctx context.Context, runtime imv1.Runtime) (client.Client, error)
 }
 
 type Fsm interface {
