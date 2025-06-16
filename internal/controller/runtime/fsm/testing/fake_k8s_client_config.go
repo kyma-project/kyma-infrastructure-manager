@@ -65,22 +65,19 @@ func GetFakePatchInterceptorForShootsAndConfigMaps(incShootGeneration bool) func
 	}
 }
 
-func GetFakePatchInterceptorFnError(returnedError *k8s_errors.StatusError)
-func (ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+func GetFakePatchInterceptorFnError(returnedError *k8s_errors.StatusError) func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
 	return func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
 		return returnedError
 	}
 }
 
-func GetFakeUpdateInterceptorFnError(returnedError *k8s_errors.StatusError)
-func (ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+func GetFakeUpdateInterceptorFnError(returnedError *k8s_errors.StatusError) func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
 	return func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
 		return returnedError
 	}
 }
 
-func GetFakeUpdateInterceptorFn(incGeneration
-bool) func (ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+func GetFakeUpdateInterceptorFn(incGeneration bool) func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
 	return func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
 		shoot, ok := obj.(*gardener_api.Shoot)
 		if !ok {

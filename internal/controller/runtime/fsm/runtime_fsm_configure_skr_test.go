@@ -23,6 +23,8 @@ import (
 )
 
 func TestSkrConfigState(t *testing.T) {
+	//TODO: test case for kyma-system namespace creation + failure (should not block reconciliation)
+
 	t.Run("Should switch state to ApplyClusterRoleBindings when OIDC extension is disabled", func(t *testing.T) {
 		// given
 		ctx := context.Background()
