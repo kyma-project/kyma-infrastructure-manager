@@ -8,7 +8,7 @@ require (
 	github.com/gardener/gardener v1.117.5
 	github.com/gardener/oidc-webhook-authenticator v0.35.0
 	github.com/go-playground/validator/v10 v10.26.0
-	github.com/kyma-project/infrastructure-manager v0.0.0-20250611093638-c8409f30d72e
+	github.com/kyma-project/infrastructure-manager v0.0.0-20250616102842-323ce095a20e
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
 	k8s.io/api v0.33.1
@@ -30,7 +30,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.8.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.9 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.0 // indirect
-	github.com/go-logr/logr v1.4.2 // indirect
+	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.21.1 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
@@ -72,7 +72,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
+	k8s.io/kube-openapi v0.0.0-20250610211856-8b98d1ed966a // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect

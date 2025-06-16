@@ -12,7 +12,7 @@ require (
 	github.com/gardener/gardener-extension-provider-openstack v1.47.0
 	github.com/gardener/gardener-extension-registry-cache v0.16.0
 	github.com/gardener/oidc-webhook-authenticator v0.35.0
-	github.com/go-logr/logr v1.4.2
+	github.com/go-logr/logr v1.4.3
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/kyma-project/kim-snatch v0.0.0-20250430122050-3c3bdc3b74bb
 	github.com/onsi/ginkgo/v2 v2.23.4
@@ -87,7 +87,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.33.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
+	k8s.io/kube-openapi v0.0.0-20250610211856-8b98d1ed966a // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
