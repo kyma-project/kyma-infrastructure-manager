@@ -42,7 +42,7 @@ func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctr
 		m.log.Error(skrDetailsErr, finalErrorMsg)
 		updateConditionFailed(&s.instance, imv1.ConditionReasonOidcAndCMsConfigured, finalErrorMsg)
 	}
-	m.log.V(log_level.DEBUG).Info("kyma-provisioning-info config map is updated")
+	m.log.V(log_level.DEBUG).Info("kyma-provisioning-info config map is created/updated")
 
 	if !isOidcExtensionEnabled(*s.shoot) {
 		m.log.V(log_level.DEBUG).Info("OIDC extension is disabled")
