@@ -69,7 +69,7 @@ func sFnHandleKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 		imv1.ConditionTypeRuntimeKubeconfigReady,
 		imv1.ConditionReasonGardenerCRReady,
 		"Gardener Cluster CR is ready.",
-		sFnConfigureOidc)
+		sFnConfigureSKR)
 }
 
 func makeGardenerClusterForRuntime(runtime imv1.Runtime, shoot *gardener.Shoot) *imv1.GardenerCluster {

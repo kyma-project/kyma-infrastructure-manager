@@ -20,7 +20,6 @@ type ShootClient interface {
 	Get(ctx context.Context, name string, opts v1.GetOptions) (*gardener_api.Shoot, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *gardener_api.Shoot, err error)
-	// List(ctx context.Context, opts v1.ListOptions) (*gardener.ShootList, error)
 }
 
 func NewRestConfigFromFile(kubeconfigFilePath string) (*restclient.Config, error) {
