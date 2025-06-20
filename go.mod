@@ -6,8 +6,8 @@ toolchain go1.24.4
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
-	github.com/gardener/gardener v1.117.5
-	github.com/gardener/gardener-extension-provider-aws v1.61.2
+	github.com/gardener/gardener v1.120.0
+	github.com/gardener/gardener-extension-provider-aws v1.62.2
 	github.com/gardener/gardener-extension-provider-gcp v1.43.3
 	github.com/gardener/gardener-extension-provider-openstack v1.47.0
 	github.com/gardener/gardener-extension-registry-cache v0.16.0
@@ -90,7 +90,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20250610211856-8b98d1ed966a // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
 )
 
 replace (
