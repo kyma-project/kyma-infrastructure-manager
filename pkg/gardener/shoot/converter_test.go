@@ -2,7 +2,9 @@ package shoot
 
 import (
 	"fmt"
+	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"io"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"strings"
 	"testing"
 
@@ -277,6 +279,57 @@ func TestConverter(t *testing.T) {
 
 		assert.Equal(t, expectedMaintenanceWindow, shoot.Spec.Maintenance.TimeWindow)
 	})
+
+	t.Run("Create shoot from Runtime with registry cache enabled", func(t *testing.T) {
+		// given
+		runtime := fixRuntimeWithRegistryCache(true)
+
+		converterConfig := fixConverterConfig()
+
+		volumeSize, err := resource.ParseQuantity("10Gi")
+		require.NoError(t, err)
+
+		converter := NewConverterPatch(PatchOpts{
+			ConverterConfig: converterConfig,
+			RegistryCache: []registrycache.RegistryCache{
+				{
+					Upstream:  "https://my.registry.upstream,com",
+					RemoteURL: ptr.To("https://my.registry.com"),
+					Volume: &registrycache.Volume{
+						Size:             &volumeSize,
+						StorageClassName: ptr.To("standard"),
+					},
+					SecretReferenceName: ptr.To("registry-cache-secret"),
+					Proxy: &registrycache.Proxy{
+						HTTPProxy:  ptr.To("http://proxy.example.com:8080"),
+						HTTPSProxy: ptr.To("https://proxy.example.com:8443"),
+					},
+					HTTP: &registrycache.HTTP{
+						TLS: true,
+					},
+				},
+			}})
+
+		// when
+		shoot, err := converter.ToShoot(runtime)
+
+		// then
+		require.NoError(t, err)
+		assertShootFields(t, runtime, shoot)
+
+		var registryCacheExtension *gardener.Extension
+
+		for i := range shoot.Spec.Extensions {
+			if shoot.Spec.Extensions[i].Type == extensions.RegistryCacheExtensionType {
+				registryCacheExtension = &shoot.Spec.Extensions[i]
+			}
+		}
+
+		require.NotNil(t, registryCacheExtension)
+		assert.Equal(t, extensions.RegistryCacheExtensionType, registryCacheExtension.Type)
+		assert.Equal(t, registryCacheExtension.Disabled, ptr.To(false))
+		assert.NotNil(t, registryCacheExtension.ProviderConfig)
+	})
 }
 
 func assertShootFields(t *testing.T, runtime imv1.Runtime, shoot gardener.Shoot) {
@@ -386,7 +439,7 @@ func fixRuntime(purpose gardener.ShootPurpose) imv1.Runtime {
 	usernameClaim := "sub"
 	imageVersion := "1591.1.0"
 
-	return imv1.Runtime{
+	runtime := imv1.Runtime{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      "runtime",
 			Namespace: "kcp-system",
@@ -447,6 +500,18 @@ func fixRuntime(purpose gardener.ShootPurpose) imv1.Runtime {
 			},
 		},
 	}
+
+	return runtime
+}
+
+func fixRuntimeWithRegistryCache(enableRegistryCache bool) imv1.Runtime {
+	r := fixRuntime(gardener.ShootPurposeProduction)
+
+	r.Spec.Caching = &imv1.ImageRegistryCache{
+		Enabled: true,
+	}
+
+	return r
 }
 
 func fixRuntimeWithNoVersionsSpecified() imv1.Runtime {
