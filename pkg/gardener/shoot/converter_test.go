@@ -290,7 +290,11 @@ func TestConverter(t *testing.T) {
 		require.NoError(t, err)
 
 		converter := NewConverterPatch(PatchOpts{
-			ConverterConfig: converterConfig,
+			ConverterConfig:      converterConfig,
+			Extensions:           fixAllExtensionsOnTheShoot(),
+			InfrastructureConfig: fixAWSInfrastructureConfig("10.250.0.0/16", []string{"eu-central-1c", "eu-central-1b", "eu-central-1a"}),
+			ControlPlaneConfig:   fixAWSControlPlaneConfig(),
+			Workers:              fixWorkersWithReversedZones("gardenlinux", "1592.2.0"),
 			RegistryCache: []registrycache.RegistryCache{
 				{
 					Upstream:  "https://my.registry.upstream,com",
