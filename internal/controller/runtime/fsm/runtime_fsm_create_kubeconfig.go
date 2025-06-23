@@ -22,7 +22,7 @@ func sFnHandleKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 
 	// get section
 	var cluster imv1.GardenerCluster
-	err := m.Get(ctx, types.NamespacedName{
+	err := m.ShootClient.Get(ctx, types.NamespacedName{
 		Namespace: s.instance.Namespace,
 		Name:      runtimeID,
 	}, &cluster)
@@ -41,7 +41,7 @@ func sFnHandleKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 		}
 
 		m.log.V(log_level.DEBUG).Info("GardenerCluster CR not found, creating a new one", "name", runtimeID)
-		err = m.Create(ctx, makeGardenerClusterForRuntime(s.instance, s.shoot))
+		err = m.ShootClient.Create(ctx, makeGardenerClusterForRuntime(s.instance, s.shoot))
 		if err != nil {
 			m.log.Error(err, "GardenerCluster CR create error", "name", runtimeID)
 			s.instance.UpdateStatePending(

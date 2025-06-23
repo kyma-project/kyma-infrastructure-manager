@@ -8,6 +8,7 @@ import (
 )
 
 // GetShootClient returns a Kubernetes client for the shoot cluster associated with the given runtime.
+//
 //nolint:gochecknoglobals
 var GetShootClient = func(ctx context.Context, cnt client.Client, runtime imv1.Runtime) (client.Client, error) {
 	runtimeID := runtime.Labels[imv1.LabelKymaRuntimeID]

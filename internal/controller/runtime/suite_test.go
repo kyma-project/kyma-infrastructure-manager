@@ -61,14 +61,14 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	cfg                       *rest.Config         //nolint:gochecknoglobals
-	k8sClient                 client.Client        //nolint:gochecknoglobals
-	gardenerTestClient        client.Client        //nolint:gochecknoglobals
-	testEnv                   *envtest.Environment //nolint:gochecknoglobals
-	suiteCtx                  context.Context      //nolint:gochecknoglobals
-	cancelSuiteCtx            context.CancelFunc   //nolint:gochecknoglobals
-	runtimeReconciler         *RuntimeReconciler   //nolint:gochecknoglobals
-	customTracker             *CustomTracker       //nolint:gochecknoglobals
+	cfg                *rest.Config         //nolint:gochecknoglobals
+	k8sClient          client.Client        //nolint:gochecknoglobals
+	gardenerTestClient client.Client        //nolint:gochecknoglobals
+	testEnv            *envtest.Environment //nolint:gochecknoglobals
+	suiteCtx           context.Context      //nolint:gochecknoglobals
+	cancelSuiteCtx     context.CancelFunc   //nolint:gochecknoglobals
+	runtimeReconciler  *RuntimeReconciler   //nolint:gochecknoglobals
+	customTracker      *CustomTracker       //nolint:gochecknoglobals
 )
 
 func TestControllers(t *testing.T) {
@@ -219,7 +219,7 @@ func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot, seeds []*gard
 		WithInterceptorFuncs(interceptor.Funcs{
 			Patch: fsm_testing.GetFakePatchInterceptorForShootsAndConfigMaps(true),
 		}).Build()
-	runtimeReconciler.ShootClient = gardenerTestClient
+	runtimeReconciler.SeedClient = gardenerTestClient
 }
 
 func getBaseShootForTestingSequence() gardener_api.Shoot {

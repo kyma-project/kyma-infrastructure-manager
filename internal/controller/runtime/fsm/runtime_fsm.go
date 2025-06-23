@@ -51,9 +51,9 @@ func (f stateFn) name() string {
 type Watch = func(src source.Source, eventhandler handler.EventHandler, predicates ...predicate.Predicate) error
 
 type K8s struct {
-	client.Client
-	record.EventRecorder
 	ShootClient client.Client
+	record.EventRecorder
+	SeedClient client.Client
 }
 
 type Fsm interface {

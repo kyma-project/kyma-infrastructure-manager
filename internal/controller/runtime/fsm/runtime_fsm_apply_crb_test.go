@@ -184,7 +184,7 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 			_ context.Context,
 			_ client.Client,
 			_ imv1.Runtime) (client.Client, error) {
-			return f.Client, nil
+			return f.ShootClient, nil
 		}
 		return nil
 	}

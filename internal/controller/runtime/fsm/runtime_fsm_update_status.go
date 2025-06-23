@@ -18,7 +18,7 @@ func sFnUpdateStatus(result *ctrl.Result, err error) stateFn {
 			return nil, result, err
 		}
 
-		updateErr := m.Status().Update(ctx, &s.instance)
+		updateErr := m.ShootClient.Status().Update(ctx, &s.instance)
 
 		if updateErr != nil {
 			m.log.Error(updateErr, "unable to update instance status!")

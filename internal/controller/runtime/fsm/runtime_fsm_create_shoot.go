@@ -14,14 +14,14 @@ import (
 )
 
 const (
-	msgFailedToConfigureAuditlogs      = "Failed to configure audit logs"
-	msgFailedStructuredConfigMap       = "Failed to create structured authentication config map"
-	msgFailedToConfigureRegistryCache  = "Failed to configure registry cache"
+	msgFailedToConfigureAuditlogs     = "Failed to configure audit logs"
+	msgFailedStructuredConfigMap      = "Failed to create structured authentication config map"
+	msgFailedToConfigureRegistryCache = "Failed to configure registry cache"
 )
 
 func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	if s.instance.Spec.Shoot.EnforceSeedLocation != nil && *s.instance.Spec.Shoot.EnforceSeedLocation {
-		seedAvailable, regionsWithSeeds, err := seedForRegionAvailable(ctx, m.ShootClient, s.instance.Spec.Shoot.Provider.Type, s.instance.Spec.Shoot.Region)
+		seedAvailable, regionsWithSeeds, err := seedForRegionAvailable(ctx, m.SeedClient, s.instance.Spec.Shoot.Provider.Type, s.instance.Spec.Shoot.Region)
 		if err != nil {
 			msg := fmt.Sprintf("Failed to verify whether seed is available for the region %s.", s.instance.Spec.Shoot.Region)
 			m.log.Error(err, msg)
@@ -50,7 +50,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
 		oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
 
-		err := structuredauth.CreateOrUpdateStructuredAuthConfigMap(ctx, m.ShootClient, types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace}, oidcConfig)
+		err := structuredauth.CreateOrUpdateStructuredAuthConfigMap(ctx, m.SeedClient, types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace}, oidcConfig)
 		if err != nil {
 			m.log.Error(err, "Failed to create structured authentication config map")
 
@@ -96,7 +96,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 			fmt.Sprintf("Runtime conversion error %v", err))
 	}
 
-	err = m.ShootClient.Create(ctx, &shoot)
+	err = m.SeedClient.Create(ctx, &shoot)
 	if err != nil {
 		m.log.Error(err, "Failed to create new gardener Shoot")
 		s.instance.UpdateStatePending(

@@ -132,8 +132,8 @@ var (
 		}
 
 		return func(fsm *fsm) error {
-			fsm.Client = k8sClient
 			fsm.ShootClient = k8sClient
+			fsm.SeedClient = k8sClient
 			return nil
 		}
 	}
@@ -152,8 +152,8 @@ var (
 			}).Build()
 
 		return func(fsm *fsm) error {
-			fsm.Client = k8sClient
 			fsm.ShootClient = k8sClient
+			fsm.SeedClient = k8sClient
 			return nil
 		}
 	}
@@ -173,8 +173,8 @@ var (
 			}).Build()
 
 		return func(fsm *fsm) error {
-			fsm.Client = k8sClient
 			fsm.ShootClient = k8sClient
+			fsm.SeedClient = k8sClient
 			return nil
 		}
 	}
@@ -194,8 +194,8 @@ var (
 			}).Build()
 
 		return func(fsm *fsm) error {
-			fsm.Client = k8sClient
 			fsm.ShootClient = k8sClient
+			fsm.SeedClient = k8sClient
 			return nil
 		}
 	}
@@ -214,8 +214,8 @@ var (
 			Build()
 
 		return func(fsm *fsm) error {
-			fsm.Client = k8sClient
 			fsm.ShootClient = k8sClient
+			fsm.SeedClient = k8sClient
 			return nil
 		}
 	}

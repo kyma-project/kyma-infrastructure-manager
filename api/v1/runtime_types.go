@@ -96,7 +96,7 @@ const (
 	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
 	ConditionReasonOidcAndCMsConfigured     = RuntimeConditionReason("OidcAndConfigMapsConfigured")
 	ConditionReasonOidcError                = RuntimeConditionReason("OidcConfigurationErr")
-	ConditionReasonKymaSystemNSError                 = RuntimeConditionReason("KymaSystemCreationErr")
+	ConditionReasonKymaSystemNSError        = RuntimeConditionReason("KymaSystemCreationErr")
 	ConditionReasonSeedNotFound             = RuntimeConditionReason("SeedNotFound")
 	ConditionReasonRegistryCacheError       = RuntimeConditionReason("RegistryCacheConfigurationErr")
 )

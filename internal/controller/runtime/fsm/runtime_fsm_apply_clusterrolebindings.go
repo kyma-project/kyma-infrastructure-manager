@@ -22,7 +22,7 @@ var (
 )
 
 func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	shootAdminClient, err := imv1_client.GetShootClient(ctx, m.Client, s.instance)
+	shootAdminClient, err := imv1_client.GetShootClient(ctx, m.ShootClient, s.instance)
 	if err != nil {
 		updateCRBApplyFailed(&s.instance)
 		return updateStatusAndStopWithError(err)
@@ -74,8 +74,6 @@ func logDeletedClusterRoleBindings(removed []rbacv1.ClusterRoleBinding, m *fsm, 
 		m.log.V(log_level.DEBUG).Info("Following CRBs were deleted", "deletedCRBs", crbsNames)
 	}
 }
-
-
 
 func isRBACUserKind() func(rbacv1.Subject) bool {
 	return func(s rbacv1.Subject) bool {

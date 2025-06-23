@@ -220,13 +220,13 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 				},
 			}
 
-			err := fakeFSM.ShootClient.Create(ctx, newConfigMap)
+			err := fakeFSM.SeedClient.Create(ctx, newConfigMap)
 			Expect(err).To(BeNil())
 
 			testFunc(ctx, fakeFSM, fakeSystemState, outputFsmState)
 			shootAfterUpdate := &gardener.Shoot{}
 
-			err = fakeFSM.ShootClient.Get(ctx, types.NamespacedName{
+			err = fakeFSM.SeedClient.Get(ctx, types.NamespacedName{
 				Name:      fakeSystemState.shoot.Name,
 				Namespace: fakeSystemState.shoot.Namespace,
 			}, shootAfterUpdate)
@@ -236,7 +236,7 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 
 			var updatedConfigMap core_v1.ConfigMap
 
-			err = fakeFSM.ShootClient.Get(ctx, types.NamespacedName{
+			err = fakeFSM.SeedClient.Get(ctx, types.NamespacedName{
 				Name:      newConfigMap.Name,
 				Namespace: newConfigMap.Namespace,
 			}, &updatedConfigMap)
@@ -437,7 +437,7 @@ func setupFakeFSMForTestWithAuditLogMandatoryAndConfig(scheme *api.Scheme, runti
 func buildPatchTestFunction(fn stateFn) func(context.Context, *fsm, *systemState, outputFnState) {
 	return func(ctx context.Context, r *fsm, s *systemState, expected outputFnState) {
 
-		createErr := r.ShootClient.Create(ctx, s.shoot)
+		createErr := r.SeedClient.Create(ctx, s.shoot)
 		if createErr != nil {
 			return
 		}

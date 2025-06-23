@@ -1,6 +1,6 @@
 package skrdetails
 
-func IsOdd(zones[]string) bool {
+func IsOdd(zones []string) bool {
 	return len(zones)%2 != 0
 
 }

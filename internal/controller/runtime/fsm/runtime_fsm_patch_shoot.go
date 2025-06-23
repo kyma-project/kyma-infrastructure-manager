@@ -50,7 +50,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
 		err = structuredauth.CreateOrUpdateStructuredAuthConfigMap(
 			ctx,
-			m.ShootClient,
+			m.SeedClient,
 			types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace},
 			oidcConfig,
 		)
@@ -67,7 +67,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	var registrycache []v1beta1.RegistryCache
 	if s.instance.Spec.Caching != nil && s.instance.Spec.Caching.Enabled {
-		registrycache, err = getRegistryCache(ctx, m.Client, s.instance)
+		registrycache, err = getRegistryCache(ctx, m.ShootClient, s.instance)
 
 		if err != nil {
 			m.log.Error(err, "Failed to get Registry Cache Config")
@@ -129,7 +129,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		copyShoot.Spec.Provider.ControlPlaneConfig = updatedShoot.Spec.Provider.ControlPlaneConfig
 		copyShoot.Spec.Provider.InfrastructureConfig = updatedShoot.Spec.Provider.InfrastructureConfig
 
-		updateErr := m.ShootClient.Update(ctx, copyShoot,
+		updateErr := m.SeedClient.Update(ctx, copyShoot,
 			&client.UpdateOptions{
 				FieldManager: fieldManagerName,
 			})
@@ -150,7 +150,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		}
 	}
 
-	patchErr := m.ShootClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
+	patchErr := m.SeedClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
 	})
@@ -238,7 +238,7 @@ func waitForWorkerPoolUpdate(ctx context.Context, m *fsm, s *systemState, shoot 
 	for i := 0; i < 5; i++ {
 		time.Sleep(time.Duration(i) * delay)
 
-		err := m.ShootClient.Get(ctx, types.NamespacedName{
+		err := m.SeedClient.Get(ctx, types.NamespacedName{
 			Name:      s.instance.Spec.Shoot.Name,
 			Namespace: m.ShootNamesapace,
 		}, &newShoot, &client.GetOptions{})
@@ -280,7 +280,7 @@ func handleForceReconciliationAnnotation(runtime *imv1.Runtime, fsm *fsm, ctx co
 		delete(annotations, reconciler.ForceReconcileAnnotation)
 		runtime.SetAnnotations(annotations)
 
-		err := fsm.Update(ctx, runtime)
+		err := fsm.ShootClient.Update(ctx, runtime)
 		if err != nil {
 			return err
 		}
@@ -321,12 +321,12 @@ func migrateOIDCToStructuredAuth(ctx context.Context, shootToUpdate gardener.Sho
 		// nolint: staticcheck
 		copyShoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
 
-		err = m.ShootClient.Update(ctx, copyShoot, &client.UpdateOptions{
+		err = m.SeedClient.Update(ctx, copyShoot, &client.UpdateOptions{
 			FieldManager: fieldManagerName,
 		})
 
 		if err == nil {
-			err = m.ShootClient.Get(ctx, types.NamespacedName{
+			err = m.SeedClient.Get(ctx, types.NamespacedName{
 				Name:      s.instance.Spec.Shoot.Name,
 				Namespace: m.ShootNamesapace,
 			}, s.shoot, &client.GetOptions{})
@@ -337,8 +337,8 @@ func migrateOIDCToStructuredAuth(ctx context.Context, shootToUpdate gardener.Sho
 	return err
 }
 
-func getRegistryCache(ctx context.Context, client client.Client, runtime imv1.Runtime) ([]v1beta1.RegistryCache, error) {
-	secret, err := imv1_client.GetKubeconfigSecret(ctx, client, runtime.Labels[imv1.LabelKymaRuntimeID], runtime.Namespace)
+func getRegistryCache(ctx context.Context, shootClient client.Client, runtime imv1.Runtime) ([]v1beta1.RegistryCache, error) {
+	secret, err := imv1_client.GetKubeconfigSecret(ctx, shootClient, runtime.Labels[imv1.LabelKymaRuntimeID], runtime.Namespace)
 	if err != nil {
 		return nil, err
 	}

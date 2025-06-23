@@ -15,7 +15,7 @@ func sFnDeleteKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 	// get section
 	runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
 	var cluster imv1.GardenerCluster
-	err := m.Get(ctx, types.NamespacedName{
+	err := m.ShootClient.Get(ctx, types.NamespacedName{
 		Namespace: s.instance.Namespace,
 		Name:      runtimeID,
 	}, &cluster)
@@ -44,7 +44,7 @@ func sFnDeleteKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 
 	// action section
 	m.log.Info("Deleting GardenerCluster CR", "Runtime", runtimeID, "Shoot", s.shoot.Name)
-	err = m.Delete(ctx, &cluster)
+	err = m.ShootClient.Delete(ctx, &cluster)
 	if err != nil {
 		// action error handler section
 		m.log.Error(err, "Failed to delete gardener Cluster CR")

@@ -36,7 +36,6 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 	var kymaWorkerPool WorkerPool
 	var customWorkerPools []WorkerPool
 
-
 	// There is an existing check if number of workers != 1 in pkg/gardener/shoot/extender/provider/provider.go:27
 	// that will be later moved to validator webhook
 	if len(runtime.Spec.Shoot.Provider.Workers) > 0 {
@@ -69,8 +68,8 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 			Kyma:   kymaWorkerPool,
 			Custom: customWorkerPools,
 		},
-		GlobalAccountID:   runtime.Labels["kyma-project.io/global-account-id"],
-		SubaccountID:      runtime.Labels["kyma-project.io/subaccount-id"],
+		GlobalAccountID:      runtime.Labels["kyma-project.io/global-account-id"],
+		SubaccountID:         runtime.Labels["kyma-project.io/subaccount-id"],
 		InfrastructureConfig: *shoot.Spec.Provider.InfrastructureConfig,
 	}
 }
