@@ -387,7 +387,7 @@ func TestSkrConfigState(t *testing.T) {
 		assertSuccesfullStatusConditions(t, systemState)
 	})
 
-	t.Run("Error in kyma-provisioning-info creation will not stop the reconciliation", func(t *testing.T) {
+	t.Run("Error in kyma-provisioning-info should reque with conditions set", func(t *testing.T) {
 		ctx := context.Background()
 
 		runtime := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
@@ -451,8 +451,17 @@ func TestSkrConfigState(t *testing.T) {
 		}
 		cmErr := fakeClient.Get(ctx, cmKey, &detailsCM)
 		assert.True(t, errors.IsNotFound(cmErr))
-		assert.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
-		assertSuccesfullStatusConditions(t, systemState)
+		assert.Contains(t, stateFn.name(), "sFnUpdateStatus")
+
+		expectedRuntimeConditions := []metav1.Condition{
+			{
+				Type:    string(imv1.ConditionTypeOidcAndCMsConfigured),
+				Reason:  string(imv1.ConditionReasonKymaSystemNSError),
+				Status:  "False",
+				Message: "Failed to create kyma-system namespace. Scheduling for retry",
+			},
+		}
+		assertEqualConditions(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)
 	})
 
 	t.Run("Should delete existing OpenIDConnect CRs from SKR when additional OIDC config contains empty array", func(t *testing.T) {
