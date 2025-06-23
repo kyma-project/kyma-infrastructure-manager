@@ -337,8 +337,8 @@ func migrateOIDCToStructuredAuth(ctx context.Context, shootToUpdate gardener.Sho
 	return err
 }
 
-func getRegistryCache(ctx context.Context, shootClient client.Client, runtime imv1.Runtime) ([]v1beta1.RegistryCache, error) {
-	secret, err := imv1_client.GetKubeconfigSecret(ctx, shootClient, runtime.Labels[imv1.LabelKymaRuntimeID], runtime.Namespace)
+func getRegistryCache(ctx context.Context, kcpClient client.Client, runtime imv1.Runtime) ([]v1beta1.RegistryCache, error) {
+	secret, err := imv1_client.GetKubeconfigSecret(ctx, kcpClient, runtime.Labels[imv1.LabelKymaRuntimeID], runtime.Namespace)
 	if err != nil {
 		return nil, err
 	}
