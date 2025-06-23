@@ -33,14 +33,12 @@ const (
 func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	kymaNsCreationErr := createKymaSystemNamespace(ctx, m, s)
 	if kymaNsCreationErr != nil {
-		updateConditionFailed(&s.instance, imv1.ConditionReasonKymaSystemNSError, kymaNamespaceCreationErrorMessage)
+		return handleProvisioningInfoError(m, s, kymaNsCreationErr, imv1.ConditionReasonKymaSystemNSError)
 	}
 
 	skrDetailsErr := applyKymaProvisioningInfoCM(ctx, m, s)
 	if skrDetailsErr != nil {
-		finalErrorMsg := fmt.Sprintf(msgFailedProvisioningInfoConfigMap, skrDetailsErr.Error())
-		m.log.Error(skrDetailsErr, finalErrorMsg)
-		updateConditionFailed(&s.instance, imv1.ConditionReasonOidcAndCMsConfigured, finalErrorMsg)
+		return handleProvisioningInfoError(m, s, skrDetailsErr, imv1.ConditionReasonOidcAndCMsConfigured)
 	}
 	m.log.V(log_level.DEBUG).Info("kyma-provisioning-info config map is created/updated")
 
@@ -60,9 +58,9 @@ func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctr
 	err := recreateOpenIDConnectResources(ctx, m, s, additionalOIDCStatus)
 
 	if err != nil {
-		updateConditionFailed(&s.instance, imv1.ConditionReasonOidcError , oidcErrorMessage)
+		updateConditionFailed(&s.instance, imv1.ConditionReasonOidcError, oidcErrorMessage)
 		m.log.Error(err, oidcErrorMessage)
-		return requeue()
+		return updateStatusAndRequeueAfter(m.ControlPlaneRequeueDuration)
 	}
 	m.log.V(log_level.DEBUG).Info("OIDC has been configured", "name", s.shoot.Name)
 
@@ -74,6 +72,13 @@ func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctr
 	)
 
 	return switchState(sFnApplyClusterRoleBindings)
+}
+
+func handleProvisioningInfoError(m *fsm, s *systemState, error error, conditionReason imv1.RuntimeConditionReason) (stateFn, *ctrl.Result, error) {
+	finalErrorMsg := fmt.Sprintf(msgFailedProvisioningInfoConfigMap, error.Error())
+	m.log.Error(error, finalErrorMsg)
+	updateConditionFailed(&s.instance, conditionReason, kymaNamespaceCreationErrorMessage)
+	return updateStatusAndRequeueAfter(m.ControlPlaneRequeueDuration)
 }
 
 func createKymaSystemNamespace(ctx context.Context, m *fsm, s *systemState) error {
