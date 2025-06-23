@@ -52,8 +52,8 @@ github.com/gardener/gardener-extension-registry-cache v0.16.0 h1:nnZHNbkw9BbwAIf
 github.com/gardener/gardener-extension-registry-cache v0.16.0/go.mod h1:I4LB0bgvoteIUMgDHQfoQaLV5LZwf3OVlL9PlZ9MjXQ=
 github.com/gardener/machine-controller-manager v0.58.0 h1:JLMpuD+omliu/RwK0mA9Ce+MLObJq421Du1qmaAHmAU=
 github.com/gardener/machine-controller-manager v0.58.0/go.mod h1:TCU/KoudCMt2eV0Jnrq2D1TwgsrBCuhIVgV3j1el6Og=
-github.com/gardener/oidc-webhook-authenticator v0.35.0 h1:VfIClVIi/1F0pHd4j/ue0ByGy0TJZI2lGJWaoES+vtE=
-github.com/gardener/oidc-webhook-authenticator v0.35.0/go.mod h1:Z1eqaEAgqPLTNgEd+26Jgrx5vCoftSNCglvnuR77nzE=
+github.com/gardener/oidc-webhook-authenticator v0.36.0 h1:hdTpC4+Ytzzfrylv/9nLVv536lg3Ghf+jHHuJoNCIJA=
+github.com/gardener/oidc-webhook-authenticator v0.36.0/go.mod h1:3Iq7yNHzjH0HF68gvEoAR7DeVSHM5Z4tFOzkmslQoak=
 github.com/go-jose/go-jose/v4 v4.1.0 h1:cYSYxd3pw5zd2FSXk2vGdn9igQU2PS8MuxrCOCl0FdY=
 github.com/go-jose/go-jose/v4 v4.1.0/go.mod h1:GG/vqmYm3Von2nYiB2vGTXzdoNKE5tix5tuc6iAd+sw=
 github.com/go-logr/logr v1.4.3 h1:CjnDlHq8ikf6E492q6eKboGOC0T8CDaOvkHCIg8idEI=
