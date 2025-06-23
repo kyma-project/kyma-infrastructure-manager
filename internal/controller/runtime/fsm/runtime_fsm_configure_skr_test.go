@@ -350,7 +350,7 @@ func TestSkrConfigState(t *testing.T) {
 			},
 			Data: nil,
 		}
-		cmCreationErr := testFsm.ShootClient.Create(ctx, detailsConfigMap)
+		cmCreationErr := testFsm.KcpClient.Create(ctx, detailsConfigMap)
 		assert.NoError(t, cmCreationErr)
 		kymaSystemNs := core_v1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -407,8 +407,8 @@ func TestSkrConfigState(t *testing.T) {
 			WithScheme(scheme).
 			Build()
 		testFsm := &fsm{K8s: K8s{
-			SeedClient:  fakeClient,
-			ShootClient: fakeClient,
+			SeedClient: fakeClient,
+			KcpClient:  fakeClient,
 		},
 			RCCfg: RCCfg{
 				Config: config.Config{
@@ -531,8 +531,8 @@ func setupFakeClient() (client.WithWatch, *fsm) {
 		WithScheme(scheme).
 		Build()
 	testFsm := &fsm{K8s: K8s{
-		SeedClient:  fakeClient,
-		ShootClient: fakeClient,
+		SeedClient: fakeClient,
+		KcpClient:  fakeClient,
 	},
 		RCCfg: RCCfg{
 			Config: config.Config{

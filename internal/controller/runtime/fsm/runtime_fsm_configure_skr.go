@@ -89,7 +89,7 @@ func createKymaSystemNamespace(ctx context.Context, m *fsm, s *systemState) erro
 		},
 	}
 
-	shootAdminClient, shootClientError := imv1_client.GetShootClient(ctx, m.ShootClient, s.instance)
+	shootAdminClient, shootClientError := imv1_client.GetShootClient(ctx, m.KcpClient, s.instance)
 	if shootClientError != nil {
 		return shootClientError
 	}
@@ -139,7 +139,7 @@ func additionalOidcEmptyOrUndefined(runtime *imv1.Runtime, cfg RCCfg) additional
 }
 
 func recreateOpenIDConnectResources(ctx context.Context, m *fsm, s *systemState, additionalOIDC additionalOIDCState) error {
-	shootAdminClient, shootClientError := imv1_client.GetShootClient(ctx, m.ShootClient, s.instance)
+	shootAdminClient, shootClientError := imv1_client.GetShootClient(ctx, m.KcpClient, s.instance)
 	if shootClientError != nil {
 		return shootClientError
 	}
@@ -236,7 +236,7 @@ func applyKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) er
 		return errors.Wrap(conversionErr, "failed to convert RuntimeCR and Shoot spec to ToKymaProvisioningInfo config map")
 	}
 
-	shootAdminClient, shootClientError := imv1_client.GetShootClient(ctx, m.ShootClient, s.instance)
+	shootAdminClient, shootClientError := imv1_client.GetShootClient(ctx, m.KcpClient, s.instance)
 	if shootClientError != nil {
 		return shootClientError
 	}

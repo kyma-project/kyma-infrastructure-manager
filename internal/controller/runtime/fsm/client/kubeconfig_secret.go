@@ -13,13 +13,13 @@ const (
 )
 
 // Retrieves the `Secret` from a Kubeconfig
-func GetKubeconfigSecret(ctx context.Context, cnt client.Client, runtimeID, namespace string) (corev1.Secret, error) {
+func GetKubeconfigSecret(ctx context.Context, kcpClient client.Client, runtimeID, namespace string) (corev1.Secret, error) {
 	secretName := fmt.Sprintf("kubeconfig-%s", runtimeID)
 
 	var kubeconfigSecret corev1.Secret
 	secretKey := types.NamespacedName{Name: secretName, Namespace: namespace}
 
-	err := cnt.Get(ctx, secretKey, &kubeconfigSecret)
+	err := kcpClient.Get(ctx, secretKey, &kubeconfigSecret)
 
 	if err != nil {
 		return corev1.Secret{}, err

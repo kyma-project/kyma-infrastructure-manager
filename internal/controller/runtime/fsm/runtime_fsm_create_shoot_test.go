@@ -32,8 +32,8 @@ var _ = Describe("KIM sFnCreateShoot", func() {
 				WithScheme(scheme).
 				Build()
 			testFsm := &fsm{K8s: K8s{
-				SeedClient:  fakeClient,
-				ShootClient: fakeClient,
+				SeedClient: fakeClient,
+				KcpClient:  fakeClient,
 			}}
 			imv1_client.GetShootClient = func(
 				_ context.Context,

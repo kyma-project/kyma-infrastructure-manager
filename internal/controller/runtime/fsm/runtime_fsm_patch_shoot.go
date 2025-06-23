@@ -67,7 +67,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	var registrycache []v1beta1.RegistryCache
 	if s.instance.Spec.Caching != nil && s.instance.Spec.Caching.Enabled {
-		registrycache, err = getRegistryCache(ctx, m.ShootClient, s.instance)
+		registrycache, err = getRegistryCache(ctx, m.KcpClient, s.instance)
 
 		if err != nil {
 			m.log.Error(err, "Failed to get Registry Cache Config")
@@ -280,7 +280,7 @@ func handleForceReconciliationAnnotation(runtime *imv1.Runtime, fsm *fsm, ctx co
 		delete(annotations, reconciler.ForceReconcileAnnotation)
 		runtime.SetAnnotations(annotations)
 
-		err := fsm.ShootClient.Update(ctx, runtime)
+		err := fsm.KcpClient.Update(ctx, runtime)
 		if err != nil {
 			return err
 		}

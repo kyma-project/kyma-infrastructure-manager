@@ -22,7 +22,7 @@ var (
 )
 
 func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	shootAdminClient, err := imv1_client.GetShootClient(ctx, m.ShootClient, s.instance)
+	shootAdminClient, err := imv1_client.GetShootClient(ctx, m.KcpClient, s.instance)
 	if err != nil {
 		updateCRBApplyFailed(&s.instance)
 		return updateStatusAndStopWithError(err)
