@@ -35,9 +35,9 @@ import (
 // RuntimeReconciler reconciles a Runtime object
 // nolint:revive
 type RuntimeReconciler struct {
-	client.Client
-	Scheme        *runtime.Scheme
-	ShootClient   client.Client
+	KcpClient client.Client
+	Scheme    *runtime.Scheme
+	SeedClient    client.Client
 	Log           logr.Logger
 	Cfg           fsm.RCCfg
 	EventRecorder record.EventRecorder
@@ -52,7 +52,7 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 	r.Log.V(log_level.TRACE).Info(request.String())
 
 	var runtime imv1.Runtime
-	if err := r.Get(ctx, request.NamespacedName, &runtime); err != nil {
+	if err := r.KcpClient.Get(ctx, request.NamespacedName, &runtime); err != nil {
 		return ctrl.Result{
 			Requeue: false,
 		}, client.IgnoreNotFound(err)
@@ -70,8 +70,8 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		log,
 		r.Cfg,
 		fsm.K8s{
-			Client:        r.Client,
-			ShootClient:   r.ShootClient,
+			KcpClient:     r.KcpClient,
+			SeedClient:    r.SeedClient,
 			EventRecorder: r.EventRecorder,
 		})
 
@@ -80,9 +80,9 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 
 func NewRuntimeReconciler(mgr ctrl.Manager, shootClient client.Client, logger logr.Logger, cfg fsm.RCCfg) *RuntimeReconciler {
 	return &RuntimeReconciler{
-		Client:        mgr.GetClient(),
+		KcpClient:     mgr.GetClient(),
 		Scheme:        mgr.GetScheme(),
-		ShootClient:   shootClient,
+		SeedClient:    shootClient,
 		EventRecorder: mgr.GetEventRecorderFor("runtime-controller"),
 		Log:           logger,
 		Cfg:           cfg,

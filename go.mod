@@ -2,17 +2,17 @@ module github.com/kyma-project/infrastructure-manager
 
 go 1.24.2
 
-toolchain go1.24.3
+toolchain go1.24.4
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
-	github.com/gardener/gardener v1.117.5
-	github.com/gardener/gardener-extension-provider-aws v1.61.2
-	github.com/gardener/gardener-extension-provider-gcp v1.43.3
+	github.com/gardener/gardener v1.120.0
+	github.com/gardener/gardener-extension-provider-aws v1.62.2
+	github.com/gardener/gardener-extension-provider-gcp v1.44.0
 	github.com/gardener/gardener-extension-provider-openstack v1.47.0
 	github.com/gardener/gardener-extension-registry-cache v0.16.0
-	github.com/gardener/oidc-webhook-authenticator v0.35.0
-	github.com/go-logr/logr v1.4.2
+	github.com/gardener/oidc-webhook-authenticator v0.36.0
+	github.com/go-logr/logr v1.4.3
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/kyma-project/kim-snatch v0.0.0-20250430122050-3c3bdc3b74bb
 	github.com/onsi/ginkgo/v2 v2.23.4
@@ -20,10 +20,10 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.22.0
 	github.com/stretchr/testify v1.10.0
-	k8s.io/api v0.33.1
-	k8s.io/apimachinery v0.33.1
-	k8s.io/client-go v0.33.1
-	k8s.io/utils v0.0.0-20250502105355-0f33e8f1c979
+	k8s.io/api v0.33.2
+	k8s.io/apimachinery v0.33.2
+	k8s.io/client-go v0.33.2
+	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 	sigs.k8s.io/controller-runtime v0.20.4
 	sigs.k8s.io/yaml v1.4.0
 )
@@ -50,7 +50,7 @@ require (
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/pprof v0.0.0-20250501235452-c0086092b71a // indirect
+	github.com/google/pprof v0.0.0-20250607225305-033d6d78b36a // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -63,7 +63,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.64.0 // indirect
+	github.com/prometheus/common v0.65.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
@@ -81,19 +81,16 @@ require (
 	golang.org/x/time v0.11.0 // indirect
 	golang.org/x/tools v0.33.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
-	gomodules.xyz/jsonpatch/v3 v3.0.1 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
-	gopkg.in/evanphx/json-patch.v5 v5.9.11 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.33.1 // indirect
+	k8s.io/apiextensions-apiserver v0.33.2 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
+	k8s.io/kube-openapi v0.0.0-20250610211856-8b98d1ed966a // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v6 v6.1.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
 )
 
 replace (

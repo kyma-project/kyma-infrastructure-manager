@@ -19,27 +19,27 @@ package runtime
 import (
 	"context"
 	"encoding/json"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
-	v12 "k8s.io/api/core/v1"
-	"path/filepath"
-	"testing"
-	"time"
-
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_oidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
+	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
 	"github.com/stretchr/testify/mock"
 	v1 "k8s.io/api/autoscaling/v1"
+	v12 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"path/filepath"
+	"testing"
+	"time"
 	//nolint:revive
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -61,15 +61,14 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	cfg                       *rest.Config         //nolint:gochecknoglobals
-	k8sClient                 client.Client        //nolint:gochecknoglobals
-	k8sFakeClientRoleBindings client.Client        //nolint:gochecknoglobals
-	gardenerTestClient        client.Client        //nolint:gochecknoglobals
-	testEnv                   *envtest.Environment //nolint:gochecknoglobals
-	suiteCtx                  context.Context      //nolint:gochecknoglobals
-	cancelSuiteCtx            context.CancelFunc   //nolint:gochecknoglobals
-	runtimeReconciler         *RuntimeReconciler   //nolint:gochecknoglobals
-	customTracker             *CustomTracker       //nolint:gochecknoglobals
+	cfg                *rest.Config         //nolint:gochecknoglobals
+	k8sClient          client.Client        //nolint:gochecknoglobals
+	gardenerTestClient client.Client        //nolint:gochecknoglobals
+	testEnv            *envtest.Environment //nolint:gochecknoglobals
+	suiteCtx           context.Context      //nolint:gochecknoglobals
+	cancelSuiteCtx     context.CancelFunc   //nolint:gochecknoglobals
+	runtimeReconciler  *RuntimeReconciler   //nolint:gochecknoglobals
+	customTracker      *CustomTracker       //nolint:gochecknoglobals
 )
 
 func TestControllers(t *testing.T) {
@@ -107,6 +106,7 @@ var _ = BeforeSuite(func() {
 	clientScheme := runtime.NewScheme()
 	_ = gardener_api.AddToScheme(clientScheme)
 	_ = imv1.AddToScheme(clientScheme)
+	_ = v12.AddToScheme(clientScheme)
 
 	// tracker will be updated with different shoot sequence for each test case
 	tracker := clienttesting.NewObjectTracker(clientScheme, serializer.NewCodecFactory(clientScheme).UniversalDecoder())
@@ -144,12 +144,33 @@ var _ = BeforeSuite(func() {
 
 	shootClientScheme := runtime.NewScheme()
 	_ = rbacv1.AddToScheme(shootClientScheme)
+	_ = v12.AddToScheme(shootClientScheme)
 	err = gardener_oidc.AddToScheme(shootClientScheme)
-	k8sFakeClientRoleBindings = fake.NewClientBuilder().WithScheme(shootClientScheme).Build()
 
-	fsm.GetShootClient = func(_ context.Context, _ client.Client, _ imv1.Runtime) (client.Client, error) {
-		return k8sFakeClientRoleBindings, nil
+	var fakeClient = fake.NewClientBuilder().
+		WithScheme(shootClientScheme).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Patch: fsm_testing.GetFakePatchInterceptorForShootsAndConfigMaps(true),
+		}).
+		Build()
+	imv1_client.GetShootClient = func(_ context.Context, _ client.Client, _ imv1.Runtime) (client.Client, error) {
+		return fakeClient, nil
 	}
+
+	detailsConfigMap := &v12.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "kyma-provisioning-info",
+			Namespace: "kyma-system",
+		},
+		Data: nil,
+	}
+
+	cmCreationErr := fakeClient.Create(context.Background(), detailsConfigMap)
+	Expect(cmCreationErr).To(BeNil())
 
 	go func() {
 		defer GinkgoRecover()
@@ -196,9 +217,9 @@ func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot, seeds []*gard
 	customTracker = NewCustomTracker(tracker, shoots, seeds)
 	gardenerTestClient = fake.NewClientBuilder().WithScheme(clientScheme).WithObjectTracker(customTracker).
 		WithInterceptorFuncs(interceptor.Funcs{
-			Patch: fsm_testing.GetFakePatchInterceptorFn(true),
+			Patch: fsm_testing.GetFakePatchInterceptorForShootsAndConfigMaps(true),
 		}).Build()
-	runtimeReconciler.ShootClient = gardenerTestClient
+	runtimeReconciler.SeedClient = gardenerTestClient
 }
 
 func getBaseShootForTestingSequence() gardener_api.Shoot {
