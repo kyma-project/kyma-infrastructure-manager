@@ -20,8 +20,8 @@ This is a Proof of Concept. Here's a checklist that should help you consider oft
 - [ ] Is there a need for alignment with KEB/SRE/other teams? 
 - [ ] Usually, it's worth timeboxing such PoC tasks. What would be a good timebox in this case?
 - [ ] Will the final solution need a new repository or any pipelines adjustments?
-- [ ] are we already aware of any additional challenges related to the release process? E.g. should additional threat modelling sessions be scheduled?
-- [ ] will automated tests require any unusual efforts? E.g. complex setup for e2e tests?
+- [ ] Are we already aware of any additional challenges related to the release process? For example, should additional threat modelling sessions be scheduled?
+- [ ] Will automated tests require any unusual efforts? For example, a complex setup for e2e tests?
 
 **Reasons**
 
