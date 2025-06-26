@@ -1,4 +1,4 @@
-package customconfig
+package registrycache
 
 import (
 	"context"
@@ -23,7 +23,7 @@ var (
 	testEnv    *envtest.Environment
 	suiteCtx   context.Context
 	cancelFunc context.CancelFunc
-	reconciler *CustomSKRConfigReconciler
+	reconciler *RegistryCacheConfigReconciler
 )
 
 func TestCustomConfigController(t *testing.T) {
@@ -64,7 +64,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	reconciler = NewCustomConfigReconciler(mgr, logger, fixMockedRegistryCache())
+	reconciler = NewRegistryCacheConfigReconciler(mgr, logger, fixMockedRegistryCache())
 	Expect(reconciler).NotTo(BeNil())
 	err = reconciler.SetupWithManager(mgr, 1)
 	Expect(err).To(BeNil())
