@@ -1,0 +1,109 @@
+apiVersion: infrastructuremanager.kyma-project.io/v1
+kind: Runtime
+metadata:
+  annotations:
+    compass.provisioner.kyma-project.io/runtime-id: i539990-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+    gardener.cloud/created-by: system:serviceaccount:garden-kyma-dev:compass-provisioner
+    kcp.provisioner.kyma-project.io/operation-id: i539990-aaaa-aaaa-aaaa-operationidd
+    kcp.provisioner.kyma-project.io/runtime-id: i539990-fd2b-4186-b0e5-8a1bc8ede501
+  finalizers:
+  - runtime-controller.infrastructure-manager.kyma-project.io/deletion-hook
+  labels:
+    account: i539990-aaaa-aaaa-aaaa-aaaaaaccount
+    dnsrecord.extensions.gardener.cloud/aws-route53: "true"
+    extensions.extensions.gardener.cloud/shoot-auditlog-service: "true"
+    extensions.extensions.gardener.cloud/shoot-cert-service: "true"
+    extensions.extensions.gardener.cloud/shoot-dns-service: "true"
+    extensions.extensions.gardener.cloud/shoot-lakom-service: "true"
+    extensions.extensions.gardener.cloud/shoot-networking-filter: "true"
+    extensions.extensions.gardener.cloud/shoot-networking-problemdetector: "true"
+    kyma-project.io/broker-plan-id: plan-id
+    kyma-project.io/broker-plan-name: plan-name
+    kyma-project.io/controlled-by-provisioner: "false"
+    kyma-project.io/global-account-id: i539990-8085-41c8-af0c-e185f39b5e18
+    kyma-project.io/instance-id: instance-id
+    kyma-project.io/kyma-name: i539990-1234-1234-1234-123456789abc
+    kyma-project.io/region: region
+    kyma-project.io/runtime-id: i539990-fd2b-4186-b0e5-8a1bc8ede01
+    kyma-project.io/shoot-name: i539990-test
+    kyma-project.io/subaccount-id: i539990-3d1b-4592-bee1-f022661f7b30
+    networking.extensions.gardener.cloud/calico: "true"
+    operatingsystemconfig.extensions.gardener.cloud/gardenlinux: "true"
+    operator.kyma-project.io/kyma-name: i539990-1234-1234-1234-123456789abc
+    owner.email: t.schuhmacher-at-sap.com
+    provider.extensions.gardener.cloud/aws: "true"
+    seed.gardener.cloud/aws-ha-eu4: "true"
+    shoot.gardener.cloud/status: healthy
+    subaccount: 00c65839-890a-416b-8ffd-6fe25b7326df
+  name: i539990-test
+  namespace: kcp-system
+spec:
+  security:
+    administrators:
+    - t.schuhmacher@sap.com
+    - runtimeOperator
+    - runtimeAdmin
+    networking:
+      filter:
+        egress:
+          enabled: true
+        ingress:
+          enabled: false
+  shoot:
+    controlPlane:
+      highAvailability:
+        failureTolerance:
+          type: node
+    kubernetes:
+      kubeAPIServer:
+        oidcConfig:
+          clientID: 9bd05ed7-a930-44e6-8c79-e6defeb7dec9
+          groupsClaim: groups
+          issuerURL: https://kymatest.accounts400.ondemand.com
+          signingAlgs:
+          - RS256
+          usernameClaim: sub
+          usernamePrefix: '-'
+      version: 1.30.6
+    licenceType: ""
+    name: i539990-test
+    networking:
+      nodes: 10.250.0.0/22
+      pods: 10.96.0.0/13
+      services: 10.104.0.0/13
+      type: calico
+    platformRegion: cf-us10-staging
+    provider:
+      type: aws
+      workers:
+      - cri:
+          name: containerd
+        machine:
+          architecture: amd64
+          image:
+            name: gardenlinux
+            version: 1443.15.0
+          type: m5.large
+        maxSurge: 3
+        maxUnavailable: 0
+        maximum: 20
+        minimum: 3
+        name: cpu-worker-0
+        providerConfig:
+          apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1
+          instanceMetadataOptions:
+            httpPutResponseHopLimit: 2
+            httpTokens: required
+          kind: WorkerConfig
+        systemComponents:
+          allow: true
+        volume:
+          size: 50Gi
+          type: gp2
+        zones:
+        - eu-central-1b
+        - eu-central-1a
+        - eu-central-1c
+    purpose: development
+    region: eu-central-1
+    secretBindingName: sap-aws-skr-dev-cust-00002-kyma-integration
