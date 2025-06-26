@@ -68,7 +68,7 @@ Kyma operators three different control planes, each has a KIM instance deployed:
 5. It fetches the Kubeconfig from Gardener and stores it in a secret on the KCP cluster.
 
 
-## Deployment
+## Operation
 
 ### Installation
 
@@ -87,6 +87,27 @@ Updates are normally not requiring any manual action. In seldom cases where a ne
 ### Troubleshooting
 
 Please see the trouble shooting guides for KCP components for further details.
+
+
+### Observability
+
+KIM exposes, beside the common Pod resource indicators (CPU, memory etc.), also cluster reconciliation specific information over his metrics REST-endpoint (`/metrics/*` ):
+
+1. `im_gardener_clusters_state`
+
+    Indicates the Status.state for GardenerCluster CRs.
+
+2. `im_runtime_state`
+
+    Exposes current Status.state for Runtime CRs.
+
+3. `unexpected_stops_total`
+
+    Exposes the number of unexpected state machine stop events.
+
+4. `im_kubeconfig_expiration`
+
+    Exposes current kubeconfig expiration value in epoch timestamp value format.
 
 
 ## Architectural decisions
@@ -111,6 +132,10 @@ The data model consists of two CRDs:
 * `RuntimeKubeconfig`
 
     Kubeconfig related metadata are stored in entities of the  CRD.
+
+The structure and the purpose of the different fields in these resources are documented in the CRD files:
+
+https://github.com/kyma-project/kyma-infrastructure-manager/tree/main/config/crd/bases
 
 
 ### State Machine
