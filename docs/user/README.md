@@ -31,9 +31,17 @@ All backend service are running in the Kyma Control Plane (KCP).
 
 Kyma operators three different control planes, each has a KIM instance deployed:
 
-1. DEV: Used for development and integration purposes of KCP components.
-2. STAGE: Runs the current or next release candidates of KCP component and is used for stabilization of these components.
-3. PROD: The productive environment includes the stabilized components and manages productive Kyma runtimes.
+1. DEV
+
+    Used for development and integration purposes of KCP components.
+
+2. STAGE
+
+    Runs the current or next release candidates of KCP component and is used for stabilization of these components.
+
+3. PROD
+
+    The productive environment includes the stabilized components and manages productive Kyma runtimes.
 
 
 
@@ -48,10 +56,91 @@ Kyma operators three different control planes, each has a KIM instance deployed:
 |Business Technology Platform|BTP|This is the entry point for customers to manage their Kyma runtime.|
 |Kyma Environment Broker|KEB|The environment broker receives requests from BTP. Cluster related configuration parameters are converted into a `RuntimeCR`|
 |Runtime Custom Resource|RuntimeCR|KIM exposes a Customer Resource Defintion to describe the infrastructure of a Kubernetes Cluster. A `RuntimeCR` represents an instance of this CRD.|
-|||
+|Runtime Kubeconfig Custom Resource|RuntimeKubeconfigCR|This CR is used to administrate and rotate the kubeconfig of a Kyma runtime. It is created and managed by KIM.|
 
 
-**Process Flow:**
+### Process Flow
 
-1. The customer requests  a Kyma runtime via BTP. The request is received by KEB which creates/updates an `RuntimeCR` instance. this `RuntimeCR` describes how the infrastructure of the Kubernetes cluster has to look like.
-2. KIM is detecting the change of this `RuntimeCR` 
+1. The customer requests  a Kyma runtime via BTP. The request is received by KEB which creates/updates an `RuntimeCR` instance. this `RuntimeCR` describes how the infrastructure of the Kubernetes cluster.
+2. KIM is detecting the change of this `RuntimeCR` and triggers the reconciliation process.
+3. KIM converts the information into a Shoot definition for Gardener.
+4. After the cluster was created, KIM creates a `RuntimeKubeconfigCR` which include required data for fetching and rotating the cluster Kubeconfig.
+5. It fetches the Kubeconfig from Gardener and stores it in a secret on the KCP cluster.
+
+
+## Deployment
+
+### Installation
+
+As runtime is a Kubernetes cluster expected.
+
+KIM is bundled a containerized application. As component of the Kyma Control Plane, the common delivery process of our SRE team (Argo CD) is supported. Deployment is based on HELM.
+
+The deployment of KIM is self-contained and can be fully automated (no manual pre- or post-actions are required).
+
+
+### Updates
+
+Updates are normally not requiring any manual action. In seldom cases where a new feature requires a migration, a rollout guide will be provided.
+
+
+### Troubleshooting
+
+Please see the trouble shooting guides for KCP components for further details.
+
+
+## Architectural decisions
+
+### Kubebuilder
+
+KIM is following the [operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) of Kubernetes. 
+
+Technically, its build on the [Kubebuilder framework](https://github.com/kubernetes-sigs/kubebuilder) and benefits from its scaffolding features for controller and models (CRDs).
+
+
+### Domain model
+
+All business data are completely stored in ETCD, using [Custom Resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/).
+
+The data model consists of two CRDs:
+
+* `Runtime`
+
+    Cluster data are stored in instances of the  CRD. 
+
+* `RuntimeKubeconfig`
+
+    Kubeconfig related metadata are stored in entities of the  CRD.
+
+
+### State Machine
+The reconciliation process is implemented by using a [state machine pattern](https://en.wikipedia.org/wiki/Finite-state_machine). Each state represents a reconciliation step. Based on the return value of a step, the transition to a next steps happens.
+
+### ADR
+Please see the ADR (Architectural Decision Record) of KIM tp get more insights about its [software architecture](../adr/001-provisioning.md).
+
+
+## Quality Requirements
+
+Non-technical requirements for KIM are:
+
+* Performance
+
+    Goal was to be able to process +/- 5.000 Runtime instances with KIM. A load and performance test was implemented which confirms the achievement of this goal.
+
+* Extensibility
+
+    Selected software patterns are used to ensure an easy extensibility of KIM:
+    
+    *  state machine pattern is used for process flow control
+    *  chain of responsibility pattern is used for rendering the Shoot definitions
+
+*  Reliability
+
+    Uptime is crucial for KIM. Monitoring is detecting throughput degradation and long-running reconciliation processes. Alerting rule are in place to notify the team about SLA violations.
+
+* Security
+
+    SAP product standards are used during development and a threat modeling workshop is executed annually.
+
+
