@@ -293,17 +293,6 @@ func setupFakeFSMForTestWithAuditLogMandatory(scheme *api.Scheme, runtime *imv1.
 	)
 }
 
-func setupFakeFSMForTestWithStructuredAuthEnabled(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
-	return must(newFakeFSM,
-		withMockedMetrics(),
-		withShootNamespace("garden-"),
-		withTestFinalizer,
-		withFakedK8sClientNoPatchInterceptor(scheme, runtime),
-		withFakeEventRecorder(1),
-		withDefaultReconcileDuration(),
-	)
-}
-
 func setupFakeFSMForTestWithAuditLogMandatoryAndConfig(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	return must(newFakeFSM,
 		withMockedMetrics(),
