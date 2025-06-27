@@ -228,7 +228,6 @@ func main() {
 		AuditLogMandatory:             auditLogMandatory,
 		Metrics:                       metrics,
 		AuditLogging:                  auditLogDataMap,
-		StructuredAuthEnabled:         structuredAuthEnabled,
 	}
 
 	runtimeReconciler := runtimecontroller.NewRuntimeReconciler(

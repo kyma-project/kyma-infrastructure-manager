@@ -42,25 +42,23 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			msgFailedToConfigureAuditlogs)
 	}
 
-	if m.StructuredAuthEnabled {
-		oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
+	oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
 
-		cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
-		err = structuredauth.CreateOrUpdateStructuredAuthConfigMap(
-			ctx,
-			m.SeedClient,
-			types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace},
-			oidcConfig,
-		)
+	cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
+	err = structuredauth.CreateOrUpdateStructuredAuthConfigMap(
+		ctx,
+		m.SeedClient,
+		types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace},
+		oidcConfig,
+	)
 
-		if err != nil {
-			m.Metrics.IncRuntimeFSMStopCounter()
-			return updateStatePendingWithErrorAndStop(
-				&s.instance,
-				imv1.ConditionTypeRuntimeProvisioned,
-				imv1.ConditionReasonOidcError,
-				msgFailedStructuredConfigMap)
-		}
+	if err != nil {
+		m.Metrics.IncRuntimeFSMStopCounter()
+		return updateStatePendingWithErrorAndStop(
+			&s.instance,
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonOidcError,
+			msgFailedStructuredConfigMap)
 	}
 
 	var registrycache []v1beta1.RegistryCache
@@ -91,7 +89,6 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		InfrastructureConfig:  s.shoot.Spec.Provider.InfrastructureConfig,
 		ControlPlaneConfig:    s.shoot.Spec.Provider.ControlPlaneConfig,
 		Log:                   ptr.To(m.log),
-		StructuredAuthEnabled: m.StructuredAuthEnabled,
 		RegistryCache:         registrycache,
 	})
 

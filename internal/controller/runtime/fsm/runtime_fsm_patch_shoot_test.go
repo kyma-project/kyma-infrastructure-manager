@@ -301,7 +301,6 @@ func setupFakeFSMForTestWithStructuredAuthEnabled(scheme *api.Scheme, runtime *i
 		withFakedK8sClientNoPatchInterceptor(scheme, runtime),
 		withFakeEventRecorder(1),
 		withDefaultReconcileDuration(),
-		withStructuredAuthEnabled(true),
 	)
 }
 
