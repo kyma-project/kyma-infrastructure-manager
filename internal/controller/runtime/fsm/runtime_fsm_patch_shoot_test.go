@@ -4,15 +4,11 @@ import (
 	"context"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 	"testing"
 	"time"
 
@@ -179,114 +175,6 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 			},
 		),
 	)
-
-	// When removing the feature flag for structured auth, the test should be removed
-	Context("When migrating OIDC setting for existing clusters", func() {
-		ctx := context.Background()
-
-		It("Should successfully nil OIDC property, and setup structured auth config", func() {
-			testFunc := buildPatchTestFunction(sFnPatchExistingShoot)
-
-			runtimeWithOIDC := *inputRuntime.DeepCopy()
-
-			runtimeWithOIDC.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig.ClientID = ptr.To("client-id")
-			runtimeWithOIDC.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig.IssuerURL = ptr.To("some.url.com")
-
-			shootWithOIDC := fsm_testing.TestShootForUpdate().DeepCopy()
-
-			shootWithOIDC.Spec.Kubernetes = gardener.Kubernetes{
-				KubeAPIServer: &gardener.KubeAPIServerConfig{
-					OIDCConfig: &gardener.OIDCConfig{
-						ClientID:  ptr.To("some-old-client-id"),
-						IssuerURL: ptr.To("some-old-url.com"),
-					},
-				},
-			}
-
-			fakeFSM := setupFakeFSMForTestWithStructuredAuthEnabled(testScheme, &runtimeWithOIDC)
-			fakeSystemState := &systemState{instance: runtimeWithOIDC, shoot: shootWithOIDC}
-
-			outputFsmState := outputFnState{
-				nextStep:    haveName("sFnUpdateStatus"),
-				annotations: expectedAnnotations,
-				result:      nil,
-				status:      fsm_testing.PendingStatusShootPatched(),
-			}
-
-			newConfigMap := &core_v1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "structured-auth-config-" + fakeSystemState.shoot.Name,
-					Namespace: fakeSystemState.shoot.Namespace,
-				},
-			}
-
-			err := fakeFSM.SeedClient.Create(ctx, newConfigMap)
-			Expect(err).To(BeNil())
-
-			testFunc(ctx, fakeFSM, fakeSystemState, outputFsmState)
-			shootAfterUpdate := &gardener.Shoot{}
-
-			err = fakeFSM.SeedClient.Get(ctx, types.NamespacedName{
-				Name:      fakeSystemState.shoot.Name,
-				Namespace: fakeSystemState.shoot.Namespace,
-			}, shootAfterUpdate)
-
-			Expect(err).To(BeNil())
-			Expect(shootAfterUpdate.Spec.Kubernetes.KubeAPIServer.OIDCConfig).To(BeNil()) //nolint:staticcheck
-
-			var updatedConfigMap core_v1.ConfigMap
-
-			err = fakeFSM.SeedClient.Get(ctx, types.NamespacedName{
-				Name:      newConfigMap.Name,
-				Namespace: newConfigMap.Namespace,
-			}, &updatedConfigMap)
-			Expect(err).To(BeNil())
-
-			authenticationConfigString := updatedConfigMap.Data["config.yaml"]
-			var authenticationConfiguration structuredauth.AuthenticationConfiguration
-			err = yaml.Unmarshal([]byte(authenticationConfigString), &authenticationConfiguration)
-
-			Expect(err).To(BeNil())
-			Expect(authenticationConfiguration.JWT).To(HaveLen(1))
-			Expect(authenticationConfiguration.JWT[0].Issuer.URL).To(Equal("some.url.com"))
-			Expect(authenticationConfiguration.JWT[0].Issuer.Audiences).To(Equal([]string{"client-id"}))
-		})
-
-		It("Should retry when failed to migrate OIDC", func() {
-			testFunc := buildPatchTestFunction(sFnPatchExistingShoot)
-			runtimeWithOIDC := *inputRuntime.DeepCopy()
-
-			runtimeWithOIDC.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig.ClientID = ptr.To("client-id")
-			runtimeWithOIDC.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig.IssuerURL = ptr.To("some.url.com")
-
-			shootWithOIDC := fsm_testing.TestShootForUpdate().DeepCopy()
-
-			shootWithOIDC.Spec.Kubernetes = gardener.Kubernetes{
-				KubeAPIServer: &gardener.KubeAPIServerConfig{
-					OIDCConfig: &gardener.OIDCConfig{
-						ClientID:  ptr.To("some-old-client-id"),
-						IssuerURL: ptr.To("some-old-url.com"),
-					},
-				},
-			}
-
-			fakeFSM := setupFakeFSMForTestWithFailingUpdateWithInConflictError(testScheme, &runtimeWithOIDC)
-			fakeFSM.StructuredAuthEnabled = true
-
-			fakeSystemState := &systemState{instance: runtimeWithOIDC, shoot: shootWithOIDC}
-
-			outputFsmState := outputFnState{
-				nextStep:    haveName("sFnUpdateStatus"),
-				annotations: expectedAnnotations,
-				result:      nil,
-				status:      fsm_testing.PendingStatusAfterConflictErr(),
-			}
-
-			testFunc(ctx, fakeFSM, fakeSystemState, outputFsmState)
-
-		})
-
-	})
 })
 
 func setupFakeFSMForTest(scheme *api.Scheme, objs ...client.Object) *fsm {
