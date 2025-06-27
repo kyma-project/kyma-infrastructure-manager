@@ -23,6 +23,7 @@ KIM has to be implemented as Kubernetes Operator. It will provide a Custom Resou
 
 In addition to the alignment of Kubernetes infrastructure. KIM is also providing access to these clusters via KCP by exposing and rotating their Kubeconfig: for each running Kyma runtime is the kubeconfig stored in a secret on KCP. For addressing security requirements, KIM is also regularly rotating this kubeconfig.
 
+
 ## Context and Scope
 
 Together with the Kyma Environment Broker (KEB) and Kyma Lifecycle Manager (KLM), it builds the backbone of managed Kyma runtimes.
@@ -44,10 +45,10 @@ Kyma operators three different control planes, each has a KIM instance deployed:
     The productive environment includes the stabilized components and manages productive Kyma runtimes.
 
 
-
 ## Solution Strategy
 
 ![architecture](../adr/assets/keb-kim-target-arch.drawio.svg)
+
 
 ### Building Blocks
 
@@ -69,6 +70,7 @@ Kyma operators three different control planes, each has a KIM instance deployed:
 
 
 ## Operation
+
 
 ### Installation
 
@@ -112,6 +114,7 @@ KIM exposes, beside the common Pod resource indicators (CPU, memory etc.), also 
 
 ## Architectural decisions
 
+
 ### Kubebuilder
 
 KIM is following the [operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) of Kubernetes. 
@@ -140,6 +143,25 @@ https://github.com/kyma-project/kyma-infrastructure-manager/tree/main/config/crd
 
 ### State Machine
 The reconciliation process is implemented by using a [state machine pattern](https://en.wikipedia.org/wiki/Finite-state_machine). Each state represents a reconciliation step. Based on the return value of a step, the transition to a next steps happens.
+
+
+### Sub-Components
+During the implementation of paritcular KIM features were sub-components introduced to address the feature-specifc requirements:
+
+* KIM Snatch
+
+    This is a Kyma module which belongs to KIM and was introduced with the support for multiple worker pools. It's a mandatory module: KLM installs it on all Kyma runtimes automatically, customers cannot avoid this or remove the module. Purpose of KIM Snatch is to assign Kyma workloads to the Kyma worker pool. This is needed to avoid that Kyma workloads will be assigned to worker pools created by customers.
+
+    More information are available in the KIM Snatch repository: https://github.com/kyma-project/kim-snatch/tree/main/docs/user
+
+* Gardener Syncer
+
+    This Kubernetes Cronjob synchronizes Seed cluster data from the Gardener cluster to KCP. This data is used by KEB for input validation of customers (primarily for the "Shoot and Seed in same region" feature to detect if a Seed cluster exists in a particular Shoot region).
+
+    The seed data are stored in a config map in KCP.
+
+    More details includes the documentation of the Gardener Syncer: https://github.com/kyma-project/gardener-syncer/blob/main/README.md
+
 
 ### ADR
 Please see the ADR (Architectural Decision Record) of KIM tp get more insights about its [software architecture](../adr/001-provisioning.md).
