@@ -1,4 +1,4 @@
-package customconfig
+package registrycache
 
 import (
 	"context"
@@ -23,7 +23,7 @@ import (
 
 // CustomConfigReconciler reconciles a secret object
 // nolint:revive
-type CustomSKRConfigReconciler struct {
+type RegistryCacheConfigReconciler struct {
 	client.Client
 	Scheme        *runtime.Scheme
 	Log           logr.Logger
@@ -35,7 +35,7 @@ type CustomSKRConfigReconciler struct {
 
 const fieldManagerName = "customconfigcontroller"
 
-func (r *CustomSKRConfigReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	r.Log.V(log_level.TRACE).Info(request.String())
 
 	var secret v1.Secret
@@ -64,7 +64,7 @@ func (r *CustomSKRConfigReconciler) Reconcile(ctx context.Context, request ctrl.
 	return r.reconcileRegistryCacheConfig(ctx, secret, runtime)
 }
 
-func (r *CustomSKRConfigReconciler) reconcileRegistryCacheConfig(ctx context.Context, secret v1.Secret, runtime imv1.Runtime) (ctrl.Result, error) {
+func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context.Context, secret v1.Secret, runtime imv1.Runtime) (ctrl.Result, error) {
 
 	registryCache, err := r.Creator(secret)
 	if err != nil {
@@ -134,8 +134,8 @@ type RegistryCache interface {
 
 type RegistryCacheCreator func(secret v1.Secret) (RegistryCache, error)
 
-func NewCustomConfigReconciler(mgr ctrl.Manager, logger logr.Logger, creator RegistryCacheCreator) *CustomSKRConfigReconciler {
-	return &CustomSKRConfigReconciler{
+func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, creator RegistryCacheCreator) *RegistryCacheConfigReconciler {
+	return &RegistryCacheConfigReconciler{
 		Client:        mgr.GetClient(),
 		Scheme:        mgr.GetScheme(),
 		EventRecorder: mgr.GetEventRecorderFor("runtime-controller"),
@@ -145,7 +145,7 @@ func NewCustomConfigReconciler(mgr ctrl.Manager, logger logr.Logger, creator Reg
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *CustomSKRConfigReconciler) SetupWithManager(mgr ctrl.Manager, numberOfWorkers int) error {
+func (r *RegistryCacheConfigReconciler) SetupWithManager(mgr ctrl.Manager, numberOfWorkers int) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.Secret{}).
 		WithOptions(controller.Options{MaxConcurrentReconciles: numberOfWorkers}).

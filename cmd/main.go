@@ -21,22 +21,22 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/customconfig"
-	registrycache2 "github.com/kyma-project/infrastructure-manager/internal/registrycache"
-	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
+	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
+	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
+	registrycacheapi "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"io"
 	"os"
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardener_apis "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
-	gardener_oidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
+	gardenerapis "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
+	gardeneroidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	"github.com/go-logr/logr"
 	validator "github.com/go-playground/validator/v10"
 	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	kubeconfig_controller "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig"
+	kubeconfigcontroller "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
-	runtime_controller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
+	runtimecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
@@ -69,7 +69,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(infrastructuremanagerv1.AddToScheme(scheme))
 	utilruntime.Must(rbacv1.AddToScheme(scheme))
-	utilruntime.Must(gardener_oidc.AddToScheme(scheme))
+	utilruntime.Must(gardeneroidc.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -107,7 +107,7 @@ func main() {
 	var converterConfigFilepath string
 	var auditLogMandatory bool
 	var structuredAuthEnabled bool
-	var customConfigControllerEnabled bool
+	var registryCacheConfigControllerEnabled bool
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -127,7 +127,7 @@ func main() {
 	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "A file path to the gardener shoot converter configuration.")
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration")
 	flag.BoolVar(&structuredAuthEnabled, "structured-auth-enabled", false, "Feature flag to enable structured authentication")
-	flag.BoolVar(&customConfigControllerEnabled, "custom-config-controller-enabled", false, "Feature flag to custom config controller")
+	flag.BoolVar(&registryCacheConfigControllerEnabled, "custom-config-controller-enabled", false, "Feature flag to custom config controller")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
@@ -181,7 +181,7 @@ func main() {
 
 	rotationPeriod := time.Duration(minimalRotationTimeRatio*expirationTime.Minutes()) * time.Minute
 	metrics := metrics.NewMetrics()
-	if err = kubeconfig_controller.NewGardenerClusterController(
+	if err = kubeconfigcontroller.NewGardenerClusterController(
 		mgr,
 		kubeconfigProvider,
 		logger,
@@ -228,10 +228,9 @@ func main() {
 		AuditLogMandatory:             auditLogMandatory,
 		Metrics:                       metrics,
 		AuditLogging:                  auditLogDataMap,
-		StructuredAuthEnabled:         structuredAuthEnabled,
 	}
 
-	runtimeReconciler := runtime_controller.NewRuntimeReconciler(
+	runtimeReconciler := runtimecontroller.NewRuntimeReconciler(
 		mgr,
 		gardenerClient,
 		logger,
@@ -256,11 +255,11 @@ func main() {
 
 	refreshRuntimeMetrics(restConfig, logger, metrics)
 
-	if customConfigControllerEnabled {
-		customConfigReconciler := customconfig.NewCustomConfigReconciler(mgr, logger, func(secret corev1.Secret) (customconfig.RegistryCache, error) {
-			return registrycache2.NewConfigExplorer(context.Background(), secret)
+	if registryCacheConfigControllerEnabled {
+		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, func(secret corev1.Secret) (registrycachecontroller.RegistryCache, error) {
+			return registrycache.NewConfigExplorer(context.Background(), secret)
 		})
-		if err = customConfigReconciler.SetupWithManager(mgr, 1); err != nil {
+		if err = registryCacheConfigReconciler.SetupWithManager(mgr, 1); err != nil {
 			setupLog.Error(err, "unable to setup custom config controller with Manager", "controller", "Runtime")
 			os.Exit(1)
 		}
@@ -274,7 +273,7 @@ func main() {
 	}
 }
 
-func initGardenerClients(kubeconfigPath string, namespace string, timeout time.Duration, rlQPS, rlBurst int) (client.Client, gardener_apis.ShootInterface, client.SubResourceClient, error) {
+func initGardenerClients(kubeconfigPath string, namespace string, timeout time.Duration, rlQPS, rlBurst int) (client.Client, gardenerapis.ShootInterface, client.SubResourceClient, error) {
 	restConfig, err := gardener.NewRestConfigFromFile(kubeconfigPath)
 	if err != nil {
 		return nil, nil, nil, err
@@ -283,7 +282,7 @@ func initGardenerClients(kubeconfigPath string, namespace string, timeout time.D
 	restConfig.Timeout = timeout
 	restConfig.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(float32(rlQPS), rlBurst)
 
-	gardenerClientSet, err := gardener_apis.NewForConfig(restConfig)
+	gardenerClientSet, err := gardenerapis.NewForConfig(restConfig)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -298,12 +297,12 @@ func initGardenerClients(kubeconfigPath string, namespace string, timeout time.D
 		return nil, nil, nil, errors.Wrap(err, "failed to register Gardener schema")
 	}
 
-	err = gardener_oidc.AddToScheme(gardenerClient.Scheme())
+	err = gardeneroidc.AddToScheme(gardenerClient.Scheme())
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to register Gardener schema")
 	}
 
-	err = registrycache.AddToScheme(gardenerClient.Scheme())
+	err = registrycacheapi.AddToScheme(gardenerClient.Scheme())
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to register Gardener schema")
 	}
