@@ -23,7 +23,7 @@ Kyma runs three different control planes, each deploying a KIM instance:
 2. STAGE: Running the current or next release candidates of the KCP components; used to stabilize these components
 3. PROD: Including the stabilized components and managing productive Kyma runtimes
 
-## Solution Strategy
+## Solution Strategy and Architecture
 
 ### Components
 
@@ -61,7 +61,9 @@ For details, see the troubleshooting guides for KCP components.
 
 ### Observability
 
-In addition to the standard Pod resource indicators such as CPU and memory, KIM exposes cluster reconciliation-specific information through its metrics REST endpoint (/metrics/*).
+KIM exposes multiple data over an metrics REST endpoint (`/metrics/*`) which provides insights about the application health state.
+
+In addition to the standard Pod resource indicators such as CPU and memory, KIM exposes cluster reconciliation-specific information:
 
 - `im_gardener_clusters_state` - Indicates the Status.state for GardenerCluster CRs
 - `im_runtime_state` - Exposes current Status.state for Runtime CRs
