@@ -11,8 +11,7 @@ While Gardener reconciles a Kubernetes cluster, KIM monitors its progress, react
 You have multiple configuration options for Kyma runtime, such as defining cluster sizes, configuring OIDC authentication providers and administrators, introducing worker pools, and more. KIM aligns the Kubernetes infrastructure created from Gardener with your latest Kyma configuration with minimal delay.
 As a Kubernetes Operator, KIM provides a Custom Resource Definition (CRD) that exposes all configurable options of a Kubernetes cluster. It continuously watches the instances (custom resources (CRs)) of this CRD, triggering Shoot definition reconciliation upon any change to match the description provided by the CR.
 
-In addition to aligning the Kubernetes infrastructure, KIM also provides access to these clusters through Kyma Control Plane (KCP) by exposing and rotating their kubeconfigs. Each Kyma runtime has the kubeconfig stored in a Secret on KCP. To address security requirements, KIM also regularly rotates these kubeconfigs.
-
+In addition to the Kubernetes infrastructure alignment, KIM provides cluster access through Kyma Control Plane (KCP) through kubeconfig exposure and rotation. Each Kyma runtime has its kubeconfig stored in a Secret on KCP. To address security requirements, KIM also regularly rotates these kubeconfigs.
 
 ## Context and Scope
 
