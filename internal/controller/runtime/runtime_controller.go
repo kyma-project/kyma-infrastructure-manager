@@ -35,13 +35,14 @@ import (
 // RuntimeReconciler reconciles a Runtime object
 // nolint:revive
 type RuntimeReconciler struct {
-	KcpClient     client.Client
-	Scheme        *runtime.Scheme
-	SeedClient    client.Client
-	Log           logr.Logger
-	Cfg           fsm.RCCfg
-	EventRecorder record.EventRecorder
-	RequestID     atomic.Uint64
+	KcpClient           client.Client
+	Scheme              *runtime.Scheme
+	SeedClient          client.Client
+	Log                 logr.Logger
+	Cfg                 fsm.RCCfg
+	EventRecorder       record.EventRecorder
+	RequestID           atomic.Uint64
+	RuntimeClientGetter fsm.RuntimeClientGetter
 }
 
 //+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=runtimes,verbs=get;list;watch;create;update;patch,namespace=kcp-system
@@ -70,22 +71,24 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		log,
 		r.Cfg,
 		fsm.K8s{
-			KcpClient:     r.KcpClient,
-			SeedClient:    r.SeedClient,
-			EventRecorder: r.EventRecorder,
+			KcpClient:           r.KcpClient,
+			SeedClient:          r.SeedClient,
+			EventRecorder:       r.EventRecorder,
+			RuntimeClientGetter: r.RuntimeClientGetter,
 		})
 
 	return stateFSM.Run(ctx, runtime)
 }
 
-func NewRuntimeReconciler(mgr ctrl.Manager, shootClient client.Client, logger logr.Logger, cfg fsm.RCCfg) *RuntimeReconciler {
+func NewRuntimeReconciler(mgr ctrl.Manager, shootClient client.Client, runtimeClientGetter fsm.RuntimeClientGetter, logger logr.Logger, cfg fsm.RCCfg) *RuntimeReconciler {
 	return &RuntimeReconciler{
-		KcpClient:     mgr.GetClient(),
-		Scheme:        mgr.GetScheme(),
-		SeedClient:    shootClient,
-		EventRecorder: mgr.GetEventRecorderFor("runtime-controller"),
-		Log:           logger,
-		Cfg:           cfg,
+		KcpClient:           mgr.GetClient(),
+		Scheme:              mgr.GetScheme(),
+		SeedClient:          shootClient,
+		EventRecorder:       mgr.GetEventRecorderFor("runtime-controller"),
+		Log:                 logger,
+		Cfg:                 cfg,
+		RuntimeClientGetter: runtimeClientGetter,
 	}
 }
 

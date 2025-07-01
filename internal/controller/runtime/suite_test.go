@@ -25,6 +25,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
 	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
+	mocks2 "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
@@ -120,6 +121,24 @@ var _ = BeforeSuite(func() {
 	mm.On("IncRuntimeFSMStopCounter").Return()
 	mm.On("CleanUpRuntimeGauge", mock.Anything, mock.Anything).Return()
 
+	shootClientScheme := runtime.NewScheme()
+	_ = rbacv1.AddToScheme(shootClientScheme)
+	_ = v12.AddToScheme(shootClientScheme)
+	err = gardener_oidc.AddToScheme(shootClientScheme)
+
+	var fakeClient = fake.NewClientBuilder().
+		WithScheme(shootClientScheme).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Patch: fsm_testing.GetFakePatchInterceptorForShootsAndConfigMaps(true),
+		}).
+		Build()
+	runtimeClientGetterMock := &mocks2.RuntimeClientGetter{}
+
+	runtimeClientGetterMock.On("Get", mock.Anything, mock.Anything).Return(fakeClient, nil)
+	imv1_client.GetShootClient = func(_ context.Context, _ client.Client, _ imv1.Runtime) (client.Client, error) {
+		return fakeClient, nil
+	}
+
 	fsmCfg := fsm.RCCfg{
 		Finalizer:                     imv1.Finalizer,
 		Config:                        convConfig,
@@ -132,7 +151,7 @@ var _ = BeforeSuite(func() {
 		RequeueDurationShootDelete:    3 * time.Second,
 	}
 
-	runtimeReconciler = NewRuntimeReconciler(mgr, gardenerTestClient, logger, fsmCfg)
+	runtimeReconciler = NewRuntimeReconciler(mgr, gardenerTestClient, runtimeClientGetterMock, logger, fsmCfg)
 	Expect(runtimeReconciler).NotTo(BeNil())
 	err = runtimeReconciler.SetupWithManager(mgr, 1)
 	Expect(err).To(BeNil())
@@ -141,21 +160,6 @@ var _ = BeforeSuite(func() {
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
-
-	shootClientScheme := runtime.NewScheme()
-	_ = rbacv1.AddToScheme(shootClientScheme)
-	_ = v12.AddToScheme(shootClientScheme)
-	err = gardener_oidc.AddToScheme(shootClientScheme)
-
-	var fakeClient = fake.NewClientBuilder().
-		WithScheme(shootClientScheme).
-		WithInterceptorFuncs(interceptor.Funcs{
-			Patch: fsm_testing.GetFakePatchInterceptorForShootsAndConfigMaps(true),
-		}).
-		Build()
-	imv1_client.GetShootClient = func(_ context.Context, _ client.Client, _ imv1.Runtime) (client.Client, error) {
-		return fakeClient, nil
-	}
 
 	detailsConfigMap := &v12.ConfigMap{
 		TypeMeta: metav1.TypeMeta{

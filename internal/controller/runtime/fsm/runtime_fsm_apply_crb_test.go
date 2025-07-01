@@ -248,22 +248,12 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 			},
 			fsm: must(
 				newFakeFSM,
-				withFakedK8sClient(testScheme, &testRuntime),
+				withFailedRuntimeK8sClient(testErr, testScheme, &testRuntime),
 				withFn(sFnApplyClusterRoleBindingsStateSetup),
 				withFakeEventRecorder(1),
 				withMockedMetrics(),
 				withDefaultReconcileDuration(),
 			),
-			setup: func(f *fsm) error {
-				imv1_client.GetShootClient = func(
-					_ context.Context,
-					_ client.Client,
-					_ imv1.Runtime) (client.Client, error) {
-					return nil, testErr
-				}
-				return nil
-
-			},
 		}),
 	)
 })

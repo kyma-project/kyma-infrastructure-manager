@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+//go:generate mockery --name=RuntimeClientGetter
 type RuntimeClientGetter interface {
 	Get(ctx context.Context, runtime imv1.Runtime) (client.Client, error)
 }

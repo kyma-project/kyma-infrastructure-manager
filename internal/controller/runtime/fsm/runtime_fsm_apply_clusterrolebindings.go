@@ -5,7 +5,6 @@ import (
 	"slices"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,7 +21,7 @@ var (
 )
 
 func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	shootAdminClient, err := imv1_client.GetShootClient(ctx, m.KcpClient, s.instance)
+	shootAdminClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 	if err != nil {
 		updateCRBApplyFailed(&s.instance)
 		return updateStatusAndStopWithError(err)
