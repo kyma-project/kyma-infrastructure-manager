@@ -123,7 +123,9 @@ var _ = BeforeSuite(func() {
 	shootClientScheme := runtime.NewScheme()
 	_ = rbacv1.AddToScheme(shootClientScheme)
 	_ = v12.AddToScheme(shootClientScheme)
+
 	err = gardener_oidc.AddToScheme(shootClientScheme)
+	Expect(err).To(BeNil())
 
 	var fakeClient = fake.NewClientBuilder().
 		WithScheme(shootClientScheme).
