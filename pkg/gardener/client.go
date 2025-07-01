@@ -40,7 +40,6 @@ const (
 	kubeconfigSecretKey = "config"
 )
 
-// TODO: Use this function in the Runtime Controller's FSM
 func GetRuntimeClient(secret corev1.Secret) (client.Client, error) {
 
 	restConfig, err := clientcmd.RESTConfigFromKubeConfig(secret.Data[kubeconfigSecretKey])
