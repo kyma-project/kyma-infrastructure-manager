@@ -11,7 +11,6 @@ import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/skrdetails"
 	"github.com/pkg/errors"
@@ -89,7 +88,8 @@ func createKymaSystemNamespace(ctx context.Context, m *fsm, s *systemState) erro
 		},
 	}
 
-	shootAdminClient, shootClientError := imv1_client.GetShootClient(ctx, m.KcpClient, s.instance)
+	shootAdminClient, shootClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
+
 	if shootClientError != nil {
 		return shootClientError
 	}
@@ -139,7 +139,7 @@ func additionalOidcEmptyOrUndefined(runtime *imv1.Runtime, cfg RCCfg) additional
 }
 
 func recreateOpenIDConnectResources(ctx context.Context, m *fsm, s *systemState, additionalOIDC additionalOIDCState) error {
-	shootAdminClient, shootClientError := imv1_client.GetShootClient(ctx, m.KcpClient, s.instance)
+	shootAdminClient, shootClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
 	if shootClientError != nil {
 		return shootClientError
 	}
@@ -236,7 +236,7 @@ func applyKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) er
 		return errors.Wrap(conversionErr, "failed to convert RuntimeCR and Shoot spec to ToKymaProvisioningInfo config map")
 	}
 
-	shootAdminClient, shootClientError := imv1_client.GetShootClient(ctx, m.KcpClient, s.instance)
+	shootAdminClient, shootClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
 	if shootClientError != nil {
 		return shootClientError
 	}
