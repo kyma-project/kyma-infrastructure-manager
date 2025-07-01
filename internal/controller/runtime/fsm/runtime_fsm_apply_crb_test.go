@@ -7,7 +7,6 @@ import (
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
-	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
@@ -15,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
@@ -179,16 +177,6 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 	testScheme, err := newTestScheme()
 	Expect(err).ShouldNot(HaveOccurred())
 
-	defaultSetup := func(f *fsm) error {
-		imv1_client.GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
-			return f.KcpClient, nil
-		}
-		return nil
-	}
-
 	DescribeTable("sFnApplyClusterRoleBindings",
 		func(tc tcApplySfn) {
 			// initialize test data if required
@@ -221,7 +209,6 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 				withMockedMetrics(),
 				withDefaultReconcileDuration(),
 			),
-			setup: defaultSetup,
 		}),
 
 		Entry("nothing change", tcApplySfn{
@@ -238,7 +225,6 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 				withMockedMetrics(),
 				withDefaultReconcileDuration(),
 			),
-			setup: defaultSetup,
 		}),
 
 		Entry("error getting client", tcApplySfn{

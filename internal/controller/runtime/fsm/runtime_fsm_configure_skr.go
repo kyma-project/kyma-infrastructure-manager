@@ -88,12 +88,12 @@ func createKymaSystemNamespace(ctx context.Context, m *fsm, s *systemState) erro
 		},
 	}
 
-	shootAdminClient, shootClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
+	runtimeClient, shootClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
 
 	if shootClientError != nil {
 		return shootClientError
 	}
-	kymaNsCreationErr := shootAdminClient.Create(ctx, &kymaSystemNs)
+	kymaNsCreationErr := runtimeClient.Create(ctx, &kymaSystemNs)
 
 	if kymaNsCreationErr != nil {
 		if k8s_errors.IsAlreadyExists(kymaNsCreationErr) {
@@ -139,12 +139,12 @@ func additionalOidcEmptyOrUndefined(runtime *imv1.Runtime, cfg RCCfg) additional
 }
 
 func recreateOpenIDConnectResources(ctx context.Context, m *fsm, s *systemState, additionalOIDC additionalOIDCState) error {
-	shootAdminClient, shootClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
+	runtimeClient, shootClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
 	if shootClientError != nil {
 		return shootClientError
 	}
 
-	err := deleteExistingKymaOpenIDConnectResources(ctx, shootAdminClient)
+	err := deleteExistingKymaOpenIDConnectResources(ctx, runtimeClient)
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func recreateOpenIDConnectResources(ctx context.Context, m *fsm, s *systemState,
 	var errResourceCreation error
 	for id, additionalOidcConfig := range additionalOidcConfigs {
 		openIDConnectResource := createOpenIDConnectResource(additionalOidcConfig, id)
-		errResourceCreation = shootAdminClient.Create(ctx, openIDConnectResource)
+		errResourceCreation = runtimeClient.Create(ctx, openIDConnectResource)
 	}
 	return errResourceCreation
 }
@@ -236,12 +236,12 @@ func applyKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) er
 		return errors.Wrap(conversionErr, "failed to convert RuntimeCR and Shoot spec to ToKymaProvisioningInfo config map")
 	}
 
-	shootAdminClient, shootClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
+	runtimeClient, shootClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
 	if shootClientError != nil {
 		return shootClientError
 	}
 
-	errResourceCreation := shootAdminClient.Patch(ctx, &configMap, k8s_client.Apply, &k8s_client.PatchOptions{
+	errResourceCreation := runtimeClient.Patch(ctx, &configMap, k8s_client.Apply, &k8s_client.PatchOptions{
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
 	})

@@ -24,7 +24,6 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
-	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
 	mocks2 "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
@@ -135,9 +134,6 @@ var _ = BeforeSuite(func() {
 	runtimeClientGetterMock := &mocks2.RuntimeClientGetter{}
 
 	runtimeClientGetterMock.On("Get", mock.Anything, mock.Anything).Return(fakeClient, nil)
-	imv1_client.GetShootClient = func(_ context.Context, _ client.Client, _ imv1.Runtime) (client.Client, error) {
-		return fakeClient, nil
-	}
 
 	fsmCfg := fsm.RCCfg{
 		Finalizer:                     imv1.Finalizer,

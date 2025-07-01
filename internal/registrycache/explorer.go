@@ -17,13 +17,13 @@ type GetSecretFunc func() (corev1.Secret, error)
 
 func NewConfigExplorer(ctx context.Context, kubeconfigSecret corev1.Secret) (*ConfigExplorer, error) {
 
-	shootClient, err := gardener.GetShootClient(kubeconfigSecret)
+	runtimeClient, err := gardener.GetRuntimeClient(kubeconfigSecret)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ConfigExplorer{
-		shootClient: shootClient,
+		shootClient: runtimeClient,
 		Context:     ctx,
 	}, nil
 }

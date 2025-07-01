@@ -31,7 +31,7 @@ func (r *runtimeClientGetter) Get(ctx context.Context, runtime imv1.Runtime) (cl
 		return nil, err
 	}
 
-	return gardener.GetShootClient(secret)
+	return gardener.GetRuntimeClient(secret)
 }
 
 func getKubeconfigSecret(ctx context.Context, cnt client.Client, runtimeID, namespace string) (corev1.Secret, error) {

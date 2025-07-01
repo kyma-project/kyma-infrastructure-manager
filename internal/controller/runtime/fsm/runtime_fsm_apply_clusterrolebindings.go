@@ -21,14 +21,14 @@ var (
 )
 
 func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	shootAdminClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
+	runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 	if err != nil {
 		updateCRBApplyFailed(&s.instance)
 		return updateStatusAndStopWithError(err)
 	}
 	// list existing cluster role bindings
 	var crbList rbacv1.ClusterRoleBindingList
-	if err := shootAdminClient.List(ctx, &crbList); err != nil {
+	if err := runtimeClient.List(ctx, &crbList); err != nil {
 		updateCRBApplyFailed(&s.instance)
 		m.log.Info("Cannot list Cluster Role Bindings on shoot, scheduling for retry")
 		return requeue()
@@ -38,8 +38,8 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 	missing := getMissing(crbList.Items, s.instance.Spec.Security.Administrators)
 
 	for _, fn := range []func() error{
-		newDelCRBs(ctx, shootAdminClient, removed),
-		newAddCRBs(ctx, shootAdminClient, missing),
+		newDelCRBs(ctx, runtimeClient, removed),
+		newAddCRBs(ctx, runtimeClient, missing),
 	} {
 		if err := fn(); err != nil {
 			updateCRBApplyFailed(&s.instance)

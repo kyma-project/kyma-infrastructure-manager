@@ -41,7 +41,7 @@ const (
 )
 
 // TODO: Use this function in the Runtime Controller's FSM
-func GetShootClient(secret corev1.Secret) (client.Client, error) {
+func GetRuntimeClient(secret corev1.Secret) (client.Client, error) {
 
 	restConfig, err := clientcmd.RESTConfigFromKubeConfig(secret.Data[kubeconfigSecretKey])
 	if err != nil {
