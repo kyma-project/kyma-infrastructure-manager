@@ -8,45 +8,37 @@ While Gardener reconciles a Kubernetes cluster, KIM monitors its progress, react
 
 ## Stakeholder Expectations
 
-You have multiple options to adjust your Kyma runtime. For example, you can define cluster sizes, configure OIDC authentication providers and administrators, introduce worker pools, and more. KIM ensures that the Kubernetes infrastructure created from Gardener is aligned with your latest Kyma configuration with minimal delay.
-
-
-KIM must be implemented as a Kubernetes Operator. It provides a Custom Resource Definition (CRD) that exposes all configurable options of a Kubernetes cluster. This operator continuously watches the instances (custom resources (CRs)) of this CRD. Any change triggers reconciliation of the Shoot definition to align the Shoot definition with the description provided by the CR.
+You have multiple configuration options for Kyma runtime, such as defining cluster sizes, configuring OIDC authentication providers and administrators, introducing worker pools, and more. KIM aligns the Kubernetes infrastructure created from Gardener with your latest Kyma configuration with minimal delay.
+As a Kubernetes Operator, KIM provides a Custom Resource Definition (CRD) that exposes all configurable options of a Kubernetes cluster. It continuously watches the instances (custom resources (CRs)) of this CRD, triggering Shoot definition reconciliation upon any change to match the description provided by the CR.
 
 In addition to aligning the Kubernetes infrastructure, KIM also provides access to these clusters through Kyma Control Plane (KCP) by exposing and rotating their kubeconfigs. Each Kyma runtime has the kubeconfig stored in a Secret on KCP. To address security requirements, KIM also regularly rotates these kubeconfigs.
 
 
 ## Context and Scope
 
-With Kyma Environment Broker (KEB) and Lifecycle Manager, KIM builds the foundation of Kyma runtime.
-All backend services run in KCP.
+With Kyma Environment Broker (KEB) and Lifecycle Manager, KIM builds the foundation for Kyma runtime, with all backend services running within KCP.
 
-Kyma runs three different control planes, each has a KIM instance deployed:
+Kyma runs three different control planes, each deploying a KIM instance:
 
-1. DEV: Used for development and integration of KCP components.
-
-2. STAGE: Runs the current or next release candidates of the KCP components and is used to stabilize these components.
-3. PROD: Includes the stabilized components and manages productive Kyma runtimes.
+1. DEV: For development and integration of KCP components
+2. STAGE: Running the current or next release candidates of the KCP components; used to stabilize these components
+3. PROD: Including the stabilized components and managing productive Kyma runtimes
 
 ## Solution Strategy
 
-![architecture](../adr/assets/keb-kim-target-arch.drawio.svg)
+![architecture](.assets/keb-kim-arch.drawio.svg)
 
+### Components
 
-### Building Blocks
-
-|Component|Acronym|Purpose|
-|--|--|--|
-|Business Technology Platform|BTP|An entry point for managing Kyma runtime|
-|Kyma Environment Broker|KEB|The environment broker that receives requests from BTP and converts cluster-related configuration parameters into `RuntimeCR`|
-|Runtime custom resource|RuntimeCR|KIM exposes a CRD to describe the infrastructure of a Kubernetes cluster. `RuntimeCR` represents an instance of this CRD |
-|Runtime kubeconfig custom resource|RuntimeKubeconfigCR|Used to administrate and rotate Kyma runtime's kubeconfig. It is created and managed by KIM |
-
+- Business Technology Platform (BTP) - Entry point for managing Kyma runtime
+- Kyma Environment Broker (KEB) - Receives requests from BTP and converts cluster-related configuration parameters into `RuntimeCR`
+- Runtime custom resource (`RuntimeCR`) - Represents an instance of KIM's CRD, describing Kubernetes cluster infrastructure
+- Runtime kubeconfig custom resource (`RuntimeKubeconfigCR`) - Administrates and rotates Kyma runtime's kubeconfig; created and managed by KIM
 
 ### Process Flow
 
-1. You request a Kyma runtime using BTP. KEB receives the request and creates or updates a `RuntimeCR` instance. This `RuntimeCR` describes the Kubernetes cluster's infrastructure.
-2. KIM detects the change of this `RuntimeCR` and triggers the reconciliation process.
+1. When you request a Kyma runtime using BTP, KEB processes the request, creating or updating a `RuntimeCR` instance that describes the Kubernetes cluster's infrastructure.
+2. KIM detects the change in `RuntimeCR` and triggers the reconciliation process.
 3. KIM converts the information into a Shoot definition for Gardener.
 4. After the cluster is created, KIM generates `RuntimeKubeconfigCR`, which includes data required for fetching and rotating the cluster kubeconfig.
 5. KIM fetches the kubeconfig from Gardener and stores it in a Secret in the KCP cluster.
