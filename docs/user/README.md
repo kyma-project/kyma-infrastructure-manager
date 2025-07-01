@@ -2,12 +2,11 @@
 
 ## Introduction
 
-Kyma Infrastructure Manager (KIM) manages the lifecycle of SAP BTP, Kyma runtime by using SAP Gardener to create and manage Kubernetes cluster-related infrastructure components.
+Kyma Infrastructure Manager (KIM) manages the lifecycle of SAP BTP, Kyma runtime, using SAP Gardener to create and manage Kubernetes cluster infrastructure components.
+KIM translates Kubernetes cluster-related requirements for Kyma runtime into Gardener's Shoot definitions, managing their creation, update, and deletion. 
+While Gardener reconciles a Kubernetes cluster, KIM monitors its progress, reacting to failures and ensuring the cluster is prepared for running the Kyma software.
 
-KIM translates Kubernetes cluster-related requirements for Kyma runtime into Gardener's Shoot definitions. It creates, updates, and deletes the Shoot definition. While Gardener reconciles a Kubernetes cluster, KIM monitors the progress, reacting to failure cases and ensuring the cluster is prepared for running the Kyma software.
-
-
-## Constraints
+## Stakeholder Expectations
 
 You have multiple options to adjust your Kyma runtime. For example, you can define cluster sizes, configure OIDC authentication providers and administrators, introduce worker pools, and more. KIM ensures that the Kubernetes infrastructure created from Gardener is aligned with your latest Kyma configuration with minimal delay.
 
