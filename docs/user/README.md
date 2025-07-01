@@ -57,17 +57,11 @@ Kyma runs three different control planes, each has a KIM instance deployed:
 
 ### Installation
 
-As runtime is a Kubernetes cluster expected.
-
-KIM is bundled a containerized application. As component of the Kyma Control Plane, the common delivery process of our SRE team (Argo CD) is supported. Deployment is based on HELM.
-
-cluster. The HELM-based deployment process is self-contained and fully automated, requiring no manual pre- or post-deployment actions. The SRE team facilitates deployment through a common delivery process using Argo CD.
-
+KIM, a component of the KCP, is delivered as a containerized application and deployed within a Kubernetes cluster. The HELM-based deployment process is self-contained and fully automated, requiring no manual pre- or post-deployment actions. The SRE team facilitates deployment through a common delivery process using Argo CD.
 
 ### Updates
 
-Updates normally do not require manual action. In rare cases where a new feature requires a migration, a rollout guide will be provided.
-
+Updates don't usually require manual action. In rare cases where a new feature requires a migration, a rollout guide will be provided.
 
 ### Troubleshooting
 
@@ -78,10 +72,10 @@ For details, see the troubleshooting guides for KCP components.
 
 In addition to the standard Pod resource indicators such as CPU and memory, KIM exposes cluster reconciliation-specific information through its metrics REST endpoint (/metrics/*).
 
-- `im_gardener_clusters_state` - Indicates the Status.state for GardenerCluster CRs.
-- `im_runtime_state` - Exposes current Status.state for Runtime CRs.
-3. `unexpected_stops_total` - Exposes the number of unexpected state machine stop events.
-4. `im_kubeconfig_expiration` - Exposes the current kubeconfig expiration value in epoch timestamp value format.
+- `im_gardener_clusters_state` - Indicates the Status.state for GardenerCluster CRs
+- `im_runtime_state` - Exposes current Status.state for Runtime CRs
+- `unexpected_stops_total` - Exposes the number of unexpected state machine stop events
+- `im_kubeconfig_expiration` - Exposes the current kubeconfig expiration value in epoch timestamp value format
 
 ## Architectural Decisions
 
@@ -98,43 +92,30 @@ All business data is stored in etcd, using [custom resources](https://kubernetes
 
 The data model consists of two CRDs:
 
-* `Runtime` - Cluster data is stored in instances of the  CRD. 
-
-* `RuntimeKubeconfig` - Kubeconfig-related metadata is stored in entities of the  CRD.
+* `Runtime CRD` - Stores cluster data within instances of the  CRD
+* `RuntimeKubeconfig CRD` - Stores kubeconfig-related metadata in entities of the  CRD
 
 For information on the structure and the purpose of the different fields in these resources, see the [CRD files](https://github.com/kyma-project/kyma-infrastructure-manager/tree/main/config/crd/bases).
 
 ### State Machine
-The reconciliation process is implemented using a [state machine pattern](https://en.wikipedia.org/wiki/Finite-state_machine). Each state represents a reconciliation step, and transitions to subsequent steps occur based on a step's return value.
 
+The reconciliation process is implemented using a [state machine pattern](https://en.wikipedia.org/wiki/Finite-state_machine). Each state represents a reconciliation step, and transitions to subsequent steps occur based on a step's return value.
 
 ### Sub-Components
 
 To address the requirements for implementing KIM features, the following sub-components have been introduced :
 
-* KIM Snatch
-
-    This mandatory Kyma module belongs to KIM and is automatically installed on all Kyma runtimes. To avoid Kyma workloads from being assigned to worker pools created by customers, KIM Snatch assigns Kyma workloads to the Kyma worker pool.
-
-    For more information, see the [KIM Snatch repository](https://github.com/kyma-project/kim-snatch/tree/main/docs/user).
-
-* Gardener Syncer
-
-    This Kubernetes CronJob synchronizes Seed cluster data from the Gardener cluster to KCP. KEB uses this data for customer input validation (primarily for the "Shoot and Seed Same Region" feature to detect if a Seed cluster exists in a particular Shoot region). The Seed data is stored in a ConfigMap in KCP.
-
-    For more information, see the [Gardener Syncer documentation](https://github.com/kyma-project/gardener-syncer/blob/main/README.md).
-
-
-
+* KIM Snatch: Automatically installed on all Kyma runtimes to prevent assigning Kyma workloads to worker pools created by customers, KIM Snatch assigns Kyma workloads to the Kyma worker pool. For more information, see the [KIM Snatch repository](https://github.com/kyma-project/kim-snatch/tree/main/docs/user).
+* Gardener Syncer: A Kubernetes CronJob synchronizing Seed cluster data from the Gardener cluster to KCP. KEB uses this data for customer input validation (primarily for the "Shoot and Seed Same Region" feature to detect if a Seed cluster exists in a particular Shoot region). The Seed data is stored in a ConfigMap in KCP. For more information, see the [Gardener Syncer documentation](https://github.com/kyma-project/gardener-syncer/blob/main/README.md).
 
 ## Quality Requirements
 
 Non-technical requirements for KIM are:
 
-* Performance: KIM processes about 5.000 Runtime instances.
-* Extensibility: To ensure easy extensibility of KIM, the following software patterns are used:  
-    * The state machine pattern for process flow control
-    * The chain of responsibility pattern for rendering the Shoot definitions
-*  Reliability: Since uptime is crucial for KIM, monitoring tools are employed to detect throughput degradation and long-running reconciliation processes, with alerting rules to notify about any SLA violations.
-* Security:  SAP product standards are used during development, and a threat modeling workshop is executed annually.
+* Performance: Processes about 5.000 Runtime instances.
+* Extensibility: Ensures easy extensibility by employing the following software patterns:  
+    * State machine pattern for process flow control.
+    * Chain of responsibility pattern for rendering the Shoot definitions.
+*  Reliability: Monitoring tools detect throughput degradation and long-running reconciliation processes, triggering alerts for any SLA violations.
+* Security:  Adheres to SAP product standards during development; threat modeling workshops are executed annually.
 
