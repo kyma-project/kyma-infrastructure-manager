@@ -70,6 +70,14 @@ In addition to the standard Pod resource indicators such as CPU and memory, KIM 
 - `unexpected_stops_total` - Exposes the number of unexpected state machine stop events
 - `im_kubeconfig_expiration` - Exposes the current kubeconfig expiration value in epoch timestamp value format
 
+
+### Configuration Parameters
+
+KIM can be configured via command line parameters. The latest supported command line parameters are listed and described in this file:
+
+https://github.com/kyma-project/kyma-infrastructure-manager/blob/main/cmd/main.go#L112-L130
+
+
 ## Architectural Decisions
 
 
