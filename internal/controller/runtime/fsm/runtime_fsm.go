@@ -35,7 +35,6 @@ type RCCfg struct {
 	AuditLogMandatory             bool
 	Metrics                       metrics.Metrics
 	AuditLogging                  auditlogs.Configuration
-	StructuredAuthEnabled         bool
 	config.Config
 }
 

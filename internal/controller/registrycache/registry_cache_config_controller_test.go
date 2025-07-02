@@ -1,10 +1,10 @@
-package customconfig
+package registrycache
 
 import (
 	"context"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/customconfig/mocks"
+	"github.com/kyma-project/infrastructure-manager/internal/controller/registrycache/mocks"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"

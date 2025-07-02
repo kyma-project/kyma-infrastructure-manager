@@ -20,19 +20,13 @@ import (
 
 type Extend func(imv1.Runtime, *gardener.Shoot) error
 
-func baseExtenders(cfg config.ConverterConfig, structuredAuthEnabled bool) []Extend {
-
-	oidcExtender := extender2.NewLegacyOidcExtender(cfg.Kubernetes.DefaultOperatorOidc)
-
-	if structuredAuthEnabled {
-		oidcExtender = extender2.NewOidcExtender()
-	}
+func baseExtenders() []Extend {
 
 	return []Extend{
 		extender2.ExtendWithAnnotations,
 		extender2.ExtendWithLabels,
 		extender2.ExtendWithSeedSelector,
-		oidcExtender,
+		extender2.NewOidcExtender(),
 		extender2.ExtendWithCloudProfile,
 		extender2.ExtendWithExposureClassName,
 		restrictions.ExtendWithAccessRestriction(),
@@ -67,19 +61,18 @@ type PatchOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
-	ShootK8SVersion       string
-	Workers               []gardener.Worker
-	Extensions            []gardener.Extension
-	Resources             []gardener.NamedResourceReference
-	InfrastructureConfig  *runtime.RawExtension
-	ControlPlaneConfig    *runtime.RawExtension
-	Log                   *logr.Logger
-	StructuredAuthEnabled bool
-	RegistryCache         []registrycache.RegistryCache
+	ShootK8SVersion      string
+	Workers              []gardener.Worker
+	Extensions           []gardener.Extension
+	Resources            []gardener.NamedResourceReference
+	InfrastructureConfig *runtime.RawExtension
+	ControlPlaneConfig   *runtime.RawExtension
+	Log                  *logr.Logger
+	RegistryCache        []registrycache.RegistryCache
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {
-	extendersForCreate := baseExtenders(opts.ConverterConfig, opts.StructuredAuthEnabled)
+	extendersForCreate := baseExtenders()
 
 	extendersForCreate = append(extendersForCreate,
 		provider.NewProviderExtenderForCreateOperation(
@@ -110,7 +103,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 }
 
 func NewConverterPatch(opts PatchOpts) Converter {
-	extendersForPatch := baseExtenders(opts.ConverterConfig, opts.StructuredAuthEnabled)
+	extendersForPatch := baseExtenders()
 
 	extendersForPatch = append(extendersForPatch,
 		provider.NewProviderExtenderPatchOperation(

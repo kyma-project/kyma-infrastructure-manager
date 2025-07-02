@@ -35,8 +35,8 @@ import (
 // RuntimeReconciler reconciles a Runtime object
 // nolint:revive
 type RuntimeReconciler struct {
-	KcpClient client.Client
-	Scheme    *runtime.Scheme
+	KcpClient     client.Client
+	Scheme        *runtime.Scheme
 	SeedClient    client.Client
 	Log           logr.Logger
 	Cfg           fsm.RCCfg
