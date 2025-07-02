@@ -7,7 +7,7 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
-	mocks2 "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
+	fsm_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
@@ -118,7 +118,7 @@ var (
 				Update: fsm_testing.GetFakeUpdateInterceptorFn(true),
 			}).Build()
 
-		runtimeClientGetter := &mocks2.RuntimeClientGetter{}
+		runtimeClientGetter := &fsm_mocks.RuntimeClientGetter{}
 		runtimeClientGetter.On("Get", mock.Anything, mock.Anything).Return(k8sClient, nil)
 
 		return func(fsm *fsm) error {
@@ -141,7 +141,7 @@ var (
 				Update: fsm_testing.GetFakeUpdateInterceptorFn(true),
 			}).Build()
 
-		runtimeClientGetter := &mocks2.RuntimeClientGetter{}
+		runtimeClientGetter := &fsm_mocks.RuntimeClientGetter{}
 		runtimeClientGetter.On("Get", mock.Anything, mock.Anything).Return(nil, err)
 
 		return func(fsm *fsm) error {

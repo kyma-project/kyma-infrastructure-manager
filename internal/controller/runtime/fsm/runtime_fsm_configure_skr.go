@@ -88,10 +88,10 @@ func createKymaSystemNamespace(ctx context.Context, m *fsm, s *systemState) erro
 		},
 	}
 
-	runtimeClient, shootClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
+	runtimeClient, runtimeClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
 
-	if shootClientError != nil {
-		return shootClientError
+	if runtimeClientError != nil {
+		return runtimeClientError
 	}
 	kymaNsCreationErr := runtimeClient.Create(ctx, &kymaSystemNs)
 
@@ -236,9 +236,9 @@ func applyKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) er
 		return errors.Wrap(conversionErr, "failed to convert RuntimeCR and Shoot spec to ToKymaProvisioningInfo config map")
 	}
 
-	runtimeClient, shootClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
-	if shootClientError != nil {
-		return shootClientError
+	runtimeClient, runtimeClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
+	if runtimeClientError != nil {
+		return runtimeClientError
 	}
 
 	errResourceCreation := runtimeClient.Patch(ctx, &configMap, k8s_client.Apply, &k8s_client.PatchOptions{
