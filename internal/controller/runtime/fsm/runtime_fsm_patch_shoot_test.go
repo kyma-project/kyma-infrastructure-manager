@@ -21,6 +21,174 @@ import (
 	util "k8s.io/apimachinery/pkg/util/runtime"
 )
 
+func TestFSMPatchShoot(t *testing.T) {
+	testCtx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	testScheme := api.NewScheme()
+
+	util.Must(imv1.AddToScheme(testScheme))
+	util.Must(gardener.AddToScheme(testScheme))
+	util.Must(core_v1.AddToScheme(testScheme))
+
+	expectedAnnotations := map[string]string{"operator.kyma-project.io/existing-annotation": "true"}
+	inputRuntimeWithForceAnnotation := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/force-patch-reconciliation": "true", "operator.kyma-project.io/existing-annotation": "true"})
+	inputRuntime := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
+
+	RegisterTestingT(t)
+
+	for _, entry := range []struct {
+		description string
+		fsm         *fsm
+		systemState *systemState
+		expected    outputFnState
+	}{
+		{
+			"transition graph validation for sFnPatchExistingShoot success",
+			setupFakeFSMForTest(testScheme, inputRuntime),
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
+			outputFnState{
+				nextStep:    haveName("sFnUpdateStatus"),
+				annotations: expectedAnnotations,
+				result:      nil,
+				status:      fsm_testing.PendingStatusShootPatched(),
+			},
+		},
+		{
+			"should transition to Pending Unknown state after successful patching and remove force patch annotation",
+			setupFakeFSMForTest(testScheme, inputRuntimeWithForceAnnotation),
+			&systemState{instance: *inputRuntimeWithForceAnnotation, shoot: fsm_testing.TestShootForPatch()},
+			outputFnState{
+				nextStep:    haveName("sFnUpdateStatus"),
+				annotations: expectedAnnotations,
+				result:      nil,
+				status:      fsm_testing.PendingStatusShootPatched(),
+			},
+		},
+		{
+			"should transition to Failed state when Audit Logs are mandatory and Audit Log Config cannot be read",
+			setupFakeFSMForTestWithAuditLogMandatory(testScheme, inputRuntime),
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
+			outputFnState{
+				nextStep:    haveName("sFnUpdateStatus"),
+				annotations: expectedAnnotations,
+				result:      nil,
+				status:      fsm_testing.FailedStatusAuditLogError(),
+			},
+		},
+		{
+			"should transition to Pending Unknown state after successful patching when Audit Logs are mandatory and Audit Log Config can be read",
+			setupFakeFSMForTestWithAuditLogMandatoryAndConfig(testScheme, inputRuntime),
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
+			outputFnState{
+				nextStep:    haveName("sFnUpdateStatus"),
+				annotations: expectedAnnotations,
+				result:      nil,
+				status:      fsm_testing.PendingStatusShootPatched(),
+			},
+		},
+		{
+			"should transition to Pending Unknown when cannot execute Patch shoot with inConflict error",
+			setupFakeFSMForTestWithFailingPatchWithInConflictError(testScheme, inputRuntime),
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
+			outputFnState{
+				nextStep:    haveName("sFnUpdateStatus"),
+				annotations: expectedAnnotations,
+				result:      nil,
+				status:      fsm_testing.PendingStatusAfterConflictErr(),
+			},
+		},
+		{
+			"should transition to Pending Unknown when cannot execute Patch shoot with inConflict error",
+			setupFakeFSMForTestWithFailingPatchWithInConflictError(testScheme, inputRuntime),
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
+			outputFnState{
+				nextStep:    haveName("sFnUpdateStatus"),
+				annotations: expectedAnnotations,
+				result:      nil,
+				status:      fsm_testing.PendingStatusAfterConflictErr(),
+			},
+		},
+		{
+			"should transition to Pending Unknown when cannot execute Patch shoot with forbidden error",
+			setupFakeFSMForTestWithFailingPatchWithForbiddenError(testScheme, inputRuntime),
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
+			outputFnState{
+				nextStep:    haveName("sFnUpdateStatus"),
+				annotations: expectedAnnotations,
+				result:      nil,
+				status:      fsm_testing.PendingStatusAfterForbiddenErr(),
+			},
+		},
+		{
+			"should transition to Failed state when cannot execute Patch shoot with any other error",
+			setupFakeFSMForTestWithFailingPatchWithOtherError(testScheme, inputRuntime),
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
+			outputFnState{
+				nextStep:    haveName("sFnUpdateStatus"),
+				annotations: expectedAnnotations,
+				result:      nil,
+				status:      fsm_testing.FailedStatusPatchErr(),
+			},
+		},
+		{
+			"should transition to Pending Unknown when cannot execute Update shoot with inConflict error",
+			setupFakeFSMForTestWithFailingUpdateWithInConflictError(testScheme, inputRuntime),
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForUpdate()},
+			outputFnState{
+				nextStep:    haveName("sFnUpdateStatus"),
+				annotations: expectedAnnotations,
+				result:      nil,
+				status:      fsm_testing.PendingStatusAfterConflictErr(),
+			},
+		},
+		{
+			"should transition to Pending Unknown when cannot execute Update shoot with forbidden error",
+			setupFakeFSMForTestWithFailingUpdateWithForbiddenError(testScheme, inputRuntime),
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForUpdate()},
+			outputFnState{
+				nextStep:    haveName("sFnUpdateStatus"),
+				annotations: expectedAnnotations,
+				result:      nil,
+				status:      fsm_testing.PendingStatusAfterForbiddenErr(),
+			},
+		},
+		{
+			"should transition to to Failed state when cannot execute Update shoot with any other error",
+			setupFakeFSMForTestWithFailingUpdateWithOtherError(testScheme, inputRuntime),
+			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForUpdate()},
+			outputFnState{
+				nextStep:    haveName("sFnUpdateStatus"),
+				annotations: expectedAnnotations,
+				result:      nil,
+				status:      fsm_testing.FailedStatusUpdateError(),
+			},
+		},
+	} {
+		createErr := entry.fsm.SeedClient.Create(testCtx, entry.systemState.shoot)
+		if createErr != nil {
+			return
+		}
+
+		sFn, res, err := sFnPatchExistingShoot(testCtx, entry.fsm, entry.systemState)
+
+		Expect(err).To(BeNil())
+		Expect(res).To(Equal(entry.expected.result))
+
+		if entry.systemState.instance.Status.Conditions != nil {
+			Expect(len(entry.systemState.instance.Status.Conditions)).To(Equal(len(entry.expected.status.Conditions)))
+			for i := range entry.systemState.instance.Status.Conditions {
+				entry.systemState.instance.Status.Conditions[i].LastTransitionTime = metav1.Time{}
+				entry.expected.status.Conditions[i].LastTransitionTime = metav1.Time{}
+			}
+		}
+
+		Expect(entry.systemState.instance.Status).To(Equal(entry.expected.status))
+		Expect(sFn).To(entry.expected.nextStep)
+		Expect(entry.systemState.instance.GetAnnotations()).To(Equal(entry.expected.annotations))
+	}
+}
+
 var _ = Describe("KIM sFnPatchExistingShoot", func() {
 
 	testCtx, cancel := context.WithTimeout(context.Background(), time.Second)
