@@ -139,9 +139,9 @@ func additionalOidcEmptyOrUndefined(runtime *imv1.Runtime, cfg RCCfg) additional
 }
 
 func recreateOpenIDConnectResources(ctx context.Context, m *fsm, s *systemState, additionalOIDC additionalOIDCState) error {
-	runtimeClient, shootClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
-	if shootClientError != nil {
-		return shootClientError
+	runtimeClient, runtimeClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
+	if runtimeClientError != nil {
+		return runtimeClientError
 	}
 
 	err := deleteExistingKymaOpenIDConnectResources(ctx, runtimeClient)
