@@ -27,8 +27,7 @@ Kyma runs three different control planes, each deploying a KIM instance:
 
 ### Components
 
-![architecture](../adr/assets/keb-kim-target-arch.drawio.svg)
-
+![architecture](.assets/keb-kim-arch.drawio.svg)
 - Business Technology Platform (BTP) - Entry point for managing Kyma runtime
 - Kyma Environment Broker (KEB) - Receives requests from BTP and converts cluster-related configuration parameters into `RuntimeCR`
 - Runtime custom resource (`RuntimeCR`) - Represents an instance of KIM's CRD, describing Kubernetes cluster infrastructure
