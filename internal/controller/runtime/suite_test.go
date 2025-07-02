@@ -22,9 +22,9 @@ import (
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_oidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	metrics_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
+	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
-	fsm_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
+	mocks2 "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
@@ -115,25 +115,25 @@ var _ = BeforeSuite(func() {
 
 	convConfig := fixConverterConfigForTests()
 
-	mm := &metrics_mocks.Metrics{}
+	mm := &mocks.Metrics{}
 	mm.On("SetRuntimeStates", mock.Anything).Return()
 	mm.On("IncRuntimeFSMStopCounter").Return()
 	mm.On("CleanUpRuntimeGauge", mock.Anything, mock.Anything).Return()
 
-	runtimeClientScheme := runtime.NewScheme()
-	_ = rbacv1.AddToScheme(runtimeClientScheme)
-	_ = v12.AddToScheme(runtimeClientScheme)
+	shootClientScheme := runtime.NewScheme()
+	_ = rbacv1.AddToScheme(shootClientScheme)
+	_ = v12.AddToScheme(shootClientScheme)
 
-	err = gardener_oidc.AddToScheme(runtimeClientScheme)
+	err = gardener_oidc.AddToScheme(shootClientScheme)
 	Expect(err).To(BeNil())
 
 	var fakeClient = fake.NewClientBuilder().
-		WithScheme(runtimeClientScheme).
+		WithScheme(shootClientScheme).
 		WithInterceptorFuncs(interceptor.Funcs{
 			Patch: fsm_testing.GetFakePatchInterceptorForShootsAndConfigMaps(true),
 		}).
 		Build()
-	runtimeClientGetterMock := &fsm_mocks.RuntimeClientGetter{}
+	runtimeClientGetterMock := &mocks2.RuntimeClientGetter{}
 
 	runtimeClientGetterMock.On("Get", mock.Anything, mock.Anything).Return(fakeClient, nil)
 

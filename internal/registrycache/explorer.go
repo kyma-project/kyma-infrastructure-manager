@@ -9,8 +9,8 @@ import (
 )
 
 type ConfigExplorer struct {
-	runtimeClient client.Client
-	Context       context.Context
+	shootClient client.Client
+	Context     context.Context
 }
 
 type GetSecretFunc func() (corev1.Secret, error)
@@ -23,14 +23,14 @@ func NewConfigExplorer(ctx context.Context, kubeconfigSecret corev1.Secret) (*Co
 	}
 
 	return &ConfigExplorer{
-		runtimeClient: runtimeClient,
-		Context:       ctx,
+		shootClient: runtimeClient,
+		Context:     ctx,
 	}, nil
 }
 
 func (c *ConfigExplorer) RegistryCacheConfigExists() (bool, error) {
 	var customConfigList registrycache.CustomConfigList
-	err := c.runtimeClient.List(c.Context, &customConfigList)
+	err := c.shootClient.List(c.Context, &customConfigList)
 	if err != nil {
 		return false, err
 	}
@@ -46,7 +46,7 @@ func (c *ConfigExplorer) RegistryCacheConfigExists() (bool, error) {
 
 func (c *ConfigExplorer) GetRegistryCacheConfig() ([]registrycache.RegistryCache, error) {
 	var customConfigList registrycache.CustomConfigList
-	err := c.runtimeClient.List(c.Context, &customConfigList)
+	err := c.shootClient.List(c.Context, &customConfigList)
 	if err != nil {
 		return nil, err
 	}
