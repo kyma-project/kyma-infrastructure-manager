@@ -23,7 +23,7 @@ Kyma runs three different control planes, each deploying a KIM instance:
 2. STAGE: Running the current or next release candidates of the KCP components; used to stabilize these components
 3. PROD: Including the stabilized components and managing productive Kyma runtimes
 
-## Solution Strategy and Architecture
+## Architecture
 
 ### Components
 
@@ -41,9 +41,38 @@ Kyma runs three different control planes, each deploying a KIM instance:
 4. After the cluster is created, KIM generates `RuntimeKubeconfigCR`, which includes data required for fetching and rotating the cluster kubeconfig.
 5. KIM fetches the kubeconfig from Gardener and stores it in a Secret in the KCP cluster.
 
+### Architectural Decisions
+
+#### Kubebuilder
+
+KIM follows the Kubernetes [operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/). 
+Technically, it's built on the [Kubebuilder framework](https://github.com/kubernetes-sigs/kubebuilder) and benefits from its scaffolding features for controllers and models (CRDs).
+
+
+#### Domain Model
+
+All business data is stored in etcd, using [custom resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/).
+
+The data model consists of two CRDs:
+
+* `Runtime CRD` - Stores cluster data within instances of the  CRD
+* `RuntimeKubeconfig CRD` - Stores kubeconfig-related metadata in entities of the  CRD
+
+For information on the structure and the purpose of the different fields in these resources, see the [CRD files](https://github.com/kyma-project/kyma-infrastructure-manager/tree/main/config/crd/bases).
+
+#### State Machine
+
+The reconciliation process is implemented using a [state machine pattern](https://en.wikipedia.org/wiki/Finite-state_machine). Each state represents a reconciliation step, and transitions to subsequent steps occur based on a step's return value.
+
+#### Sub-Components
+
+To address the requirements for implementing KIM features, the following sub-components have been introduced :
+
+* KIM Snatch: Automatically installed on all Kyma runtimes to prevent assigning Kyma workloads to worker pools created by customers, KIM Snatch assigns Kyma workloads to the Kyma worker pool. For more information, see the [KIM Snatch repository](https://github.com/kyma-project/kim-snatch/tree/main/docs/user).
+* Gardener Syncer: A Kubernetes CronJob synchronizing Seed cluster data from the Gardener cluster to KCP. KEB uses this data for customer input validation (primarily for the "Shoot and Seed Same Region" feature to detect if a Seed cluster exists in a particular Shoot region). The Seed data is stored in a ConfigMap in KCP. For more information, see the [Gardener Syncer documentation](https://github.com/kyma-project/gardener-syncer/blob/main/README.md).
+
 
 ## Operations
-
 
 ### Installation
 
@@ -76,37 +105,6 @@ KIM can be configured via command line parameters. The latest supported command 
 
 https://github.com/kyma-project/kyma-infrastructure-manager/blob/main/cmd/main.go#L112-L130
 
-
-## Architectural Decisions
-
-
-### Kubebuilder
-
-KIM follows the Kubernetes [operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/). 
-Technically, it's built on the [Kubebuilder framework](https://github.com/kubernetes-sigs/kubebuilder) and benefits from its scaffolding features for controllers and models (CRDs).
-
-
-### Domain Model
-
-All business data is stored in etcd, using [custom resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/).
-
-The data model consists of two CRDs:
-
-* `Runtime CRD` - Stores cluster data within instances of the  CRD
-* `RuntimeKubeconfig CRD` - Stores kubeconfig-related metadata in entities of the  CRD
-
-For information on the structure and the purpose of the different fields in these resources, see the [CRD files](https://github.com/kyma-project/kyma-infrastructure-manager/tree/main/config/crd/bases).
-
-### State Machine
-
-The reconciliation process is implemented using a [state machine pattern](https://en.wikipedia.org/wiki/Finite-state_machine). Each state represents a reconciliation step, and transitions to subsequent steps occur based on a step's return value.
-
-### Sub-Components
-
-To address the requirements for implementing KIM features, the following sub-components have been introduced :
-
-* KIM Snatch: Automatically installed on all Kyma runtimes to prevent assigning Kyma workloads to worker pools created by customers, KIM Snatch assigns Kyma workloads to the Kyma worker pool. For more information, see the [KIM Snatch repository](https://github.com/kyma-project/kim-snatch/tree/main/docs/user).
-* Gardener Syncer: A Kubernetes CronJob synchronizing Seed cluster data from the Gardener cluster to KCP. KEB uses this data for customer input validation (primarily for the "Shoot and Seed Same Region" feature to detect if a Seed cluster exists in a particular Shoot region). The Seed data is stored in a ConfigMap in KCP. For more information, see the [Gardener Syncer documentation](https://github.com/kyma-project/gardener-syncer/blob/main/README.md).
 
 ## Quality Requirements
 
