@@ -154,7 +154,7 @@ func TestFSMPatchShoot(t *testing.T) {
 			},
 		},
 		{
-			"should transition to to Failed state when cannot execute Update shoot with any other error",
+			"should transition to Failed state when cannot execute Update shoot with any other error",
 			setupFakeFSMForTestWithFailingUpdateWithOtherError(testScheme, inputRuntime),
 			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForUpdate()},
 			outputFnState{
@@ -166,9 +166,7 @@ func TestFSMPatchShoot(t *testing.T) {
 		},
 	} {
 		createErr := entry.fsm.SeedClient.Create(testCtx, entry.systemState.shoot)
-		if createErr != nil {
-			return
-		}
+		Expect(createErr).To(BeNil())
 
 		sFn, res, err := sFnPatchExistingShoot(testCtx, entry.fsm, entry.systemState)
 
