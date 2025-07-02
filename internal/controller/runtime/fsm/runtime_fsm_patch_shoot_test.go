@@ -322,33 +322,6 @@ func setupFakeFSMForTestWithAuditLogMandatoryAndConfig(scheme *api.Scheme, runti
 	)
 }
 
-func buildPatchTestFunction(fn stateFn) func(context.Context, *fsm, *systemState, outputFnState) {
-	return func(ctx context.Context, r *fsm, s *systemState, expected outputFnState) {
-
-		createErr := r.SeedClient.Create(ctx, s.shoot)
-		if createErr != nil {
-			return
-		}
-
-		sFn, res, err := fn(ctx, r, s)
-
-		Expect(err).To(BeNil())
-		Expect(res).To(Equal(expected.result))
-
-		if s.instance.Status.Conditions != nil {
-			Expect(len(s.instance.Status.Conditions)).To(Equal(len(expected.status.Conditions)))
-			for i := range s.instance.Status.Conditions {
-				s.instance.Status.Conditions[i].LastTransitionTime = metav1.Time{}
-				expected.status.Conditions[i].LastTransitionTime = metav1.Time{}
-			}
-		}
-
-		Expect(s.instance.Status).To(Equal(expected.status))
-		Expect(sFn).To(expected.nextStep)
-		Expect(s.instance.GetAnnotations()).To(Equal(expected.annotations))
-	}
-}
-
 func TestWorkersAreEqual(t *testing.T) {
 	tests := []struct {
 		name     string
