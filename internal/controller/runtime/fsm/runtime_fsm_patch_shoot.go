@@ -260,7 +260,3 @@ func updateStatePendingWithErrorAndStop(instance *imv1.Runtime,
 	instance.UpdateStatePending(c, r, "False", msg)
 	return updateStatusAndStop()
 }
-
-func getRegistryCache(ctx context.Context, runtimeClient client.Client) ([]v1beta1.RegistryCache, error) {
-	return registrycache.NewConfigExplorer(ctx, runtimeClient).GetRegistryCacheConfig()
-}
