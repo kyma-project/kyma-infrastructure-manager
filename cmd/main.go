@@ -233,6 +233,7 @@ func main() {
 	runtimeReconciler := runtimecontroller.NewRuntimeReconciler(
 		mgr,
 		gardenerClient,
+		fsm.NewRuntimeClientGetter(mgr.GetClient()),
 		logger,
 		cfg,
 	)
