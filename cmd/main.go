@@ -264,7 +264,7 @@ func main() {
 				return nil, errors.Wrap(err, "failed to get runtime client from secret")
 			}
 
-			return registrycache.NewConfigExplorer(context.Background(), runtimeClient)
+			return registrycache.NewConfigExplorer(context.Background(), runtimeClient), nil
 		})
 		if err = registryCacheConfigReconciler.SetupWithManager(mgr, 1); err != nil {
 			setupLog.Error(err, "unable to setup custom config controller with Manager", "controller", "Runtime")

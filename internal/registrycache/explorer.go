@@ -14,11 +14,11 @@ type ConfigExplorer struct {
 
 type GetSecretFunc func() (corev1.Secret, error)
 
-func NewConfigExplorer(ctx context.Context, runtimeClient client.Client) (*ConfigExplorer, error) {
+func NewConfigExplorer(ctx context.Context, runtimeClient client.Client) *ConfigExplorer {
 	return &ConfigExplorer{
 		runtimeClient: runtimeClient,
 		Context:       ctx,
-	}, nil
+	}
 }
 
 func (c *ConfigExplorer) RegistryCacheConfigExists() (bool, error) {

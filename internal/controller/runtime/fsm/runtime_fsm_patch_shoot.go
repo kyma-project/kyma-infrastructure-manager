@@ -60,7 +60,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			msgFailedStructuredConfigMap)
 	}
 
-	var registrycache []v1beta1.RegistryCache
+	var rc []v1beta1.RegistryCache
 	if s.instance.Spec.Caching != nil && s.instance.Spec.Caching.Enabled {
 		runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 		if err != nil {
@@ -74,7 +74,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 				msgFailedToConfigureRegistryCache)
 		}
 
-		registrycache, err = getRegistryCache(ctx, runtimeClient)
+		rc, err = registrycache.NewConfigExplorer(ctx, runtimeClient).GetRegistryCacheConfig()
 
 		if err != nil {
 			m.log.Error(err, "Failed to get Registry Cache Config")
@@ -100,7 +100,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		InfrastructureConfig:  s.shoot.Spec.Provider.InfrastructureConfig,
 		ControlPlaneConfig:    s.shoot.Spec.Provider.ControlPlaneConfig,
 		Log:                   ptr.To(m.log),
-		RegistryCache:         registrycache,
+		RegistryCache:         rc,
 	})
 
 	if err != nil {
@@ -262,10 +262,5 @@ func updateStatePendingWithErrorAndStop(instance *imv1.Runtime,
 }
 
 func getRegistryCache(ctx context.Context, runtimeClient client.Client) ([]v1beta1.RegistryCache, error) {
-	configExplorer, err := registrycache.NewConfigExplorer(ctx, runtimeClient)
-	if err != nil {
-		return nil, err
-	}
-
-	return configExplorer.GetRegistryCacheConfig()
+	return registrycache.NewConfigExplorer(ctx, runtimeClient).GetRegistryCacheConfig()
 }

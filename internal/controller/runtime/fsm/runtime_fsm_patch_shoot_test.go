@@ -4,6 +4,7 @@ import (
 	"context"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	registrycachev1beta1 "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -31,9 +32,19 @@ func TestFSMPatchShoot(t *testing.T) {
 	util.Must(gardener.AddToScheme(testScheme))
 	util.Must(core_v1.AddToScheme(testScheme))
 
+	testSchemeWithRegistryCache := api.NewScheme()
+	util.Must(imv1.AddToScheme(testSchemeWithRegistryCache))
+	util.Must(gardener.AddToScheme(testSchemeWithRegistryCache))
+	util.Must(core_v1.AddToScheme(testSchemeWithRegistryCache))
+	util.Must(registrycachev1beta1.AddToScheme(testSchemeWithRegistryCache))
+
 	expectedAnnotations := map[string]string{"operator.kyma-project.io/existing-annotation": "true"}
 	inputRuntimeWithForceAnnotation := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/force-patch-reconciliation": "true", "operator.kyma-project.io/existing-annotation": "true"})
 	inputRuntime := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
+	inputRuntimeWithRegistryCacheEnabled := inputRuntime.DeepCopy()
+	inputRuntimeWithRegistryCacheEnabled.Spec.Caching = &imv1.ImageRegistryCache{
+		Enabled: true,
+	}
 
 	RegisterTestingT(t)
 
@@ -47,6 +58,24 @@ func TestFSMPatchShoot(t *testing.T) {
 			"should transition to Pending Unknown state after successful shoot patching",
 			setupFakeFSMForTest(testScheme, inputRuntime),
 			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
+			outputFnState{
+				nextStep:    haveName("sFnUpdateStatus"),
+				annotations: expectedAnnotations,
+				result:      nil,
+				status:      fsm_testing.PendingStatusShootPatched(),
+			},
+		},
+		{
+			"should transition to sFnUpdateStatus when registry cache configured properly",
+			setupFakeFSMForTest(testSchemeWithRegistryCache, inputRuntimeWithRegistryCacheEnabled, &registrycachev1beta1.CustomConfig{
+				Spec: registrycachev1beta1.CustomConfigSpec{
+					RegistryCaches: []registrycachev1beta1.RegistryCache{
+						{Upstream: "docker.io"},
+						{Upstream: "quay.io"},
+					},
+				},
+			}),
+			&systemState{instance: *inputRuntimeWithRegistryCacheEnabled, shoot: fsm_testing.TestShootForUpdate()},
 			outputFnState{
 				nextStep:    haveName("sFnUpdateStatus"),
 				annotations: expectedAnnotations,
