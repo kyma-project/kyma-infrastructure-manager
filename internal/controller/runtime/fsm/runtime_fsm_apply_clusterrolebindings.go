@@ -180,10 +180,10 @@ func toAdminClusterRoleBinding(name string) rbacv1.ClusterRoleBinding {
 }
 
 //nolint:gochecknoglobals
-var newDelCRBs = func(ctx context.Context, shootClient client.Client, crbs []rbacv1.ClusterRoleBinding) func() error {
+var newDelCRBs = func(ctx context.Context, runtimeClient client.Client, crbs []rbacv1.ClusterRoleBinding) func() error {
 	return func() error {
 		for _, crb := range crbs {
-			if err := shootClient.Delete(ctx, &crb); err != nil {
+			if err := runtimeClient.Delete(ctx, &crb); err != nil {
 				return err
 			}
 		}
@@ -193,10 +193,10 @@ var newDelCRBs = func(ctx context.Context, shootClient client.Client, crbs []rba
 }
 
 //nolint:gochecknoglobals
-var newAddCRBs = func(ctx context.Context, shootClient client.Client, crbs []rbacv1.ClusterRoleBinding) func() error {
+var newAddCRBs = func(ctx context.Context, runtimeClient client.Client, crbs []rbacv1.ClusterRoleBinding) func() error {
 	return func() error {
 		for _, crb := range crbs {
-			if err := shootClient.Create(ctx, &crb); err != nil {
+			if err := runtimeClient.Create(ctx, &crb); err != nil {
 				return err
 			}
 		}

@@ -8,22 +8,22 @@ import (
 )
 
 type ConfigExplorer struct {
-	shootClient client.Client
-	Context     context.Context
+	runtimeClient client.Client
+	Context       context.Context
 }
 
 type GetSecretFunc func() (corev1.Secret, error)
 
 func NewConfigExplorer(ctx context.Context, runtimeClient client.Client) (*ConfigExplorer, error) {
 	return &ConfigExplorer{
-		shootClient: runtimeClient,
-		Context:     ctx,
+		runtimeClient: runtimeClient,
+		Context:       ctx,
 	}, nil
 }
 
 func (c *ConfigExplorer) RegistryCacheConfigExists() (bool, error) {
 	var customConfigList registrycache.CustomConfigList
-	err := c.shootClient.List(c.Context, &customConfigList)
+	err := c.runtimeClient.List(c.Context, &customConfigList)
 	if err != nil {
 		return false, err
 	}
@@ -39,7 +39,7 @@ func (c *ConfigExplorer) RegistryCacheConfigExists() (bool, error) {
 
 func (c *ConfigExplorer) GetRegistryCacheConfig() ([]registrycache.RegistryCache, error) {
 	var customConfigList registrycache.CustomConfigList
-	err := c.shootClient.List(c.Context, &customConfigList)
+	err := c.runtimeClient.List(c.Context, &customConfigList)
 	if err != nil {
 		return nil, err
 	}

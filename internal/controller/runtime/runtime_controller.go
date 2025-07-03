@@ -80,11 +80,11 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 	return stateFSM.Run(ctx, runtime)
 }
 
-func NewRuntimeReconciler(mgr ctrl.Manager, shootClient client.Client, runtimeClientGetter fsm.RuntimeClientGetter, logger logr.Logger, cfg fsm.RCCfg) *RuntimeReconciler {
+func NewRuntimeReconciler(mgr ctrl.Manager, seedClient client.Client, runtimeClientGetter fsm.RuntimeClientGetter, logger logr.Logger, cfg fsm.RCCfg) *RuntimeReconciler {
 	return &RuntimeReconciler{
 		KcpClient:           mgr.GetClient(),
 		Scheme:              mgr.GetScheme(),
-		SeedClient:          shootClient,
+		SeedClient:          seedClient,
 		EventRecorder:       mgr.GetEventRecorderFor("runtime-controller"),
 		Log:                 logger,
 		Cfg:                 cfg,

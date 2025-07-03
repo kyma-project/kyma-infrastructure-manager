@@ -2,7 +2,7 @@ package fsm
 
 import (
 	"context"
-	mocks2 "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
+	fsm_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
 	"github.com/stretchr/testify/mock"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -408,7 +408,7 @@ func TestSkrConfigState(t *testing.T) {
 			WithScheme(scheme).
 			Build()
 
-		runtimeClientGetter := &mocks2.RuntimeClientGetter{}
+		runtimeClientGetter := &fsm_mocks.RuntimeClientGetter{}
 		runtimeClientGetter.On("Get", mock.Anything, mock.Anything).Return(fakeClient, nil)
 
 		testFsm := &fsm{K8s: K8s{
@@ -525,7 +525,7 @@ func setupFakeClient() (client.WithWatch, *fsm) {
 		WithScheme(scheme).
 		Build()
 
-	runtimeClientGetter := &mocks2.RuntimeClientGetter{}
+	runtimeClientGetter := &fsm_mocks.RuntimeClientGetter{}
 	runtimeClientGetter.On("Get", mock.Anything, mock.Anything).Return(fakeClient, nil)
 
 	testFsm := &fsm{K8s: K8s{
