@@ -62,7 +62,19 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	var registrycache []v1beta1.RegistryCache
 	if s.instance.Spec.Caching != nil && s.instance.Spec.Caching.Enabled {
-		registrycache, err = getRegistryCache(ctx, m.KcpClient, s.instance)
+		runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
+		if err != nil {
+			m.log.Error(err, "Failed to get Runtime Client")
+
+			m.Metrics.IncRuntimeFSMStopCounter()
+			return updateStatePendingWithErrorAndStop(
+				&s.instance,
+				imv1.ConditionTypeRuntimeProvisioned,
+				imv1.ConditionReasonRegistryCacheError,
+				msgFailedToConfigureRegistryCache)
+		}
+
+		registrycache, err = getRegistryCache(ctx, runtimeClient)
 
 		if err != nil {
 			m.log.Error(err, "Failed to get Registry Cache Config")
@@ -249,13 +261,8 @@ func updateStatePendingWithErrorAndStop(instance *imv1.Runtime,
 	return updateStatusAndStop()
 }
 
-func getRegistryCache(ctx context.Context, kcpClient client.Client, runtime imv1.Runtime) ([]v1beta1.RegistryCache, error) {
-	secret, err := GetKubeconfigSecret(ctx, kcpClient, runtime.Labels[imv1.LabelKymaRuntimeID], runtime.Namespace)
-	if err != nil {
-		return nil, err
-	}
-
-	configExplorer, err := registrycache.NewConfigExplorer(ctx, secret)
+func getRegistryCache(ctx context.Context, runtimeClient client.Client) ([]v1beta1.RegistryCache, error) {
+	configExplorer, err := registrycache.NewConfigExplorer(ctx, runtimeClient)
 	if err != nil {
 		return nil, err
 	}
