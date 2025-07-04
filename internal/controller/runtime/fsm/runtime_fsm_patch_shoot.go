@@ -60,9 +60,21 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			msgFailedStructuredConfigMap)
 	}
 
-	var registrycache []v1beta1.RegistryCache
+	var rc []v1beta1.RegistryCache
 	if s.instance.Spec.Caching != nil && s.instance.Spec.Caching.Enabled {
-		registrycache, err = getRegistryCache(ctx, m.KcpClient, s.instance)
+		runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
+		if err != nil {
+			m.log.Error(err, "Failed to get Runtime Client")
+
+			m.Metrics.IncRuntimeFSMStopCounter()
+			return updateStatePendingWithErrorAndStop(
+				&s.instance,
+				imv1.ConditionTypeRuntimeProvisioned,
+				imv1.ConditionReasonRegistryCacheError,
+				msgFailedToConfigureRegistryCache)
+		}
+
+		rc, err = registrycache.NewConfigExplorer(ctx, runtimeClient).GetRegistryCacheConfig()
 
 		if err != nil {
 			m.log.Error(err, "Failed to get Registry Cache Config")
@@ -88,7 +100,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		InfrastructureConfig:  s.shoot.Spec.Provider.InfrastructureConfig,
 		ControlPlaneConfig:    s.shoot.Spec.Provider.ControlPlaneConfig,
 		Log:                   ptr.To(m.log),
-		RegistryCache:         registrycache,
+		RegistryCache:         rc,
 	})
 
 	if err != nil {
@@ -247,18 +259,4 @@ func updateStatePendingWithErrorAndStop(instance *imv1.Runtime,
 	c imv1.RuntimeConditionType, r imv1.RuntimeConditionReason, msg string) (stateFn, *ctrl.Result, error) {
 	instance.UpdateStatePending(c, r, "False", msg)
 	return updateStatusAndStop()
-}
-
-func getRegistryCache(ctx context.Context, kcpClient client.Client, runtime imv1.Runtime) ([]v1beta1.RegistryCache, error) {
-	secret, err := GetKubeconfigSecret(ctx, kcpClient, runtime.Labels[imv1.LabelKymaRuntimeID], runtime.Namespace)
-	if err != nil {
-		return nil, err
-	}
-
-	configExplorer, err := registrycache.NewConfigExplorer(ctx, secret)
-	if err != nil {
-		return nil, err
-	}
-
-	return configExplorer.GetRegistryCacheConfig()
 }

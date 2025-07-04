@@ -25,12 +25,12 @@ import (
 // nolint:revive
 type RegistryCacheConfigReconciler struct {
 	client.Client
-	Scheme        *runtime.Scheme
-	Log           logr.Logger
-	Cfg           fsm.RCCfg
-	EventRecorder record.EventRecorder
-	RequestID     atomic.Uint64
-	Creator       RegistryCacheCreator
+	Scheme               *runtime.Scheme
+	Log                  logr.Logger
+	Cfg                  fsm.RCCfg
+	EventRecorder        record.EventRecorder
+	RequestID            atomic.Uint64
+	RegistryCacheCreator RegistryCacheCreator
 }
 
 const fieldManagerName = "customconfigcontroller"
@@ -66,14 +66,16 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 
 func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context.Context, secret v1.Secret, runtime imv1.Runtime) (ctrl.Result, error) {
 
-	registryCache, err := r.Creator(secret)
+	registryCache, err := r.RegistryCacheCreator(secret)
 	if err != nil {
+		r.Log.V(log_level.TRACE).Error(err, "Failed to get runtime client for runtime", "RuntimeID", runtime.Name, "Namespace", runtime.Namespace)
+
 		return ctrl.Result{}, err
 	}
 
 	enableRegistryCache, err := registryCache.RegistryCacheConfigExists()
 	if err != nil {
-		r.Log.V(log_level.TRACE).Error(err, "Failed to check if custom config exists")
+		r.Log.V(log_level.TRACE).Error(err, "Failed to check if custom config exists", "RuntimeID", runtime.Name, "Namespace", runtime.Namespace)
 
 		return ctrl.Result{}, err
 	}
@@ -134,13 +136,13 @@ type RegistryCache interface {
 
 type RegistryCacheCreator func(secret v1.Secret) (RegistryCache, error)
 
-func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, creator RegistryCacheCreator) *RegistryCacheConfigReconciler {
+func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, registryCacheCreator RegistryCacheCreator) *RegistryCacheConfigReconciler {
 	return &RegistryCacheConfigReconciler{
-		Client:        mgr.GetClient(),
-		Scheme:        mgr.GetScheme(),
-		EventRecorder: mgr.GetEventRecorderFor("runtime-controller"),
-		Log:           logger,
-		Creator:       creator,
+		Client:               mgr.GetClient(),
+		Scheme:               mgr.GetScheme(),
+		EventRecorder:        mgr.GetEventRecorderFor("runtime-controller"),
+		Log:                  logger,
+		RegistryCacheCreator: registryCacheCreator,
 	}
 }
 

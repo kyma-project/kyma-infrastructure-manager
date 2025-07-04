@@ -110,3 +110,18 @@ func FailedStatusAuditLogError() imv1.RuntimeStatus {
 	meta.SetStatusCondition(&result.Conditions, condition)
 	return result
 }
+
+func FailedStatusRegistryCache() imv1.RuntimeStatus {
+	var result imv1.RuntimeStatus
+	result.State = imv1.RuntimeStateFailed
+	result.ProvisioningCompleted = false
+
+	condition := metav1.Condition{
+		Type:    string(imv1.ConditionTypeRuntimeProvisioned),
+		Status:  metav1.ConditionStatus("False"),
+		Reason:  string(imv1.ConditionReasonRegistryCacheError),
+		Message: "Failed to configure registry cache",
+	}
+	meta.SetStatusCondition(&result.Conditions, condition)
+	return result
+}
