@@ -261,7 +261,7 @@ func main() {
 			runtimeClient, err := gardener.GetRuntimeClient(secret)
 
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to get runtime client from secret")
+				return nil, err
 			}
 
 			return registrycache.NewConfigExplorer(context.Background(), runtimeClient), nil

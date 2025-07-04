@@ -19,7 +19,7 @@ var _ = Describe("KIM sFnCreateShoot", func() {
 
 		It("Should successfully switch status to sFnUpdateStatus", func() {
 			runtime := *inputRuntime.DeepCopy()
-			shoot := fsm_testing.TestShootForPatch().DeepCopy()
+			shoot := fsm_testing.TestShootForUpdate().DeepCopy()
 
 			scheme, schemeErr := newCreateTestScheme()
 			Expect(schemeErr).To(BeNil(), "Failed to create test scheme")
