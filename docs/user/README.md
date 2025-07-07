@@ -113,10 +113,22 @@ Please use this URL pattern to retrieve the supported parameters for your deploy
 
 `https://github.com/kyma-project/kyma-infrastructure-manager/blob/{KIM_VERSION}/cmd/main.go#L108`
 
-Example-URL for KIM version 1.24.0:
+Example-URL for KIM version 1.26.2:
 
-https://github.com/kyma-project/kyma-infrastructure-manager/blob/1.24.0/cmd/main.go#L108
+https://github.com/kyma-project/kyma-infrastructure-manager/blob/1.26.2/cmd/main.go#L108
 
+Alternatively, the support configuration parameters can be retrieved by executing:
+
+```
+# Please define your KIM version:
+export KIM_VERSION=1.26.2
+
+git clone -b "$KIM_VERSION" https://github.com/kyma-project/kyma-infrastructure-manager.git
+
+cd ./kyma-infrastructure-manager/cmd
+
+go run main.go --help
+```
 
 ## Quality Requirements
 
