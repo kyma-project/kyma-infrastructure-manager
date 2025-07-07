@@ -58,7 +58,13 @@ The data model consists of two CRDs:
 * `Runtime CRD` - Stores cluster data within instances of the  CRD
 * `RuntimeKubeconfig CRD` - Stores kubeconfig-related metadata in entities of the  CRD
 
-For information on the structure and the purpose of the different fields in these resources, see the [CRD files](https://github.com/kyma-project/kyma-infrastructure-manager/tree/main/config/crd/bases).
+For information on the structure and the purpose of the different fields in these resources, see the CRD files. URL-Pattern for these files is:
+
+`https://github.com/kyma-project/kyma-infrastructure-manager/tree/{KIM_VERSION}/config/crd/bases`
+
+Example:
+
+https://github.com/kyma-project/kyma-infrastructure-manager/tree/1.24.0/config/crd/bases
 
 #### State Machine
 
@@ -68,7 +74,7 @@ The reconciliation process is implemented using a [state machine pattern](https:
 
 To address the requirements for implementing KIM features, the following sub-components have been introduced :
 
-* KIM Snatch: Automatically installed on all Kyma runtimes to prevent assigning Kyma workloads to worker pools created by customers, KIM Snatch assigns Kyma workloads to the Kyma worker pool. For more information, see the [KIM Snatch repository](https://github.com/kyma-project/kim-snatch/tree/main/docs/user).
+* KIM Snatch: Automatically installed on all Kyma runtimes to prevent assigning Kyma workloads to worker pools created by customers, KIM Snatch assigns Kyma workloads to the Kyma worker pool. For more information, see the [KIM Snatch documentation](https://github.com/kyma-project/kim-snatch/tree/main/docs/user).
 * Gardener Syncer: A Kubernetes CronJob synchronizing Seed cluster data from the Gardener cluster to KCP. KEB uses this data for customer input validation (primarily for the "Shoot and Seed Same Region" feature to detect if a Seed cluster exists in a particular Shoot region). The Seed data is stored in a ConfigMap in KCP. For more information, see the [Gardener Syncer documentation](https://github.com/kyma-project/gardener-syncer/blob/main/README.md).
 
 
@@ -101,9 +107,15 @@ In addition to the standard Pod resource indicators such as CPU and memory, KIM 
 
 ### Configuration Parameters
 
-KIM can be configured via command line parameters. The latest supported command line parameters are listed and described in this file:
+KIM can be configured via command line parameters. The supported command line parameters are available and described in this file main.go file of KIM.
 
-https://github.com/kyma-project/kyma-infrastructure-manager/blob/main/cmd/main.go#L112-L130
+Please use this URL pattern to retrieve the supported parameters for your deployed KIM version:
+
+`https://github.com/kyma-project/kyma-infrastructure-manager/blob/{KIM_VERSION}/cmd/main.go#L108`
+
+Example-URL for KIM version 1.24.0:
+
+https://github.com/kyma-project/kyma-infrastructure-manager/blob/1.24.0/cmd/main.go#L108
 
 
 ## Quality Requirements
