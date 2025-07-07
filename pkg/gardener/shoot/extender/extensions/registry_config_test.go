@@ -19,23 +19,27 @@ func TestNewRegistryCacheExtension(t *testing.T) {
 
 		// given
 		volumeQuantity := resource.MustParse("10Gi")
-		caches := []registrycache.RegistryCache{
+		caches := []registrycache.RegistryCacheConfig{
 			{
-				Upstream: "ghcr.io",
-				GarbageCollection: &registrycache.GarbageCollection{
-					TTL: metav1.Duration{Duration: time.Hour * 24},
-				},
-				SecretReferenceName: ptr.To("secret"),
-				Volume: &registrycache.Volume{
-					Size:             &volumeQuantity,
-					StorageClassName: ptr.To("storageClass"),
+				Spec: registrycache.RegistryCacheConfigSpec{
+					Upstream: "ghcr.io",
+					GarbageCollection: &registrycache.GarbageCollection{
+						TTL: metav1.Duration{Duration: time.Hour * 24},
+					},
+					SecretReferenceName: ptr.To("secret"),
+					Volume: &registrycache.Volume{
+						Size:             &volumeQuantity,
+						StorageClassName: ptr.To("storageClass"),
+					},
 				},
 			},
 			{
-				RemoteURL: ptr.To("http://my-registry.io:5000"),
-				Proxy: &registrycache.Proxy{
-					HTTPProxy:  ptr.To("http://proxy.io:5000"),
-					HTTPSProxy: ptr.To("https://proxy.io:5000"),
+				Spec: registrycache.RegistryCacheConfigSpec{
+					RemoteURL: ptr.To("http://my-registry.io:5000"),
+					Proxy: &registrycache.Proxy{
+						HTTPProxy:  ptr.To("http://proxy.io:5000"),
+						HTTPSProxy: ptr.To("https://proxy.io:5000"),
+					},
 				},
 			},
 		}

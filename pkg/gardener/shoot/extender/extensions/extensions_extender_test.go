@@ -34,16 +34,18 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 		SecretName: "doesnt matter",
 	}
 
-	caches := []registrycache.RegistryCache{
+	caches := []registrycache.RegistryCacheConfig{
 		{
-			Upstream: "ghcr.io",
+			Spec: registrycache.RegistryCacheConfigSpec{
+				Upstream: "ghcr.io",
+			},
 		},
 	}
 
 	for _, testcase := range []struct {
 		name                string
 		inputAuditLogData   auditlogs.AuditLogData
-		caches              []registrycache.RegistryCache
+		caches              []registrycache.RegistryCacheConfig
 		enableNetworkFilter bool
 		enableImageCaching  bool
 		extensionOrderMap   map[string]int
@@ -132,15 +134,24 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		SecretName: "doesnt matter",
 	}
 
-	oldCaches := []registrycache.RegistryCache{{Upstream: "quay.io"}}
-	newCaches := []registrycache.RegistryCache{{Upstream: "gcr.io"}}
+	oldCaches := []registrycache.RegistryCacheConfig{
+		{
+			Spec: registrycache.RegistryCacheConfigSpec{Upstream: "quay.io"},
+		},
+	}
+
+	newCaches := []registrycache.RegistryCacheConfig{
+		{
+			Spec: registrycache.RegistryCacheConfigSpec{Upstream: "gcr.io"},
+		},
+	}
 
 	for _, testCase := range []struct {
 		name                 string
 		previousExtensions   []gardener.Extension
 		inputAuditLogData    auditlogs.AuditLogData
 		expectedAuditLogData auditlogs.AuditLogData
-		registryCaches       []registrycache.RegistryCache
+		registryCaches       []registrycache.RegistryCacheConfig
 		enableNetworkFilter  bool
 		enableImageCaching   bool
 	}{
@@ -185,7 +196,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
 			inputAuditLogData:    auditlogs.AuditLogData{},
 			expectedAuditLogData: auditlogs.AuditLogData{},
-			registryCaches:       []registrycache.RegistryCache{},
+			registryCaches:       []registrycache.RegistryCacheConfig{},
 			enableNetworkFilter:  false,
 			enableImageCaching:   true,
 		},
@@ -248,7 +259,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
-			registryCaches:       []registrycache.RegistryCache{},
+			registryCaches:       []registrycache.RegistryCacheConfig{},
 			enableNetworkFilter:  false,
 			enableImageCaching:   true,
 		},
@@ -498,7 +509,7 @@ func verifyNetworkFilterExtension(t *testing.T, ext gardener.Extension, isEnable
 	assert.Equal(t, !isEnabled, *ext.Disabled)
 }
 
-func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches []registrycache.RegistryCache, registryCacheEnabled bool) {
+func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches []registrycache.RegistryCacheConfig, registryCacheEnabled bool) {
 	if len(caches) == 0 || !registryCacheEnabled {
 		assert.True(t, ext != nil || (ext.ProviderConfig == nil && *ext.Disabled))
 
@@ -515,9 +526,9 @@ func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches 
 
 	assert.Equal(t, "registry.extensions.gardener.cloud/v1alpha3", registryConfig.APIVersion)
 	assert.Equal(t, "RegistryConfig", registryConfig.Kind)
-	assert.Equal(t, caches[0].Upstream, registryConfig.Caches[0].Upstream)
-	assert.Nil(t, caches[0].GarbageCollection)
-	assert.Equal(t, caches[0].SecretReferenceName, registryConfig.Caches[0].SecretReferenceName)
+	assert.Equal(t, caches[0].Spec.Upstream, registryConfig.Caches[0].Upstream)
+	assert.Nil(t, caches[0].Spec.GarbageCollection)
+	assert.Equal(t, caches[0].Spec.SecretReferenceName, registryConfig.Caches[0].SecretReferenceName)
 	assert.Nil(t, registryConfig.Caches[0].Proxy)
 }
 

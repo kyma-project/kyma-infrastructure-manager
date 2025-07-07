@@ -19,15 +19,13 @@ func TestConfigExplorer_RegistryCacheConfigExists(t *testing.T) {
 
 	t.Run("Return true if at least one RegistryCacheConfig CR exist", func(t *testing.T) {
 		// given
-		customConfig := &registrycachev1beta1.CustomConfig{
-			Spec: registrycachev1beta1.CustomConfigSpec{
-				RegistryCaches: []registrycachev1beta1.RegistryCache{
-					{Upstream: "docker.io"},
-				},
+		registryCacheConfig := &registrycachev1beta1.RegistryCacheConfig{
+			Spec: registrycachev1beta1.RegistryCacheConfigSpec{
+				Upstream: "docker.io",
 			},
 		}
 
-		client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(customConfig).Build()
+		client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(registryCacheConfig).Build()
 
 		explorer := NewConfigExplorer(ctx, client)
 
@@ -76,12 +74,9 @@ func TestConfigExplorer_GetRegistryCacheConfig(t *testing.T) {
 
 	t.Run("Return non empty RegistryCacheConfig list", func(t *testing.T) {
 		// given
-		customConfig := &registrycachev1beta1.CustomConfig{
-			Spec: registrycachev1beta1.CustomConfigSpec{
-				RegistryCaches: []registrycachev1beta1.RegistryCache{
-					{Upstream: "docker.io"},
-					{Upstream: "quay.io"},
-				},
+		customConfig := &registrycachev1beta1.RegistryCacheConfig{
+			Spec: registrycachev1beta1.RegistryCacheConfigSpec{
+				Upstream: "docker.io",
 			},
 		}
 		client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(customConfig).Build()
@@ -93,9 +88,8 @@ func TestConfigExplorer_GetRegistryCacheConfig(t *testing.T) {
 
 		// then
 		Expect(err).To(BeNil())
-		Expect(configs).To(HaveLen(2))
-		Expect(configs[0].Upstream).To(Equal("docker.io"))
-		Expect(configs[1].Upstream).To(Equal("quay.io"))
+		Expect(configs).To(HaveLen(1))
+		Expect(configs[0].Spec.Upstream).To(Equal("docker.io"))
 	})
 
 	t.Run("Return empty RegistryCacheConfig list", func(t *testing.T) {

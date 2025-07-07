@@ -12,18 +12,18 @@ import (
 
 const RegistryCacheExtensionType = "registry-cache"
 
-func NewRegistryCacheExtension(cache []registrycache.RegistryCache, enabled bool) (*gardener.Extension, error) {
+func NewRegistryCacheExtension(cache []registrycache.RegistryCacheConfig, enabled bool) (*gardener.Extension, error) {
 	return extension(cache, enabled)
 }
 
-func extension(caches []registrycache.RegistryCache, enabled bool) (*gardener.Extension, error) {
+func extension(caches []registrycache.RegistryCacheConfig, enabled bool) (*gardener.Extension, error) {
 
 	registryConfig := registrycacheext.RegistryConfig{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: "registry.extensions.gardener.cloud/v1alpha3",
 			Kind:       "RegistryConfig",
 		},
-		Caches: toRegistryCacheExtension(caches),
+		Caches: ToRegistryCacheExtension(caches),
 	}
 
 	providerConfigBytes, err := json.Marshal(registryConfig)
@@ -40,7 +40,7 @@ func extension(caches []registrycache.RegistryCache, enabled bool) (*gardener.Ex
 	}, nil
 }
 
-func toRegistryCacheExtension(cache []registrycache.RegistryCache) []registrycacheext.RegistryCache {
+func ToRegistryCacheExtension(caches []registrycache.RegistryCacheConfig) []registrycacheext.RegistryCache {
 
 	volumeToCacheExtension := func(volume *registrycache.Volume) *registrycacheext.Volume {
 
@@ -77,14 +77,14 @@ func toRegistryCacheExtension(cache []registrycache.RegistryCache) []registrycac
 
 	// Convert the registry cache to the internal format
 	registryCaches := make([]registrycacheext.RegistryCache, 0)
-	for _, c := range cache {
+	for _, c := range caches {
 		registryCaches = append(registryCaches, registrycacheext.RegistryCache{
-			Upstream:            c.Upstream,
-			RemoteURL:           c.RemoteURL,
-			Volume:              volumeToCacheExtension(c.Volume),
-			GarbageCollection:   garbageCollectionExtension(c.GarbageCollection),
-			SecretReferenceName: c.SecretReferenceName,
-			Proxy:               proxyExtension(c.Proxy),
+			Upstream:            c.Spec.Upstream,
+			RemoteURL:           c.Spec.RemoteURL,
+			Volume:              volumeToCacheExtension(c.Spec.Volume),
+			GarbageCollection:   garbageCollectionExtension(c.Spec.GarbageCollection),
+			SecretReferenceName: c.Spec.SecretReferenceName,
+			Proxy:               proxyExtension(c.Spec.Proxy),
 		})
 	}
 	return registryCaches

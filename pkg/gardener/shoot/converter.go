@@ -68,7 +68,7 @@ type PatchOpts struct {
 	InfrastructureConfig *runtime.RawExtension
 	ControlPlaneConfig   *runtime.RawExtension
 	Log                  *logr.Logger
-	RegistryCache        []registrycache.RegistryCache
+	RegistryCache        []registrycache.RegistryCacheConfig
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {

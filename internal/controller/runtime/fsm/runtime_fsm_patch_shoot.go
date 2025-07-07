@@ -60,7 +60,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			msgFailedStructuredConfigMap)
 	}
 
-	var rc []v1beta1.RegistryCache
+	var rc []v1beta1.RegistryCacheConfig
 	if s.instance.Spec.Caching != nil && s.instance.Spec.Caching.Enabled {
 		runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 		if err != nil {
