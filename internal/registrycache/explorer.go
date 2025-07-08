@@ -39,9 +39,5 @@ func (c *ConfigExplorer) GetRegistryCacheConfig() ([]registrycache.RegistryCache
 	}
 	registryCacheConfigs := make([]registrycache.RegistryCacheConfig, 0)
 
-	for _, customConfig := range customConfigList.Items {
-		registryCacheConfigs = append(registryCacheConfigs, customConfig)
-	}
-
-	return registryCacheConfigs, nil
+	return append(registryCacheConfigs, customConfigList.Items...), nil
 }

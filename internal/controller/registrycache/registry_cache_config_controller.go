@@ -7,7 +7,6 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
-	registrycache2 "github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -82,14 +81,18 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 		return ctrl.Result{}, err
 	}
 
+	caches := make([]imv1.ImageRegistryCache, 0, len(registryCacheConfigs))
+
 	for _, config := range registryCacheConfigs {
 		runtimeRegistryCacheConfig := imv1.ImageRegistryCache{
 			Name:      config.Name,
 			Namespace: config.Namespace,
 			Config:    config.Spec,
 		}
-		runtime.Spec.Caching = append(runtime.Spec.Caching, runtimeRegistryCacheConfig)
+		caches = append(caches, runtimeRegistryCacheConfig)
 	}
+	runtime.Spec.Caching = caches
+
 	r.Log.Info(fmt.Sprintf("Updating runtime %s with registry cache config", runtime.Name))
 
 	runtime.ManagedFields = nil
@@ -108,20 +111,6 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 		Requeue:      true,
 		RequeueAfter: 5 * time.Minute,
 	}, err
-}
-
-func (r *RegistryCacheConfigReconciler) validateRegistryCaches(caches []registrycache.RegistryCacheConfig) []registrycache2.Result {
-	results := make([]registrycache2.Result, 0, len(caches))
-
-	for _, cache := range caches {
-		results = append(results, registrycache2.NewConfigValidator(cache).Do(cache))
-	}
-
-	return results
-}
-
-func (r *RegistryCacheConfigReconciler) updateRegistryCacheStatuses([]registrycache2.Result) {
-
 }
 
 func requeueOnError(err error) (ctrl.Result, error) {
