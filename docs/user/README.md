@@ -1,4 +1,4 @@
-# Kyma Infrastrcuture Manager
+# Kyma Infrastructure Manager
 
 The Kyma Infrastructure Manager doesn't provide an end user documentation.
 
