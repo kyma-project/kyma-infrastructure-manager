@@ -16,9 +16,8 @@ import (
 )
 
 const (
-	secretForClusterWithCustomConfig    = "kubeconfig-secret-for-cluster-with-custom-config"
-	secretForClusterWithoutCustomConfig = "kubeconfig-secret-for-cluster-without-custom-config"
-	secretNotManagedByKIM               = "secret-not-managed-by-kim"
+	secretForClusterWithCustomConfig = "kubeconfig-secret-for-cluster-with-custom-config"
+	secretNotManagedByKIM            = "secret-not-managed-by-kim"
 )
 
 var _ = Describe("Custom Config Controller", func() {
@@ -30,7 +29,7 @@ var _ = Describe("Custom Config Controller", func() {
 		const runtimeWithRegistryCacheEnabled = "test-runtime-with-registry-cache-enabled"
 		const shootNameForRuntimeWithRegistryCacheEnabled = "shoot-with-registry-cache-enabled-ext"
 
-		DescribeTable("Should update Runtime CR", func(newRuntime *imv1.Runtime, newSecret *v1.Secret, expectedEnable bool) {
+		DescribeTable("Should update Runtime CR", func(newRuntime *imv1.Runtime, newSecret *v1.Secret) {
 
 			Expect(k8sClient.Create(ctx, newRuntime)).To(Succeed())
 
@@ -73,8 +72,7 @@ var _ = Describe("Custom Config Controller", func() {
 		},
 			Entry("with registry cache enabled",
 				createRuntimeStub(runtimeWithoutRegistryCacheConfig, shootNameForRuntimeWithoutRegistryCache, nil),
-				createSecretStub(secretForClusterWithCustomConfig, getSecretLabels(runtimeWithoutRegistryCacheConfig, "infrastructure-manager")),
-				true),
+				createSecretStub(secretForClusterWithCustomConfig, getSecretLabels(runtimeWithoutRegistryCacheConfig, "infrastructure-manager"))),
 			Entry("with registry cache disabled",
 				createRuntimeStub(runtimeWithRegistryCacheEnabled, shootNameForRuntimeWithRegistryCacheEnabled, &imv1.ImageRegistryCache{
 					Name:      "config3",
@@ -83,8 +81,7 @@ var _ = Describe("Custom Config Controller", func() {
 						Upstream: "some.registry.com",
 					},
 				}),
-				createSecretStub(secretForClusterWithoutCustomConfig, getSecretLabels(runtimeWithRegistryCacheEnabled, "infrastructure-manager")),
-				false))
+				createSecretStub(secretForClusterWithCustomConfig, getSecretLabels(runtimeWithRegistryCacheEnabled, "infrastructure-manager"))))
 
 		It("Should not update runtime when secret is not managed by KIM", func() {
 			const ShootName = "shoot-cluster-3"
@@ -127,9 +124,8 @@ var _ = Describe("Custom Config Controller", func() {
 
 func fixMockedRegistryCache() func(secret v1.Secret) (RegistryCache, error) {
 	callsMap := map[string]int{
-		secretForClusterWithCustomConfig:    0,
-		secretForClusterWithoutCustomConfig: 0,
-		secretNotManagedByKIM:               0,
+		secretForClusterWithCustomConfig: 0,
+		secretNotManagedByKIM:            0,
 	}
 
 	testConfig := []registrycache.RegistryCacheConfig{
@@ -154,9 +150,8 @@ func fixMockedRegistryCache() func(secret v1.Secret) (RegistryCache, error) {
 	}
 
 	resultsMap := map[string][]registrycache.RegistryCacheConfig{
-		secretForClusterWithCustomConfig:    testConfig,
-		secretForClusterWithoutCustomConfig: {},
-		secretNotManagedByKIM:               testConfig,
+		secretForClusterWithCustomConfig: testConfig,
+		secretNotManagedByKIM:            testConfig,
 	}
 
 	return func(secret v1.Secret) (RegistryCache, error) {

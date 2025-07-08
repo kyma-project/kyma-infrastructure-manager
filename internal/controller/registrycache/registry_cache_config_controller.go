@@ -76,7 +76,7 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 
 	registryCacheConfigs, err := registryCache.GetRegistryCacheConfig()
 	if err != nil {
-		r.Log.V(log_level.TRACE).Error(err, "Failed to check if custom config exists", "RuntimeID", runtime.Name, "Namespace", runtime.Namespace)
+		r.Log.V(log_level.TRACE).Error(err, "Failed to get custom config", "RuntimeID", runtime.Name, "Namespace", runtime.Namespace)
 
 		return ctrl.Result{}, err
 	}
