@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -128,13 +129,15 @@ type RuntimeList struct {
 
 // RuntimeSpec defines the desired state of Runtime
 type RuntimeSpec struct {
-	Shoot    RuntimeShoot        `json:"shoot"`
-	Security Security            `json:"security"`
-	Caching  *ImageRegistryCache `json:"imageRegistryCache,omitempty"`
+	Shoot    RuntimeShoot         `json:"shoot"`
+	Security Security             `json:"security"`
+	Caching  []ImageRegistryCache `json:"imageRegistryCache,omitempty"`
 }
 
 type ImageRegistryCache struct {
-	Enabled bool `json:"enabled"`
+	Name      string                                `json:"name"`
+	Namespace string                                `json:"namespace"`
+	Config    registrycache.RegistryCacheConfigSpec `json:"config"`
 }
 
 // RuntimeStatus defines the observed state of Runtime

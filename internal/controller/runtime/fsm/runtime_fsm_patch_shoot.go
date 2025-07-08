@@ -10,10 +10,8 @@ import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
-	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
-	"github.com/kyma-project/kim-snatch/api/v1beta1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -60,34 +58,6 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			msgFailedStructuredConfigMap)
 	}
 
-	var rc []v1beta1.RegistryCacheConfig
-	if s.instance.Spec.Caching != nil && s.instance.Spec.Caching.Enabled {
-		runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
-		if err != nil {
-			m.log.Error(err, "Failed to get Runtime Client")
-
-			m.Metrics.IncRuntimeFSMStopCounter()
-			return updateStatePendingWithErrorAndStop(
-				&s.instance,
-				imv1.ConditionTypeRuntimeProvisioned,
-				imv1.ConditionReasonRegistryCacheError,
-				msgFailedToConfigureRegistryCache)
-		}
-
-		rc, err = registrycache.NewConfigExplorer(ctx, runtimeClient).GetRegistryCacheConfig()
-
-		if err != nil {
-			m.log.Error(err, "Failed to get Registry Cache Config")
-
-			m.Metrics.IncRuntimeFSMStopCounter()
-			return updateStatePendingWithErrorAndStop(
-				&s.instance,
-				imv1.ConditionTypeRuntimeProvisioned,
-				imv1.ConditionReasonRegistryCacheError,
-				msgFailedToConfigureRegistryCache)
-		}
-	}
-
 	// NOTE: In the future we want to pass the whole shoot object here
 	updatedShoot, err := convertPatch(&s.instance, gardener_shoot.PatchOpts{
 		ConverterConfig:       m.ConverterConfig,
@@ -100,7 +70,6 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		InfrastructureConfig:  s.shoot.Spec.Provider.InfrastructureConfig,
 		ControlPlaneConfig:    s.shoot.Spec.Provider.ControlPlaneConfig,
 		Log:                   ptr.To(m.log),
-		RegistryCache:         rc,
 	})
 
 	if err != nil {

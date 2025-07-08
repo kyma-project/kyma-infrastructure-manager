@@ -34,9 +34,9 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 		SecretName: "doesnt matter",
 	}
 
-	caches := []registrycache.RegistryCacheConfig{
+	registryCache := []imv1.ImageRegistryCache{
 		{
-			Spec: registrycache.RegistryCacheConfigSpec{
+			Config: registrycache.RegistryCacheConfigSpec{
 				Upstream: "ghcr.io",
 			},
 		},
@@ -45,37 +45,32 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 	for _, testcase := range []struct {
 		name                string
 		inputAuditLogData   auditlogs.AuditLogData
-		caches              []registrycache.RegistryCacheConfig
 		enableNetworkFilter bool
-		enableImageCaching  bool
+		registryCache       []imv1.ImageRegistryCache
 		extensionOrderMap   map[string]int
 	}{
 		{
 			name:                "Should create all extensions for new Shoot in the right order, network filter is enabled",
 			inputAuditLogData:   newAuditLogData,
 			enableNetworkFilter: true,
-			enableImageCaching:  true,
+			registryCache:       registryCache,
 			extensionOrderMap:   getExpectedExtensionsOrderMapForCreate(),
-			caches:              caches,
 		},
 		{
 			name:                "Should create all extensions for new Shoot in the right order, network filter is disabled",
 			inputAuditLogData:   newAuditLogData,
 			enableNetworkFilter: false,
-			enableImageCaching:  true,
+			registryCache:       registryCache,
 			extensionOrderMap:   getExpectedExtensionsOrderMapForCreate(),
-			caches:              caches,
 		},
 		{
-			name:                "Should not include AuditLog extension for new Shoot when input auditLogData is empty",
-			inputAuditLogData:   auditlogs.AuditLogData{},
-			extensionOrderMap:   getExpectedExtensionsOrderMapForCreateWithoutOptional(),
-			enableNetworkFilter: true,
-			enableImageCaching:  true,
+			name:              "Should not include AuditLog extension for new Shoot when input auditLogData is empty",
+			inputAuditLogData: auditlogs.AuditLogData{},
+			extensionOrderMap: getExpectedExtensionsOrderMapForCreateWithoutOptional(),
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			runtime := fixRuntimeCRForExtensionExtenderTests(testcase.enableNetworkFilter, testcase.enableImageCaching)
+			runtime := fixRuntimeCRForExtensionExtenderTests(testcase.enableNetworkFilter, testcase.registryCache)
 
 			shoot := &gardener.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -83,7 +78,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 				},
 			}
 
-			extender := NewExtensionsExtenderForCreate(config, testcase.inputAuditLogData, testcase.caches)
+			extender := NewExtensionsExtenderForCreate(config, testcase.inputAuditLogData, testcase.registryCache)
 
 			err := extender(runtime, shoot)
 			assert.NoError(t, err)
@@ -114,7 +109,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 					verifyOIDCExtension(t, ext)
 
 				case RegistryCacheExtensionType:
-					verifyRegistryCacheExtension(t, &ext, testcase.caches, testcase.enableImageCaching)
+					verifyRegistryCacheExtension(t, &ext, testcase.registryCache)
 				}
 			}
 		})
@@ -134,15 +129,15 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		SecretName: "doesnt matter",
 	}
 
-	oldCaches := []registrycache.RegistryCacheConfig{
+	oldCaches := []imv1.ImageRegistryCache{
 		{
-			Spec: registrycache.RegistryCacheConfigSpec{Upstream: "quay.io"},
+			Config: registrycache.RegistryCacheConfigSpec{Upstream: "quay.io"},
 		},
 	}
 
-	newCaches := []registrycache.RegistryCacheConfig{
+	newCaches := []imv1.ImageRegistryCache{
 		{
-			Spec: registrycache.RegistryCacheConfigSpec{Upstream: "gcr.io"},
+			Config: registrycache.RegistryCacheConfigSpec{Upstream: "gcr.io"},
 		},
 	}
 
@@ -151,9 +146,8 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		previousExtensions   []gardener.Extension
 		inputAuditLogData    auditlogs.AuditLogData
 		expectedAuditLogData auditlogs.AuditLogData
-		registryCaches       []registrycache.RegistryCacheConfig
+		registryCaches       []imv1.ImageRegistryCache
 		enableNetworkFilter  bool
-		enableImageCaching   bool
 	}{
 		{
 			name:                 "Should add AuditLog extension at the end without changing order and data of other extensions",
@@ -162,7 +156,6 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			expectedAuditLogData: oldAuditLogData,
 			registryCaches:       nil,
 			enableNetworkFilter:  false,
-			enableImageCaching:   false,
 		},
 		{
 			name:                 "Should not add AuditLog extension to existing shoot extensions when input auditLogData is empty",
@@ -171,7 +164,6 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			expectedAuditLogData: auditlogs.AuditLogData{},
 			registryCaches:       nil,
 			enableNetworkFilter:  false,
-			enableImageCaching:   false,
 		},
 		{
 			name:                 "Should add Network filter extension at the end without changing order and data of other extensions",
@@ -180,7 +172,6 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			expectedAuditLogData: auditlogs.AuditLogData{},
 			registryCaches:       nil,
 			enableNetworkFilter:  true,
-			enableImageCaching:   false,
 		},
 		{
 			name:                 "Should add RegistryCache extension at the end without changing order and data of other extensions",
@@ -189,16 +180,14 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			expectedAuditLogData: auditlogs.AuditLogData{},
 			registryCaches:       newCaches,
 			enableNetworkFilter:  false,
-			enableImageCaching:   true,
 		},
 		{
 			name:                 "Should not add RegistryCache extension when cache list is empty",
 			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
 			inputAuditLogData:    auditlogs.AuditLogData{},
 			expectedAuditLogData: auditlogs.AuditLogData{},
-			registryCaches:       []registrycache.RegistryCacheConfig{},
+			registryCaches:       []imv1.ImageRegistryCache{},
 			enableNetworkFilter:  false,
-			enableImageCaching:   true,
 		},
 		{
 			name:                 "Should not add RegistryCache extension when cache is not enabled on Runtime CR",
@@ -207,7 +196,6 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			expectedAuditLogData: auditlogs.AuditLogData{},
 			registryCaches:       newCaches,
 			enableNetworkFilter:  false,
-			enableImageCaching:   false,
 		},
 		{
 			name:                 "Existing extensions should not change order during patching if nothing has changed",
@@ -216,7 +204,6 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			expectedAuditLogData: oldAuditLogData,
 			registryCaches:       newCaches,
 			enableNetworkFilter:  true,
-			enableImageCaching:   true,
 		},
 		{
 			name:                 "Should update Audit Log extension without changing order and data of other extensions",
@@ -225,7 +212,6 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			expectedAuditLogData: newAuditLogData,
 			registryCaches:       oldCaches,
 			enableNetworkFilter:  false,
-			enableImageCaching:   true,
 		},
 		{
 			name:                 "Should update Network filter extension without changing order and data of other extensions",
@@ -234,7 +220,6 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			expectedAuditLogData: oldAuditLogData,
 			registryCaches:       oldCaches,
 			enableNetworkFilter:  true,
-			enableImageCaching:   true,
 		},
 		{
 			name:                 "Should update RegistryCache extension without changing order and data of other extensions",
@@ -243,7 +228,6 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			expectedAuditLogData: oldAuditLogData,
 			registryCaches:       newCaches,
 			enableNetworkFilter:  false,
-			enableImageCaching:   true,
 		},
 		{
 			name:                 "Should disable RegistryCache extension when cache is not enabled on Runtime CR without changing order and data of other extensions",
@@ -252,16 +236,14 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			expectedAuditLogData: oldAuditLogData,
 			registryCaches:       newCaches,
 			enableNetworkFilter:  false,
-			enableImageCaching:   false,
 		},
 		{
 			name:                 "Should disable RegistryCache extension when cache is not enabled on Runtime CR without changing order and data of other extensions",
 			previousExtensions:   fixAllExtensionsOnTheShoot(),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
-			registryCaches:       []registrycache.RegistryCacheConfig{},
+			registryCaches:       []imv1.ImageRegistryCache{},
 			enableNetworkFilter:  false,
-			enableImageCaching:   true,
 		},
 		{
 			name:                 "Should not update existing AuditLog extension when input auditLogData is empty",
@@ -270,11 +252,10 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			expectedAuditLogData: oldAuditLogData,
 			registryCaches:       oldCaches,
 			enableNetworkFilter:  false,
-			enableImageCaching:   true,
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			runtime := fixRuntimeCRForExtensionExtenderTests(testCase.enableNetworkFilter, testCase.enableImageCaching)
+			runtime := fixRuntimeCRForExtensionExtenderTests(testCase.enableNetworkFilter, testCase.registryCaches)
 
 			shoot := &gardener.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -283,9 +264,9 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			}
 
 			auditLogDataProvided := testCase.inputAuditLogData != (auditlogs.AuditLogData{})
-			registryCacheDataProvided := testCase.enableImageCaching && len(testCase.registryCaches) != 0
+			registryCacheDataProvided := len(testCase.registryCaches) != 0
 
-			extender := NewExtensionsExtenderForPatch(testCase.inputAuditLogData, testCase.registryCaches, testCase.previousExtensions)
+			extender := NewExtensionsExtenderForPatch(testCase.inputAuditLogData, testCase.previousExtensions)
 			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided)
 
 			err := extender(runtime, shoot)
@@ -314,7 +295,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 					verifyAuditLogExtension(t, ext, testCase.expectedAuditLogData)
 
 				case RegistryCacheExtensionType:
-					verifyRegistryCacheExtension(t, &ext, testCase.registryCaches, testCase.enableImageCaching)
+					verifyRegistryCacheExtension(t, &ext, testCase.registryCaches)
 				}
 			}
 		})
@@ -509,8 +490,8 @@ func verifyNetworkFilterExtension(t *testing.T, ext gardener.Extension, isEnable
 	assert.Equal(t, !isEnabled, *ext.Disabled)
 }
 
-func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches []registrycache.RegistryCacheConfig, registryCacheEnabled bool) {
-	if len(caches) == 0 || !registryCacheEnabled {
+func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches []imv1.ImageRegistryCache) {
+	if len(caches) == 0 {
 		assert.True(t, ext != nil || (ext.ProviderConfig == nil && *ext.Disabled))
 
 		return
@@ -526,21 +507,19 @@ func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches 
 
 	assert.Equal(t, "registry.extensions.gardener.cloud/v1alpha3", registryConfig.APIVersion)
 	assert.Equal(t, "RegistryConfig", registryConfig.Kind)
-	assert.Equal(t, caches[0].Spec.Upstream, registryConfig.Caches[0].Upstream)
-	assert.Nil(t, caches[0].Spec.GarbageCollection)
-	assert.Equal(t, caches[0].Spec.SecretReferenceName, registryConfig.Caches[0].SecretReferenceName)
+	assert.Equal(t, caches[0].Config.Upstream, registryConfig.Caches[0].Upstream)
+	assert.Nil(t, caches[0].Config.GarbageCollection)
+	assert.Equal(t, caches[0].Config.SecretReferenceName, registryConfig.Caches[0].SecretReferenceName)
 	assert.Nil(t, registryConfig.Caches[0].Proxy)
 }
 
-func fixRuntimeCRForExtensionExtenderTests(networkFilterEnabled bool, registryCacheEnabled bool) imv1.Runtime {
+func fixRuntimeCRForExtensionExtenderTests(networkFilterEnabled bool, registryCache []imv1.ImageRegistryCache) imv1.Runtime {
 	runtime := imv1.Runtime{
 		Spec: imv1.RuntimeSpec{
 			Shoot: imv1.RuntimeShoot{
 				Name: "myshoot",
 			},
-			Caching: &imv1.ImageRegistryCache{
-				Enabled: registryCacheEnabled,
-			},
+			Caching: registryCache,
 			Security: imv1.Security{
 				Networking: imv1.NetworkingSecurity{
 					Filter: imv1.Filter{
