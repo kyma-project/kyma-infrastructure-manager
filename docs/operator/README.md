@@ -107,28 +107,7 @@ In addition to the standard Pod resource indicators such as CPU and memory, KIM 
 
 ### Configuration Parameters
 
-KIM can be configured via command line parameters. The supported command line parameters are available and described in this file main.go file of KIM.
-
-Please use this URL pattern to retrieve the supported parameters for your deployed KIM version:
-
-`https://github.com/kyma-project/kyma-infrastructure-manager/blob/{KIM_VERSION}/cmd/main.go#L108`
-
-Example-URL for KIM version 1.26.2:
-
-https://github.com/kyma-project/kyma-infrastructure-manager/blob/1.26.2/cmd/main.go#L108
-
-Alternatively, the support configuration parameters can be retrieved by executing:
-
-```
-# Please define your KIM version:
-export KIM_VERSION=1.26.2
-
-git clone -b "$KIM_VERSION" https://github.com/kyma-project/kyma-infrastructure-manager.git
-
-cd ./kyma-infrastructure-manager/cmd
-
-go run main.go --help
-```
+KIM can be configured via command line parameters. Supported parameters are documented in [this document](./parameter.md).
 
 ## Quality Requirements
 
