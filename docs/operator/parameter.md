@@ -4,41 +4,41 @@ The Kyma Infrastructure Manager supports multiple command line parameters:
 
 ```
   -audit-log-mandatory
-    	Feature flag to enable strict mode for audit log configuration (default true)
+    	Feature flag to enable strict mode for audit log configuration. When enabled this feature, a Shoot cluster will only be created when an auditlog tenant exists (this is defined in the auditlog mapping configuration file) (default true)
   -converter-config-filepath string
-    	A file path to the gardener shoot converter configuration. (default "/converter-config/converter_config.json")
+    	File path to the gardener shoot converter configuration. (default "/converter-config/converter_config.json")
   -custom-config-controller-enabled
-    	Feature flag to custom config controller
+    	Feature flag for registry cache. The registry cache feature is using a dedicated controller which can be enabled by this flag
   -gardener-cluster-ctrl-workers-cnt int
-    	A number of workers running in parallel for Gardener Cluster Controller (default 25)
+    	Number of workers running in parallel for Gardener Cluster Controller. The number of parallel workers has an impact on the amount of requests send to the Gardener cluster (default 25)
   -gardener-ctrl-reconcilation-timeout duration
-    	Timeout duration for reconlication for Gardener Cluster Controller (default 1m0s)
+    	Timeout duration for reconiling a kubeconfig for Gardener Cluster Controller. The reconciliation of a kubeconfig is cancelled when this timeout is reached (default 1m0s)
   -gardener-kubeconfig-path string
-    	Kubeconfig file for Gardener cluster (default "/gardener/kubeconfig/kubeconfig")
+    	Path to the kubeconfig file by KIM to access the for Gardener cluster (default "/gardener/kubeconfig/kubeconfig")
   -gardener-project-name string
-    	Name of the Gardener project (default "gardener-project")
+    	Name of the Gardener project which is used for storing Shoot definitions (default "gardener-project")
   -gardener-ratelimiter-burst int
-    	Gardener client rate limiter burst for Runtime Controller (default 5)
+    	Gardener client rate limiter burst for Runtime Controller. The burst value allows for more requests than the qps limit for short periods (see https://cloud.google.com/config-connector/docs/how-to/customize-controller-manager-rate-limit) (default 5)
   -gardener-ratelimiter-qps int
-    	Gardener client rate limiter QPS for Runtime Controller (default 5)
+    	Gardener client rate limiter QPS (queries per seconds) for Runtime Controller. The queries per second has direct impact on the load produced for the Gardener cluster (see https://cloud.google.com/config-connector/docs/how-to/customize-controller-manager-rate-limit) (default 5)
   -gardener-request-timeout duration
-    	Timeout duration for Gardener client for Runtime Controller (default 3s)
+    	Timeout duration for Gardener client for Runtime Controller. Requests to the Gardener cluster are cancelled when this timeout is reached (default 3s)
   -health-probe-bind-address string
-    	The address the probe endpoint binds to. (default ":8081")
+    	The address the probe endpoint binds to. Kubernetes is using the probe endpoint to determine the health state of the application process (default ":8081")
   -kubeconfig string
     	Paths to a kubeconfig. Only required if out-of-cluster.
   -kubeconfig-expiration-time duration
-    	Dynamic kubeconfig expiration time (default 24h0m0s)
+    	Expiration time is the maximum age of a Shoot kubeconfig until it is considered as invalid (default 24h0m0s)
   -leader-elect
     	Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.
   -metrics-bind-address string
-    	The address the metric endpoint binds to. (default ":8080")
-  -minimal-rotation-time float
-    	The ratio determines what is the minimal time that needs to pass to rotate certificate. (default 0.6)
+    	The address the metric endpoint binds to. Monitoring and alerting tools can use this endpoint to collect application specific metrics during runtime (default ":8080")
+  -minimal-rotation-time kubeconfig-expiration-time
+    	The ratio determines what is the minimal time that needs to pass to rotate the kubeconfig of Shoot clusters. The ratio determines what is the minimal time that needs to pass to rotate the kubeconfig of Shoot clusters. For example if kubeconfig-expiration-time is set to `24hs` and `minimal-rotation-time` is set to `0.5`, then the next reconciliation after 12 hours will trigger the rotation (default 0.6)
   -runtime-ctrl-workers-cnt int
-    	A number of workers running in parallel for Runtime Controller (default 25)
+    	Number of workers running in parallel for Runtime Controller. The number of parallel workers has an impact on the amount of requests send to the Gardener cluster (default 25)
   -structured-auth-enabled
-    	Feature flag to enable structured authentication
+    	Feature flag to enable structured authentication. This new authentication approach was introduced as default in Kubernetes version 1.32
   -zap-devel
     	Development Mode defaults(encoder=consoleEncoder,logLevel=Debug,stackTraceLevel=Warn). Production Mode defaults(encoder=jsonEncoder,logLevel=Info,stackTraceLevel=Error)
   -zap-encoder value
