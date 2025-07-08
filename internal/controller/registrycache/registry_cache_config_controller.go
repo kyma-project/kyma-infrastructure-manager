@@ -63,10 +63,7 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 		return requeueOnError(err)
 	}
 
-	return ctrl.Result{
-		Requeue:      true,
-		RequeueAfter: 5 * time.Minute,
-	}, nil
+	return r.reconcileRegistryCacheConfig(ctx, secret, runtime)
 }
 
 func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context.Context, secret v1.Secret, runtime imv1.Runtime) (ctrl.Result, error) {
