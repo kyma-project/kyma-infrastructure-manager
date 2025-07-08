@@ -16,8 +16,9 @@ import (
 )
 
 const (
-	secretForClusterWithCustomConfig = "kubeconfig-secret-for-cluster-with-custom-config"
-	secretNotManagedByKIM            = "secret-not-managed-by-kim"
+	secretForClusterWithCustomConfig1 = "kubeconfig-secret-for-cluster-with-custom-config1"
+	secretForClusterWithCustomConfig2 = "kubeconfig-secret-for-cluster-with-custom-config2"
+	secretNotManagedByKIM             = "secret-not-managed-by-kim"
 )
 
 var _ = Describe("Custom Config Controller", func() {
@@ -72,7 +73,7 @@ var _ = Describe("Custom Config Controller", func() {
 		},
 			Entry("with registry cache enabled",
 				createRuntimeStub(runtimeWithoutRegistryCacheConfig, shootNameForRuntimeWithoutRegistryCache, nil),
-				createSecretStub(secretForClusterWithCustomConfig, getSecretLabels(runtimeWithoutRegistryCacheConfig, "infrastructure-manager"))),
+				createSecretStub(secretForClusterWithCustomConfig1, getSecretLabels(runtimeWithoutRegistryCacheConfig, "infrastructure-manager"))),
 			Entry("with registry cache disabled",
 				createRuntimeStub(runtimeWithRegistryCacheEnabled, shootNameForRuntimeWithRegistryCacheEnabled, &imv1.ImageRegistryCache{
 					Name:      "config3",
@@ -81,7 +82,7 @@ var _ = Describe("Custom Config Controller", func() {
 						Upstream: "some.registry.com",
 					},
 				}),
-				createSecretStub(secretForClusterWithCustomConfig, getSecretLabels(runtimeWithRegistryCacheEnabled, "infrastructure-manager"))))
+				createSecretStub(secretForClusterWithCustomConfig2, getSecretLabels(runtimeWithRegistryCacheEnabled, "infrastructure-manager"))))
 
 		It("Should not update runtime when secret is not managed by KIM", func() {
 			const ShootName = "shoot-cluster-3"
@@ -124,8 +125,9 @@ var _ = Describe("Custom Config Controller", func() {
 
 func fixMockedRegistryCache() func(secret v1.Secret) (RegistryCache, error) {
 	callsMap := map[string]int{
-		secretForClusterWithCustomConfig: 0,
-		secretNotManagedByKIM:            0,
+		secretForClusterWithCustomConfig1: 0,
+		secretForClusterWithCustomConfig2: 0,
+		secretNotManagedByKIM:             0,
 	}
 
 	testConfig := []registrycache.RegistryCacheConfig{
@@ -150,8 +152,9 @@ func fixMockedRegistryCache() func(secret v1.Secret) (RegistryCache, error) {
 	}
 
 	resultsMap := map[string][]registrycache.RegistryCacheConfig{
-		secretForClusterWithCustomConfig: testConfig,
-		secretNotManagedByKIM:            testConfig,
+		secretForClusterWithCustomConfig1: testConfig,
+		secretForClusterWithCustomConfig2: testConfig,
+		secretNotManagedByKIM:             testConfig,
 	}
 
 	return func(secret v1.Secret) (RegistryCache, error) {
