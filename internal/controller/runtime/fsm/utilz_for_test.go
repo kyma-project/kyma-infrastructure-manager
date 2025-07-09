@@ -6,8 +6,8 @@ import (
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
-	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
+	metrics_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
+	fsm_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
@@ -65,7 +65,7 @@ var (
 	withTestFinalizer = withFinalizer("test-me-plz")
 
 	withMockedMetrics = func() fakeFSMOpt {
-		m := &mocks.Metrics{}
+		m := &metrics_mocks.Metrics{}
 		m.On("SetRuntimeStates", mock.Anything).Return()
 		m.On("CleanUpRuntimeGauge", mock.Anything, mock.Anything).Return()
 		m.On("IncRuntimeFSMStopCounter").Return()
@@ -117,16 +117,37 @@ var (
 				Patch:  fsm_testing.GetFakePatchInterceptorFn(true),
 				Update: fsm_testing.GetFakeUpdateInterceptorFn(true),
 			}).Build()
-		imv1_client.GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
-			return k8sClient, nil
-		}
+
+		runtimeClientGetter := &fsm_mocks.RuntimeClientGetter{}
+		runtimeClientGetter.On("Get", mock.Anything, mock.Anything).Return(k8sClient, nil)
 
 		return func(fsm *fsm) error {
 			fsm.KcpClient = k8sClient
 			fsm.SeedClient = k8sClient
+			fsm.RuntimeClientGetter = runtimeClientGetter
+			return nil
+		}
+	}
+
+	withFailedRuntimeK8sClient = func(err error, scheme *runtime.Scheme,
+		objs ...client.Object) fakeFSMOpt {
+
+		k8sClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(objs...).
+			WithStatusSubresource(objs...).
+			WithInterceptorFuncs(interceptor.Funcs{
+				Patch:  fsm_testing.GetFakePatchInterceptorFn(true),
+				Update: fsm_testing.GetFakeUpdateInterceptorFn(true),
+			}).Build()
+
+		runtimeClientGetter := &fsm_mocks.RuntimeClientGetter{}
+		runtimeClientGetter.On("Get", mock.Anything, mock.Anything).Return(nil, err)
+
+		return func(fsm *fsm) error {
+			fsm.KcpClient = k8sClient
+			fsm.SeedClient = k8sClient
+			fsm.RuntimeClientGetter = runtimeClientGetter
 			return nil
 		}
 	}

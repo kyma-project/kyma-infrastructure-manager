@@ -11,7 +11,6 @@ import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/skrdetails"
 	"github.com/pkg/errors"
@@ -89,11 +88,12 @@ func createKymaSystemNamespace(ctx context.Context, m *fsm, s *systemState) erro
 		},
 	}
 
-	shootAdminClient, shootClientError := imv1_client.GetShootClient(ctx, m.KcpClient, s.instance)
-	if shootClientError != nil {
-		return shootClientError
+	runtimeClient, runtimeClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
+
+	if runtimeClientError != nil {
+		return runtimeClientError
 	}
-	kymaNsCreationErr := shootAdminClient.Create(ctx, &kymaSystemNs)
+	kymaNsCreationErr := runtimeClient.Create(ctx, &kymaSystemNs)
 
 	if kymaNsCreationErr != nil {
 		if k8s_errors.IsAlreadyExists(kymaNsCreationErr) {
@@ -139,12 +139,12 @@ func additionalOidcEmptyOrUndefined(runtime *imv1.Runtime, cfg RCCfg) additional
 }
 
 func recreateOpenIDConnectResources(ctx context.Context, m *fsm, s *systemState, additionalOIDC additionalOIDCState) error {
-	shootAdminClient, shootClientError := imv1_client.GetShootClient(ctx, m.KcpClient, s.instance)
-	if shootClientError != nil {
-		return shootClientError
+	runtimeClient, runtimeClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
+	if runtimeClientError != nil {
+		return runtimeClientError
 	}
 
-	err := deleteExistingKymaOpenIDConnectResources(ctx, shootAdminClient)
+	err := deleteExistingKymaOpenIDConnectResources(ctx, runtimeClient)
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func recreateOpenIDConnectResources(ctx context.Context, m *fsm, s *systemState,
 	var errResourceCreation error
 	for id, additionalOidcConfig := range additionalOidcConfigs {
 		openIDConnectResource := createOpenIDConnectResource(additionalOidcConfig, id)
-		errResourceCreation = shootAdminClient.Create(ctx, openIDConnectResource)
+		errResourceCreation = runtimeClient.Create(ctx, openIDConnectResource)
 	}
 	return errResourceCreation
 }
@@ -236,12 +236,12 @@ func applyKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) er
 		return errors.Wrap(conversionErr, "failed to convert RuntimeCR and Shoot spec to ToKymaProvisioningInfo config map")
 	}
 
-	shootAdminClient, shootClientError := imv1_client.GetShootClient(ctx, m.KcpClient, s.instance)
-	if shootClientError != nil {
-		return shootClientError
+	runtimeClient, runtimeClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
+	if runtimeClientError != nil {
+		return runtimeClientError
 	}
 
-	errResourceCreation := shootAdminClient.Patch(ctx, &configMap, k8s_client.Apply, &k8s_client.PatchOptions{
+	errResourceCreation := runtimeClient.Patch(ctx, &configMap, k8s_client.Apply, &k8s_client.PatchOptions{
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
 	})

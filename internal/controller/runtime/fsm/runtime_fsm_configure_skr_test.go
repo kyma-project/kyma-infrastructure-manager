@@ -2,6 +2,8 @@ package fsm
 
 import (
 	"context"
+	fsm_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
+	"github.com/stretchr/testify/mock"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	util "k8s.io/apimachinery/pkg/util/runtime"
@@ -11,7 +13,6 @@ import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/stretchr/testify/assert"
@@ -387,7 +388,7 @@ func TestSkrConfigState(t *testing.T) {
 		assertSuccesfullStatusConditions(t, systemState)
 	})
 
-	t.Run("Error in kyma-provisioning-info should reque with conditions set", func(t *testing.T) {
+	t.Run("Error in kyma-provisioning-info should requeue with conditions set", func(t *testing.T) {
 		ctx := context.Background()
 
 		runtime := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
@@ -406,9 +407,14 @@ func TestSkrConfigState(t *testing.T) {
 			}).
 			WithScheme(scheme).
 			Build()
+
+		runtimeClientGetter := &fsm_mocks.RuntimeClientGetter{}
+		runtimeClientGetter.On("Get", mock.Anything, mock.Anything).Return(fakeClient, nil)
+
 		testFsm := &fsm{K8s: K8s{
-			SeedClient: fakeClient,
-			KcpClient:  fakeClient,
+			SeedClient:          fakeClient,
+			KcpClient:           fakeClient,
+			RuntimeClientGetter: runtimeClientGetter,
 		},
 			RCCfg: RCCfg{
 				Config: config.Config{
@@ -417,12 +423,6 @@ func TestSkrConfigState(t *testing.T) {
 					},
 				},
 			},
-		}
-		imv1_client.GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
-			return fakeClient, nil
 		}
 
 		systemState := &systemState{
@@ -471,12 +471,6 @@ func TestSkrConfigState(t *testing.T) {
 		emptyAdditionalOIDCConfig := &[]imv1.OIDCConfig{}
 
 		fakeClient, testFSM := setupFakeClient()
-		imv1_client.GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
-			return fakeClient, nil
-		}
 
 		runtimeStub := runtimeForTest()
 
@@ -530,9 +524,14 @@ func setupFakeClient() (client.WithWatch, *fsm) {
 		}).
 		WithScheme(scheme).
 		Build()
+
+	runtimeClientGetter := &fsm_mocks.RuntimeClientGetter{}
+	runtimeClientGetter.On("Get", mock.Anything, mock.Anything).Return(fakeClient, nil)
+
 	testFsm := &fsm{K8s: K8s{
-		SeedClient: fakeClient,
-		KcpClient:  fakeClient,
+		SeedClient:          fakeClient,
+		KcpClient:           fakeClient,
+		RuntimeClientGetter: runtimeClientGetter,
 	},
 		RCCfg: RCCfg{
 			Config: config.Config{
@@ -542,12 +541,7 @@ func setupFakeClient() (client.WithWatch, *fsm) {
 			},
 		},
 	}
-	imv1_client.GetShootClient = func(
-		_ context.Context,
-		_ client.Client,
-		_ imv1.Runtime) (client.Client, error) {
-		return fakeClient, nil
-	}
+
 	// end of fake client setup
 	return fakeClient, testFsm
 }

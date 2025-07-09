@@ -9,7 +9,6 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	imv1_client "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/client"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
@@ -251,7 +250,7 @@ func updateStatePendingWithErrorAndStop(instance *imv1.Runtime,
 }
 
 func getRegistryCache(ctx context.Context, kcpClient client.Client, runtime imv1.Runtime) ([]v1beta1.RegistryCache, error) {
-	secret, err := imv1_client.GetKubeconfigSecret(ctx, kcpClient, runtime.Labels[imv1.LabelKymaRuntimeID], runtime.Namespace)
+	secret, err := GetKubeconfigSecret(ctx, kcpClient, runtime.Labels[imv1.LabelKymaRuntimeID], runtime.Namespace)
 	if err != nil {
 		return nil, err
 	}
