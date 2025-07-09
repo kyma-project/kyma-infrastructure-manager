@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-// CustomConfigReconciler reconciles a secret object
+// RegistryCacheConfigReconciler reconciles a secret object
 // nolint:revive
 type RegistryCacheConfigReconciler struct {
 	client.Client
@@ -76,7 +76,7 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 
 	registryCacheConfigs, err := registryCache.GetRegistryCacheConfig()
 	if err != nil {
-		r.Log.V(log_level.TRACE).Error(err, "Failed to get custom config", "RuntimeID", runtime.Name, "Namespace", runtime.Namespace)
+		r.Log.V(log_level.TRACE).Error(err, "Failed to get registry cache config", "RuntimeID", runtime.Name, "Namespace", runtime.Namespace)
 
 		return ctrl.Result{}, err
 	}

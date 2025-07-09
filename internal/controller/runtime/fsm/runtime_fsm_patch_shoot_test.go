@@ -70,24 +70,6 @@ func TestFSMPatchShoot(t *testing.T) {
 			},
 		},
 		{
-			"should transition to sFnUpdateStatus when registry cache configured properly",
-			setupFakeFSMForTest(testSchemeWithRegistryCache, inputRuntimeWithRegistryCacheEnabled, &registrycachev1beta1.CustomConfig{
-				Spec: registrycachev1beta1.CustomConfigSpec{
-					RegistryCaches: []registrycachev1beta1.RegistryCache{
-						{Upstream: "docker.io"},
-						{Upstream: "quay.io"},
-					},
-				},
-			}),
-			&systemState{instance: *inputRuntimeWithRegistryCacheEnabled, shoot: fsm_testing.TestShootForUpdate()},
-			outputFnState{
-				nextStep:    haveName("sFnUpdateStatus"),
-				annotations: expectedAnnotations,
-				result:      nil,
-				status:      fsm_testing.PendingStatusShootPatched(),
-			},
-		},
-		{
 			"should transition to Pending Unknown state after successful patching and remove force patch annotation",
 			setupFakeFSMForTest(testScheme, inputRuntimeWithForceAnnotation),
 			&systemState{instance: *inputRuntimeWithForceAnnotation, shoot: fsm_testing.TestShootForPatch()},

@@ -32,12 +32,12 @@ func (c *ConfigExplorer) RegistryCacheConfigExists() (bool, error) {
 }
 
 func (c *ConfigExplorer) GetRegistryCacheConfig() ([]registrycache.RegistryCacheConfig, error) {
-	var customConfigList registrycache.RegistryCacheConfigList
-	err := c.runtimeClient.List(c.Context, &customConfigList)
+	var registryCacheConfigList registrycache.RegistryCacheConfigList
+	err := c.runtimeClient.List(c.Context, &registryCacheConfigList)
 	if err != nil {
 		return nil, err
 	}
 	registryCacheConfigs := make([]registrycache.RegistryCacheConfig, 0)
 
-	return append(registryCacheConfigs, customConfigList.Items...), nil
+	return append(registryCacheConfigs, registryCacheConfigList.Items...), nil
 }

@@ -2,6 +2,7 @@ package registrycache
 
 import (
 	"context"
+	"errors"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/registrycache/mocks"
@@ -16,12 +17,12 @@ import (
 )
 
 const (
-	secretForClusterWithCustomConfig1 = "kubeconfig-secret-for-cluster-with-custom-config1"
-	secretForClusterWithCustomConfig2 = "kubeconfig-secret-for-cluster-with-custom-config2"
-	secretNotManagedByKIM             = "secret-not-managed-by-kim"
+	secretForClusterWithRegistryCacheConfig1 = "kubeconfig-secret-for-cluster-with-custom-config1"
+	secretForClusterWithRegistryCacheConfig2 = "kubeconfig-secret-for-cluster-with-custom-config2"
+	secretNotManagedByKIM                    = "secret-not-managed-by-kim"
 )
 
-var _ = Describe("Custom Config Controller", func() {
+var _ = Describe("Registry Cache Config Controller", func() {
 	Context("When reconciling a Secret resource", func() {
 		ctx := context.Background()
 
@@ -73,7 +74,7 @@ var _ = Describe("Custom Config Controller", func() {
 		},
 			Entry("with registry cache enabled",
 				createRuntimeStub(runtimeWithoutRegistryCacheConfig, shootNameForRuntimeWithoutRegistryCache, nil),
-				createSecretStub(secretForClusterWithCustomConfig1, getSecretLabels(runtimeWithoutRegistryCacheConfig, "infrastructure-manager"))),
+				createSecretStub(secretForClusterWithRegistryCacheConfig1, getSecretLabels(runtimeWithoutRegistryCacheConfig, "infrastructure-manager"))),
 			Entry("with registry cache disabled",
 				createRuntimeStub(runtimeWithRegistryCacheEnabled, shootNameForRuntimeWithRegistryCacheEnabled, &imv1.ImageRegistryCache{
 					Name:      "config3",
@@ -82,7 +83,7 @@ var _ = Describe("Custom Config Controller", func() {
 						Upstream: "some.registry.com",
 					},
 				}),
-				createSecretStub(secretForClusterWithCustomConfig2, getSecretLabels(runtimeWithRegistryCacheEnabled, "infrastructure-manager"))))
+				createSecretStub(secretForClusterWithRegistryCacheConfig2, getSecretLabels(runtimeWithRegistryCacheEnabled, "infrastructure-manager"))))
 
 		It("Should not update runtime when secret is not managed by KIM", func() {
 			const ShootName = "shoot-cluster-3"
@@ -94,7 +95,7 @@ var _ = Describe("Custom Config Controller", func() {
 			runtime := createRuntimeStub(runtimeThatShouldNotBeModified, ShootName, nil)
 			Expect(k8sClient.Create(ctx, runtime)).To(Succeed())
 
-			By("Creating a Secret with custom config but not managed by KIM")
+			By("Creating a Secret with registry cache config but not managed by KIM")
 			secret := createSecretStub(secretNotManagedByKIM, getSecretLabels(runtimeThatShouldNotBeModified, "something-else"))
 			Expect(k8sClient.Create(ctx, secret)).To(Succeed())
 
@@ -125,9 +126,9 @@ var _ = Describe("Custom Config Controller", func() {
 
 func fixMockedRegistryCache() func(secret v1.Secret) (RegistryCache, error) {
 	callsMap := map[string]int{
-		secretForClusterWithCustomConfig1: 0,
-		secretForClusterWithCustomConfig2: 0,
-		secretNotManagedByKIM:             0,
+		secretForClusterWithRegistryCacheConfig1: 0,
+		secretForClusterWithRegistryCacheConfig2: 0,
+		secretNotManagedByKIM:                    0,
 	}
 
 	testConfig := []registrycache.RegistryCacheConfig{
@@ -152,9 +153,9 @@ func fixMockedRegistryCache() func(secret v1.Secret) (RegistryCache, error) {
 	}
 
 	resultsMap := map[string][]registrycache.RegistryCacheConfig{
-		secretForClusterWithCustomConfig1: testConfig,
-		secretForClusterWithCustomConfig2: testConfig,
-		secretNotManagedByKIM:             testConfig,
+		secretForClusterWithRegistryCacheConfig1: testConfig,
+		secretForClusterWithRegistryCacheConfig2: testConfig,
+		secretNotManagedByKIM:                    testConfig,
 	}
 
 	return func(secret v1.Secret) (RegistryCache, error) {

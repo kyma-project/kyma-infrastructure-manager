@@ -73,12 +73,12 @@ func TestConfigExplorer_GetRegistryCacheConfig(t *testing.T) {
 
 	t.Run("Return non empty RegistryCacheConfig list", func(t *testing.T) {
 		// given
-		customConfig := &registrycachev1beta1.RegistryCacheConfig{
+		registryCacheConfig := &registrycachev1beta1.RegistryCacheConfig{
 			Spec: registrycachev1beta1.RegistryCacheConfigSpec{
 				Upstream: "docker.io",
 			},
 		}
-		client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(customConfig).Build()
+		client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(registryCacheConfig).Build()
 
 		explorer := NewConfigExplorer(ctx, client)
 
