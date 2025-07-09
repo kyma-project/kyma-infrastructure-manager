@@ -270,7 +270,13 @@ func main() {
 
 	if registryCacheConfigControllerEnabled {
 		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, func(secret corev1.Secret) (registrycachecontroller.RegistryCache, error) {
-			return registrycache.NewConfigExplorer(context.Background(), secret)
+			runtimeClient, err := gardener.GetRuntimeClient(secret)
+
+			if err != nil {
+				return nil, err
+			}
+
+			return registrycache.NewConfigExplorer(context.Background(), runtimeClient), nil
 		})
 		if err = registryCacheConfigReconciler.SetupWithManager(mgr, 1); err != nil {
 			setupLog.Error(err, "unable to setup custom config controller with Manager", "controller", "Runtime")
