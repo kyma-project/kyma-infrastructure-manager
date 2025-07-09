@@ -242,6 +242,17 @@ func setupFakeFSMForTestKeepGeneration(scheme *api.Scheme, runtime *imv1.Runtime
 	)
 }
 
+func setupFakeFSMForTestWithFailedRuntimeK8sClient(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
+	return must(newFakeFSM,
+		withMockedMetrics(),
+		withShootNamespace("garden-"),
+		withTestFinalizer,
+		withFailedRuntimeK8sClient(errors.New("failed to get runtime"), scheme, runtime),
+		withFakeEventRecorder(1),
+		withDefaultReconcileDuration(),
+	)
+}
+
 func setupFakeFSMForTestWithFailingPatchWithInConflictError(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	gr := schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoot"}
 	err := k8s_errors.NewConflict(gr, "test-shoot", errors.New("test conflict"))

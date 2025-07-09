@@ -26,7 +26,6 @@ func TestConfigExplorer_RegistryCacheConfigExists(t *testing.T) {
 		}
 
 		client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(registryCacheConfig).Build()
-
 		explorer := NewConfigExplorer(ctx, client)
 
 		// when
