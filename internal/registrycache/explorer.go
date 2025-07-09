@@ -2,7 +2,6 @@ package registrycache
 
 import (
 	"context"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -15,17 +14,11 @@ type ConfigExplorer struct {
 
 type GetSecretFunc func() (corev1.Secret, error)
 
-func NewConfigExplorer(ctx context.Context, kubeconfigSecret corev1.Secret) (*ConfigExplorer, error) {
-
-	runtimeClient, err := gardener.GetRuntimeClient(kubeconfigSecret)
-	if err != nil {
-		return nil, err
-	}
-
+func NewConfigExplorer(ctx context.Context, runtimeClient client.Client) *ConfigExplorer {
 	return &ConfigExplorer{
 		runtimeClient: runtimeClient,
 		Context:       ctx,
-	}, nil
+	}
 }
 
 func (c *ConfigExplorer) RegistryCacheConfigExists() (bool, error) {
