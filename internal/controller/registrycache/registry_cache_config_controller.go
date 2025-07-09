@@ -103,7 +103,7 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 	})
 
 	if err != nil {
-		r.Log.V(log_level.TRACE).Error(err, "Failed to patch runtime with caching enabled")
+		r.Log.V(log_level.TRACE).Error(err, "Failed to patch runtime")
 		return ctrl.Result{}, err
 	}
 
