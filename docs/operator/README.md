@@ -102,7 +102,7 @@ In addition to the standard Pod resource indicators such as CPU and memory, KIM 
 
 ### Configuration Parameters
 
-KIM can be configured via command line parameters. Supported parameters are documented in [this document](./parameter.md).
+KIM can be configured via command line parameters. Supported parameters are described in [this document](./kim-configuration.md).
 
 ## Quality Requirements
 
