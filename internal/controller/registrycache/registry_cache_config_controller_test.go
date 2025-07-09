@@ -17,8 +17,8 @@ import (
 )
 
 const (
-	secretForClusterWithRegistryCacheConfig1 = "kubeconfig-secret-for-cluster-with-custom-config1"
-	secretForClusterWithRegistryCacheConfig2 = "kubeconfig-secret-for-cluster-with-custom-config2"
+	secretForClusterWithRegistryCacheConfig1 = "kubeconfig-secret-for-cluster-with-cache-config1"
+	secretForClusterWithRegistryCacheConfig2 = "kubeconfig-secret-for-cluster-with-cache-config2"
 	secretNotManagedByKIM                    = "secret-not-managed-by-kim"
 )
 
