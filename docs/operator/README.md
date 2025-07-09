@@ -88,11 +88,6 @@ KIM, a component of the KCP, is delivered as a containerized application and dep
 
 Updates don't usually require manual action. In rare cases where a new feature requires a migration, a rollout guide will be provided.
 
-### Troubleshooting
-
-For details, see the troubleshooting guides for KCP components.
-
-
 ### Observability
 
 KIM exposes multiple data over an metrics REST endpoint (`/metrics/*`) which provides insights about the application health state.
@@ -111,7 +106,6 @@ KIM can be configured via command line parameters. Supported parameters are docu
 
 ## Quality Requirements
 
-Non-technical requirements for KIM are:
 
 * Performance: Processes about 5.000 Runtime instances.
 * Extensibility: Ensures easy extensibility by employing the following software patterns:  
