@@ -116,7 +116,7 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&gardenerKubeconfigPath, "gardener-kubeconfig-path", "/gardener/kubeconfig/kubeconfig", "Kubeconfig file for Gardener cluster")
 	flag.StringVar(&gardenerProjectName, "gardener-project-name", "gardener-project", "Name of the Gardener project")
-	flag.Float64Var(&minimalRotationTimeRatio, "minimal-rotation-time", defaultMinimalRotationTimeRatio, "The ratio determines what is the minimal time that needs to pass to rotate certificate.")
+	flag.Float64Var(&minimalRotationTimeRatio, "minimal-rotation-time", defaultMinimalRotationTimeRatio, "The ratio determines what is the minimal time that needs to pass to rotate certificate")
 	flag.DurationVar(&expirationTime, "kubeconfig-expiration-time", defaultExpirationTime, "Dynamic kubeconfig expiration time")
 	flag.DurationVar(&gardenerCtrlReconciliationTimeout, "gardener-ctrl-reconcilation-timeout", defaultGardenerReconciliationTimeout, "Timeout duration for reconlication for Gardener Cluster Controller")
 	flag.DurationVar(&runtimeCtrlGardenerRequestTimeout, "gardener-request-timeout", defaultGardenerRequestTimeout, "Timeout duration for Gardener client for Runtime Controller")
@@ -124,10 +124,10 @@ func main() {
 	flag.IntVar(&runtimeCtrlGardenerRateLimiterBurst, "gardener-ratelimiter-burst", defaultGardenerRateLimiterBurst, "Gardener client rate limiter burst for Runtime Controller")
 	flag.IntVar(&runtimeCtrlWorkersCnt, "runtime-ctrl-workers-cnt", defaultRuntimeCtrlWorkersCnt, "A number of workers running in parallel for Runtime Controller")
 	flag.IntVar(&gardenerClusterCtrlWorkersCnt, "gardener-cluster-ctrl-workers-cnt", defaultGardenerClusterCtrlWorkersCnt, "A number of workers running in parallel for Gardener Cluster Controller")
-	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "A file path to the gardener shoot converter configuration.")
+	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "A file path to the gardener shoot converter configuration")
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration")
 	flag.BoolVar(&structuredAuthEnabled, "structured-auth-enabled", false, "Feature flag to enable structured authentication")
-	flag.BoolVar(&registryCacheConfigControllerEnabled, "custom-config-controller-enabled", false, "Feature flag to enable registry cache config controller")
+	flag.BoolVar(&registryCacheConfigControllerEnabled, "registry-cache-config-controller-enabled", false, "Feature flag to enable registry cache config controller")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
