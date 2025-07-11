@@ -275,7 +275,7 @@ func main() {
 				return nil, err
 			}
 
-			return registrycache.NewConfigExplorer(context.Background(), runtimeClient), nil
+			return registrycache.NewRuntimeConfigurationManager(context.Background(), runtimeClient), nil
 		})
 		if err = registryCacheConfigReconciler.SetupWithManager(mgr, 1); err != nil {
 			setupLog.Error(err, "unable to setup registry cache config controller with Manager", "controller", "Runtime")
