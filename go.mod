@@ -12,7 +12,7 @@ require (
 	github.com/gardener/oidc-webhook-authenticator v0.36.0
 	github.com/go-logr/logr v1.4.3
 	github.com/go-playground/validator/v10 v10.26.0
-	github.com/kyma-project/kim-snatch v0.0.0-20250707101344-d177b4dcf5c1
+	github.com/kyma-project/kim-snatch v0.0.0-20250711091737-5b307156d7bf
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
 	github.com/pkg/errors v0.9.1
