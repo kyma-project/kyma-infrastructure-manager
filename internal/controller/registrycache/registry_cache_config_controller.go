@@ -26,7 +26,7 @@ import (
 // nolint:revive
 type RegistryCacheConfigReconciler struct {
 	KcpClient            client.Client
-	RuntimeClient        client.Client
+	// RuntimeClient        client.Client // shouldn't be needed if we use RuntimeConfigurationManager?
 	Scheme               *runtime.Scheme
 	Log                  logr.Logger
 	Cfg                  fsm.RCCfg
