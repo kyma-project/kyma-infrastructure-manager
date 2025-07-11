@@ -25,7 +25,8 @@ import (
 // RegistryCacheConfigReconciler reconciles a secret object
 // nolint:revive
 type RegistryCacheConfigReconciler struct {
-	client.Client
+	KcpClient            client.Client
+	RuntimeClient        client.Client
 	Scheme               *runtime.Scheme
 	Log                  logr.Logger
 	Cfg                  fsm.RCCfg
@@ -40,7 +41,7 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 	r.Log.V(log_level.TRACE).Info(request.String())
 
 	var secret v1.Secret
-	if err := r.Get(ctx, request.NamespacedName, &secret); err != nil {
+	if err := r.KcpClient.Get(ctx, request.NamespacedName, &secret); err != nil {
 		return requeueOnError(err)
 	}
 
@@ -56,7 +57,7 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 	r.Log.V(log_level.TRACE).Info("Getting runtime", "Name", runtimeID, "Namespace", request.Namespace)
 
 	var runtime imv1.Runtime
-	if err := r.Get(ctx, types.NamespacedName{Name: runtimeID,
+	if err := r.KcpClient.Get(ctx, types.NamespacedName{Name: runtimeID,
 		Namespace: request.Namespace,
 	}, &runtime); err != nil {
 		return requeueOnError(err)
@@ -97,7 +98,7 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 
 	runtime.ManagedFields = nil
 
-	err = r.Patch(ctx, &runtime, client.Apply, &client.PatchOptions{
+	err = r.KcpClient.Patch(ctx, &runtime, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
 	})
@@ -143,7 +144,7 @@ type RegistryCacheCreator func(secret v1.Secret) (RegistryCache, error)
 
 func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, registryCacheCreator RegistryCacheCreator) *RegistryCacheConfigReconciler {
 	return &RegistryCacheConfigReconciler{
-		Client:               mgr.GetClient(),
+		KcpClient:            mgr.GetClient(),
 		Scheme:               mgr.GetScheme(),
 		EventRecorder:        mgr.GetEventRecorderFor("runtime-controller"),
 		Log:                  logger,
