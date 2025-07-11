@@ -42,8 +42,12 @@ func TestFSMPatchShoot(t *testing.T) {
 	inputRuntimeWithForceAnnotation := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/force-patch-reconciliation": "true", "operator.kyma-project.io/existing-annotation": "true"})
 	inputRuntime := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
 	inputRuntimeWithRegistryCacheEnabled := inputRuntime.DeepCopy()
-	inputRuntimeWithRegistryCacheEnabled.Spec.Caching = &imv1.ImageRegistryCache{
-		Enabled: true,
+	inputRuntimeWithRegistryCacheEnabled.Spec.Caching = []imv1.ImageRegistryCache{
+		{
+			Name:      "config1",
+			Namespace: "test1",
+			Config:    registrycachev1beta1.RegistryCacheConfigSpec{},
+		},
 	}
 
 	RegisterTestingT(t)
@@ -58,24 +62,6 @@ func TestFSMPatchShoot(t *testing.T) {
 			"should transition to Pending Unknown state after successful shoot patching",
 			setupFakeFSMForTest(testScheme, inputRuntime),
 			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
-			outputFnState{
-				nextStep:    haveName("sFnUpdateStatus"),
-				annotations: expectedAnnotations,
-				result:      nil,
-				status:      fsm_testing.PendingStatusShootPatched(),
-			},
-		},
-		{
-			"should transition to sFnUpdateStatus when registry cache configured properly",
-			setupFakeFSMForTest(testSchemeWithRegistryCache, inputRuntimeWithRegistryCacheEnabled, &registrycachev1beta1.CustomConfig{
-				Spec: registrycachev1beta1.CustomConfigSpec{
-					RegistryCaches: []registrycachev1beta1.RegistryCache{
-						{Upstream: "docker.io"},
-						{Upstream: "quay.io"},
-					},
-				},
-			}),
-			&systemState{instance: *inputRuntimeWithRegistryCacheEnabled, shoot: fsm_testing.TestShootForUpdate()},
 			outputFnState{
 				nextStep:    haveName("sFnUpdateStatus"),
 				annotations: expectedAnnotations,
@@ -193,28 +179,6 @@ func TestFSMPatchShoot(t *testing.T) {
 				status:      fsm_testing.FailedStatusUpdateError(),
 			},
 		},
-		{
-			"should transition to Failed state when cannot get registry cache config",
-			setupFakeFSMForTest(testScheme, inputRuntimeWithRegistryCacheEnabled),
-			&systemState{instance: *inputRuntimeWithRegistryCacheEnabled, shoot: fsm_testing.TestShootForUpdate()},
-			outputFnState{
-				nextStep:    haveName("sFnUpdateStatus"),
-				annotations: expectedAnnotations,
-				result:      nil,
-				status:      fsm_testing.FailedStatusRegistryCache(),
-			},
-		},
-		{
-			"should transition to Failed state when cannot get runtime client",
-			setupFakeFSMForTestWithFailedRuntimeK8sClient(testScheme, inputRuntimeWithRegistryCacheEnabled),
-			&systemState{instance: *inputRuntimeWithRegistryCacheEnabled, shoot: fsm_testing.TestShootForUpdate()},
-			outputFnState{
-				nextStep:    haveName("sFnUpdateStatus"),
-				annotations: expectedAnnotations,
-				result:      nil,
-				status:      fsm_testing.FailedStatusRegistryCache(),
-			},
-		},
 	} {
 		createErr := entry.fsm.SeedClient.Create(testCtx, entry.systemState.shoot)
 		Expect(createErr).To(BeNil())
@@ -255,17 +219,6 @@ func setupFakeFSMForTestKeepGeneration(scheme *api.Scheme, runtime *imv1.Runtime
 		withShootNamespace("garden-"),
 		withTestFinalizer,
 		withFakedK8sClientKeepGeneration(scheme, runtime),
-		withFakeEventRecorder(1),
-		withDefaultReconcileDuration(),
-	)
-}
-
-func setupFakeFSMForTestWithFailedRuntimeK8sClient(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
-	return must(newFakeFSM,
-		withMockedMetrics(),
-		withShootNamespace("garden-"),
-		withTestFinalizer,
-		withFailedRuntimeK8sClient(errors.New("failed to get runtime"), scheme, runtime),
 		withFakeEventRecorder(1),
 		withDefaultReconcileDuration(),
 	)

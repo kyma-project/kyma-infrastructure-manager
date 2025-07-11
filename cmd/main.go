@@ -116,7 +116,6 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-
 	//Gardener related parameters:
 	flag.StringVar(&gardenerKubeconfigPath, "gardener-kubeconfig-path", "/gardener/kubeconfig/kubeconfig", "Path to the kubeconfig file by KIM to access the for Gardener cluster")
 	flag.StringVar(&gardenerProjectName, "gardener-project-name", "gardener-project", "Name of the Gardener project which is used for storing Shoot definitions")
@@ -139,7 +138,7 @@ func main() {
 	//Feature flags:
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration. When enabled this feature, a Shoot cluster will only be created when an auditlog tenant exists (this is defined in the auditlog mapping configuration file)")
 	flag.BoolVar(&structuredAuthEnabled, "structured-auth-enabled", false, "Feature flag to enable structured authentication. This new authentication approach was introduced as default in Kubernetes version 1.32")
-	flag.BoolVar(&registryCacheConfigControllerEnabled, "custom-config-controller-enabled", false, "Feature flag for registry cache. The registry cache feature is using a dedicated controller which can be enabled by this flag")
+	flag.BoolVar(&registryCacheConfigControllerEnabled, "registry-cache-config-controller-enabled", false, "Feature flag to enable registry cache config controller")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
@@ -279,7 +278,7 @@ func main() {
 			return registrycache.NewConfigExplorer(context.Background(), runtimeClient), nil
 		})
 		if err = registryCacheConfigReconciler.SetupWithManager(mgr, 1); err != nil {
-			setupLog.Error(err, "unable to setup custom config controller with Manager", "controller", "Runtime")
+			setupLog.Error(err, "unable to setup registry cache config controller with Manager", "controller", "Runtime")
 			os.Exit(1)
 		}
 	}

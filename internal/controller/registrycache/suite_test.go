@@ -26,9 +26,9 @@ var (
 	reconciler *RegistryCacheConfigReconciler
 )
 
-func TestCustomConfigController(t *testing.T) {
+func TestRegistryCacheConfigController(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Custom Config Controller Suite")
+	RunSpecs(t, "Registry Cache Config Controller Suite")
 }
 
 var _ = BeforeSuite(func() {

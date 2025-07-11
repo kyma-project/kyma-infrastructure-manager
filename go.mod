@@ -1,8 +1,6 @@
 module github.com/kyma-project/infrastructure-manager
 
-go 1.24.2
-
-toolchain go1.24.4
+go 1.24.4
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
@@ -14,7 +12,7 @@ require (
 	github.com/gardener/oidc-webhook-authenticator v0.36.0
 	github.com/go-logr/logr v1.4.3
 	github.com/go-playground/validator/v10 v10.26.0
-	github.com/kyma-project/kim-snatch v0.0.0-20250430122050-3c3bdc3b74bb
+	github.com/kyma-project/kim-snatch v0.0.0-20250707101344-d177b4dcf5c1
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
 	github.com/pkg/errors v0.9.1
@@ -72,13 +70,13 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.38.0 // indirect
-	golang.org/x/net v0.40.0 // indirect
+	golang.org/x/net v0.41.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sync v0.14.0 // indirect
+	golang.org/x/sync v0.15.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/term v0.32.0 // indirect
-	golang.org/x/text v0.25.0 // indirect
-	golang.org/x/time v0.11.0 // indirect
+	golang.org/x/text v0.26.0 // indirect
+	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.33.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
@@ -94,6 +92,7 @@ require (
 )
 
 replace (
+	github.com/kyma-project/kim-snatch => github.com/akgalwas/kim-snatch v0.0.0-20250707101344-d177b4dcf5c1
 	golang.org/x/crypto => golang.org/x/crypto v0.38.0
 	golang.org/x/net => golang.org/x/net v0.40.0
 	golang.org/x/sys => golang.org/x/sys v0.33.0

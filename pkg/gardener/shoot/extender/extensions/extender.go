@@ -2,7 +2,6 @@ package extensions
 
 import (
 	"encoding/json"
-	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"k8s.io/utils/ptr"
 	"slices"
 
@@ -19,7 +18,7 @@ type Extension struct {
 	Create CreateExtensionFunc
 }
 
-func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData auditlogs.AuditLogData, registryCache []registrycache.RegistryCache) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData auditlogs.AuditLogData, registryCache []imv1.ImageRegistryCache) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			Type: NetworkFilterType,
@@ -65,13 +64,13 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 					return nil, nil
 				}
 
-				return NewRegistryCacheExtension(registryCache, true)
+				return NewRegistryCacheExtension(registryCache)
 			},
 		},
 	}, nil)
 }
 
-func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, registryCache []registrycache.RegistryCache, extensionsOnTheShoot []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			AuditlogExtensionType,
@@ -119,8 +118,8 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, registry
 			Type: RegistryCacheExtensionType,
 			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
 
-				if runtime.Spec.Caching != nil && runtime.Spec.Caching.Enabled && len(registryCache) > 0 {
-					return NewRegistryCacheExtension(registryCache, true)
+				if len(runtime.Spec.Caching) > 0 {
+					return NewRegistryCacheExtension(runtime.Spec.Caching)
 				}
 
 				for _, ext := range shoot.Spec.Extensions {

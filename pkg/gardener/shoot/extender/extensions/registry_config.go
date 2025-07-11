@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -12,18 +13,18 @@ import (
 
 const RegistryCacheExtensionType = "registry-cache"
 
-func NewRegistryCacheExtension(cache []registrycache.RegistryCache, enabled bool) (*gardener.Extension, error) {
-	return extension(cache, enabled)
+func NewRegistryCacheExtension(caches []imv1.ImageRegistryCache) (*gardener.Extension, error) {
+	return extension(caches)
 }
 
-func extension(caches []registrycache.RegistryCache, enabled bool) (*gardener.Extension, error) {
+func extension(caches []imv1.ImageRegistryCache) (*gardener.Extension, error) {
 
 	registryConfig := registrycacheext.RegistryConfig{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: "registry.extensions.gardener.cloud/v1alpha3",
 			Kind:       "RegistryConfig",
 		},
-		Caches: toRegistryCacheExtension(caches),
+		Caches: ToRegistryCacheExtension(caches),
 	}
 
 	providerConfigBytes, err := json.Marshal(registryConfig)
@@ -36,11 +37,11 @@ func extension(caches []registrycache.RegistryCache, enabled bool) (*gardener.Ex
 		ProviderConfig: &runtime.RawExtension{
 			Raw: providerConfigBytes,
 		},
-		Disabled: ptr.To(!enabled),
+		Disabled: ptr.To(false),
 	}, nil
 }
 
-func toRegistryCacheExtension(cache []registrycache.RegistryCache) []registrycacheext.RegistryCache {
+func ToRegistryCacheExtension(caches []imv1.ImageRegistryCache) []registrycacheext.RegistryCache {
 
 	volumeToCacheExtension := func(volume *registrycache.Volume) *registrycacheext.Volume {
 
@@ -77,14 +78,14 @@ func toRegistryCacheExtension(cache []registrycache.RegistryCache) []registrycac
 
 	// Convert the registry cache to the internal format
 	registryCaches := make([]registrycacheext.RegistryCache, 0)
-	for _, c := range cache {
+	for _, c := range caches {
 		registryCaches = append(registryCaches, registrycacheext.RegistryCache{
-			Upstream:            c.Upstream,
-			RemoteURL:           c.RemoteURL,
-			Volume:              volumeToCacheExtension(c.Volume),
-			GarbageCollection:   garbageCollectionExtension(c.GarbageCollection),
-			SecretReferenceName: c.SecretReferenceName,
-			Proxy:               proxyExtension(c.Proxy),
+			Upstream:            c.Config.Upstream,
+			RemoteURL:           c.Config.RemoteURL,
+			Volume:              volumeToCacheExtension(c.Config.Volume),
+			GarbageCollection:   garbageCollectionExtension(c.Config.GarbageCollection),
+			SecretReferenceName: c.Config.SecretReferenceName,
+			Proxy:               proxyExtension(c.Config.Proxy),
 		})
 	}
 	return registryCaches
