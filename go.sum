@@ -9,8 +9,8 @@ github.com/Masterminds/semver/v3 v3.4.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lpr
 github.com/Masterminds/sprig v2.22.0+incompatible h1:z4yfnGrZ7netVz+0EDJ0Wi+5VZCSYp4Z0m2dk6cEM60=
 github.com/Masterminds/sprig/v3 v3.3.0 h1:mQh0Yrg1XPo6vjYXgtf5OtijNAKJRNcTdOOGZe3tPhs=
 github.com/Masterminds/sprig/v3 v3.3.0/go.mod h1:Zy1iXRYNqNLUolqCpL4uhk6SHUMAOSCzdgBfDb35Lz0=
-github.com/akgalwas/kim-snatch v0.0.0-20250707101344-d177b4dcf5c1 h1:WYOacl/eD3UvFQ+43NU6u/MUuhJFmfDASjfJoht/jvI=
-github.com/akgalwas/kim-snatch v0.0.0-20250707101344-d177b4dcf5c1/go.mod h1:mAia7gl6JvLXJJ02AGIEd7nwv4P2pB7flm388WSnlqs=
+github.com/akgalwas/kim-snatch v0.0.0-20250703132427-1bf66148c0a5 h1:5AHHU8WU9JSmsbPdg94qQvy8UYV337F/cV6ixoNRM9s=
+github.com/akgalwas/kim-snatch v0.0.0-20250703132427-1bf66148c0a5/go.mod h1:mAia7gl6JvLXJJ02AGIEd7nwv4P2pB7flm388WSnlqs=
 github.com/andybalholm/brotli v1.1.1 h1:PR2pgnyFznKEugtsUo0xLdDop5SKXd5Qf5ysW+7XdTA=
 github.com/andybalholm/brotli v1.1.1/go.mod h1:05ib4cKhjx3OQYUY22hTVd34Bc8upXjOLL2rKwwZBoA=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=

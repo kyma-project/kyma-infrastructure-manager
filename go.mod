@@ -92,7 +92,7 @@ require (
 )
 
 replace (
-	github.com/kyma-project/kim-snatch => github.com/akgalwas/kim-snatch v0.0.0-20250707101344-d177b4dcf5c1
+	github.com/kyma-project/kim-snatch => github.com/akgalwas/kim-snatch v0.0.0-20250703132427-1bf66148c0a5
 	golang.org/x/crypto => golang.org/x/crypto v0.38.0
 	golang.org/x/net => golang.org/x/net v0.40.0
 	golang.org/x/sys => golang.org/x/sys v0.33.0
