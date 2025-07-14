@@ -1,0 +1,1 @@
+In this folder you need to place the files/secrets that are needed to set up KIM controller
