@@ -5,6 +5,7 @@ import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/registrycache/mocks"
+	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
@@ -15,12 +16,12 @@ import (
 )
 
 const (
-	secretForClusterWithCustomConfig    = "kubeconfig-secret-for-cluster-with-custom-config"
-	secretForClusterWithoutCustomConfig = "kubeconfig-secret-for-cluster-without-custom-config"
-	secretNotManagedByKIM               = "secret-not-managed-by-kim"
+	secretForClusterWithRegistryCacheConfig1 = "kubeconfig-secret-for-cluster-with-cache-config1"
+	secretForClusterWithRegistryCacheConfig2 = "kubeconfig-secret-for-cluster-with-cache-config2"
+	secretNotManagedByKIM                    = "secret-not-managed-by-kim"
 )
 
-var _ = Describe("Custom Config Controller", func() {
+var _ = Describe("Registry Cache Config Controller", func() {
 	Context("When reconciling a Secret resource", func() {
 		ctx := context.Background()
 
@@ -29,11 +30,30 @@ var _ = Describe("Custom Config Controller", func() {
 		const runtimeWithRegistryCacheEnabled = "test-runtime-with-registry-cache-enabled"
 		const shootNameForRuntimeWithRegistryCacheEnabled = "shoot-with-registry-cache-enabled-ext"
 
-		DescribeTable("Should update Runtime CR", func(newRuntime *imv1.Runtime, newSecret *v1.Secret, expectedEnable bool) {
+		DescribeTable("Should update Runtime CR", func(newRuntime *imv1.Runtime, newSecret *v1.Secret) {
 
 			Expect(k8sClient.Create(ctx, newRuntime)).To(Succeed())
 
 			Expect(k8sClient.Create(ctx, newSecret)).To(Succeed())
+
+			expectedRuntimeRegistryCacheConfig := []imv1.ImageRegistryCache{
+				{
+					Name:      "config1",
+					Namespace: "test",
+
+					Config: registrycache.RegistryCacheConfigSpec{
+						Upstream: "docker.io",
+					},
+				},
+				{
+					Name:      "config2",
+					Namespace: "test",
+
+					Config: registrycache.RegistryCacheConfigSpec{
+						Upstream: "quay.io",
+					},
+				},
+			}
 
 			// Check if Runtime CR has registry cache enabled
 			Eventually(func() bool {
@@ -45,18 +65,24 @@ var _ = Describe("Custom Config Controller", func() {
 					return false
 				}
 
-				return runtime.Spec.Caching != nil && runtime.Spec.Caching.Enabled == expectedEnable
+				return len(runtime.Spec.Caching) == 2 &&
+					runtime.Spec.Caching[0] == expectedRuntimeRegistryCacheConfig[0] &&
+					runtime.Spec.Caching[1] == expectedRuntimeRegistryCacheConfig[1]
 
 			}, time.Second*300, time.Second*3).Should(BeTrue())
 		},
 			Entry("with registry cache enabled",
-				createRuntimeStub(runtimeWithoutRegistryCacheConfig, shootNameForRuntimeWithoutRegistryCache, false),
-				createSecretStub(secretForClusterWithCustomConfig, getSecretLabels(runtimeWithoutRegistryCacheConfig, "infrastructure-manager")),
-				true),
+				createRuntimeStub(runtimeWithoutRegistryCacheConfig, shootNameForRuntimeWithoutRegistryCache, nil),
+				createSecretStub(secretForClusterWithRegistryCacheConfig1, getSecretLabels(runtimeWithoutRegistryCacheConfig, "infrastructure-manager"))),
 			Entry("with registry cache disabled",
-				createRuntimeStub(runtimeWithRegistryCacheEnabled, shootNameForRuntimeWithRegistryCacheEnabled, true),
-				createSecretStub(secretForClusterWithoutCustomConfig, getSecretLabels(runtimeWithRegistryCacheEnabled, "infrastructure-manager")),
-				false))
+				createRuntimeStub(runtimeWithRegistryCacheEnabled, shootNameForRuntimeWithRegistryCacheEnabled, &imv1.ImageRegistryCache{
+					Name:      "config3",
+					Namespace: "test3",
+					Config: registrycache.RegistryCacheConfigSpec{
+						Upstream: "some.registry.com",
+					},
+				}),
+				createSecretStub(secretForClusterWithRegistryCacheConfig2, getSecretLabels(runtimeWithRegistryCacheEnabled, "infrastructure-manager"))))
 
 		It("Should not update runtime when secret is not managed by KIM", func() {
 			const ShootName = "shoot-cluster-3"
@@ -65,10 +91,10 @@ var _ = Describe("Custom Config Controller", func() {
 			const secretThatRefersNonExistentShoot = "secret-that-refers-non-existent-shoot"
 
 			By("Creating a Runtime resource")
-			runtime := createRuntimeStub(runtimeThatShouldNotBeModified, ShootName, false)
+			runtime := createRuntimeStub(runtimeThatShouldNotBeModified, ShootName, nil)
 			Expect(k8sClient.Create(ctx, runtime)).To(Succeed())
 
-			By("Creating a Secret with custom config but not managed by KIM")
+			By("Creating a Secret with registry cache config but not managed by KIM")
 			secret := createSecretStub(secretNotManagedByKIM, getSecretLabels(runtimeThatShouldNotBeModified, "something-else"))
 			Expect(k8sClient.Create(ctx, secret)).To(Succeed())
 
@@ -99,15 +125,36 @@ var _ = Describe("Custom Config Controller", func() {
 
 func fixMockedRegistryCache() func(secret v1.Secret) (RegistryCache, error) {
 	callsMap := map[string]int{
-		secretForClusterWithCustomConfig:    0,
-		secretForClusterWithoutCustomConfig: 0,
-		secretNotManagedByKIM:               0,
+		secretForClusterWithRegistryCacheConfig1: 0,
+		secretForClusterWithRegistryCacheConfig2: 0,
+		secretNotManagedByKIM:                    0,
 	}
 
-	resultsMap := map[string]bool{
-		secretForClusterWithCustomConfig:    true,
-		secretForClusterWithoutCustomConfig: false,
-		secretNotManagedByKIM:               true,
+	testConfig := []registrycache.RegistryCacheConfig{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "config1",
+				Namespace: "test",
+			},
+			Spec: registrycache.RegistryCacheConfigSpec{
+				Upstream: "docker.io",
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "config2",
+				Namespace: "test",
+			},
+			Spec: registrycache.RegistryCacheConfigSpec{
+				Upstream: "quay.io",
+			},
+		},
+	}
+
+	resultsMap := map[string][]registrycache.RegistryCacheConfig{
+		secretForClusterWithRegistryCacheConfig1: testConfig,
+		secretForClusterWithRegistryCacheConfig2: testConfig,
+		secretNotManagedByKIM:                    testConfig,
 	}
 
 	return func(secret v1.Secret) (RegistryCache, error) {
@@ -122,7 +169,7 @@ func fixMockedRegistryCache() func(secret v1.Secret) (RegistryCache, error) {
 		}
 
 		registryCacheMock := &mocks.RegistryCache{}
-		registryCacheMock.On("RegistryCacheConfigExists").Return(resultsMap[secret.Name], nil)
+		registryCacheMock.On("GetRegistryCacheConfig").Return(resultsMap[secret.Name], nil)
 
 		return registryCacheMock, nil
 	}
@@ -145,7 +192,7 @@ func createSecretStub(name string, labels map[string]string) *v1.Secret {
 	}
 }
 
-func createRuntimeStub(name string, shootName string, registryCacheEnabled bool) *imv1.Runtime {
+func createRuntimeStub(name string, shootName string, registryCacheConfig *imv1.ImageRegistryCache) *imv1.Runtime {
 	runtime := &imv1.Runtime{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -173,10 +220,8 @@ func createRuntimeStub(name string, shootName string, registryCacheEnabled bool)
 		},
 	}
 
-	if registryCacheEnabled {
-		runtime.Spec.Caching = &imv1.ImageRegistryCache{
-			Enabled: true,
-		}
+	if registryCacheConfig != nil {
+		runtime.Spec.Caching = []imv1.ImageRegistryCache{*registryCacheConfig}
 	}
 
 	return runtime

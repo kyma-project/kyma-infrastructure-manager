@@ -22,32 +22,22 @@ func NewConfigExplorer(ctx context.Context, runtimeClient client.Client) *Config
 }
 
 func (c *ConfigExplorer) RegistryCacheConfigExists() (bool, error) {
-	var customConfigList registrycache.CustomConfigList
-	err := c.runtimeClient.List(c.Context, &customConfigList)
+	registryCaches, err := c.GetRegistryCacheConfig()
+
 	if err != nil {
 		return false, err
 	}
 
-	for _, customConfig := range customConfigList.Items {
-		if len(customConfig.Spec.RegistryCaches) > 0 {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	return len(registryCaches) > 0, nil
 }
 
-func (c *ConfigExplorer) GetRegistryCacheConfig() ([]registrycache.RegistryCache, error) {
-	var customConfigList registrycache.CustomConfigList
-	err := c.runtimeClient.List(c.Context, &customConfigList)
+func (c *ConfigExplorer) GetRegistryCacheConfig() ([]registrycache.RegistryCacheConfig, error) {
+	var registryCacheConfigList registrycache.RegistryCacheConfigList
+	err := c.runtimeClient.List(c.Context, &registryCacheConfigList)
 	if err != nil {
 		return nil, err
 	}
-	registryCacheConfigs := make([]registrycache.RegistryCache, 0)
+	registryCacheConfigs := make([]registrycache.RegistryCacheConfig, 0)
 
-	for _, customConfig := range customConfigList.Items {
-		registryCacheConfigs = append(registryCacheConfigs, customConfig.Spec.RegistryCaches...)
-	}
-
-	return registryCacheConfigs, nil
+	return append(registryCacheConfigs, registryCacheConfigList.Items...), nil
 }

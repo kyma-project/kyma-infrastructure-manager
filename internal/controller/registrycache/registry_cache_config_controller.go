@@ -7,6 +7,7 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
+	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -21,7 +22,7 @@ import (
 	"time"
 )
 
-// CustomConfigReconciler reconciles a secret object
+// RegistryCacheConfigReconciler reconciles a secret object
 // nolint:revive
 type RegistryCacheConfigReconciler struct {
 	client.Client
@@ -73,38 +74,42 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 		return ctrl.Result{}, err
 	}
 
-	enableRegistryCache, err := registryCache.RegistryCacheConfigExists()
+	registryCacheConfigs, err := registryCache.GetRegistryCacheConfig()
 	if err != nil {
-		r.Log.V(log_level.TRACE).Error(err, "Failed to check if custom config exists", "RuntimeID", runtime.Name, "Namespace", runtime.Namespace)
+		r.Log.V(log_level.TRACE).Error(err, "Failed to get registry cache config", "RuntimeID", runtime.Name, "Namespace", runtime.Namespace)
 
 		return ctrl.Result{}, err
 	}
 
-	cachingAlreadyEnabled := runtime.Spec.Caching != nil && runtime.Spec.Caching.Enabled
+	caches := make([]imv1.ImageRegistryCache, 0, len(registryCacheConfigs))
 
-	if cachingAlreadyEnabled != enableRegistryCache {
-		runtime.Spec.Caching = &imv1.ImageRegistryCache{
-			Enabled: enableRegistryCache,
+	for _, config := range registryCacheConfigs {
+		runtimeRegistryCacheConfig := imv1.ImageRegistryCache{
+			Name:      config.Name,
+			Namespace: config.Namespace,
+			Config:    config.Spec,
 		}
+		caches = append(caches, runtimeRegistryCacheConfig)
+	}
+	runtime.Spec.Caching = caches
 
-		r.Log.Info(fmt.Sprintf("Updating runtime %s with caching enabled: %t", runtime.Name, enableRegistryCache))
+	r.Log.Info(fmt.Sprintf("Updating runtime %s with registry cache config", runtime.Name))
 
-		runtime.ManagedFields = nil
+	runtime.ManagedFields = nil
 
-		err := r.Patch(ctx, &runtime, client.Apply, &client.PatchOptions{
-			FieldManager: fieldManagerName,
-			Force:        ptr.To(true),
-		})
+	err = r.Patch(ctx, &runtime, client.Apply, &client.PatchOptions{
+		FieldManager: fieldManagerName,
+		Force:        ptr.To(true),
+	})
 
-		if err != nil {
-			r.Log.V(log_level.TRACE).Error(err, "Failed to patch runtime with caching enabled")
-			return ctrl.Result{}, err
-		}
+	if err != nil {
+		r.Log.V(log_level.TRACE).Error(err, "Failed to patch runtime")
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{
 		Requeue:      true,
-		RequeueAfter: 1 * time.Minute,
+		RequeueAfter: 5 * time.Minute,
 	}, err
 }
 
@@ -131,7 +136,7 @@ func secretControlledByKIM(secret v1.Secret) bool {
 
 //go:generate mockery --name=RegistryCache
 type RegistryCache interface {
-	RegistryCacheConfigExists() (bool, error)
+	GetRegistryCacheConfig() ([]registrycache.RegistryCacheConfig, error)
 }
 
 type RegistryCacheCreator func(secret v1.Secret) (RegistryCache, error)

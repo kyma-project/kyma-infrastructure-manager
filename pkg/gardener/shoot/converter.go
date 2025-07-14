@@ -6,7 +6,6 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/restrictions"
-	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -68,7 +67,6 @@ type PatchOpts struct {
 	InfrastructureConfig *runtime.RawExtension
 	ControlPlaneConfig   *runtime.RawExtension
 	Log                  *logr.Logger
-	RegistryCache        []registrycache.RegistryCache
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {
@@ -115,7 +113,7 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.ControlPlaneConfig))
 
 	extendersForPatch = append(extendersForPatch,
-		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.RegistryCache, opts.Extensions),
+		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.Extensions),
 		extender2.NewResourcesExtenderForPatch(opts.Resources))
 
 	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
