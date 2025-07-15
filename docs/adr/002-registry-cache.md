@@ -98,10 +98,7 @@ The following diagram shows the proposed architecture:
 ![](./assets/caching-in-kim.drawio.svg)
 
 The operation flow is as follows:
-1. The user creates a CustomConfig CR with the cache configuration.
-2. The Runtime Watcher triggers an event that notifies the KIM about the new configuration.
-3. CustomConfig Controller reads the cache configuration from the CustomConfig CR and sets up the enable cache property on the Runtime CR.
-4. The Runtime Controller reads CustomConfig CR and sets up `registry-cache` extension.
+![](./assets/registry-cache-controller.drawio.svg)
 
 ## API proposal
 
