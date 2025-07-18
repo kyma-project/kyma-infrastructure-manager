@@ -209,10 +209,11 @@ type Provider struct {
 }
 
 type Networking struct {
-	Type     *string `json:"type,omitempty"`
-	Pods     string  `json:"pods"`
-	Nodes    string  `json:"nodes"`
-	Services string  `json:"services"`
+	Type      *string `json:"type,omitempty"`
+	Pods      string  `json:"pods"`
+	Nodes     string  `json:"nodes"`
+	Services  string  `json:"services"`
+	DualStack *bool   `json:"dualStack,omitempty"`
 }
 
 type Security struct {
