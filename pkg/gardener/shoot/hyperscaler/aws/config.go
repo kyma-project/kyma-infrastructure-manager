@@ -122,3 +122,23 @@ func NewWorkerConfig() *v1alpha1.WorkerConfig {
 		},
 	}
 }
+
+func GetInfrastructureConfigDualStack(cidr string, zones []string) ([]byte, error) {
+	config, err := NewInfrastructureConfig(cidr, zones)
+	if err != nil {
+		return nil, err
+	}
+	// extend the infrastructure config with dual stack support
+	config.DualStack.Enabled = true
+
+	return json.Marshal(config)
+}
+
+func GetControlPlaneConfigDualStack(_ []string) ([]byte, error) {
+	config := NewControlPlaneConfig()
+
+	// extend the control plane config with dual stack support
+	config.LoadBalancerController.Enabled = true
+
+	return json.Marshal(config)
+}
