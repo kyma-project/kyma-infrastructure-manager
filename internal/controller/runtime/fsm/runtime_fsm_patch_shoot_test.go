@@ -2,53 +2,64 @@ package fsm
 
 import (
 	"context"
-	"errors"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
-	v1 "k8s.io/api/core/v1"
+	registrycachev1beta1 "github.com/kyma-project/kim-snatch/api/v1beta1"
+	"github.com/pkg/errors"
+	core_v1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 	"testing"
 	"time"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	. "github.com/onsi/ginkgo/v2" //nolint:revive
-	. "github.com/onsi/gomega"    //nolint:revive
+	//nolint:revive
+	. "github.com/onsi/gomega" //nolint:revive
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	api "k8s.io/apimachinery/pkg/runtime"
 	util "k8s.io/apimachinery/pkg/util/runtime"
 )
 
-var _ = Describe("KIM sFnPatchExistingShoot", func() {
-
+func TestFSMPatchShoot(t *testing.T) {
 	testCtx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	testScheme := runtime.NewScheme()
+	testScheme := api.NewScheme()
 
 	util.Must(imv1.AddToScheme(testScheme))
 	util.Must(gardener.AddToScheme(testScheme))
-	util.Must(v1.AddToScheme(testScheme))
+	util.Must(core_v1.AddToScheme(testScheme))
+
+	testSchemeWithRegistryCache := api.NewScheme()
+	util.Must(imv1.AddToScheme(testSchemeWithRegistryCache))
+	util.Must(gardener.AddToScheme(testSchemeWithRegistryCache))
+	util.Must(core_v1.AddToScheme(testSchemeWithRegistryCache))
+	util.Must(registrycachev1beta1.AddToScheme(testSchemeWithRegistryCache))
 
 	expectedAnnotations := map[string]string{"operator.kyma-project.io/existing-annotation": "true"}
 	inputRuntimeWithForceAnnotation := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/force-patch-reconciliation": "true", "operator.kyma-project.io/existing-annotation": "true"})
 	inputRuntime := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
+	inputRuntimeWithRegistryCacheEnabled := inputRuntime.DeepCopy()
+	inputRuntimeWithRegistryCacheEnabled.Spec.Caching = []imv1.ImageRegistryCache{
+		{
+			Name:      "config1",
+			Namespace: "test1",
+			Config:    registrycachev1beta1.RegistryCacheConfigSpec{},
+		},
+	}
 
-	testFunction := buildPatchTestFunction(sFnPatchExistingShoot)
+	RegisterTestingT(t)
 
-	// When removing the feature flag for structured auth, the tests should be updated to check the contents of the ConfigMap
-	DescribeTable(
-		"transition graph validation for sFnPatchExistingShoot success",
-		testFunction,
-		Entry(
+	for _, entry := range []struct {
+		description string
+		fsm         *fsm
+		systemState *systemState
+		expected    outputFnState
+	}{
+		{
 			"should transition to Pending Unknown state after successful shoot patching",
-			testCtx,
 			setupFakeFSMForTest(testScheme, inputRuntime),
 			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
 			outputFnState{
@@ -57,10 +68,9 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 				result:      nil,
 				status:      fsm_testing.PendingStatusShootPatched(),
 			},
-		),
-		Entry(
+		},
+		{
 			"should transition to Pending Unknown state after successful patching and remove force patch annotation",
-			testCtx,
 			setupFakeFSMForTest(testScheme, inputRuntimeWithForceAnnotation),
 			&systemState{instance: *inputRuntimeWithForceAnnotation, shoot: fsm_testing.TestShootForPatch()},
 			outputFnState{
@@ -69,10 +79,9 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 				result:      nil,
 				status:      fsm_testing.PendingStatusShootPatched(),
 			},
-		),
-		Entry(
+		},
+		{
 			"should transition to Failed state when Audit Logs are mandatory and Audit Log Config cannot be read",
-			testCtx,
 			setupFakeFSMForTestWithAuditLogMandatory(testScheme, inputRuntime),
 			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
 			outputFnState{
@@ -81,10 +90,9 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 				result:      nil,
 				status:      fsm_testing.FailedStatusAuditLogError(),
 			},
-		),
-		Entry(
+		},
+		{
 			"should transition to Pending Unknown state after successful patching when Audit Logs are mandatory and Audit Log Config can be read",
-			testCtx,
 			setupFakeFSMForTestWithAuditLogMandatoryAndConfig(testScheme, inputRuntime),
 			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
 			outputFnState{
@@ -93,10 +101,9 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 				result:      nil,
 				status:      fsm_testing.PendingStatusShootPatched(),
 			},
-		),
-		Entry(
+		},
+		{
 			"should transition to handleKubeconfig state when shoot generation is identical",
-			testCtx,
 			setupFakeFSMForTestKeepGeneration(testScheme, inputRuntime),
 			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
 			outputFnState{
@@ -105,10 +112,9 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 				result:      nil,
 				status:      fsm_testing.PendingStatusShootNoChanged(),
 			},
-		),
-		Entry(
+		},
+		{
 			"should transition to Pending Unknown when cannot execute Patch shoot with inConflict error",
-			testCtx,
 			setupFakeFSMForTestWithFailingPatchWithInConflictError(testScheme, inputRuntime),
 			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
 			outputFnState{
@@ -117,10 +123,9 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 				result:      nil,
 				status:      fsm_testing.PendingStatusAfterConflictErr(),
 			},
-		),
-		Entry(
+		},
+		{
 			"should transition to Pending Unknown when cannot execute Patch shoot with forbidden error",
-			testCtx,
 			setupFakeFSMForTestWithFailingPatchWithForbiddenError(testScheme, inputRuntime),
 			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
 			outputFnState{
@@ -129,10 +134,9 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 				result:      nil,
 				status:      fsm_testing.PendingStatusAfterForbiddenErr(),
 			},
-		),
-		Entry(
+		},
+		{
 			"should transition to Failed state when cannot execute Patch shoot with any other error",
-			testCtx,
 			setupFakeFSMForTestWithFailingPatchWithOtherError(testScheme, inputRuntime),
 			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForPatch()},
 			outputFnState{
@@ -141,10 +145,9 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 				result:      nil,
 				status:      fsm_testing.FailedStatusPatchErr(),
 			},
-		),
-		Entry(
+		},
+		{
 			"should transition to Pending Unknown when cannot execute Update shoot with inConflict error",
-			testCtx,
 			setupFakeFSMForTestWithFailingUpdateWithInConflictError(testScheme, inputRuntime),
 			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForUpdate()},
 			outputFnState{
@@ -153,10 +156,9 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 				result:      nil,
 				status:      fsm_testing.PendingStatusAfterConflictErr(),
 			},
-		),
-		Entry(
+		},
+		{
 			"should transition to Pending Unknown when cannot execute Update shoot with forbidden error",
-			testCtx,
 			setupFakeFSMForTestWithFailingUpdateWithForbiddenError(testScheme, inputRuntime),
 			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForUpdate()},
 			outputFnState{
@@ -165,10 +167,9 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 				result:      nil,
 				status:      fsm_testing.PendingStatusAfterForbiddenErr(),
 			},
-		),
-		Entry(
-			"should transition to to Failed state when cannot execute Update shoot with any other error",
-			testCtx,
+		},
+		{
+			"should transition to Failed state when cannot execute Update shoot with any other error",
 			setupFakeFSMForTestWithFailingUpdateWithOtherError(testScheme, inputRuntime),
 			&systemState{instance: *inputRuntime, shoot: fsm_testing.TestShootForUpdate()},
 			outputFnState{
@@ -177,118 +178,31 @@ var _ = Describe("KIM sFnPatchExistingShoot", func() {
 				result:      nil,
 				status:      fsm_testing.FailedStatusUpdateError(),
 			},
-		),
-	)
+		},
+	} {
+		createErr := entry.fsm.SeedClient.Create(testCtx, entry.systemState.shoot)
+		Expect(createErr).To(BeNil())
 
-	// When removing the feature flag for structured auth, the test should be removed
-	Context("When migrating OIDC setting for existing clusters", func() {
-		ctx := context.Background()
+		sFn, res, err := sFnPatchExistingShoot(testCtx, entry.fsm, entry.systemState)
 
-		It("Should successfully nil OIDC property, and setup structured auth config", func() {
-			testFunc := buildPatchTestFunction(sFnPatchExistingShoot)
+		Expect(err).To(BeNil())
+		Expect(res).To(Equal(entry.expected.result))
 
-			runtimeWithOIDC := *inputRuntime.DeepCopy()
-
-			runtimeWithOIDC.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig.ClientID = ptr.To("client-id")
-			runtimeWithOIDC.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig.IssuerURL = ptr.To("some.url.com")
-
-			shootWithOIDC := fsm_testing.TestShootForUpdate().DeepCopy()
-
-			shootWithOIDC.Spec.Kubernetes = gardener.Kubernetes{
-				KubeAPIServer: &gardener.KubeAPIServerConfig{
-					OIDCConfig: &gardener.OIDCConfig{
-						ClientID:  ptr.To("some-old-client-id"),
-						IssuerURL: ptr.To("some-old-url.com"),
-					},
-				},
+		if entry.systemState.instance.Status.Conditions != nil {
+			Expect(len(entry.systemState.instance.Status.Conditions)).To(Equal(len(entry.expected.status.Conditions)))
+			for i := range entry.systemState.instance.Status.Conditions {
+				entry.systemState.instance.Status.Conditions[i].LastTransitionTime = metav1.Time{}
+				entry.expected.status.Conditions[i].LastTransitionTime = metav1.Time{}
 			}
+		}
 
-			fakeFSM := setupFakeFSMForTestWithStructuredAuthEnabled(testScheme, &runtimeWithOIDC)
-			fakeSystemState := &systemState{instance: runtimeWithOIDC, shoot: shootWithOIDC}
+		Expect(entry.systemState.instance.Status).To(Equal(entry.expected.status))
+		Expect(sFn).To(entry.expected.nextStep)
+		Expect(entry.systemState.instance.GetAnnotations()).To(Equal(entry.expected.annotations))
+	}
+}
 
-			outputFsmState := outputFnState{
-				nextStep:    haveName("sFnUpdateStatus"),
-				annotations: expectedAnnotations,
-				result:      nil,
-				status:      fsm_testing.PendingStatusShootPatched(),
-			}
-
-			newConfigMap := &v1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "structured-auth-config-" + fakeSystemState.shoot.Name,
-					Namespace: fakeSystemState.shoot.Namespace,
-				},
-			}
-
-			err := fakeFSM.ShootClient.Create(ctx, newConfigMap)
-			Expect(err).To(BeNil())
-
-			testFunc(ctx, fakeFSM, fakeSystemState, outputFsmState)
-			shootAfterUpdate := &gardener.Shoot{}
-
-			err = fakeFSM.ShootClient.Get(ctx, types.NamespacedName{
-				Name:      fakeSystemState.shoot.Name,
-				Namespace: fakeSystemState.shoot.Namespace,
-			}, shootAfterUpdate)
-
-			Expect(err).To(BeNil())
-			Expect(shootAfterUpdate.Spec.Kubernetes.KubeAPIServer.OIDCConfig).To(BeNil()) //nolint:staticcheck
-
-			var updatedConfigMap v1.ConfigMap
-
-			err = fakeFSM.ShootClient.Get(ctx, types.NamespacedName{
-				Name:      newConfigMap.Name,
-				Namespace: newConfigMap.Namespace,
-			}, &updatedConfigMap)
-			Expect(err).To(BeNil())
-
-			authenticationConfigString := updatedConfigMap.Data["config.yaml"]
-			var authenticationConfiguration structuredauth.AuthenticationConfiguration
-			err = yaml.Unmarshal([]byte(authenticationConfigString), &authenticationConfiguration)
-
-			Expect(err).To(BeNil())
-			Expect(authenticationConfiguration.JWT).To(HaveLen(1))
-			Expect(authenticationConfiguration.JWT[0].Issuer.URL).To(Equal("some.url.com"))
-			Expect(authenticationConfiguration.JWT[0].Issuer.Audiences).To(Equal([]string{"client-id"}))
-		})
-
-		It("Should retry when failed to migrate OIDC", func() {
-			testFunc := buildPatchTestFunction(sFnPatchExistingShoot)
-			runtimeWithOIDC := *inputRuntime.DeepCopy()
-
-			runtimeWithOIDC.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig.ClientID = ptr.To("client-id")
-			runtimeWithOIDC.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig.IssuerURL = ptr.To("some.url.com")
-
-			shootWithOIDC := fsm_testing.TestShootForUpdate().DeepCopy()
-
-			shootWithOIDC.Spec.Kubernetes = gardener.Kubernetes{
-				KubeAPIServer: &gardener.KubeAPIServerConfig{
-					OIDCConfig: &gardener.OIDCConfig{
-						ClientID:  ptr.To("some-old-client-id"),
-						IssuerURL: ptr.To("some-old-url.com"),
-					},
-				},
-			}
-
-			fakeFSM := setupFakeFSMForTestWithFailingUpdateWithInConflictError(testScheme, &runtimeWithOIDC)
-			fakeFSM.StructuredAuthEnabled = true
-
-			fakeSystemState := &systemState{instance: runtimeWithOIDC, shoot: shootWithOIDC}
-
-			outputFsmState := outputFnState{
-				nextStep:    haveName("sFnUpdateStatus"),
-				annotations: expectedAnnotations,
-				result:      nil,
-				status:      fsm_testing.PendingStatusAfterConflictErr(),
-			}
-
-			testFunc(ctx, fakeFSM, fakeSystemState, outputFsmState)
-
-		})
-	})
-})
-
-func setupFakeFSMForTest(scheme *runtime.Scheme, objs ...client.Object) *fsm {
+func setupFakeFSMForTest(scheme *api.Scheme, objs ...client.Object) *fsm {
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withTestFinalizer,
@@ -299,7 +213,7 @@ func setupFakeFSMForTest(scheme *runtime.Scheme, objs ...client.Object) *fsm {
 	)
 }
 
-func setupFakeFSMForTestKeepGeneration(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestKeepGeneration(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withShootNamespace("garden-"),
@@ -310,7 +224,7 @@ func setupFakeFSMForTestKeepGeneration(scheme *runtime.Scheme, runtime *imv1.Run
 	)
 }
 
-func setupFakeFSMForTestWithFailingPatchWithInConflictError(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestWithFailingPatchWithInConflictError(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	gr := schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoot"}
 	err := k8s_errors.NewConflict(gr, "test-shoot", errors.New("test conflict"))
 
@@ -324,7 +238,7 @@ func setupFakeFSMForTestWithFailingPatchWithInConflictError(scheme *runtime.Sche
 	)
 }
 
-func setupFakeFSMForTestWithFailingUpdateWithInConflictError(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestWithFailingUpdateWithInConflictError(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	gr := schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoot"}
 	err := k8s_errors.NewConflict(gr, "test-shoot", errors.New("test conflict"))
 
@@ -338,7 +252,7 @@ func setupFakeFSMForTestWithFailingUpdateWithInConflictError(scheme *runtime.Sch
 	)
 }
 
-func setupFakeFSMForTestWithFailingPatchWithForbiddenError(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestWithFailingPatchWithForbiddenError(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	gr := schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoot"}
 	err := k8s_errors.NewForbidden(gr, "test-shoot", errors.New("test forbidden"))
 
@@ -352,7 +266,7 @@ func setupFakeFSMForTestWithFailingPatchWithForbiddenError(scheme *runtime.Schem
 	)
 }
 
-func setupFakeFSMForTestWithFailingUpdateWithForbiddenError(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestWithFailingUpdateWithForbiddenError(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	gr := schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoot"}
 	err := k8s_errors.NewForbidden(gr, "test-shoot", errors.New("test forbidden"))
 
@@ -366,7 +280,7 @@ func setupFakeFSMForTestWithFailingUpdateWithForbiddenError(scheme *runtime.Sche
 	)
 }
 
-func setupFakeFSMForTestWithFailingPatchWithOtherError(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestWithFailingPatchWithOtherError(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	err := k8s_errors.NewUnauthorized("test unauthorized")
 
 	return must(newFakeFSM,
@@ -379,7 +293,7 @@ func setupFakeFSMForTestWithFailingPatchWithOtherError(scheme *runtime.Scheme, r
 	)
 }
 
-func setupFakeFSMForTestWithFailingUpdateWithOtherError(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestWithFailingUpdateWithOtherError(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	err := k8s_errors.NewUnauthorized("test unauthorized")
 
 	return must(newFakeFSM,
@@ -392,7 +306,7 @@ func setupFakeFSMForTestWithFailingUpdateWithOtherError(scheme *runtime.Scheme, 
 	)
 }
 
-func setupFakeFSMForTestWithAuditLogMandatory(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestWithAuditLogMandatory(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withShootNamespace("garden-"),
@@ -404,19 +318,7 @@ func setupFakeFSMForTestWithAuditLogMandatory(scheme *runtime.Scheme, runtime *i
 	)
 }
 
-func setupFakeFSMForTestWithStructuredAuthEnabled(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
-	return must(newFakeFSM,
-		withMockedMetrics(),
-		withShootNamespace("garden-"),
-		withTestFinalizer,
-		withFakedK8sClientNoPatchInterceptor(scheme, runtime),
-		withFakeEventRecorder(1),
-		withDefaultReconcileDuration(),
-		withStructuredAuthEnabled(true),
-	)
-}
-
-func setupFakeFSMForTestWithAuditLogMandatoryAndConfig(scheme *runtime.Scheme, runtime *imv1.Runtime) *fsm {
+func setupFakeFSMForTestWithAuditLogMandatoryAndConfig(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withShootNamespace("garden-"),
@@ -431,33 +333,6 @@ func setupFakeFSMForTestWithAuditLogMandatoryAndConfig(scheme *runtime.Scheme, r
 			SecretName: "test-secret",
 		}),
 	)
-}
-
-func buildPatchTestFunction(fn stateFn) func(context.Context, *fsm, *systemState, outputFnState) {
-	return func(ctx context.Context, r *fsm, s *systemState, expected outputFnState) {
-
-		createErr := r.ShootClient.Create(ctx, s.shoot)
-		if createErr != nil {
-			return
-		}
-
-		sFn, res, err := fn(ctx, r, s)
-
-		Expect(err).To(BeNil())
-		Expect(res).To(Equal(expected.result))
-
-		if s.instance.Status.Conditions != nil {
-			Expect(len(s.instance.Status.Conditions)).To(Equal(len(expected.status.Conditions)))
-			for i := range s.instance.Status.Conditions {
-				s.instance.Status.Conditions[i].LastTransitionTime = metav1.Time{}
-				expected.status.Conditions[i].LastTransitionTime = metav1.Time{}
-			}
-		}
-
-		Expect(s.instance.Status).To(Equal(expected.status))
-		Expect(sFn).To(expected.nextStep)
-		Expect(s.instance.GetAnnotations()).To(Equal(expected.annotations))
-	}
 }
 
 func TestWorkersAreEqual(t *testing.T) {

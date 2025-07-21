@@ -2,6 +2,7 @@ package extensions
 
 import (
 	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,29 +20,33 @@ func TestNewRegistryCacheExtension(t *testing.T) {
 
 		// given
 		volumeQuantity := resource.MustParse("10Gi")
-		caches := []registrycache.RegistryCache{
+		caches := []imv1.ImageRegistryCache{
 			{
-				Upstream: "ghcr.io",
-				GarbageCollection: &registrycache.GarbageCollection{
-					TTL: metav1.Duration{Duration: time.Hour * 24},
-				},
-				SecretReferenceName: ptr.To("secret"),
-				Volume: &registrycache.Volume{
-					Size:             &volumeQuantity,
-					StorageClassName: ptr.To("storageClass"),
+				Config: registrycache.RegistryCacheConfigSpec{
+					Upstream: "ghcr.io",
+					GarbageCollection: &registrycache.GarbageCollection{
+						TTL: metav1.Duration{Duration: time.Hour * 24},
+					},
+					SecretReferenceName: ptr.To("secret"),
+					Volume: &registrycache.Volume{
+						Size:             &volumeQuantity,
+						StorageClassName: ptr.To("storageClass"),
+					},
 				},
 			},
 			{
-				RemoteURL: ptr.To("http://my-registry.io:5000"),
-				Proxy: &registrycache.Proxy{
-					HTTPProxy:  ptr.To("http://proxy.io:5000"),
-					HTTPSProxy: ptr.To("https://proxy.io:5000"),
+				Config: registrycache.RegistryCacheConfigSpec{
+					RemoteURL: ptr.To("http://my-registry.io:5000"),
+					Proxy: &registrycache.Proxy{
+						HTTPProxy:  ptr.To("http://proxy.io:5000"),
+						HTTPSProxy: ptr.To("https://proxy.io:5000"),
+					},
 				},
 			},
 		}
 
 		// when
-		registryCacheExtension, err := NewRegistryCacheExtension(caches, true)
+		registryCacheExtension, err := NewRegistryCacheExtension(caches)
 
 		// then
 		require.NoError(t, err)
@@ -67,9 +72,5 @@ func TestNewRegistryCacheExtension(t *testing.T) {
 		assert.Equal(t, "http://my-registry.io:5000", *providerConfig.Caches[1].RemoteURL)
 		assert.Equal(t, ptr.To("http://proxy.io:5000"), providerConfig.Caches[1].Proxy.HTTPProxy)
 		assert.Equal(t, ptr.To("https://proxy.io:5000"), providerConfig.Caches[1].Proxy.HTTPSProxy)
-	})
-
-	t.Run("should create registry cache extension", func(t *testing.T) {
-
 	})
 }

@@ -2,17 +2,13 @@ package fsm
 
 import (
 	"context"
-	"fmt"
 	"slices"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
-	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -25,14 +21,14 @@ var (
 )
 
 func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	shootAdminClient, err := GetShootClient(ctx, m.Client, s.instance)
+	runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 	if err != nil {
 		updateCRBApplyFailed(&s.instance)
 		return updateStatusAndStopWithError(err)
 	}
 	// list existing cluster role bindings
 	var crbList rbacv1.ClusterRoleBindingList
-	if err := shootAdminClient.List(ctx, &crbList); err != nil {
+	if err := runtimeClient.List(ctx, &crbList); err != nil {
 		updateCRBApplyFailed(&s.instance)
 		m.log.Info("Cannot list Cluster Role Bindings on shoot, scheduling for retry")
 		return requeue()
@@ -42,8 +38,8 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 	missing := getMissing(crbList.Items, s.instance.Spec.Security.Administrators)
 
 	for _, fn := range []func() error{
-		newDelCRBs(ctx, shootAdminClient, removed),
-		newAddCRBs(ctx, shootAdminClient, missing),
+		newDelCRBs(ctx, runtimeClient, removed),
+		newAddCRBs(ctx, runtimeClient, missing),
 	} {
 		if err := fn(); err != nil {
 			updateCRBApplyFailed(&s.instance)
@@ -76,46 +72,6 @@ func logDeletedClusterRoleBindings(removed []rbacv1.ClusterRoleBinding, m *fsm, 
 		}
 		m.log.V(log_level.DEBUG).Info("Following CRBs were deleted", "deletedCRBs", crbsNames)
 	}
-}
-
-//nolint:gochecknoglobals
-var GetShootClient = func(ctx context.Context, cnt client.Client, runtime imv1.Runtime) (client.Client, error) {
-	runtimeID := runtime.Labels[imv1.LabelKymaRuntimeID]
-
-	secret, err := getKubeconfigSecret(ctx, cnt, runtimeID, runtime.Namespace)
-	if err != nil {
-		return nil, err
-	}
-
-	restConfig, err := clientcmd.RESTConfigFromKubeConfig(secret.Data[kubeconfigSecretKey])
-	if err != nil {
-		return nil, err
-	}
-
-	shootClientWithAdmin, err := client.New(restConfig, client.Options{})
-	if err != nil {
-		return nil, err
-	}
-
-	return shootClientWithAdmin, nil
-}
-
-func getKubeconfigSecret(ctx context.Context, cnt client.Client, runtimeID, namespace string) (corev1.Secret, error) {
-	secretName := fmt.Sprintf("kubeconfig-%s", runtimeID)
-
-	var kubeconfigSecret corev1.Secret
-	secretKey := types.NamespacedName{Name: secretName, Namespace: namespace}
-
-	err := cnt.Get(ctx, secretKey, &kubeconfigSecret)
-
-	if err != nil {
-		return corev1.Secret{}, err
-	}
-
-	if kubeconfigSecret.Data == nil {
-		return corev1.Secret{}, fmt.Errorf("kubeconfig secret `%s` does not contain kubeconfig data", kubeconfigSecret.Name)
-	}
-	return kubeconfigSecret, nil
 }
 
 func isRBACUserKind() func(rbacv1.Subject) bool {
@@ -224,10 +180,10 @@ func toAdminClusterRoleBinding(name string) rbacv1.ClusterRoleBinding {
 }
 
 //nolint:gochecknoglobals
-var newDelCRBs = func(ctx context.Context, shootClient client.Client, crbs []rbacv1.ClusterRoleBinding) func() error {
+var newDelCRBs = func(ctx context.Context, runtimeClient client.Client, crbs []rbacv1.ClusterRoleBinding) func() error {
 	return func() error {
 		for _, crb := range crbs {
-			if err := shootClient.Delete(ctx, &crb); err != nil {
+			if err := runtimeClient.Delete(ctx, &crb); err != nil {
 				return err
 			}
 		}
@@ -237,10 +193,10 @@ var newDelCRBs = func(ctx context.Context, shootClient client.Client, crbs []rba
 }
 
 //nolint:gochecknoglobals
-var newAddCRBs = func(ctx context.Context, shootClient client.Client, crbs []rbacv1.ClusterRoleBinding) func() error {
+var newAddCRBs = func(ctx context.Context, runtimeClient client.Client, crbs []rbacv1.ClusterRoleBinding) func() error {
 	return func() error {
 		for _, crb := range crbs {
-			if err := shootClient.Create(ctx, &crb); err != nil {
+			if err := runtimeClient.Create(ctx, &crb); err != nil {
 				return err
 			}
 		}

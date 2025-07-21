@@ -2,59 +2,42 @@ package registrycache
 
 import (
 	"context"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type ConfigExplorer struct {
-	shootClient client.Client
-	Context     context.Context
+	runtimeClient client.Client
+	Context       context.Context
 }
 
 type GetSecretFunc func() (corev1.Secret, error)
 
-func NewConfigExplorer(ctx context.Context, kubeconfigSecret corev1.Secret) (*ConfigExplorer, error) {
-
-	shootClient, err := gardener.GetShootClient(kubeconfigSecret)
-	if err != nil {
-		return nil, err
-	}
-
+func NewConfigExplorer(ctx context.Context, runtimeClient client.Client) *ConfigExplorer {
 	return &ConfigExplorer{
-		shootClient: shootClient,
-		Context:     ctx,
-	}, nil
+		runtimeClient: runtimeClient,
+		Context:       ctx,
+	}
 }
 
 func (c *ConfigExplorer) RegistryCacheConfigExists() (bool, error) {
-	var customConfigList registrycache.CustomConfigList
-	err := c.shootClient.List(c.Context, &customConfigList)
+	registryCaches, err := c.GetRegistryCacheConfig()
+
 	if err != nil {
 		return false, err
 	}
 
-	for _, customConfig := range customConfigList.Items {
-		if len(customConfig.Spec.RegistryCaches) > 0 {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	return len(registryCaches) > 0, nil
 }
 
-func (c *ConfigExplorer) GetRegistryCacheConfig() ([]registrycache.RegistryCache, error) {
-	var customConfigList registrycache.CustomConfigList
-	err := c.shootClient.List(c.Context, &customConfigList)
+func (c *ConfigExplorer) GetRegistryCacheConfig() ([]registrycache.RegistryCacheConfig, error) {
+	var registryCacheConfigList registrycache.RegistryCacheConfigList
+	err := c.runtimeClient.List(c.Context, &registryCacheConfigList)
 	if err != nil {
 		return nil, err
 	}
-	registryCacheConfigs := make([]registrycache.RegistryCache, 0)
+	registryCacheConfigs := make([]registrycache.RegistryCacheConfig, 0)
 
-	for _, customConfig := range customConfigList.Items {
-		registryCacheConfigs = append(registryCacheConfigs, customConfig.Spec.RegistryCaches...)
-	}
-
-	return registryCacheConfigs, nil
+	return append(registryCacheConfigs, registryCacheConfigList.Items...), nil
 }

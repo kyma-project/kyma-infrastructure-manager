@@ -35,7 +35,6 @@ type RCCfg struct {
 	AuditLogMandatory             bool
 	Metrics                       metrics.Metrics
 	AuditLogging                  auditlogs.Configuration
-	StructuredAuthEnabled         bool
 	config.Config
 }
 
@@ -51,9 +50,10 @@ func (f stateFn) name() string {
 type Watch = func(src source.Source, eventhandler handler.EventHandler, predicates ...predicate.Predicate) error
 
 type K8s struct {
-	client.Client
+	KcpClient client.Client
 	record.EventRecorder
-	ShootClient client.Client
+	SeedClient          client.Client
+	RuntimeClientGetter RuntimeClientGetter
 }
 
 type Fsm interface {
