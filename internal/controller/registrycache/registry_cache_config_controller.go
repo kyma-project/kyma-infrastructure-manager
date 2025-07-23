@@ -81,23 +81,6 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 
 		return ctrl.Result{}, err
 	}
-	// Registry Cache configs fetched successfully
-
-	// TODO: Compare Registry Cache list with Runtime CR contents
-
-	// TODO: Validate Registry Cache Configs
-
-	// TODO: handle Some Registry Cache Configs are invalid
-
-	// TODO: handle Some Registry Cache Configs correct
-
-	// TODO: handle Remove secrets on Gardener with registry credentials that are not used
-
-	// TODO: Prepare list of secrets to be created, and to be removed
-
-	// TODO: Create missing secrets with registry cache credentials.
-	//registryCache.CreateSecrets()
-	// TODO: Label secrets to be removed
 
 	//Synchronize runtime.spec.imageRegistryCache with valid Registry Cache configs (replace the old list in Runtime CR with a new one)
 	caches := make([]imv1.ImageRegistryCache, 0, len(registryCacheConfigs))

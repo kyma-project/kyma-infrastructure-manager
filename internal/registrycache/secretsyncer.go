@@ -10,9 +10,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const RegistryCacheSecretNameFmt = "reg-cache-%s"
-const RegistryCacheSecretLabel = "kyma-project.io/runtime-id"
-const RegistryCacheIDLabel = "kyma-project.io/registry-cache-id"
+const SecretNameFmt = "reg-cache-%s"
+const RuntimeSecretLabel = "kyma-project.io/runtime-id"
+const CacheIDAnnotation = "kyma-project.io/registry-cache-id"
 
 type SecretSyncer struct {
 	GardenClient    client.Client
@@ -72,8 +72,10 @@ func (s SecretSyncer) copySecretFromRuntimeToGardenCluster(cacheConfig imv1.Imag
 			Name:      getGardenSecretName(cacheConfig),
 			Namespace: s.GardenNamespace,
 			Labels: map[string]string{
-				RegistryCacheSecretLabel: s.RuntimeID,
-				RegistryCacheIDLabel:     cacheConfig.UID,
+				RuntimeSecretLabel: s.RuntimeID,
+			},
+			Annotations: map[string]string{
+				CacheIDAnnotation: cacheConfig.UID,
 			},
 		},
 		Data: secret.Data,
@@ -95,32 +97,21 @@ func (s SecretSyncer) updateSecretInGardenCluster(cacheConfig imv1.ImageRegistry
 	return s.GardenClient.Update(context.TODO(), &gardenerSecret)
 }
 
-func (s SecretSyncer) DeleteNotUsed(registryCaches []imv1.ImageRegistryCache) error {
+func (s SecretSyncer) Delete(registryCaches []imv1.ImageRegistryCache) error {
 
 	cachesWithSecret := getRegistryCachesWithSecret(registryCaches)
 
 	var gardenSecrets v12.SecretList
-	err := s.GardenClient.List(context.TODO(), &gardenSecrets, client.MatchingLabels{RegistryCacheSecretLabel: s.RuntimeID})
+	err := s.GardenClient.List(context.TODO(), &gardenSecrets, client.MatchingLabels{RuntimeSecretLabel: s.RuntimeID})
 
 	if err != nil {
 		return fmt.Errorf("failed to list garden secrets: %w", err)
 	}
 
 	for _, gardenSecret := range gardenSecrets.Items {
-		id := gardenSecret.Labels[RegistryCacheIDLabel]
+		registryCacheUID := gardenSecret.Annotations[CacheIDAnnotation]
 
-		if id == "" {
-			continue
-		}
-
-		found := false
-		for _, cache := range cachesWithSecret {
-			if cache.UID == id {
-				found = true
-			}
-		}
-
-		if !found {
+		if registryCacheUID != "" && !registryCacheUidExists(registryCacheUID, cachesWithSecret) {
 			err = s.GardenClient.Delete(context.TODO(), &gardenSecret)
 
 			if err != nil {
@@ -130,6 +121,16 @@ func (s SecretSyncer) DeleteNotUsed(registryCaches []imv1.ImageRegistryCache) er
 	}
 
 	return nil
+}
+
+func registryCacheUidExists(uid string, registryCaches []imv1.ImageRegistryCache) bool {
+	for _, cache := range registryCaches {
+		if cache.UID == uid {
+			return true
+		}
+	}
+
+	return false
 }
 
 func getRegistryCachesWithSecret(caches []imv1.ImageRegistryCache) []imv1.ImageRegistryCache {
@@ -143,5 +144,5 @@ func getRegistryCachesWithSecret(caches []imv1.ImageRegistryCache) []imv1.ImageR
 }
 
 func getGardenSecretName(registryCaches imv1.ImageRegistryCache) string {
-	return fmt.Sprintf(RegistryCacheSecretNameFmt, registryCaches.UID)
+	return fmt.Sprintf(SecretNameFmt, registryCaches.UID)
 }

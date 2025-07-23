@@ -21,11 +21,12 @@ func sFnSeedClusterPostProcessing(ctx context.Context, m *fsm, s *systemState) (
 		return updateStatusAndRequeue()
 	}
 
-	secretSyncer := registrycache.NewSecretSyncer(m.SeedClient, runtimeClient)
+	// TODO: pass Garden namespace name
+	secretSyncer := registrycache.NewSecretSyncer(m.SeedClient, runtimeClient, "", s.instance.Name)
 	registryCachesWitSecrets := getRegistryCachesWithSecrets(s.instance)
 
 	if len(registryCachesWitSecrets) > 0 {
-		err = secretSyncer.DeleteNotUsed(registryCachesWitSecrets)
+		err = secretSyncer.Delete(registryCachesWitSecrets)
 		if err != nil {
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRuntimeKubeconfigReady,
