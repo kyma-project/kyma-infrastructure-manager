@@ -7,7 +7,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func sFnSeedClusterPreProcessing(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+func sFnGardenClusterPreProcessing(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 	if err != nil {
 		s.instance.UpdateStatePending(
@@ -21,7 +21,8 @@ func sFnSeedClusterPreProcessing(ctx context.Context, m *fsm, s *systemState) (s
 		return updateStatusAndRequeue()
 	}
 
-	secretSyncer := registrycache.NewSecretSyncer(m.SeedClient, runtimeClient)
+	// TODO: pass Garden namespace name
+	secretSyncer := registrycache.NewSecretSyncer(m.SeedClient, runtimeClient, "", s.instance.Name)
 	registryCachesWitSecrets := getRegistryCachesWithSecrets(s.instance)
 
 	if len(registryCachesWitSecrets) > 0 {
