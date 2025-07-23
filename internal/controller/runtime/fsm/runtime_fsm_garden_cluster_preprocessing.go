@@ -48,7 +48,7 @@ func sFnGardenClusterPreProcessing(ctx context.Context, m *fsm, s *systemState) 
 	return switchState(sFnSelectShootProcessing)
 }
 
-func getRegistryCachesWithSecrets(instance imv1.Runtime) []imv1.ImageRegistryCache {
+func getRegistryCachesWithSecrets(instance imv1.Runtime) []imv1.ImageRegistryCache { //nolint:unused
 	var caches []imv1.ImageRegistryCache
 	for _, cache := range instance.Spec.Caching {
 		if cache.Config.SecretReferenceName != nil && *cache.Config.SecretReferenceName != "" {
