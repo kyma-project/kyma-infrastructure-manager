@@ -129,7 +129,9 @@ func GetInfrastructureConfigDualStack(cidr string, zones []string) ([]byte, erro
 		return nil, err
 	}
 	// extend the infrastructure config with dual stack support
-	config.DualStack.Enabled = true
+	config.DualStack = &v1alpha1.DualStack{
+		Enabled: true,
+	}
 
 	return json.Marshal(config)
 }
@@ -138,7 +140,9 @@ func GetControlPlaneConfigDualStack(_ []string) ([]byte, error) {
 	config := NewControlPlaneConfig()
 
 	// extend the control plane config with dual stack support
-	config.LoadBalancerController.Enabled = true
+	config.LoadBalancerController = &v1alpha1.LoadBalancerControllerConfig{
+		Enabled: true,
+	}
 
 	return json.Marshal(config)
 }

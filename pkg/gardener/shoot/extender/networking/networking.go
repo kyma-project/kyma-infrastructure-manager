@@ -19,7 +19,7 @@ func isDualStackIPsEnabled(dualStack *bool, providerType string) bool {
 	if dualStack == nil {
 		return false
 	}
-	return *dualStack == true && providerType == hyperscaler2.TypeGCP
+	return *dualStack == true && (providerType == hyperscaler2.TypeGCP || providerType == hyperscaler2.TypeAWS)
 }
 
 func extendWithDualIPs(shoot *gardener.Shoot) {
