@@ -27,16 +27,18 @@ func TestSecretSyncer(t *testing.T) {
 	t.Run("Should create not existing secrets", func(t *testing.T) {
 		// given
 		runtimeID := "test-runtime-id"
-		secret1 := fixRegistryCacheSecret("secret1", "test", "user1", "password1")
-		secret2 := fixRegistryCacheSecret("secret2", "default", "user2", "password2")
+		gardenNamespace := "garden-dev"
+
+		secret1 := fixRegistryCacheSecret("secret1", "test", map[string]string{}, "user1", "password1")
+		secret2 := fixRegistryCacheSecret("secret2", "default", map[string]string{}, "user2", "password2")
 
 		runtimeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			fixRegistryCacheSecret("orphaned-secret1", "test", "user", "password"),
+			fixRegistryCacheSecret("orphaned-secret1", "test", map[string]string{}, "user", "password"),
 			secret1,
 			secret2,
 		).Build()
 
-		seedClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+		gardenClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 
 		registryCacheWithSecret1 := fixRegistryCacheConfigWithSecret("config-with-secret-1", secret1.Namespace, "id1", "quay.io", secret1.Name)
 		registryCacheWithSecret2 := fixRegistryCacheConfigWithSecret("config-with-secret-2", secret2.Namespace, "id2", "gcr.io", secret2.Name)
@@ -48,37 +50,41 @@ func TestSecretSyncer(t *testing.T) {
 		}
 
 		// when
-		secretSyncer := NewSecretSyncer(seedClient, runtimeClient, runtimeID)
+		secretSyncer := NewSecretSyncer(gardenClient, runtimeClient, gardenNamespace, runtimeID)
 		err := secretSyncer.CreateOrUpdate(registryCacheConfigs)
 
 		// then
 		Expect(err).To(BeNil())
 
-		secrets, err := getSeedSecrets(ctx, seedClient, runtimeID)
+		secrets, err := getGardenSecrets(ctx, gardenClient, runtimeID)
 		Expect(err).To(BeNil())
 
 		Expect(len(secrets)).To(Equal(2))
 
-		gardenerSecret1, err := getSeedSecret(ctx, seedClient, fmt.Sprintf(RegistryCacheSecretNameFmt, registryCacheWithSecret1.UID), "test")
+		gardenerSecret1, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(RegistryCacheSecretNameFmt, registryCacheWithSecret1.UID), gardenNamespace)
 		Expect(err).To(BeNil())
 		Expect(gardenerSecret1).To(Not(BeNil()))
 
 		Expect(gardenerSecret1.Labels[RegistryCacheSecretLabel]).To(Equal(runtimeID))
+		Expect(gardenerSecret1.Labels[RegistryCacheIDLabel]).To(Equal(registryCacheWithSecret1.UID))
+
 		Expect(gardenerSecret1.Data).To(Equal(secret1.Data))
 
-		gardenerSecret2, err := getSeedSecret(ctx, seedClient, fmt.Sprintf(RegistryCacheSecretNameFmt, registryCacheWithSecret2.UID), "default")
+		gardenerSecret2, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(RegistryCacheSecretNameFmt, registryCacheWithSecret2.UID), gardenNamespace)
 		Expect(err).To(BeNil())
 		Expect(gardenerSecret2).To(Not(BeNil()))
 
 		Expect(gardenerSecret2.Labels[RegistryCacheSecretLabel]).To(Equal(runtimeID))
+		Expect(gardenerSecret2.Labels[RegistryCacheIDLabel]).To(Equal(registryCacheWithSecret2.UID))
 		Expect(gardenerSecret2.Data).To(Equal(secret2.Data))
 	})
 
 	t.Run("Should update existing secrets", func(t *testing.T) {
 		// given
 		runtimeID := "test-runtime-id"
-		secret1 := fixRegistryCacheSecret("secret1", "test", "newuser", "newpassword")
-		secret2 := fixRegistryCacheSecret("secret2", "default", "user2", "password2")
+		gardenNamespace := "garden-dev"
+		secret1 := fixRegistryCacheSecret("secret1", "test", map[string]string{}, "newuser", "newpassword")
+		secret2 := fixRegistryCacheSecret("secret2", "default", map[string]string{}, "user2", "password2")
 
 		runtimeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			secret1,
@@ -93,55 +99,114 @@ func TestSecretSyncer(t *testing.T) {
 			registryCacheWithSecret1,
 			registryCacheWithSecret2,
 		}
+		labels1 := fixRegistryCacheGardenSecretLabels(runtimeID, registryCacheWithSecret1.UID)
+		labels2 := fixRegistryCacheGardenSecretLabels(runtimeID, registryCacheWithSecret2.UID)
 
-		gardenerSecret1 := fixRegistryCacheSecret(getSeedSecretName(registryCacheWithSecret1), "test", "user1", "password1")
-		gardenerSecret2 := fixRegistryCacheSecret(getSeedSecretName(registryCacheWithSecret2), "default", "user2", "password2")
+		gardenerSecret1 := fixRegistryCacheSecret(getGardenSecretName(registryCacheWithSecret1), gardenNamespace, labels1, "user1", "password1")
+		gardenerSecret2 := fixRegistryCacheSecret(getGardenSecretName(registryCacheWithSecret2), gardenNamespace, labels2, "user2", "password2")
 
-		seedClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+		gardenClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			gardenerSecret1,
 			gardenerSecret2,
 		).Build()
 
 		// when
-		secretSyncer := NewSecretSyncer(seedClient, runtimeClient, runtimeID)
+		secretSyncer := NewSecretSyncer(gardenClient, runtimeClient, gardenNamespace, runtimeID)
 		err := secretSyncer.CreateOrUpdate(registryCacheConfigs)
 
 		// then
 		Expect(err).To(BeNil())
 
-		secrets, err := getSeedSecrets(ctx, seedClient, runtimeID)
+		secrets, err := getGardenSecrets(ctx, gardenClient, runtimeID)
 		Expect(err).To(BeNil())
 
 		Expect(len(secrets)).To(Equal(2))
 
-		updatedGardenerSecret1, err := getSeedSecret(ctx, seedClient, fmt.Sprintf(RegistryCacheSecretNameFmt, registryCacheWithSecret1.UID), "test")
+		updatedGardenerSecret1, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(RegistryCacheSecretNameFmt, registryCacheWithSecret1.UID), gardenNamespace)
 		Expect(err).To(BeNil())
 		Expect(updatedGardenerSecret1).To(Not(BeNil()))
 
 		Expect(updatedGardenerSecret1.Labels[RegistryCacheSecretLabel]).To(Equal(runtimeID))
+		Expect(gardenerSecret1.Labels[RegistryCacheIDLabel]).To(Equal(registryCacheWithSecret1.UID))
 		Expect(updatedGardenerSecret1.Data).To(Equal(secret1.Data))
 
-		updatedGardenerSecret2, err := getSeedSecret(ctx, seedClient, fmt.Sprintf(RegistryCacheSecretNameFmt, registryCacheWithSecret2.UID), "default")
+		updatedGardenerSecret2, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(RegistryCacheSecretNameFmt, registryCacheWithSecret2.UID), gardenNamespace)
 		Expect(err).To(BeNil())
 		Expect(updatedGardenerSecret2).To(Not(BeNil()))
 
 		Expect(updatedGardenerSecret2.Labels[RegistryCacheSecretLabel]).To(Equal(runtimeID))
+		Expect(gardenerSecret2.Labels[RegistryCacheIDLabel]).To(Equal(registryCacheWithSecret2.UID))
 		Expect(updatedGardenerSecret2.Data).To(Equal(secret2.Data))
+	})
+
+	t.Run("Should remove unneeded secrets", func(t *testing.T) {
+		// given
+		runtimeID := "test-runtime-id"
+		gardenNamespace := "garden-dev"
+
+		secret1 := fixRegistryCacheSecret("secret1", "test", map[string]string{}, "user1", "password1")
+		secret3 := fixRegistryCacheSecret("secret3", "default", map[string]string{}, "user3", "password3")
+
+		runtimeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			secret1,
+			secret3,
+		).Build()
+
+		registryCacheWithSecret1 := fixRegistryCacheConfigWithSecret("config-with-secret-1", secret1.Namespace, "id1", "quay.io", secret1.Name)
+		registryCacheWithSecret3 := fixRegistryCacheConfigWithSecret("config-with-secret-3", secret3.Namespace, "id3", "gcr.io", secret3.Name)
+
+		registryCacheConfigs := []imv1.ImageRegistryCache{
+			fixRegistryCacheConfigWithoutSecret("config-without-secret-1", "test", "id1", "docker.io"),
+			registryCacheWithSecret1,
+			registryCacheWithSecret3,
+		}
+
+		labels1 := fixRegistryCacheGardenSecretLabels(runtimeID, registryCacheWithSecret1.UID)
+		labels2 := fixRegistryCacheGardenSecretLabels(runtimeID, "id2")
+
+		gardenerSecret1 := fixRegistryCacheSecret(getGardenSecretName(registryCacheWithSecret1), gardenNamespace, labels1, "user1", "password1")
+		gardenerSecret2 := fixRegistryCacheSecret("reg-cache-id", gardenNamespace, labels2, "user2", "password2")
+
+		gardenClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			gardenerSecret1,
+			gardenerSecret2,
+		).Build()
+
+		// when
+		secretSyncer := NewSecretSyncer(gardenClient, runtimeClient, gardenNamespace, runtimeID)
+		err := secretSyncer.DeleteNotUsed(registryCacheConfigs)
+
+		// then
+		Expect(err).To(BeNil())
+
+		secrets, err := getGardenSecrets(ctx, gardenClient, runtimeID)
+		Expect(err).To(BeNil())
+
+		Expect(len(secrets)).To(Equal(1))
+
+		updatedGardenerSecret1, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(RegistryCacheSecretNameFmt, registryCacheWithSecret1.UID), gardenNamespace)
+		Expect(err).To(BeNil())
+		Expect(updatedGardenerSecret1).To(Not(BeNil()))
 	})
 }
 
-func fixRegistryCacheSecret(name, namespace, user, password string) *corev1.Secret {
+func fixRegistryCacheSecret(name, namespace string, labels map[string]string, user string, password string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels: map[string]string{
-				"kyma-project.io/runtime-id": "test-runtime-id",
-			},
+			Labels:    labels,
 		},
 		Data: map[string][]byte{
 			"username": []byte(user),
 			"password": []byte(password)},
+	}
+}
+
+func fixRegistryCacheGardenSecretLabels(runtimeID, registryCacheConfigUid string) map[string]string {
+	return map[string]string{
+		RegistryCacheSecretLabel: runtimeID,
+		RegistryCacheIDLabel:     registryCacheConfigUid,
 	}
 }
 
@@ -168,9 +233,9 @@ func fixRegistryCacheConfigWithoutSecret(name, namespace, uuid, upstream string)
 	}
 }
 
-func getSeedSecret(ctx context.Context, seedClient client.Client, name, namespace string) (*corev1.Secret, error) {
+func getGardenSecret(ctx context.Context, gardenClient client.Client, name, namespace string) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
-	err := seedClient.Get(ctx, types.NamespacedName{
+	err := gardenClient.Get(ctx, types.NamespacedName{
 		Name:      name,
 		Namespace: namespace,
 	}, secret)
@@ -178,9 +243,9 @@ func getSeedSecret(ctx context.Context, seedClient client.Client, name, namespac
 	return secret, err
 }
 
-func getSeedSecrets(ctx context.Context, seedClient client.Client, runtimeID string) ([]corev1.Secret, error) {
+func getGardenSecrets(ctx context.Context, gardenClient client.Client, runtimeID string) ([]corev1.Secret, error) {
 	secretList := &corev1.SecretList{}
-	err := seedClient.List(ctx, secretList, client.MatchingLabels{RegistryCacheSecretLabel: runtimeID})
+	err := gardenClient.List(ctx, secretList, client.MatchingLabels{RegistryCacheSecretLabel: runtimeID})
 	if err != nil {
 		return nil, err
 	}
