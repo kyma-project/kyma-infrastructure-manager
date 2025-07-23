@@ -22,7 +22,7 @@ func sFnGardenClusterPostProcessing(ctx context.Context, m *fsm, s *systemState)
 	}
 
 	// TODO: pass Garden namespace name
-	secretSyncer := registrycache.NewSecretSyncer(m.SeedClient, runtimeClient, "", s.instance.Name)
+	secretSyncer := registrycache.NewSecretSyncer(m.GardenClient, runtimeClient, "", s.instance.Name)
 	registryCachesWitSecrets := getRegistryCachesWithSecrets(s.instance)
 
 	if len(registryCachesWitSecrets) > 0 {
