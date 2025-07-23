@@ -1,10 +1,11 @@
 package azure
 
 import (
-	"github.com/pkg/errors"
 	"math/big"
 	"net/netip"
 	"strconv"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -40,7 +41,11 @@ func generateAzureZones(workerCidr string, zoneNames []string) ([]Zone, error) {
 	}
 
 	workerNetworkPrefixLength := prefixLength + subNetworkBitsSize
-	workerPrefix, _ := cidr.Addr().Prefix(workerNetworkPrefixLength)
+	workerPrefix, err := cidr.Addr().Prefix(workerNetworkPrefixLength)
+	if err != nil {
+		return nil, err
+	}
+
 	// delta - it is the difference between CIDRs of two zones:
 	//    zone1:   "10.250.0.0/19",
 	//    zone2:   "10.250.32.0/19",

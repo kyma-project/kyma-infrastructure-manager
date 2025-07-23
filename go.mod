@@ -5,7 +5,7 @@ go 1.24.4
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/gardener/gardener v1.120.0
-	github.com/gardener/gardener-extension-provider-aws v1.62.2
+	github.com/gardener/gardener-extension-provider-aws v1.62.3
 	github.com/gardener/gardener-extension-provider-gcp v1.44.0
 	github.com/gardener/gardener-extension-provider-openstack v1.47.0
 	github.com/gardener/gardener-extension-registry-cache v0.16.0
@@ -63,7 +63,7 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.65.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
-	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/spf13/pflag v1.0.7 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
