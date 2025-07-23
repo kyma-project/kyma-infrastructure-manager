@@ -35,8 +35,9 @@ import (
 // RuntimeReconciler reconciles a Runtime object
 // nolint:revive
 type RuntimeReconciler struct {
-	KcpClient           client.Client
-	Scheme              *runtime.Scheme
+	KcpClient client.Client
+	Scheme    *runtime.Scheme
+	// GardenClient is the client for the Garden cluster, used to manage shoots (please see the docs: https://github.com/gardener/gardener/blob/master/docs/concepts/architecture.md).
 	GardenClient        client.Client
 	Log                 logr.Logger
 	Cfg                 fsm.RCCfg
