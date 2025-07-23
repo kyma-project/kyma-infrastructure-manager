@@ -7,7 +7,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func sFnGardenClusterPreProcessing(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+func sFnGardenClusterPreProcessing(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) { //nolint:unused
 	runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 	if err != nil {
 		s.instance.UpdateStatePending(
