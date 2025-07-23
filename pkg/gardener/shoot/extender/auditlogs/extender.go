@@ -16,13 +16,17 @@ type Extend = func(runtime imv1.Runtime, shoot *gardener.Shoot) error
 
 type operation = func(*gardener.Shoot) error
 
+func fixPolicyConfigMapName(annotations map[string]string, defaultPolicyMapName string) string {
+	annotationVal, found := annotations[experimentalAuditPolicyAnnotationName]
+	if found && strings.ToLower(annotationVal) == "true" {
+		return experimentalAuditPolicy
+	}
+	return defaultPolicyMapName
+}
+
 func NewAuditlogExtenderForCreate(policyConfigMapName string, data AuditLogData) Extend {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
-		annotationVal, found := rt.Annotations[experimentalAuditPolicyAnnotationName]
-		if found && strings.ToLower(annotationVal) == "true" {
-			policyConfigMapName = experimentalAuditPolicy
-		}
-
+		policyConfigMapName := fixPolicyConfigMapName(rt.Annotations, policyConfigMapName)
 		for _, f := range []operation{
 			oSetSecret(data.SecretName),
 			oSetPolicyConfigmap(policyConfigMapName),
@@ -37,11 +41,7 @@ func NewAuditlogExtenderForCreate(policyConfigMapName string, data AuditLogData)
 
 func NewAuditlogExtenderForPatch(policyConfigMapName string) Extend {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
-		annotationVal, found := rt.Annotations[experimentalAuditPolicyAnnotationName]
-		if found && strings.ToLower(annotationVal) == "true" {
-			policyConfigMapName = experimentalAuditPolicy
-		}
-
+		policyConfigMapName := fixPolicyConfigMapName(rt.Annotations, policyConfigMapName)
 		return oSetPolicyConfigmap(policyConfigMapName)(shoot)
 	}
 }
