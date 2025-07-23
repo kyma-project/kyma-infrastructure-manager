@@ -1,6 +1,7 @@
 package auditlogs
 
 import (
+	"fmt"
 	"strings"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -9,14 +10,16 @@ import (
 
 const experimentalAuditPolicy = "experimental-audit-policy"
 
+var experimentalAuditPolicyAnnotationName = fmt.Sprintf("operator.kyma-project.io/%s", experimentalAuditPolicy)
+
 type Extend = func(runtime imv1.Runtime, shoot *gardener.Shoot) error
 
 type operation = func(*gardener.Shoot) error
 
 func NewAuditlogExtenderForCreate(policyConfigMapName string, data AuditLogData) Extend {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
-		experimentalAuditPolicyVal, found := rt.Annotations[experimentalAuditPolicy]
-		if found && strings.ToLower(experimentalAuditPolicyVal) == "true" {
+		annotationVal, found := rt.Annotations[experimentalAuditPolicyAnnotationName]
+		if found && strings.ToLower(annotationVal) == "true" {
 			policyConfigMapName = experimentalAuditPolicy
 		}
 
@@ -33,7 +36,12 @@ func NewAuditlogExtenderForCreate(policyConfigMapName string, data AuditLogData)
 }
 
 func NewAuditlogExtenderForPatch(policyConfigMapName string) Extend {
-	return func(_ imv1.Runtime, shoot *gardener.Shoot) error {
+	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+		annotationVal, found := rt.Annotations[experimentalAuditPolicyAnnotationName]
+		if found && strings.ToLower(annotationVal) == "true" {
+			policyConfigMapName = experimentalAuditPolicy
+		}
+
 		return oSetPolicyConfigmap(policyConfigMapName)(shoot)
 	}
 }
