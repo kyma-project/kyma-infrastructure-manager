@@ -139,6 +139,7 @@ type RuntimeSpec struct {
 type ImageRegistryCache struct {
 	Name      string                                `json:"name"`
 	Namespace string                                `json:"namespace"`
+	UID       string                                `json:"uid"`
 	Config    registrycache.RegistryCacheConfigSpec `json:"config"`
 }
 

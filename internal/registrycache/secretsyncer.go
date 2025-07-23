@@ -6,6 +6,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const RegistryCacheSecretNameFmt = "reg-cache-%s"
+
 type SecretSyncer struct {
 	SeedClient    client.Client
 	RuntimeClient client.Client
