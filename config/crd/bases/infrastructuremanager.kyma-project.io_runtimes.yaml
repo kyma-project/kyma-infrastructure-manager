@@ -142,10 +142,13 @@ spec:
                       type: string
                     namespace:
                       type: string
+                    uid:
+                      type: string
                   required:
                   - config
                   - name
                   - namespace
+                  - uid
                   type: object
                 type: array
               security:
