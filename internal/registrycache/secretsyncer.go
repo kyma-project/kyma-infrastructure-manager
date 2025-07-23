@@ -36,25 +36,31 @@ func (s SecretSyncer) CreateOrUpdate(registryCaches []imv1.ImageRegistryCache) e
 		err := s.SeedClient.Get(context.TODO(), client.ObjectKey{Name: getSeedSecretName(cache), Namespace: cache.Namespace}, &secret)
 
 		if err != nil && errors.IsNotFound(err) {
-			err = s.copySecret(*cache.Config.SecretReferenceName, cache.Namespace, cache)
-
+			err = s.copySecret(cache)
 			if err != nil {
 				return fmt.Errorf("failed to copy secret for registry cache %s: %w", cache.Name, err)
 			}
+
+			continue
 		}
 
 		if err != nil {
 			return err
+		}
+
+		err = s.updateSecret(cache, secret)
+		if err != nil {
+			return fmt.Errorf("failed to update secret for registry cache %s: %w", cache.Name, err)
 		}
 	}
 
 	return nil
 }
 
-func (s SecretSyncer) copySecret(name, namespace string, cacheConfig imv1.ImageRegistryCache) error {
+func (s SecretSyncer) copySecret(cacheConfig imv1.ImageRegistryCache) error {
 
 	var secret v12.Secret
-	err := s.RuntimeClient.Get(context.TODO(), client.ObjectKey{Name: name, Namespace: namespace}, &secret)
+	err := s.RuntimeClient.Get(context.TODO(), client.ObjectKey{Name: *cacheConfig.Config.SecretReferenceName, Namespace: cacheConfig.Namespace}, &secret)
 
 	if err != nil {
 		return err
@@ -72,6 +78,19 @@ func (s SecretSyncer) copySecret(name, namespace string, cacheConfig imv1.ImageR
 	}
 
 	return s.SeedClient.Create(context.TODO(), &newSecret)
+}
+
+func (s SecretSyncer) updateSecret(cacheConfig imv1.ImageRegistryCache, gardenerSecret v12.Secret) error {
+	var runtimeSecret v12.Secret
+	err := s.RuntimeClient.Get(context.TODO(), client.ObjectKey{Name: *cacheConfig.Config.SecretReferenceName, Namespace: cacheConfig.Namespace}, &runtimeSecret)
+
+	if err != nil {
+		return err
+	}
+
+	gardenerSecret.Data = runtimeSecret.Data
+
+	return s.SeedClient.Update(context.TODO(), &gardenerSecret)
 }
 
 func (s SecretSyncer) DeleteNotUsed(registryCaches []imv1.ImageRegistryCache) error {
