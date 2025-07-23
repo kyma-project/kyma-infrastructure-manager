@@ -26,20 +26,20 @@ func TestSecretSyncer(t *testing.T) {
 
 	t.Run("Should create not existing secrets", func(t *testing.T) {
 		// given
-		secret1 := fixSecretOnRuntime("secret1", "test")
-		secret2 := fixSecretOnRuntime("secret2", "default")
+		runtimeID := "test-runtime-id"
+		secret1 := fixRegistryCacheSecret("secret1", "test")
+		secret2 := fixRegistryCacheSecret("secret2", "default")
 
 		runtimeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			fixSecretOnRuntime("some-other-secret1", "test"),
+			fixRegistryCacheSecret("orphaned-secret1", "test"),
 			secret1,
 			secret2,
 		).Build()
 
 		seedClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-		secretSyncer := NewSecretSyncer(seedClient, runtimeClient)
 
-		registryCacheWithSecret1 := fixRegistryCacheConfigWithSecret("config-with-secret-1", "test", "id2", "quay.io", "secret1")
-		registryCacheWithSecret2 := fixRegistryCacheConfigWithSecret("config-with-secret-2", "test", "id3", "gcr.io", "secret2")
+		registryCacheWithSecret1 := fixRegistryCacheConfigWithSecret("config-with-secret-1", secret1.Namespace, "id2", "quay.io", secret1.Name)
+		registryCacheWithSecret2 := fixRegistryCacheConfigWithSecret("config-with-secret-2", secret2.Namespace, "id3", "gcr.io", secret2.Name)
 
 		registryCacheConfigs := []imv1.ImageRegistryCache{
 			fixRegistryCacheConfigWithoutSecret("config-without-secret-1", "test", "id1", "docker.io"),
@@ -48,21 +48,29 @@ func TestSecretSyncer(t *testing.T) {
 		}
 
 		// when
+		secretSyncer := NewSecretSyncer(seedClient, runtimeClient, runtimeID)
 		err := secretSyncer.CreateOrUpdate(registryCacheConfigs)
 
 		// then
-		Expect(err).To(Not(BeNil()))
+		Expect(err).To(BeNil())
+
+		secrets, err := getSeedSecrets(ctx, seedClient, runtimeID)
+		Expect(err).To(BeNil())
+
+		Expect(len(secrets)).To(Equal(2))
 
 		gardenerSecret1, err := getSeedSecret(ctx, seedClient, fmt.Sprintf(RegistryCacheSecretNameFmt, registryCacheWithSecret1.UID), "test")
 		Expect(err).To(BeNil())
 		Expect(gardenerSecret1).To(Not(BeNil()))
 
+		Expect(gardenerSecret1.Labels[RegistryCacheSecretLabel]).To(Equal(runtimeID))
 		Expect(gardenerSecret1.Data).To(Equal(secret1.Data))
 
-		gardenerSecret2, err := getSeedSecret(ctx, seedClient, fmt.Sprintf(RegistryCacheSecretNameFmt, registryCacheWithSecret2.UID), "test")
+		gardenerSecret2, err := getSeedSecret(ctx, seedClient, fmt.Sprintf(RegistryCacheSecretNameFmt, registryCacheWithSecret2.UID), "default")
 		Expect(err).To(BeNil())
 		Expect(gardenerSecret2).To(Not(BeNil()))
 
+		Expect(gardenerSecret1.Labels[RegistryCacheSecretLabel]).To(Equal(runtimeID))
 		Expect(gardenerSecret2.Data).To(Equal(secret2.Data))
 	})
 
@@ -71,11 +79,14 @@ func TestSecretSyncer(t *testing.T) {
 	})
 }
 
-func fixSecretOnRuntime(name, namespace string) *corev1.Secret {
+func fixRegistryCacheSecret(name, namespace string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels: map[string]string{
+				"kyma-project.io/runtime-id": "test-runtime-id",
+			},
 		},
 		Data: map[string][]byte{
 			"username": []byte("test-user"),
@@ -114,4 +125,14 @@ func getSeedSecret(ctx context.Context, seedClient client.Client, name, namespac
 	}, secret)
 
 	return secret, err
+}
+
+func getSeedSecrets(ctx context.Context, seedClient client.Client, runtimeID string) ([]corev1.Secret, error) {
+	secretList := &corev1.SecretList{}
+	err := seedClient.List(ctx, secretList, client.MatchingLabels{RegistryCacheSecretLabel: runtimeID})
+	if err != nil {
+		return nil, err
+	}
+
+	return secretList.Items, nil
 }
