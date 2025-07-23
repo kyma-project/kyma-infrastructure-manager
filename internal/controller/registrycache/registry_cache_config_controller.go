@@ -135,8 +135,6 @@ func secretControlledByKIM(secret corev1.Secret) bool {
 //go:generate mockery --name=RegistryCache
 type RegistryCache interface {
 	GetRegistryCacheConfig() ([]registrycache.RegistryCacheConfig, error)
-	GetRegistryCacheSecrets() ([]corev1.Secret, []corev1.Secret)
-	CreateSecrets(secrets []corev1.Secret) error
 }
 
 type RegistryCacheCreator func(secret corev1.Secret) (RegistryCache, error)
