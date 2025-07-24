@@ -36,7 +36,7 @@ func (s SecretSyncer) CreateOrUpdate(ctx context.Context, registryCaches []imv1.
 
 	for _, cache := range cachesWithSecret {
 		var gardenerSecret v12.Secret
-		err := s.GardenClient.Get(ctx, client.ObjectKey{Name: getGardenSecretName(cache), Namespace: s.GardenNamespace}, &gardenerSecret)
+		err := s.GardenClient.Get(ctx, client.ObjectKey{Name: GetGardenSecretName(cache.UID), Namespace: s.GardenNamespace}, &gardenerSecret)
 
 		if err != nil && !errors.IsNotFound(err) {
 			return err
@@ -69,7 +69,7 @@ func (s SecretSyncer) copySecretFromRuntimeToGardenCluster(ctx context.Context, 
 
 	newSecret := v12.Secret{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      getGardenSecretName(cacheConfig),
+			Name:      GetGardenSecretName(cacheConfig.UID),
 			Namespace: s.GardenNamespace,
 			Labels: map[string]string{
 				RuntimeSecretLabel: s.RuntimeID,
@@ -143,6 +143,6 @@ func getRegistryCachesWithSecret(caches []imv1.ImageRegistryCache) []imv1.ImageR
 	return cachesWithSecret
 }
 
-func getGardenSecretName(registryCaches imv1.ImageRegistryCache) string {
-	return fmt.Sprintf(SecretNameFmt, registryCaches.UID)
+func GetGardenSecretName(uid string) string {
+	return fmt.Sprintf(SecretNameFmt, uid)
 }

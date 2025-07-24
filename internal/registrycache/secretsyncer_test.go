@@ -104,8 +104,8 @@ func TestSecretSyncer(t *testing.T) {
 		annotations1 := fixRegistryCacheGardenSecretLabels(registryCacheWithSecret1.UID)
 		annotations2 := fixRegistryCacheGardenSecretLabels(registryCacheWithSecret1.UID)
 
-		gardenerSecret1 := fixRegistryCacheSecret(getGardenSecretName(registryCacheWithSecret1), gardenNamespace, labels1, annotations1, "user1", "password1")
-		gardenerSecret2 := fixRegistryCacheSecret(getGardenSecretName(registryCacheWithSecret2), gardenNamespace, labels2, annotations2, "user2", "password2")
+		gardenerSecret1 := fixRegistryCacheSecret(GetGardenSecretName(registryCacheWithSecret1.UID), gardenNamespace, labels1, annotations1, "user1", "password1")
+		gardenerSecret2 := fixRegistryCacheSecret(GetGardenSecretName(registryCacheWithSecret2.UID), gardenNamespace, labels2, annotations2, "user2", "password2")
 
 		gardenClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			gardenerSecret1,
@@ -166,7 +166,7 @@ func TestSecretSyncer(t *testing.T) {
 		annotations1 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret1.UID)
 		annotations2 := fixRegistryCacheGardenSecretAnnotations("id2")
 
-		gardenerSecret1 := fixRegistryCacheSecret(getGardenSecretName(registryCacheWithSecret1), gardenNamespace, labels1, annotations1, "user1", "password1")
+		gardenerSecret1 := fixRegistryCacheSecret(GetGardenSecretName(registryCacheWithSecret1.UID), gardenNamespace, labels1, annotations1, "user1", "password1")
 		gardenerSecret2 := fixRegistryCacheSecret("reg-cache-id", gardenNamespace, labels2, annotations2, "user2", "password2")
 
 		gardenClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
