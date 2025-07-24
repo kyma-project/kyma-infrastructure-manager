@@ -40,5 +40,5 @@ func sFnGardenClusterPostProcessing(ctx context.Context, m *fsm, s *systemState)
 		}
 	}
 
-	return switchState(sFnPatchExistingShoot)
+	return switchState(sFnConfigureSKR)
 }

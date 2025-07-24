@@ -44,12 +44,7 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 		return updateStatusAndRequeue()
 	}
 
-	if s.shoot == nil {
-		m.log.Info("Gardener shoot does not exist, creating new one")
-		return switchState(sFnCreateShoot)
-	}
-
-	return switchState(sFnSelectShootProcessing)
+	return switchState(sFnGardenClusterPreProcessing)
 }
 
 func addFinalizerAndRequeue(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
