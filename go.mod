@@ -14,7 +14,7 @@ require (
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/kyma-project/kim-snatch v0.0.0-20250707101344-d177b4dcf5c1
 	github.com/onsi/ginkgo/v2 v2.23.4
-	github.com/onsi/gomega v1.37.0
+	github.com/onsi/gomega v1.38.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.22.0
 	github.com/stretchr/testify v1.10.0
