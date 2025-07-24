@@ -2,6 +2,7 @@ package fsm
 
 import (
 	"context"
+	"fmt"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -22,11 +23,11 @@ func sFnGardenClusterPreProcessing(ctx context.Context, m *fsm, s *systemState) 
 	}
 
 	// TODO: pass Garden namespace name
-	secretSyncer := registrycache.NewSecretSyncer(m.GardenClient, runtimeClient, "", s.instance.Name)
+	secretSyncer := registrycache.NewSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
 	registryCachesWitSecrets := getRegistryCachesWithSecrets(s.instance)
 
 	if len(registryCachesWitSecrets) > 0 {
-		err = secretSyncer.CreateOrUpdate(registryCachesWitSecrets)
+		err = secretSyncer.CreateOrUpdate(ctx, registryCachesWitSecrets)
 		if err != nil {
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRuntimeKubeconfigReady,

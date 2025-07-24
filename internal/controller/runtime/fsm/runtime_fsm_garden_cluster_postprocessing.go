@@ -26,7 +26,7 @@ func sFnGardenClusterPostProcessing(ctx context.Context, m *fsm, s *systemState)
 	registryCachesWitSecrets := getRegistryCachesWithSecrets(s.instance)
 
 	if len(registryCachesWitSecrets) > 0 {
-		err = secretSyncer.Delete(registryCachesWitSecrets)
+		err = secretSyncer.Delete(ctx, registryCachesWitSecrets)
 		if err != nil {
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRuntimeKubeconfigReady,

@@ -51,7 +51,7 @@ func TestSecretSyncer(t *testing.T) {
 
 		// when
 		secretSyncer := NewSecretSyncer(gardenClient, runtimeClient, gardenNamespace, runtimeID)
-		err := secretSyncer.CreateOrUpdate(registryCacheConfigs)
+		err := secretSyncer.CreateOrUpdate(context.Background(), registryCacheConfigs)
 
 		// then
 		Expect(err).To(BeNil())
@@ -114,7 +114,7 @@ func TestSecretSyncer(t *testing.T) {
 
 		// when
 		secretSyncer := NewSecretSyncer(gardenClient, runtimeClient, gardenNamespace, runtimeID)
-		err := secretSyncer.CreateOrUpdate(registryCacheConfigs)
+		err := secretSyncer.CreateOrUpdate(context.Background(), registryCacheConfigs)
 
 		// then
 		Expect(err).To(BeNil())
@@ -176,7 +176,7 @@ func TestSecretSyncer(t *testing.T) {
 
 		// when
 		secretSyncer := NewSecretSyncer(gardenClient, runtimeClient, gardenNamespace, runtimeID)
-		err := secretSyncer.Delete(registryCacheConfigs)
+		err := secretSyncer.Delete(context.Background(), registryCacheConfigs)
 
 		// then
 		Expect(err).To(BeNil())
