@@ -150,7 +150,7 @@ var _ = Describe("KIM sFnInitialise", func() {
 			&systemState{instance: testRtWithFinalizerAndProvisioningCondition},
 			testOpts{
 				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnGardenClusterPreProcessing"),
+				MatchNextFnState: haveName("sFnCreateShoot"),
 			},
 		),
 		Entry(
@@ -160,7 +160,7 @@ var _ = Describe("KIM sFnInitialise", func() {
 			&systemState{instance: testRtWithFinalizerAndProvisioningCondition, shoot: &testShoot},
 			testOpts{
 				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnGardenClusterPreProcessing"),
+				MatchNextFnState: haveName("sFnSelectShootProcessing"),
 			},
 		),
 	)

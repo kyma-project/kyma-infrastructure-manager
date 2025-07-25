@@ -8,12 +8,19 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func sFnGardenClusterPreProcessing(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) { //nolint:unused
+func sFnGardenClusterPreProcessing(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+
+	if s.shoot == nil {
+		m.log.Info("Gardener shoot does not exist, creating new one")
+		return switchState(sFnCreateShoot)
+	}
+
+	//nolint:unused
 	runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 	if err != nil {
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRuntimeKubeconfigReady,
-			imv1.ConditionReasonSeedClusterPreProcessingError,
+			imv1.ConditionReasonRegistryCacheError,
 			"False",
 			err.Error(),
 		)
@@ -31,7 +38,7 @@ func sFnGardenClusterPreProcessing(ctx context.Context, m *fsm, s *systemState) 
 		if err != nil {
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRuntimeKubeconfigReady,
-				imv1.ConditionReasonSeedClusterPreProcessingError,
+				imv1.ConditionReasonRegistryCacheError,
 				"False",
 				err.Error(),
 			)
@@ -39,11 +46,6 @@ func sFnGardenClusterPreProcessing(ctx context.Context, m *fsm, s *systemState) 
 
 			return updateStatusAndRequeue()
 		}
-	}
-
-	if s.shoot == nil {
-		m.log.Info("Gardener shoot does not exist, creating new one")
-		return switchState(sFnCreateShoot)
 	}
 
 	return switchState(sFnSelectShootProcessing)

@@ -103,13 +103,13 @@ var _ = Describe("KIM sFnCreateKubeconfig", func() {
 			},
 		),
 		Entry(
-			"should return sFnProcessShoot when GardenCluster CR exists and is in ready state",
+			"should return sFnConfigureSKR when GardenCluster CR exists and is in ready state",
 			testCtx,
 			must(newFakeFSM, withTestFinalizer, withTestSchemeAndObjects(testGardenerCRStateReady), withMockedMetrics(), withDefaultReconcileDuration()),
 			&systemState{instance: *inputRtWithLabelsAndCondition, shoot: &testShoot},
 			testOpts{
 				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnGardenClusterPostProcessing"),
+				MatchNextFnState: haveName("sFnConfigureSKR"),
 			},
 		),
 		Entry(

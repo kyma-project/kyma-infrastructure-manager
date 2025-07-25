@@ -94,14 +94,12 @@ const (
 
 	ConditionReasonAuditLogError = RuntimeConditionReason("AuditLogErr")
 
-	ConditionReasonAdministratorsConfigured       = RuntimeConditionReason("AdministratorsConfigured")
-	ConditionReasonOidcAndCMsConfigured           = RuntimeConditionReason("OidcAndConfigMapsConfigured")
-	ConditionReasonOidcError                      = RuntimeConditionReason("OidcConfigurationErr")
-	ConditionReasonKymaSystemNSError              = RuntimeConditionReason("KymaSystemCreationErr")
-	ConditionReasonSeedNotFound                   = RuntimeConditionReason("SeedNotFound")
-	ConditionReasonRegistryCacheError             = RuntimeConditionReason("RegistryCacheConfigurationErr")
-	ConditionReasonSeedClusterPreProcessingError  = RuntimeConditionReason("SeedClusterPreProcessingErr")
-	ConditionReasonSeedClusterPostProcessingError = RuntimeConditionReason("SeedClusterPostProcessingErr")
+	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
+	ConditionReasonOidcAndCMsConfigured     = RuntimeConditionReason("OidcAndConfigMapsConfigured")
+	ConditionReasonOidcError                = RuntimeConditionReason("OidcConfigurationErr")
+	ConditionReasonKymaSystemNSError        = RuntimeConditionReason("KymaSystemCreationErr")
+	ConditionReasonSeedNotFound             = RuntimeConditionReason("SeedNotFound")
+	ConditionReasonRegistryCacheError       = RuntimeConditionReason("RegistryCacheConfigurationErr")
 )
 
 //+kubebuilder:object:root=true
