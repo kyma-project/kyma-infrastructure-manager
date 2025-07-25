@@ -35,9 +35,10 @@ import (
 // RuntimeReconciler reconciles a Runtime object
 // nolint:revive
 type RuntimeReconciler struct {
-	KcpClient           client.Client
-	Scheme              *runtime.Scheme
-	SeedClient          client.Client
+	KcpClient client.Client
+	Scheme    *runtime.Scheme
+	// GardenClient is the client for the Garden cluster, used to manage shoots (please see the docs: https://github.com/gardener/gardener/blob/master/docs/concepts/architecture.md).
+	GardenClient        client.Client
 	Log                 logr.Logger
 	Cfg                 fsm.RCCfg
 	EventRecorder       record.EventRecorder
@@ -72,7 +73,7 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		r.Cfg,
 		fsm.K8s{
 			KcpClient:           r.KcpClient,
-			SeedClient:          r.SeedClient,
+			GardenClient:        r.GardenClient,
 			EventRecorder:       r.EventRecorder,
 			RuntimeClientGetter: r.RuntimeClientGetter,
 		})
@@ -80,11 +81,11 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 	return stateFSM.Run(ctx, runtime)
 }
 
-func NewRuntimeReconciler(mgr ctrl.Manager, seedClient client.Client, runtimeClientGetter fsm.RuntimeClientGetter, logger logr.Logger, cfg fsm.RCCfg) *RuntimeReconciler {
+func NewRuntimeReconciler(mgr ctrl.Manager, gardenClient client.Client, runtimeClientGetter fsm.RuntimeClientGetter, logger logr.Logger, cfg fsm.RCCfg) *RuntimeReconciler {
 	return &RuntimeReconciler{
 		KcpClient:           mgr.GetClient(),
 		Scheme:              mgr.GetScheme(),
-		SeedClient:          seedClient,
+		GardenClient:        gardenClient,
 		EventRecorder:       mgr.GetEventRecorderFor("runtime-controller"),
 		Log:                 logger,
 		Cfg:                 cfg,

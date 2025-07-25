@@ -412,7 +412,7 @@ func TestSkrConfigState(t *testing.T) {
 		runtimeClientGetter.On("Get", mock.Anything, mock.Anything).Return(fakeClient, nil)
 
 		testFsm := &fsm{K8s: K8s{
-			SeedClient:          fakeClient,
+			GardenClient:        fakeClient,
 			KcpClient:           fakeClient,
 			RuntimeClientGetter: runtimeClientGetter,
 		},
@@ -529,7 +529,7 @@ func setupFakeClient() (client.WithWatch, *fsm) {
 	runtimeClientGetter.On("Get", mock.Anything, mock.Anything).Return(fakeClient, nil)
 
 	testFsm := &fsm{K8s: K8s{
-		SeedClient:          fakeClient,
+		GardenClient:        fakeClient,
 		KcpClient:           fakeClient,
 		RuntimeClientGetter: runtimeClientGetter,
 	},

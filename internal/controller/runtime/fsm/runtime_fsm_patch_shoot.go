@@ -44,7 +44,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
 	err = structuredauth.CreateOrUpdateStructuredAuthConfigMap(
 		ctx,
-		m.SeedClient,
+		m.GardenClient,
 		types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace},
 		oidcConfig,
 	)
@@ -91,7 +91,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		copyShoot.Spec.Provider.ControlPlaneConfig = updatedShoot.Spec.Provider.ControlPlaneConfig
 		copyShoot.Spec.Provider.InfrastructureConfig = updatedShoot.Spec.Provider.InfrastructureConfig
 
-		updateErr := m.SeedClient.Update(ctx, copyShoot,
+		updateErr := m.GardenClient.Update(ctx, copyShoot,
 			&client.UpdateOptions{
 				FieldManager: fieldManagerName,
 			})
@@ -102,7 +102,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		}
 	}
 
-	patchErr := m.SeedClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
+	patchErr := m.GardenClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
 	})

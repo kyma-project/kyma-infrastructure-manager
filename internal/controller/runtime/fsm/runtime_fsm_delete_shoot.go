@@ -25,7 +25,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		setObjectFields(s.shoot)
 		s.shoot.Annotations = addGardenerCloudDelConfirmation(s.shoot.Annotations)
 
-		err := m.SeedClient.Patch(ctx, s.shoot, client.Apply, &client.PatchOptions{
+		err := m.GardenClient.Patch(ctx, s.shoot, client.Apply, &client.PatchOptions{
 			FieldManager: "kim",
 			Force:        ptr.To(true),
 		})
@@ -37,7 +37,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	}
 
 	m.log.Info("deleting structured authentication config", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
-	err := structuredauth.DeleteStructuredConfigMap(ctx, m.SeedClient, *s.shoot)
+	err := structuredauth.DeleteStructuredConfigMap(ctx, m.GardenClient, *s.shoot)
 	if err != nil {
 		// action error handler section
 		m.log.Error(err, "Failed to delete structured authentication configmap")
@@ -52,7 +52,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	}
 
 	m.log.Info("deleting shoot", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
-	err = m.SeedClient.Delete(ctx, s.shoot)
+	err = m.GardenClient.Delete(ctx, s.shoot)
 	if err != nil {
 		// action error handler section
 		m.log.Error(err, "Failed to delete gardener Shoot")
