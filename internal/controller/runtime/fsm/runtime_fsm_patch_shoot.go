@@ -3,7 +3,6 @@ package fsm
 import (
 	"context"
 	"fmt"
-	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
 	"reflect"
@@ -57,36 +56,6 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonOidcError,
 			msgFailedStructuredConfigMap)
-	}
-
-	if registryCacheExists(s.instance) {
-		runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
-		if err != nil {
-			s.instance.UpdateStatePending(
-				imv1.ConditionTypeRuntimeProvisioned,
-				imv1.ConditionReasonRegistryCacheError,
-				"False",
-				err.Error(),
-			)
-			m.log.Error(err, "Failed to get runtime client")
-
-			return updateStatusAndRequeue()
-		}
-
-		secretSyncer := registrycache.NewSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
-
-		err = secretSyncer.CreateOrUpdate(ctx, s.instance.Spec.Caching)
-		if err != nil {
-			s.instance.UpdateStatePending(
-				imv1.ConditionTypeRuntimeKubeconfigReady,
-				imv1.ConditionReasonRegistryCacheError,
-				"False",
-				err.Error(),
-			)
-			m.log.Error(err, "Failed to sync registry cache secrets")
-
-			return updateStatusAndRequeue()
-		}
 	}
 
 	// NOTE: In the future we want to pass the whole shoot object here
