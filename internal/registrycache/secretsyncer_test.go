@@ -96,6 +96,7 @@ func TestSecretSyncer(t *testing.T) {
 		}
 		labels1 := fixRegistryCacheGardenSecretLabels(runtimeID)
 		labels2 := fixRegistryCacheGardenSecretLabels(runtimeID)
+
 		annotations1 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret1.Name, registryCacheWithSecret1.Namespace, registryCacheWithSecret1.UID)
 		annotations2 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret2.Name, registryCacheWithSecret2.Namespace, registryCacheWithSecret2.UID)
 
