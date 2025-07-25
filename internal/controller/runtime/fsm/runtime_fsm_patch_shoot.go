@@ -59,10 +59,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			msgFailedStructuredConfigMap)
 	}
 
-	registryCachesWitSecrets := getRegistryCachesWithSecrets(s.instance)
-
-	if len(registryCachesWitSecrets) > 0 {
-
+	if registryCacheExists(s.instance) {
 		runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 		if err != nil {
 			s.instance.UpdateStatePending(
@@ -78,7 +75,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 		secretSyncer := registrycache.NewSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
 
-		err = secretSyncer.CreateOrUpdate(ctx, registryCachesWitSecrets)
+		err = secretSyncer.CreateOrUpdate(ctx, s.instance.Spec.Caching)
 		if err != nil {
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRuntimeKubeconfigReady,
@@ -175,6 +172,16 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	)
 
 	return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
+}
+
+func registryCacheExists(runtime imv1.Runtime) bool {
+	for _, cache := range runtime.Spec.Caching {
+		if cache.Config.SecretReferenceName != nil && *cache.Config.SecretReferenceName != "" {
+			return true
+		}
+	}
+
+	return false
 }
 
 func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg string) (stateFn, *ctrl.Result, error) {
