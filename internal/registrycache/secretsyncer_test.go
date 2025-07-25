@@ -61,22 +61,17 @@ func TestSecretSyncer(t *testing.T) {
 
 		Expect(len(secrets)).To(Equal(2))
 
-		gardenerSecret1, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(SecretNameFmt, registryCacheWithSecret1.UID), gardenNamespace)
+		gardenSecret1, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(SecretNameFmt, registryCacheWithSecret1.UID), gardenNamespace)
 		Expect(err).To(BeNil())
-		Expect(gardenerSecret1).To(Not(BeNil()))
+		Expect(gardenSecret1).To(Not(BeNil()))
 
-		Expect(gardenerSecret1.Labels[RuntimeSecretLabel]).To(Equal(runtimeID))
-		Expect(gardenerSecret1.Annotations[CacheIDAnnotation]).To(Equal(registryCacheWithSecret1.UID))
-
-		Expect(gardenerSecret1.Data).To(Equal(secret1.Data))
+		verifyGardenSecret(gardenSecret1, secret1, registryCacheWithSecret1, runtimeID)
 
 		gardenerSecret2, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(SecretNameFmt, registryCacheWithSecret2.UID), gardenNamespace)
 		Expect(err).To(BeNil())
 		Expect(gardenerSecret2).To(Not(BeNil()))
 
-		Expect(gardenerSecret2.Labels[RuntimeSecretLabel]).To(Equal(runtimeID))
-		Expect(gardenerSecret2.Annotations[CacheIDAnnotation]).To(Equal(registryCacheWithSecret2.UID))
-		Expect(gardenerSecret2.Data).To(Equal(secret2.Data))
+		verifyGardenSecret(gardenerSecret2, secret2, registryCacheWithSecret2, runtimeID)
 	})
 
 	t.Run("Should update existing secrets", func(t *testing.T) {
@@ -101,8 +96,8 @@ func TestSecretSyncer(t *testing.T) {
 		}
 		labels1 := fixRegistryCacheGardenSecretLabels(runtimeID)
 		labels2 := fixRegistryCacheGardenSecretLabels(runtimeID)
-		annotations1 := fixRegistryCacheGardenSecretLabels(registryCacheWithSecret1.UID)
-		annotations2 := fixRegistryCacheGardenSecretLabels(registryCacheWithSecret1.UID)
+		annotations1 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret1.Name, registryCacheWithSecret1.Namespace, registryCacheWithSecret1.UID)
+		annotations2 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret2.Name, registryCacheWithSecret2.Namespace, registryCacheWithSecret2.UID)
 
 		gardenerSecret1 := fixRegistryCacheSecret(GetGardenSecretName(registryCacheWithSecret1.UID), gardenNamespace, labels1, annotations1, "user1", "password1")
 		gardenerSecret2 := fixRegistryCacheSecret(GetGardenSecretName(registryCacheWithSecret2.UID), gardenNamespace, labels2, annotations2, "user2", "password2")
@@ -128,15 +123,13 @@ func TestSecretSyncer(t *testing.T) {
 		Expect(err).To(BeNil())
 		Expect(updatedGardenerSecret1).To(Not(BeNil()))
 
-		Expect(updatedGardenerSecret1.Labels[RuntimeSecretLabel]).To(Equal(runtimeID))
-		Expect(updatedGardenerSecret1.Data).To(Equal(secret1.Data))
+		verifyGardenSecret(updatedGardenerSecret1, secret1, registryCacheWithSecret1, runtimeID)
 
 		updatedGardenerSecret2, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(SecretNameFmt, registryCacheWithSecret2.UID), gardenNamespace)
 		Expect(err).To(BeNil())
 		Expect(updatedGardenerSecret2).To(Not(BeNil()))
 
-		Expect(updatedGardenerSecret2.Labels[RuntimeSecretLabel]).To(Equal(runtimeID))
-		Expect(updatedGardenerSecret2.Data).To(Equal(secret2.Data))
+		verifyGardenSecret(updatedGardenerSecret2, secret2, registryCacheWithSecret2, runtimeID)
 	})
 
 	t.Run("Should remove unneeded secrets", func(t *testing.T) {
@@ -163,8 +156,8 @@ func TestSecretSyncer(t *testing.T) {
 
 		labels1 := fixRegistryCacheGardenSecretLabels(runtimeID)
 		labels2 := fixRegistryCacheGardenSecretLabels(runtimeID)
-		annotations1 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret1.UID)
-		annotations2 := fixRegistryCacheGardenSecretAnnotations("id2")
+		annotations1 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret1.Name, registryCacheWithSecret1.Namespace, registryCacheWithSecret1.UID)
+		annotations2 := fixRegistryCacheGardenSecretAnnotations("config-with-secret-2", "test", "id2")
 
 		gardenerSecret1 := fixRegistryCacheSecret(GetGardenSecretName(registryCacheWithSecret1.UID), gardenNamespace, labels1, annotations1, "user1", "password1")
 		gardenerSecret2 := fixRegistryCacheSecret("reg-cache-id", gardenNamespace, labels2, annotations2, "user2", "password2")
@@ -192,6 +185,16 @@ func TestSecretSyncer(t *testing.T) {
 	})
 }
 
+func verifyGardenSecret(gardenSecret, registryCacheSecret *corev1.Secret, registryCache imv1.ImageRegistryCache, runtimeID string) {
+	Expect(gardenSecret.Labels[RuntimeSecretLabel]).To(Equal(runtimeID))
+	Expect(gardenSecret.Annotations[CacheIDAnnotation]).To(Equal(registryCache.UID))
+	Expect(gardenSecret.Annotations[CacheNameAnnotation]).To(Equal(registryCache.Name))
+	Expect(gardenSecret.Annotations[CacheNamespaceAnnotation]).To(Equal(registryCache.Namespace))
+
+	Expect(gardenSecret.Data).To(Equal(registryCacheSecret.Data))
+	Expect(*gardenSecret.Immutable).To(Equal(true))
+}
+
 func fixRegistryCacheSecret(name, namespace string, labels map[string]string, annotations map[string]string, user string, password string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -200,6 +203,7 @@ func fixRegistryCacheSecret(name, namespace string, labels map[string]string, an
 			Labels:      labels,
 			Annotations: annotations,
 		},
+		Immutable: ptr.To(true),
 		Data: map[string][]byte{
 			"username": []byte(user),
 			"password": []byte(password)},
@@ -212,9 +216,11 @@ func fixRegistryCacheGardenSecretLabels(runtimeID string) map[string]string {
 	}
 }
 
-func fixRegistryCacheGardenSecretAnnotations(registryCacheID string) map[string]string {
+func fixRegistryCacheGardenSecretAnnotations(cacheName, cacheNamespace, registryCacheID string) map[string]string {
 	return map[string]string{
-		CacheIDAnnotation: registryCacheID,
+		CacheIDAnnotation:        registryCacheID,
+		CacheNameAnnotation:      cacheName,
+		CacheNamespaceAnnotation: cacheNamespace,
 	}
 }
 

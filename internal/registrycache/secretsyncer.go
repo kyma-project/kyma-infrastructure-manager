@@ -14,6 +14,8 @@ import (
 const SecretNameFmt = "reg-cache-%s"
 const RuntimeSecretLabel = "kyma-project.io/runtime-id"
 const CacheIDAnnotation = "kyma-project.io/registry-cache-id"
+const CacheNameAnnotation = "kyma-project.io/registry-cache-name"
+const CacheNamespaceAnnotation = "kyma-project.io/registry-cache-namespace"
 
 type SecretSyncer struct {
 	GardenClient    client.Client
@@ -76,7 +78,9 @@ func (s SecretSyncer) copySecretFromRuntimeToGardenCluster(ctx context.Context, 
 				RuntimeSecretLabel: s.RuntimeID,
 			},
 			Annotations: map[string]string{
-				CacheIDAnnotation: cacheConfig.UID,
+				CacheIDAnnotation:        cacheConfig.UID,
+				CacheNameAnnotation:      cacheConfig.Name,
+				CacheNamespaceAnnotation: cacheConfig.Namespace,
 			},
 		},
 		Immutable: ptr.To(true),
