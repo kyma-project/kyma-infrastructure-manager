@@ -62,7 +62,7 @@ var _ = Describe("KIM sFnSelectShootProcessing", func() {
 			&systemState{instance: *inputRtWithForceAnnotation, shoot: &testShoot},
 			testOpts{
 				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnPatchExistingShoot"),
+				MatchNextFnState: haveName("sFnPrepareRegistryCache"),
 			},
 		),
 		Entry(

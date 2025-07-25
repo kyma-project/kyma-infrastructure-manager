@@ -143,6 +143,16 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
 }
 
+func registryCacheExists(runtime imv1.Runtime) bool {
+	for _, cache := range runtime.Spec.Caching {
+		if cache.Config.SecretReferenceName != nil && *cache.Config.SecretReferenceName != "" {
+			return true
+		}
+	}
+
+	return false
+}
+
 func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg string) (stateFn, *ctrl.Result, error) {
 	if err != nil {
 		if k8serrors.IsConflict(err) {
