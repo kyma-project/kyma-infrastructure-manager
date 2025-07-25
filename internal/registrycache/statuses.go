@@ -7,16 +7,29 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type RegistryCacheConditionType string
+
+const (
+	ConditionTypeCacheConfigured RegistryCacheConditionType = "CacheConfigured"
+)
+
 func UpdateStatusPending(ctx context.Context, runtimeClient client.Client, cache registrycache.RegistryCacheConfig, condition string) error {
-	//cache.Status.State = registrycache.PendingState
-	//cond := getCondition(&cache, condition)
-	//
-	//runtimeClient.Update(ctx, &cache)
-	return nil
+	cache.Status.State = registrycache.PendingState
+
+	cond := getCondition(&cache, condition)
+
+	if cond == nil {
+		cond = &v1.Condition{
+			Type:   condition,
+			Status: v1.ConditionFalse,
+		}
+		cache.Status.Conditions = append(cache.Status.Conditions, *cond)
+	}
+
+	return runtimeClient.Update(ctx, &cache)
 }
 
 func UpdateStatusFailed(ctx context.Context, runtimeClient client.Client, cache registrycache.RegistryCacheConfig, condition string, errorMessage string) error {
-
 	return nil
 }
 
@@ -25,15 +38,12 @@ func UpdateStatusReady(ctx context.Context, runtimeClient client.Client, cache r
 	return nil
 }
 
-func getCondition(cache *registrycache.RegistryCacheConfig, condition string) v1.Condition {
+func getCondition(cache *registrycache.RegistryCacheConfig, condition string) *v1.Condition {
 	for _, c := range cache.Status.Conditions {
 		if c.Type == condition {
-			return c
+			return &c
 		}
 	}
 
-	return v1.Condition{
-		Type:   condition,
-		Status: "Unknown",
-	}
+	return nil
 }

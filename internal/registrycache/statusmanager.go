@@ -30,7 +30,7 @@ func (s StatusManager) SetStatusReady(ctx context.Context, instance imv1.Runtime
 			return err
 		}
 
-		err = UpdateStatusReady(s.RuntimeClient, registryCache, condition)
+		err = UpdateStatusReady(ctx, s.RuntimeClient, registryCache, condition)
 		if err != nil {
 			return err
 		}
@@ -52,7 +52,7 @@ func (s StatusManager) SetStatusFailed(ctx context.Context, instance imv1.Runtim
 			return err
 		}
 
-		err = UpdateStatusFailed(s.RuntimeClient, registryCache, condition, errorMessage)
+		err = UpdateStatusFailed(ctx, s.RuntimeClient, registryCache, condition, errorMessage)
 		if err != nil {
 			return err
 		}
@@ -74,7 +74,7 @@ func (s StatusManager) SetStatusPending(ctx context.Context, instance imv1.Runti
 			return err
 		}
 
-		err = UpdateStatusPending(s.RuntimeClient, registryCache, condition)
+		err = UpdateStatusPending(ctx, s.RuntimeClient, registryCache, condition)
 		if err != nil {
 			return err
 		}

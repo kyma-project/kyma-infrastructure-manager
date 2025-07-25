@@ -26,7 +26,7 @@ func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (state
 		statusManager := registrycache.NewStatusManager(runtimeClient)
 		secretSyncer := registrycache.NewSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
 
-		err = statusManager.SetStatusPending(ctx, s.instance)
+		err = statusManager.SetStatusPending(ctx, s.instance, string(registrycache.ConditionTypeCacheConfigured))
 		if err != nil {
 			m.log.Error(err, "Failed to set registry cache status to pending")
 
@@ -43,7 +43,7 @@ func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (state
 			)
 			m.log.Error(err, "Failed to sync registry cache secrets")
 
-			err = statusManager.SetStatusFailed(ctx, s.instance, err.Error())
+			err = statusManager.SetStatusFailed(ctx, s.instance, string(registrycache.ConditionTypeCacheConfigured), err.Error())
 
 			if err != nil {
 				m.log.Error(err, "Failed to update registry cache status")
