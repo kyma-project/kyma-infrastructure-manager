@@ -9,7 +9,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+func sFnFinalizeRegistryCache(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	if registryCacheExists(s.instance) {
 		runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 		if err != nil {
@@ -27,24 +27,24 @@ func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (state
 		statusManager := registrycache.NewStatusManager(runtimeClient)
 		secretSyncer := registrycache.NewSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
 
-		err = statusManager.SetStatusPending(ctx, s.instance, registrycacheapi.ConditionTypeRegistryCacheConfigured, registrycacheapi.ConditionReasonRegistryCacheConfigured)
+		err = statusManager.SetStatusReady(ctx, s.instance, registrycacheapi.ConditionTypeRegistryCacheConfigured, registrycacheapi.ConditionReasonRegistryCacheConfigured)
 		if err != nil {
 			m.log.Error(err, "Failed to set registry cache status to pending")
 
 			return requeue()
 		}
 
-		err = secretSyncer.CreateOrUpdate(ctx, s.instance.Spec.Caching)
+		err = secretSyncer.Delete(ctx, s.instance.Spec.Caching)
 		if err != nil {
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRegistryCacheConfigured,
-				imv1.ConditionReasonRegistryCacheGardenClusterConfigurationFailed,
+				imv1.ConditionReasonRegistryCacheGardenClusterCleanupFailed,
 				"False",
 				err.Error(),
 			)
-			m.log.Error(err, "Failed to sync registry cache secrets")
+			m.log.Error(err, "Failed to delete not used registry cache secrets")
 
-			err = statusManager.SetStatusFailed(ctx, s.instance, registrycacheapi.ConditionTypeRegistryCacheConfigured, registrycacheapi.ConditionReasonRegistryCacheCGardenClusterConfigurationFailed, err.Error())
+			err = statusManager.SetStatusFailed(ctx, s.instance, registrycacheapi.ConditionTypeRegistryCacheConfigured, registrycacheapi.ConditionReasonRegistryCacheCGardenClusterCleanupFailed, err.Error())
 
 			if err != nil {
 				m.log.Error(err, "Failed to update registry cache status")
@@ -54,5 +54,5 @@ func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (state
 		}
 	}
 
-	return switchState(sFnPatchExistingShoot)
+	return switchState(sFnConfigureSKR)
 }

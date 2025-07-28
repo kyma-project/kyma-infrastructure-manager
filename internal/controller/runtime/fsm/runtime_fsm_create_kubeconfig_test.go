@@ -103,13 +103,13 @@ var _ = Describe("KIM sFnCreateKubeconfig", func() {
 			},
 		),
 		Entry(
-			"should return sFnConfigureSKR when GardenCluster CR exists and is in ready state",
+			"should return sFnFinalizeRegistryCache when GardenCluster CR exists and is in ready state",
 			testCtx,
 			must(newFakeFSM, withTestFinalizer, withTestSchemeAndObjects(testGardenerCRStateReady), withMockedMetrics(), withDefaultReconcileDuration()),
 			&systemState{instance: *inputRtWithLabelsAndCondition, shoot: &testShoot},
 			testOpts{
 				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnConfigureSKR"),
+				MatchNextFnState: haveName("sFnFinalizeRegistryCache"),
 			},
 		),
 		Entry(
