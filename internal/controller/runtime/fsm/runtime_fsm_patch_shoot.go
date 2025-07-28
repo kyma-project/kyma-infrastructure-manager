@@ -3,8 +3,10 @@ package fsm
 import (
 	"context"
 	"fmt"
+	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
+	registrycacheapi "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"reflect"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -75,6 +77,18 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object, exiting with no retry")
 		m.Metrics.IncRuntimeFSMStopCounter()
+
+		runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
+		if err != nil {
+			m.log.Error(err, "Failed to get Runtime Client to set Registry Cache status")
+		}
+
+		statusManager := registrycache.NewStatusManager(runtimeClient)
+		err = statusManager.SetStatusFailed(ctx, s.instance, registrycacheapi.ConditionTypeRegistryCacheConfigured, registrycacheapi.ConditionReasonRegistryCacheExtensionConfigurationFailed, "failed to apply registry cache configuration")
+		if err != nil {
+			m.log.Error(err, "Failed to get Runtime Client to set Registry Cache status")
+		}
+
 		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonConversionError, fmt.Sprintf("Runtime conversion error %v", err))
 	}
 

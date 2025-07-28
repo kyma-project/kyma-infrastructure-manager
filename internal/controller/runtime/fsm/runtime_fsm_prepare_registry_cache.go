@@ -5,6 +5,7 @@ import (
 	"fmt"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
+	registrycacheapi "github.com/kyma-project/kim-snatch/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -13,8 +14,8 @@ func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (state
 		runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 		if err != nil {
 			s.instance.UpdateStatePending(
-				imv1.ConditionTypeRuntimeProvisioned,
-				imv1.ConditionReasonRegistryCacheError,
+				imv1.ConditionTypeRegistryCacheConfigured,
+				imv1.ConditionReasonRegistryCacheConfigured,
 				"False",
 				err.Error(),
 			)
@@ -26,7 +27,7 @@ func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (state
 		statusManager := registrycache.NewStatusManager(runtimeClient)
 		secretSyncer := registrycache.NewSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
 
-		err = statusManager.SetStatusPending(ctx, s.instance, string(registrycache.ConditionTypeCacheConfigured))
+		err = statusManager.SetStatusPending(ctx, s.instance, registrycacheapi.ConditionTypeRegistryCacheConfigured, registrycacheapi.ConditionReasonRegistryCacheConfigured)
 		if err != nil {
 			m.log.Error(err, "Failed to set registry cache status to pending")
 
@@ -36,14 +37,14 @@ func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (state
 		err = secretSyncer.CreateOrUpdate(ctx, s.instance.Spec.Caching)
 		if err != nil {
 			s.instance.UpdateStatePending(
-				imv1.ConditionTypeRuntimeKubeconfigReady,
-				imv1.ConditionReasonRegistryCacheError,
+				imv1.ConditionTypeRegistryCacheConfigured,
+				imv1.ConditionReasonRegistryCacheGardenClusterConfigurationFailed,
 				"False",
 				err.Error(),
 			)
 			m.log.Error(err, "Failed to sync registry cache secrets")
 
-			err = statusManager.SetStatusFailed(ctx, s.instance, string(registrycache.ConditionTypeCacheConfigured), err.Error())
+			err = statusManager.SetStatusFailed(ctx, s.instance, registrycacheapi.ConditionTypeRegistryCacheConfigured, registrycacheapi.ConditionReasonRegistryCacheCGardenClusterConfigurationFailed, err.Error())
 
 			if err != nil {
 				m.log.Error(err, "Failed to update registry cache status")
