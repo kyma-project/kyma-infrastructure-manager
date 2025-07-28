@@ -29,7 +29,7 @@ func sFnFinalizeRegistryCache(ctx context.Context, m *fsm, s *systemState) (stat
 
 		err = statusManager.SetStatusReady(ctx, s.instance, registrycacheapi.ConditionTypeRegistryCacheConfigured, registrycacheapi.ConditionReasonRegistryCacheConfigured)
 		if err != nil {
-			m.log.Error(err, "Failed to set registry cache status to pending")
+			m.log.Error(err, "Failed to set registry cache status to ready")
 
 			return requeue()
 		}
