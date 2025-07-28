@@ -4,6 +4,7 @@ import (
 	"context"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
+	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -17,7 +18,7 @@ func NewStatusManager(runtimeClient client.Client) *StatusManager {
 	}
 }
 
-func (s StatusManager) SetStatusReady(ctx context.Context, instance imv1.Runtime, condition string) error {
+func (s StatusManager) SetStatusReady(ctx context.Context, instance imv1.Runtime, conditionType registrycache.ConditionType, conditionReason registrycache.ConditionReason) error {
 	for _, cache := range instance.Spec.Caching {
 		var registryCache registrycache.RegistryCacheConfig
 
@@ -30,16 +31,18 @@ func (s StatusManager) SetStatusReady(ctx context.Context, instance imv1.Runtime
 			return err
 		}
 
-		err = UpdateStatusReady(ctx, s.RuntimeClient, registryCache, condition)
+		registryCache.UpdateStatusReady(conditionType, conditionReason)
+
+		err = s.RuntimeClient.Update(ctx, &registryCache)
 		if err != nil {
-			return err
+			return errors.New("failed to update registry cache status: " + err.Error())
 		}
 	}
 
 	return nil
 }
 
-func (s StatusManager) SetStatusFailed(ctx context.Context, instance imv1.Runtime, condition string, errorMessage string) error {
+func (s StatusManager) SetStatusFailed(ctx context.Context, instance imv1.Runtime, conditionType registrycache.ConditionType, conditionReason registrycache.ConditionReason, errorMessage string) error {
 	for _, cache := range instance.Spec.Caching {
 		var registryCache registrycache.RegistryCacheConfig
 
@@ -52,16 +55,17 @@ func (s StatusManager) SetStatusFailed(ctx context.Context, instance imv1.Runtim
 			return err
 		}
 
-		err = UpdateStatusFailed(ctx, s.RuntimeClient, registryCache, condition, errorMessage)
+		registryCache.UpdateStatusFailed(conditionType, conditionReason, errorMessage)
+		err = s.RuntimeClient.Update(ctx, &registryCache)
 		if err != nil {
-			return err
+			return errors.New("failed to update registry cache status: " + err.Error())
 		}
 	}
 
 	return nil
 }
 
-func (s StatusManager) SetStatusPending(ctx context.Context, instance imv1.Runtime, condition string) error {
+func (s StatusManager) SetStatusPending(ctx context.Context, instance imv1.Runtime, conditionType registrycache.ConditionType, conditionReason registrycache.ConditionReason) error {
 	for _, cache := range instance.Spec.Caching {
 		var registryCache registrycache.RegistryCacheConfig
 
@@ -74,9 +78,10 @@ func (s StatusManager) SetStatusPending(ctx context.Context, instance imv1.Runti
 			return err
 		}
 
-		err = UpdateStatusPending(ctx, s.RuntimeClient, registryCache, condition)
+		registryCache.UpdateStatusPending(conditionType, conditionReason)
+		err = s.RuntimeClient.Update(ctx, &registryCache)
 		if err != nil {
-			return err
+			return errors.New("failed to update registry cache status: " + err.Error())
 		}
 	}
 
