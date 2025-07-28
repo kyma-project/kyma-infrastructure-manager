@@ -104,7 +104,7 @@ const (
 
 	ConditionReasonRegistryCacheError                            = RuntimeConditionReason("RegistryCacheConfigurationErr")
 	ConditionReasonRegistryCacheGardenClusterConfigurationFailed = RuntimeConditionReason("RegistryCacheGardenClusterConfigurationFailed")
-	ConditionReasonRegistryCacheGardenClusterCleanupFailed       = RuntimeConditionReason("RegistryCacheGardenClusterConfigurationFailed")
+	ConditionReasonRegistryCacheGardenClusterCleanupFailed       = RuntimeConditionReason("RegistryCacheGardenClusterCleanupFailed")
 )
 
 //+kubebuilder:object:root=true
