@@ -129,6 +129,26 @@ func (s SecretSyncer) Delete(ctx context.Context, registryCaches []imv1.ImageReg
 	return nil
 }
 
+func (s SecretSyncer) DeleteAll(ctx context.Context) error {
+
+	var gardenSecrets v12.SecretList
+	err := s.GardenClient.List(ctx, &gardenSecrets, client.MatchingLabels{RuntimeSecretLabel: s.RuntimeID}, client.InNamespace(s.GardenNamespace))
+
+	if err != nil {
+		return fmt.Errorf("failed to list garden secrets: %w", err)
+	}
+
+	for _, gardenSecret := range gardenSecrets.Items {
+		err = s.GardenClient.Delete(ctx, &gardenSecret)
+
+		if err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("failed to delete unused garden secret %s: %w", gardenSecret.Name, err)
+		}
+	}
+
+	return nil
+}
+
 func registryCacheUidExists(uid string, registryCaches []imv1.ImageRegistryCache) bool {
 	for _, cache := range registryCaches {
 		if cache.UID == uid {
