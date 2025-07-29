@@ -5,6 +5,7 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -31,7 +32,7 @@ func (s StatusManager) SetStatusReady(ctx context.Context, instance imv1.Runtime
 			return err
 		}
 
-		registryCache.UpdateStatusReady(conditionType, conditionReason)
+		registryCache.UpdateStatusReady(conditionType, conditionReason, metav1.ConditionTrue)
 
 		err = s.RuntimeClient.Status().Update(ctx, &registryCache)
 		if err != nil {
@@ -55,7 +56,7 @@ func (s StatusManager) SetStatusFailed(ctx context.Context, instance imv1.Runtim
 			return err
 		}
 
-		registryCache.UpdateStatusFailed(conditionType, conditionReason, errorMessage)
+		registryCache.UpdateStatusFailed(conditionType, conditionReason, metav1.ConditionFalse, errorMessage)
 		err = s.RuntimeClient.Status().Update(ctx, &registryCache)
 		if err != nil {
 			return errors.New("failed to update registry cache status: " + err.Error())
@@ -78,7 +79,7 @@ func (s StatusManager) SetStatusPending(ctx context.Context, instance imv1.Runti
 			return err
 		}
 
-		registryCache.UpdateStatusPending(conditionType, conditionReason)
+		registryCache.UpdateStatusPending(conditionType, conditionReason, metav1.ConditionUnknown)
 		err = s.RuntimeClient.Status().Update(ctx, &registryCache)
 		if err != nil {
 			return errors.New("failed to update registry cache status: " + err.Error())
