@@ -162,10 +162,12 @@ func TestSecretSyncer(t *testing.T) {
 
 		gardenerSecret1 := fixRegistryCacheSecret(GetGardenSecretName(registryCacheWithSecret1.UID), gardenNamespace, labels1, annotations1, "user1", "password1")
 		gardenerSecret2 := fixRegistryCacheSecret("reg-cache-id", gardenNamespace, labels2, annotations2, "user2", "password2")
+		gardenerSecret3 := fixRegistryCacheSecret("some-secret", "somens", labels2, annotations2, "user3", "password3")
 
 		gardenClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			gardenerSecret1,
 			gardenerSecret2,
+			gardenerSecret3,
 		).Build()
 
 		// when
@@ -178,7 +180,7 @@ func TestSecretSyncer(t *testing.T) {
 		secrets, err := getGardenSecrets(ctx, gardenClient, runtimeID)
 		Expect(err).To(BeNil())
 
-		Expect(len(secrets)).To(Equal(1))
+		Expect(len(secrets)).To(Equal(2))
 
 		updatedGardenerSecret1, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(SecretNameFmt, registryCacheWithSecret1.UID), gardenNamespace)
 		Expect(err).To(BeNil())

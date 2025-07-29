@@ -108,7 +108,7 @@ func (s SecretSyncer) Delete(ctx context.Context, registryCaches []imv1.ImageReg
 	cachesWithSecret := getRegistryCachesWithSecret(registryCaches)
 
 	var gardenSecrets v12.SecretList
-	err := s.GardenClient.List(ctx, &gardenSecrets, client.MatchingLabels{RuntimeSecretLabel: s.RuntimeID})
+	err := s.GardenClient.List(ctx, &gardenSecrets, client.MatchingLabels{RuntimeSecretLabel: s.RuntimeID}, client.InNamespace(s.GardenNamespace))
 
 	if err != nil {
 		return fmt.Errorf("failed to list garden secrets: %w", err)

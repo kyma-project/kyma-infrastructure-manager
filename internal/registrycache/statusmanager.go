@@ -33,7 +33,7 @@ func (s StatusManager) SetStatusReady(ctx context.Context, instance imv1.Runtime
 
 		registryCache.UpdateStatusReady(conditionType, conditionReason)
 
-		err = s.RuntimeClient.Update(ctx, &registryCache)
+		err = s.RuntimeClient.Status().Update(ctx, &registryCache)
 		if err != nil {
 			return errors.New("failed to update registry cache status: " + err.Error())
 		}
@@ -56,7 +56,7 @@ func (s StatusManager) SetStatusFailed(ctx context.Context, instance imv1.Runtim
 		}
 
 		registryCache.UpdateStatusFailed(conditionType, conditionReason, errorMessage)
-		err = s.RuntimeClient.Update(ctx, &registryCache)
+		err = s.RuntimeClient.Status().Update(ctx, &registryCache)
 		if err != nil {
 			return errors.New("failed to update registry cache status: " + err.Error())
 		}
@@ -79,7 +79,7 @@ func (s StatusManager) SetStatusPending(ctx context.Context, instance imv1.Runti
 		}
 
 		registryCache.UpdateStatusPending(conditionType, conditionReason)
-		err = s.RuntimeClient.Update(ctx, &registryCache)
+		err = s.RuntimeClient.Status().Update(ctx, &registryCache)
 		if err != nil {
 			return errors.New("failed to update registry cache status: " + err.Error())
 		}
