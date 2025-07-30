@@ -11,9 +11,7 @@ func NewTolerationsExtender(config config.TolerationsConfig) func(runtime imv1.R
 		for region, tolerations := range config {
 			if runtime.Spec.Shoot.Region == region {
 				shoot.Spec.Tolerations = make([]gardener.Toleration, len(tolerations))
-				for i := range tolerations {
-					shoot.Spec.Tolerations[i] = tolerations[i]
-				}
+				copy(shoot.Spec.Tolerations, tolerations)
 			}
 		}
 		return nil
