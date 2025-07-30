@@ -75,6 +75,8 @@ type MachineImageConfig struct {
 	DefaultVersion string `json:"defaultVersion" validate:"required"`
 }
 
+type TolerationsConfig map[string][]gardener.Toleration
+
 type ConverterConfig struct {
 	Kubernetes        KubernetesConfig        `json:"kubernetes" validate:"required"`
 	DNS               DNSConfig               `json:"dns"`
@@ -83,6 +85,7 @@ type ConverterConfig struct {
 	Gardener          GardenerConfig          `json:"gardener" validate:"required"`
 	AuditLog          AuditLogConfig          `json:"auditLogging" validate:"required"`
 	MaintenanceWindow MaintenanceWindowConfig `json:"maintenanceWindow"`
+	Tolerations       TolerationsConfig       `json:"tolerations"`
 }
 
 // special case for own Gardener's DNS solution

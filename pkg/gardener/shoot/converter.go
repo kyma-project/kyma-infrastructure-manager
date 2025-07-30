@@ -2,6 +2,7 @@ package shoot
 
 import (
 	"fmt"
+
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
@@ -78,7 +79,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
 		),
-		extender2.ExtendWithTolerations,
+		extender2.NewTolerationsExtender(opts.Tolerations),
 	)
 
 	if !opts.DNS.IsGardenerInternal() {
