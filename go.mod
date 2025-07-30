@@ -12,7 +12,7 @@ require (
 	github.com/gardener/oidc-webhook-authenticator v0.36.0
 	github.com/go-logr/logr v1.4.3
 	github.com/go-playground/validator/v10 v10.26.0
-	github.com/kyma-project/kim-snatch v0.0.0-20250729064055-71ff5279b84c
+	github.com/kyma-project/kim-snatch v0.0.0-20250729144127-52ef1957c9b6
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.38.0
 	github.com/pkg/errors v0.9.1
@@ -94,7 +94,7 @@ require (
 )
 
 replace (
-	github.com/kyma-project/kim-snatch => github.com/akgalwas/kim-snatch v0.0.0-20250729064055-71ff5279b84c
+	github.com/kyma-project/kim-snatch => github.com/akgalwas/kim-snatch v0.0.0-20250729144127-52ef1957c9b6
 	golang.org/x/crypto => golang.org/x/crypto v0.40.0
 	golang.org/x/net => golang.org/x/net v0.42.0
 	golang.org/x/sys => golang.org/x/sys v0.34.0

@@ -48,7 +48,7 @@ func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (state
 			)
 			m.log.Error(err, "Failed to sync registry cache secrets")
 
-			err = statusManager.SetStatusFailed(ctx, s.instance, registrycacheapi.ConditionTypeRegistryCacheConfigured, registrycacheapi.ConditionReasonRegistryCacheCGardenClusterConfigurationFailed, err.Error())
+			err = statusManager.SetStatusFailed(ctx, s.instance, registrycacheapi.ConditionTypeRegistryCacheConfigured, registrycacheapi.ConditionReasonRegistryCacheGardenClusterConfigurationFailed, err.Error())
 
 			if err != nil {
 				m.log.Error(err, "Failed to update registry cache status")
