@@ -180,7 +180,7 @@ func TestFSMPatchShoot(t *testing.T) {
 			},
 		},
 	} {
-		createErr := entry.fsm.SeedClient.Create(testCtx, entry.systemState.shoot)
+		createErr := entry.fsm.GardenClient.Create(testCtx, entry.systemState.shoot)
 		Expect(createErr).To(BeNil())
 
 		sFn, res, err := sFnPatchExistingShoot(testCtx, entry.fsm, entry.systemState)

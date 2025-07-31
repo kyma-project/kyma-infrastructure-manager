@@ -8,11 +8,11 @@ import (
 	"slices"
 )
 
-func seedForRegionAvailable(context context.Context, seedClient client.Client, providerType, region string) (bool, []string, error) {
+func seedForRegionAvailable(context context.Context, gardenClient client.Client, providerType, region string) (bool, []string, error) {
 	var seedList gardener_types.SeedList
 	var regionsWithSeeds []string
 
-	err := seedClient.List(context, &seedList)
+	err := gardenClient.List(context, &seedList)
 
 	if err != nil {
 		return false, nil, err

@@ -123,7 +123,7 @@ var (
 
 		return func(fsm *fsm) error {
 			fsm.KcpClient = k8sClient
-			fsm.SeedClient = k8sClient
+			fsm.GardenClient = k8sClient
 			fsm.RuntimeClientGetter = runtimeClientGetter
 			return nil
 		}
@@ -146,7 +146,7 @@ var (
 
 		return func(fsm *fsm) error {
 			fsm.KcpClient = k8sClient
-			fsm.SeedClient = k8sClient
+			fsm.GardenClient = k8sClient
 			fsm.RuntimeClientGetter = runtimeClientGetter
 			return nil
 		}
@@ -167,7 +167,7 @@ var (
 
 		return func(fsm *fsm) error {
 			fsm.KcpClient = k8sClient
-			fsm.SeedClient = k8sClient
+			fsm.GardenClient = k8sClient
 			return nil
 		}
 	}
@@ -188,7 +188,7 @@ var (
 
 		return func(fsm *fsm) error {
 			fsm.KcpClient = k8sClient
-			fsm.SeedClient = k8sClient
+			fsm.GardenClient = k8sClient
 			return nil
 		}
 	}
@@ -209,7 +209,7 @@ var (
 
 		return func(fsm *fsm) error {
 			fsm.KcpClient = k8sClient
-			fsm.SeedClient = k8sClient
+			fsm.GardenClient = k8sClient
 			return nil
 		}
 	}

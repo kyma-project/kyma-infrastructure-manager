@@ -79,7 +79,7 @@ func toAuthenticationConfiguration(oidcConfig gardener.OIDCConfig) Authenticatio
 	}
 }
 
-func CreateOrUpdateStructuredAuthConfigMap(ctx context.Context, seedClient client.Client, cmKey types.NamespacedName, oidcConfig gardener.OIDCConfig) error {
+func CreateOrUpdateStructuredAuthConfigMap(ctx context.Context, gardenClient client.Client, cmKey types.NamespacedName, oidcConfig gardener.OIDCConfig) error {
 	creteConfigMapObject := func() (v1.ConfigMap, error) {
 		authenticationConfig := toAuthenticationConfiguration(oidcConfig)
 		authConfigBytes, err := yaml.Marshal(authenticationConfig)
@@ -103,7 +103,7 @@ func CreateOrUpdateStructuredAuthConfigMap(ctx context.Context, seedClient clien
 	}
 
 	var existingCM v1.ConfigMap
-	err := seedClient.Get(ctx, cmKey, &existingCM)
+	err := gardenClient.Get(ctx, cmKey, &existingCM)
 
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return err
@@ -119,13 +119,13 @@ func CreateOrUpdateStructuredAuthConfigMap(ctx context.Context, seedClient clien
 
 	if configMapAlreadyExists {
 		existingCM.Data = newConfigMap.Data
-		return seedClient.Update(ctx, &existingCM)
+		return gardenClient.Update(ctx, &existingCM)
 	}
 
-	return seedClient.Create(ctx, &newConfigMap)
+	return gardenClient.Create(ctx, &newConfigMap)
 }
 
-func DeleteStructuredConfigMap(ctx context.Context, seedClient client.Client, shoot gardener.Shoot) error {
+func DeleteStructuredConfigMap(ctx context.Context, gardenClient client.Client, shoot gardener.Shoot) error {
 	if shoot.Spec.Kubernetes.KubeAPIServer != nil && shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication != nil {
 		cmName := shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName
 
@@ -133,7 +133,7 @@ func DeleteStructuredConfigMap(ctx context.Context, seedClient client.Client, sh
 			return nil
 		}
 
-		err := seedClient.Delete(ctx, &v1.ConfigMap{
+		err := gardenClient.Delete(ctx, &v1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName,
 				Namespace: shoot.Namespace,

@@ -26,7 +26,7 @@ func TestConfigExplorer_RegistryCacheConfigExists(t *testing.T) {
 		}
 
 		client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(registryCacheConfig).Build()
-		explorer := NewConfigExplorer(ctx, client)
+		explorer := NewRuntimeConfigurationManager(ctx, client)
 
 		// when
 		exists, err := explorer.RegistryCacheConfigExists()
@@ -39,7 +39,7 @@ func TestConfigExplorer_RegistryCacheConfigExists(t *testing.T) {
 	t.Run("Return false no RegistryCacheConfig CR exist", func(t *testing.T) {
 		// given
 		client := fake.NewClientBuilder().WithScheme(scheme).Build()
-		explorer := NewConfigExplorer(ctx, client)
+		explorer := NewRuntimeConfigurationManager(ctx, client)
 
 		// when
 		exists, err := explorer.RegistryCacheConfigExists()
@@ -52,7 +52,7 @@ func TestConfigExplorer_RegistryCacheConfigExists(t *testing.T) {
 	t.Run("Return error when failed to list RegistryCacheConfig CRs", func(t *testing.T) {
 		// given
 		client := fake.NewClientBuilder().Build()
-		explorer := NewConfigExplorer(ctx, client)
+		explorer := NewRuntimeConfigurationManager(ctx, client)
 
 		// when
 		exists, err := explorer.RegistryCacheConfigExists()
@@ -80,7 +80,7 @@ func TestConfigExplorer_GetRegistryCacheConfig(t *testing.T) {
 		}
 		client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(registryCacheConfig).Build()
 
-		explorer := NewConfigExplorer(ctx, client)
+		explorer := NewRuntimeConfigurationManager(ctx, client)
 
 		// when
 		configs, err := explorer.GetRegistryCacheConfig()
@@ -94,7 +94,7 @@ func TestConfigExplorer_GetRegistryCacheConfig(t *testing.T) {
 	t.Run("Return empty RegistryCacheConfig list", func(t *testing.T) {
 		// given
 		client := fake.NewClientBuilder().WithScheme(scheme).Build()
-		explorer := NewConfigExplorer(ctx, client)
+		explorer := NewRuntimeConfigurationManager(ctx, client)
 
 		// when
 		configs, err := explorer.GetRegistryCacheConfig()
@@ -107,7 +107,7 @@ func TestConfigExplorer_GetRegistryCacheConfig(t *testing.T) {
 	t.Run("Return error when failed to list RegistryCacheConfig CRs", func(t *testing.T) {
 		// given
 		client := fake.NewClientBuilder().Build()
-		explorer := NewConfigExplorer(ctx, client)
+		explorer := NewRuntimeConfigurationManager(ctx, client)
 
 		// when
 		configs, err := explorer.GetRegistryCacheConfig()

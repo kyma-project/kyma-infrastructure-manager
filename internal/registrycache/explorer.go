@@ -7,21 +7,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type ConfigExplorer struct {
+// RuntimeConfigurationManager is responsible for managing runtime configurations (RegistryCacheConfig and corresponding Secrets).
+type RuntimeConfigurationManager struct {
 	runtimeClient client.Client
 	Context       context.Context
 }
 
 type GetSecretFunc func() (corev1.Secret, error)
 
-func NewConfigExplorer(ctx context.Context, runtimeClient client.Client) *ConfigExplorer {
-	return &ConfigExplorer{
+func NewRuntimeConfigurationManager(ctx context.Context, runtimeClient client.Client) *RuntimeConfigurationManager {
+	return &RuntimeConfigurationManager{
 		runtimeClient: runtimeClient,
 		Context:       ctx,
 	}
 }
 
-func (c *ConfigExplorer) RegistryCacheConfigExists() (bool, error) {
+func (c *RuntimeConfigurationManager) RegistryCacheConfigExists() (bool, error) {
 	registryCaches, err := c.GetRegistryCacheConfig()
 
 	if err != nil {
@@ -31,7 +32,7 @@ func (c *ConfigExplorer) RegistryCacheConfigExists() (bool, error) {
 	return len(registryCaches) > 0, nil
 }
 
-func (c *ConfigExplorer) GetRegistryCacheConfig() ([]registrycache.RegistryCacheConfig, error) {
+func (c *RuntimeConfigurationManager) GetRegistryCacheConfig() ([]registrycache.RegistryCacheConfig, error) {
 	var registryCacheConfigList registrycache.RegistryCacheConfigList
 	err := c.runtimeClient.List(c.Context, &registryCacheConfigList)
 	if err != nil {
