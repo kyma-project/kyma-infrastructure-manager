@@ -2,7 +2,7 @@
 This document defines the architecture and API for the Gardener cluster provisioning functionality.
 
 # Status
-Proposed
+Accepted
 
 # Decision
 
