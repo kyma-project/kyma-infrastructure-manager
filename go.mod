@@ -4,10 +4,10 @@ go 1.24.4
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/gardener/gardener v1.120.0
+	github.com/gardener/gardener v1.122.1
 	github.com/gardener/gardener-extension-provider-aws v1.62.3
 	github.com/gardener/gardener-extension-provider-gcp v1.44.0
-	github.com/gardener/gardener-extension-provider-openstack v1.47.0
+	github.com/gardener/gardener-extension-provider-openstack v1.48.1
 	github.com/gardener/gardener-extension-registry-cache v0.16.0
 	github.com/gardener/oidc-webhook-authenticator v0.36.0
 	github.com/go-logr/logr v1.4.3
