@@ -180,7 +180,7 @@ type Kubernetes struct {
 // Note: Descriptions were taken from the Kubernetes documentation.
 type OIDCConfig struct {
 	gardener.OIDCConfig `json:",omitempty"`
-	JWKS                []byte `json:"jwks,omitempty"`
+	JWKS                string `json:"jwks,omitempty"`
 }
 
 type APIServer struct {

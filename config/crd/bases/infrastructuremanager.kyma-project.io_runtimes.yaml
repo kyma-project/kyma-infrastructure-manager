@@ -278,7 +278,6 @@ spec:
                                     the OIDC JSON Web Token (JWT).
                                   type: string
                                 jwks:
-                                  format: byte
                                   type: string
                                 requiredClaims:
                                   additionalProperties:
