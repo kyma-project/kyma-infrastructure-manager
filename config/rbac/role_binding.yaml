@@ -17,4 +17,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: infrastructure-manager
-  namespace: system
+  namespace: kcp-system
