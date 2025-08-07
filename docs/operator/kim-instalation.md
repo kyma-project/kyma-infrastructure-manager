@@ -1,4 +1,4 @@
-# Installing Kyma Infrastructure Manager
+# Setting Up Kyma Infrastructure Manager
 
 ## Context
 
@@ -6,6 +6,13 @@ Kyma Infrastructure Manager (KIM) is a Kubernetes Operator that manages the life
 
 Additionally, KIM manages secure cluster access from the Kyma Control Plane (KCP) by exposing and regularly rotating the `kubeconfig` for each Kyma runtime.
 
+The KIM image consists of three controllers:
+
+- Runtime controller
+- GardenerCluster controller that manages and rotates the Shoot `kubeconfig`
+- RegistryCache controller
+
+**Those three controllers are the inseparable compontents of KIM**
 
 With Kyma Environment Broker (KEB) and Lifecycle Manager, KIM builds the foundation for the Kyma runtime, with all backend services running within KCP.
 
