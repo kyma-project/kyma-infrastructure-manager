@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/networking"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/restrictions"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -96,6 +97,8 @@ func NewConverterCreate(opts CreateOpts) Converter {
 				opts.AuditLog.PolicyConfigMapName,
 				opts.AuditLogData))
 	}
+
+	extendersForCreate = append(extendersForCreate, networking.ExtendWithNetworking())
 
 	return newConverter(opts.ConverterConfig, extendersForCreate...)
 }
