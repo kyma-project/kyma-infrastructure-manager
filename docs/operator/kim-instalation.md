@@ -28,7 +28,7 @@ With Kyma Environment Broker (KEB) and Lifecycle Manager, KIM builds the foundat
 
 The SAP BTP, Kyma runtime product installation sets up KIM.
 
-You can change many of the settings by providing corresponding values in the `infrastructure-manager` `DataObject` for the SAP BTP, Kyma runtime product installation. The following table outlines the main configuration possibilities in the `infrastructure-manager` `DataObject`. Note that this is simply a YAMLpath notation of the configuration in the `DataObject's` data section, where each dot . represents a level in the `DataObject's` YAML structure under the main data key.
+You can change many of the settings by providing corresponding values in the `infrastructure-manager` `DataObject` for the SAP BTP, Kyma runtime product installation. The following table outlines the main configuration possibilities in the `infrastructure-manager` `DataObject`. The configuration uses the YAMLPath notation in the `DataObject's` data section, where each dot `.` represents a level in the `DataObject's` YAML structure under the main data key.
 ### Helm Chart Values
 
 The following table describes the configurable parameters of the Kyma Infrastructure Manager Helm chart and their default values.
