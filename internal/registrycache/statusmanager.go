@@ -18,7 +18,7 @@ func NewStatusManager(runtimeClient client.Client) *StatusManager {
 	}
 }
 
-func (s StatusManager) SetStatusReady(ctx context.Context, instance imv1.Runtime, conditionType registrycache.ConditionType, conditionReason registrycache.ConditionReason) error {
+func (s StatusManager) SetStatusReady(ctx context.Context, instance imv1.Runtime, conditionReason registrycache.ConditionReason) error {
 	for _, cache := range instance.Spec.Caching {
 		var registryCache registrycache.RegistryCacheConfig
 
@@ -42,7 +42,7 @@ func (s StatusManager) SetStatusReady(ctx context.Context, instance imv1.Runtime
 	return nil
 }
 
-func (s StatusManager) SetStatusFailed(ctx context.Context, instance imv1.Runtime, conditionType registrycache.ConditionType, conditionReason registrycache.ConditionReason, errorMessage string) error {
+func (s StatusManager) SetStatusFailed(ctx context.Context, instance imv1.Runtime, conditionReason registrycache.ConditionReason, errorMessage string) error {
 	for _, cache := range instance.Spec.Caching {
 		var registryCache registrycache.RegistryCacheConfig
 
@@ -65,7 +65,7 @@ func (s StatusManager) SetStatusFailed(ctx context.Context, instance imv1.Runtim
 	return nil
 }
 
-func (s StatusManager) SetStatusPending(ctx context.Context, instance imv1.Runtime, conditionType registrycache.ConditionType, conditionReason registrycache.ConditionReason) error {
+func (s StatusManager) SetStatusPending(ctx context.Context, instance imv1.Runtime, conditionReason registrycache.ConditionReason) error {
 	for _, cache := range instance.Spec.Caching {
 		var registryCache registrycache.RegistryCacheConfig
 

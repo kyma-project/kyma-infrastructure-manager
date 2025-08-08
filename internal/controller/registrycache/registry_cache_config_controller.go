@@ -12,7 +12,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -89,7 +88,7 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 		runtimeRegistryCacheConfig := imv1.ImageRegistryCache{
 			Name:      config.Name,
 			Namespace: config.Namespace,
-			UID:       getRegistryCacheUUID(runtime, config),
+			UID:       string(config.UID),
 			Config:    config.Spec,
 		}
 		caches = append(caches, runtimeRegistryCacheConfig)
@@ -111,23 +110,6 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 		Requeue:      true,
 		RequeueAfter: 5 * time.Minute,
 	}, err
-}
-
-func getRegistryCacheUUID(runtime imv1.Runtime, registryCacheConfig registrycache.RegistryCacheConfig) string {
-	var existingRuntimeCache *imv1.ImageRegistryCache
-
-	for _, existingCache := range runtime.Spec.Caching {
-		if existingCache.Name == registryCacheConfig.Name && existingCache.Namespace == registryCacheConfig.Namespace {
-			existingRuntimeCache = &existingCache
-			break
-		}
-	}
-
-	if existingRuntimeCache != nil {
-		return existingRuntimeCache.UID
-	}
-
-	return string(uuid.NewUUID())
 }
 
 func requeueOnError(err error) (ctrl.Result, error) {

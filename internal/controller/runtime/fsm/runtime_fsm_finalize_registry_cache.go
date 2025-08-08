@@ -46,7 +46,7 @@ func sFnFinalizeRegistryCache(ctx context.Context, m *fsm, s *systemState) (stat
 		statusManager := registrycache.NewStatusManager(runtimeClient)
 
 		m.log.V(log_level.DEBUG).Info("Registry cache CRs state set to Ready", "instance", s.instance.Name)
-		err = statusManager.SetStatusReady(ctx, s.instance, registrycacheapi.ConditionTypeRegistryCacheConfigured, registrycacheapi.ConditionReasonRegistryCacheConfigured)
+		err = statusManager.SetStatusReady(ctx, s.instance, registrycacheapi.ConditionReasonRegistryCacheConfigured)
 		if err != nil {
 			m.log.Error(err, "Failed to set registry cache status to ready")
 
