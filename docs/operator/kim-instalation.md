@@ -12,7 +12,7 @@ The KIM image consists of three controllers:
 - GardenerCluster controller that manages and rotates the Shoot `kubeconfig`
 - RegistryCache controller
 
-**Those three controllers are the inseparable compontents of KIM**
+**Those three controllers are the inseparable components of KIM.**
 
 With Kyma Environment Broker (KEB) and Lifecycle Manager, KIM builds the foundation for the Kyma runtime, with all backend services running within KCP.
 
