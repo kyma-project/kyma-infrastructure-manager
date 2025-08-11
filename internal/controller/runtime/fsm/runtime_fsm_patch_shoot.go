@@ -94,16 +94,27 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	m.log.V(log_level.DEBUG).Info("Shoot converted successfully", "Name", updatedShoot.Name, "Namespace", updatedShoot.Namespace)
 
+	registryCacheSecretShouldBeRemoved, err := registrycache.SecretMustBeRemoved(s.shoot, s.instance)
+	workersShouldBeUpdated := !workersAreEqual(s.shoot.Spec.Provider.Workers, updatedShoot.Spec.Provider.Workers)
+
 	// The additional Update function is required to fully replace shoot Workers collection with workers defined in updated runtime object.
 	// This is a workaround for the sigs.k8s.io/controller-runtime/pkg/client, which does not support replacing the Workers collection with client.Patch
 	// This could caused some workers to be not removed from the shoot object during update
 	// More info: https://github.com/kyma-project/infrastructure-manager/issues/640
 
-	if !workersAreEqual(s.shoot.Spec.Provider.Workers, updatedShoot.Spec.Provider.Workers) {
+	if workersShouldBeUpdated || registryCacheSecretShouldBeRemoved {
 		copyShoot := s.shoot.DeepCopy()
-		copyShoot.Spec.Provider.Workers = updatedShoot.Spec.Provider.Workers
-		copyShoot.Spec.Provider.ControlPlaneConfig = updatedShoot.Spec.Provider.ControlPlaneConfig
-		copyShoot.Spec.Provider.InfrastructureConfig = updatedShoot.Spec.Provider.InfrastructureConfig
+
+		if workersShouldBeUpdated {
+			copyShoot.Spec.Provider.Workers = updatedShoot.Spec.Provider.Workers
+			copyShoot.Spec.Provider.ControlPlaneConfig = updatedShoot.Spec.Provider.ControlPlaneConfig
+			copyShoot.Spec.Provider.InfrastructureConfig = updatedShoot.Spec.Provider.InfrastructureConfig
+		}
+
+		if registryCacheSecretShouldBeRemoved {
+			copyShoot.Spec.Extensions = updatedShoot.Spec.Extensions
+			copyShoot.Spec.Resources = updatedShoot.Spec.Resources
+		}
 
 		updateErr := m.GardenClient.Update(ctx, copyShoot,
 			&client.UpdateOptions{

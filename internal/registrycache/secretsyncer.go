@@ -2,13 +2,17 @@ package registrycache
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
+	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	v12 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"slices"
 )
 
 const SecretNameFmt = "reg-cache-%s"
@@ -171,4 +175,41 @@ func getRegistryCachesWithSecret(caches []imv1.ImageRegistryCache) []imv1.ImageR
 
 func GetGardenSecretName(uid string) string {
 	return fmt.Sprintf(SecretNameFmt, uid)
+}
+
+func SecretMustBeRemoved(currentShoot *gardener.Shoot, runtime imv1.Runtime) (bool, error) {
+	var registryCacheExt *gardener.Extension
+
+	for _, ext := range currentShoot.Spec.Extensions {
+		if ext.Type == "registry-cache" {
+			if ext.Disabled != nil && *ext.Disabled {
+				registryCacheExt = &ext
+			}
+		}
+	}
+
+	if registryCacheExt == nil {
+		return false, nil
+	}
+
+	imageRegistryConfigWithSecrets := getRegistryCachesWithSecret(runtime.Spec.Caching)
+
+	var registryConfig registrycacheext.RegistryConfig
+
+	err := json.Unmarshal(registryCacheExt.ProviderConfig.Raw, &registryConfig)
+	if err != nil {
+		return false, fmt.Errorf("failed to unmarshal registry cache config: %w", err)
+	}
+
+	for _, cache := range registryConfig.Caches {
+		secretNotReferencedInRuntimeCR := slices.ContainsFunc(imageRegistryConfigWithSecrets, func(c imv1.ImageRegistryCache) bool {
+			return c.Config.SecretReferenceName == cache.SecretReferenceName
+		})
+
+		if !secretNotReferencedInRuntimeCR {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
