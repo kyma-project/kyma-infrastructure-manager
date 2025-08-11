@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -93,12 +94,14 @@ const (
 
 	ConditionReasonAuditLogError = RuntimeConditionReason("AuditLogErr")
 
-	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
-	ConditionReasonOidcAndCMsConfigured     = RuntimeConditionReason("OidcAndConfigMapsConfigured")
-	ConditionReasonOidcError                = RuntimeConditionReason("OidcConfigurationErr")
-	ConditionReasonKymaSystemNSError        = RuntimeConditionReason("KymaSystemCreationErr")
-	ConditionReasonSeedNotFound             = RuntimeConditionReason("SeedNotFound")
-	ConditionReasonRegistryCacheError       = RuntimeConditionReason("RegistryCacheConfigurationErr")
+	ConditionReasonAdministratorsConfigured       = RuntimeConditionReason("AdministratorsConfigured")
+	ConditionReasonOidcAndCMsConfigured           = RuntimeConditionReason("OidcAndConfigMapsConfigured")
+	ConditionReasonOidcError                      = RuntimeConditionReason("OidcConfigurationErr")
+	ConditionReasonKymaSystemNSError              = RuntimeConditionReason("KymaSystemCreationErr")
+	ConditionReasonSeedNotFound                   = RuntimeConditionReason("SeedNotFound")
+	ConditionReasonRegistryCacheError             = RuntimeConditionReason("RegistryCacheConfigurationErr")
+	ConditionReasonSeedClusterPreProcessingError  = RuntimeConditionReason("SeedClusterPreProcessingErr")
+	ConditionReasonSeedClusterPostProcessingError = RuntimeConditionReason("SeedClusterPostProcessingErr")
 )
 
 //+kubebuilder:object:root=true
@@ -128,13 +131,16 @@ type RuntimeList struct {
 
 // RuntimeSpec defines the desired state of Runtime
 type RuntimeSpec struct {
-	Shoot    RuntimeShoot        `json:"shoot"`
-	Security Security            `json:"security"`
-	Caching  *ImageRegistryCache `json:"imageRegistryCache,omitempty"`
+	Shoot    RuntimeShoot         `json:"shoot"`
+	Security Security             `json:"security"`
+	Caching  []ImageRegistryCache `json:"imageRegistryCache,omitempty"`
 }
 
 type ImageRegistryCache struct {
-	Enabled bool `json:"enabled"`
+	Name      string                                `json:"name"`
+	Namespace string                                `json:"namespace"`
+	UID       string                                `json:"uid"`
+	Config    registrycache.RegistryCacheConfigSpec `json:"config"`
 }
 
 // RuntimeStatus defines the observed state of Runtime

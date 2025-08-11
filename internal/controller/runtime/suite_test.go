@@ -221,7 +221,7 @@ func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot, seeds []*gard
 		WithInterceptorFuncs(interceptor.Funcs{
 			Patch: fsm_testing.GetFakePatchInterceptorForShootsAndConfigMaps(true),
 		}).Build()
-	runtimeReconciler.SeedClient = gardenerTestClient
+	runtimeReconciler.GardenClient = gardenerTestClient
 }
 
 func getBaseShootForTestingSequence() gardener_api.Shoot {

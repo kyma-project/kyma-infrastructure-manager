@@ -52,7 +52,7 @@ type Watch = func(src source.Source, eventhandler handler.EventHandler, predicat
 type K8s struct {
 	KcpClient client.Client
 	record.EventRecorder
-	SeedClient          client.Client
+	GardenClient        client.Client
 	RuntimeClientGetter RuntimeClientGetter
 }
 

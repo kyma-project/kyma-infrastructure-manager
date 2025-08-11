@@ -29,8 +29,8 @@ var _ = Describe("KIM sFnCreateShoot", func() {
 				WithScheme(scheme).
 				Build()
 			testFsm := &fsm{K8s: K8s{
-				SeedClient: fakeClient,
-				KcpClient:  fakeClient,
+				GardenClient: fakeClient,
+				KcpClient:    fakeClient,
 			}}
 
 			// end of fake client setup

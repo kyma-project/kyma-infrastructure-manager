@@ -23,6 +23,7 @@ Run `make test` to see if all tests are passing.
 10. `runtime-ctrl-workers-cnt` - number of workers running in parallel for Runtime Controller. Default value is `25`.
 11. `gardener-cluster-ctrl-workers-cnt` - number of workers running in parallel for GardenerCluster Controller. Default value is `25`.
 12. `structured-auth-enabled` - feature flag responsible for enabling the structured authentication. Default value is `false`.
+13. `registry-cache-config-controller-enabled` - feature flag responsible for enabling the RegistryCacheConfig Controller. Find more in [002-registry-cache.md](adr/002-registry-cache.md). Default value is `false`.
 
 See [manager_gardener_secret_patch.yaml](../config/default/manager_gardener_secret_patch.yaml) for default values.
 ## Troubleshooting

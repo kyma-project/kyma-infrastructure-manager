@@ -7,7 +7,8 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
-	"k8s.io/api/core/v1"
+	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,10 +22,11 @@ import (
 	"time"
 )
 
-// CustomConfigReconciler reconciles a secret object
+// RegistryCacheConfigReconciler reconciles a secret object
 // nolint:revive
 type RegistryCacheConfigReconciler struct {
-	client.Client
+	KcpClient client.Client
+	// RuntimeClient        client.Client // shouldn't be needed if we use RuntimeConfigurationManager?
 	Scheme               *runtime.Scheme
 	Log                  logr.Logger
 	Cfg                  fsm.RCCfg
@@ -38,8 +40,8 @@ const fieldManagerName = "customconfigcontroller"
 func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	r.Log.V(log_level.TRACE).Info(request.String())
 
-	var secret v1.Secret
-	if err := r.Get(ctx, request.NamespacedName, &secret); err != nil {
+	var secret corev1.Secret
+	if err := r.KcpClient.Get(ctx, request.NamespacedName, &secret); err != nil {
 		return requeueOnError(err)
 	}
 
@@ -55,7 +57,7 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 	r.Log.V(log_level.TRACE).Info("Getting runtime", "Name", runtimeID, "Namespace", request.Namespace)
 
 	var runtime imv1.Runtime
-	if err := r.Get(ctx, types.NamespacedName{Name: runtimeID,
+	if err := r.KcpClient.Get(ctx, types.NamespacedName{Name: runtimeID,
 		Namespace: request.Namespace,
 	}, &runtime); err != nil {
 		return requeueOnError(err)
@@ -64,7 +66,7 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 	return r.reconcileRegistryCacheConfig(ctx, secret, runtime)
 }
 
-func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context.Context, secret v1.Secret, runtime imv1.Runtime) (ctrl.Result, error) {
+func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context.Context, secret corev1.Secret, runtime imv1.Runtime) (ctrl.Result, error) {
 
 	registryCache, err := r.RegistryCacheCreator(secret)
 	if err != nil {
@@ -73,38 +75,39 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 		return ctrl.Result{}, err
 	}
 
-	enableRegistryCache, err := registryCache.RegistryCacheConfigExists()
+	registryCacheConfigs, err := registryCache.GetRegistryCacheConfig()
 	if err != nil {
-		r.Log.V(log_level.TRACE).Error(err, "Failed to check if custom config exists", "RuntimeID", runtime.Name, "Namespace", runtime.Namespace)
+		r.Log.V(log_level.TRACE).Error(err, "Failed to get registry cache config", "RuntimeID", runtime.Name, "Namespace", runtime.Namespace)
 
 		return ctrl.Result{}, err
 	}
 
-	cachingAlreadyEnabled := runtime.Spec.Caching != nil && runtime.Spec.Caching.Enabled
-
-	if cachingAlreadyEnabled != enableRegistryCache {
-		runtime.Spec.Caching = &imv1.ImageRegistryCache{
-			Enabled: enableRegistryCache,
+	//Synchronize runtime.spec.imageRegistryCache with valid Registry Cache configs (replace the old list in Runtime CR with a new one)
+	caches := make([]imv1.ImageRegistryCache, 0, len(registryCacheConfigs))
+	for _, config := range registryCacheConfigs {
+		runtimeRegistryCacheConfig := imv1.ImageRegistryCache{
+			Name:      config.Name,
+			Namespace: config.Namespace,
+			Config:    config.Spec,
 		}
+		caches = append(caches, runtimeRegistryCacheConfig)
+	}
+	runtime.Spec.Caching = caches
+	r.Log.Info(fmt.Sprintf("Updating runtime %s with registry cache config", runtime.Name))
+	runtime.ManagedFields = nil
+	err = r.KcpClient.Patch(ctx, &runtime, client.Apply, &client.PatchOptions{
+		FieldManager: fieldManagerName,
+		Force:        ptr.To(true),
+	})
 
-		r.Log.Info(fmt.Sprintf("Updating runtime %s with caching enabled: %t", runtime.Name, enableRegistryCache))
-
-		runtime.ManagedFields = nil
-
-		err := r.Patch(ctx, &runtime, client.Apply, &client.PatchOptions{
-			FieldManager: fieldManagerName,
-			Force:        ptr.To(true),
-		})
-
-		if err != nil {
-			r.Log.V(log_level.TRACE).Error(err, "Failed to patch runtime with caching enabled")
-			return ctrl.Result{}, err
-		}
+	if err != nil {
+		r.Log.V(log_level.TRACE).Error(err, "Failed to patch runtime")
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{
 		Requeue:      true,
-		RequeueAfter: 1 * time.Minute,
+		RequeueAfter: 5 * time.Minute,
 	}, err
 }
 
@@ -119,7 +122,7 @@ func requeueOnError(err error) (ctrl.Result, error) {
 	return ctrl.Result{}, err
 }
 
-func secretControlledByKIM(secret v1.Secret) bool {
+func secretControlledByKIM(secret corev1.Secret) bool {
 	if secret.Labels == nil {
 		return false
 	}
@@ -131,14 +134,14 @@ func secretControlledByKIM(secret v1.Secret) bool {
 
 //go:generate mockery --name=RegistryCache
 type RegistryCache interface {
-	RegistryCacheConfigExists() (bool, error)
+	GetRegistryCacheConfig() ([]registrycache.RegistryCacheConfig, error)
 }
 
-type RegistryCacheCreator func(secret v1.Secret) (RegistryCache, error)
+type RegistryCacheCreator func(secret corev1.Secret) (RegistryCache, error)
 
 func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, registryCacheCreator RegistryCacheCreator) *RegistryCacheConfigReconciler {
 	return &RegistryCacheConfigReconciler{
-		Client:               mgr.GetClient(),
+		KcpClient:            mgr.GetClient(),
 		Scheme:               mgr.GetScheme(),
 		EventRecorder:        mgr.GetEventRecorderFor("runtime-controller"),
 		Log:                  logger,
@@ -149,7 +152,7 @@ func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, regi
 // SetupWithManager sets up the controller with the Manager.
 func (r *RegistryCacheConfigReconciler) SetupWithManager(mgr ctrl.Manager, numberOfWorkers int) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1.Secret{}).
+		For(&corev1.Secret{}).
 		WithOptions(controller.Options{MaxConcurrentReconciles: numberOfWorkers}).
 		WithEventFilter(predicate.Or(
 			predicate.GenerationChangedPredicate{},
