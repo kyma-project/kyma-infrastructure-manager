@@ -69,11 +69,11 @@ var _ = Describe("Registry Cache Config Controller", func() {
 					runtime.Spec.Caching[0].Config == expectedRuntimeRegistryCacheConfig[0].Config &&
 					runtime.Spec.Caching[0].Name == expectedRuntimeRegistryCacheConfig[0].Name &&
 					runtime.Spec.Caching[0].Namespace == expectedRuntimeRegistryCacheConfig[0].Namespace &&
-					runtime.Spec.Caching[0].UID != "" && // UID should be generated
+					runtime.Spec.Caching[0].UID == expectedRuntimeRegistryCacheConfig[0].UID &&
 					runtime.Spec.Caching[1].Config == expectedRuntimeRegistryCacheConfig[1].Config &&
 					runtime.Spec.Caching[1].Name == expectedRuntimeRegistryCacheConfig[1].Name &&
 					runtime.Spec.Caching[1].Namespace == expectedRuntimeRegistryCacheConfig[1].Namespace &&
-					runtime.Spec.Caching[1].UID != "" // UID should be generated
+					runtime.Spec.Caching[1].UID == expectedRuntimeRegistryCacheConfig[1].UID
 
 			}, time.Second*300, time.Second*3).Should(BeTrue())
 		},
