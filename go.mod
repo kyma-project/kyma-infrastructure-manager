@@ -4,10 +4,10 @@ go 1.24.4
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/gardener/gardener v1.120.0
+	github.com/gardener/gardener v1.122.1
 	github.com/gardener/gardener-extension-provider-aws v1.62.3
 	github.com/gardener/gardener-extension-provider-gcp v1.44.0
-	github.com/gardener/gardener-extension-provider-openstack v1.47.0
+	github.com/gardener/gardener-extension-provider-openstack v1.48.1
 	github.com/gardener/gardener-extension-registry-cache v0.16.0
 	github.com/gardener/oidc-webhook-authenticator v0.36.0
 	github.com/go-logr/logr v1.4.3
@@ -16,14 +16,14 @@ require (
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.38.0
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.22.0
+	github.com/prometheus/client_golang v1.23.0
 	github.com/stretchr/testify v1.10.0
 	k8s.io/api v0.33.3
 	k8s.io/apimachinery v0.33.3
 	k8s.io/client-go v0.33.3
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 	sigs.k8s.io/controller-runtime v0.21.0
-	sigs.k8s.io/yaml v1.5.0
+	sigs.k8s.io/yaml v1.6.0
 )
 
 require (
@@ -35,7 +35,7 @@ require (
 	github.com/evanphx/json-patch v5.9.11+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
-	github.com/fxamacker/cbor/v2 v2.8.0 // indirect
+	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.9 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.1 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
