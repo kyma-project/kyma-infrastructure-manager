@@ -361,10 +361,9 @@ func fixRegistryCacheExtension() gardener.Extension {
 		Type:     RegistryCacheExtensionType,
 		Disabled: ptr.To(false),
 		ProviderConfig: &runtime.RawExtension{
-			Raw: []byte(`apiVersion":"registry.extensions.gardener.cloud/v1alpha3","kind":"RegistryConfig","caches":{"upstream":"quay.io"}`),
+			Raw: []byte(`{"apiVersion":"registry.extensions.gardener.cloud/v1alpha3","kind":"RegistryConfig","caches":{"upstream":"quay.io"}}`),
 		},
 	}
-
 }
 
 func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extension, networkExtAdded bool, auditLogExtAdded bool, registryCacheExtAdded bool) map[string]int {

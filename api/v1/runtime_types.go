@@ -101,6 +101,7 @@ const (
 	ConditionReasonKymaSystemNSError        = RuntimeConditionReason("KymaSystemNSError")
 	ConditionReasonSeedNotFound             = RuntimeConditionReason("SeedNotFound")
 
+	ConditionReasonRegistryCacheConfigured                       = RuntimeConditionReason("RegistryCacheConfigured")
 	ConditionReasonRegistryCacheError                            = RuntimeConditionReason("RegistryCacheError")
 	ConditionReasonRegistryCacheGardenClusterConfigurationFailed = RuntimeConditionReason("RegistryCacheGardenClusterConfigurationFailed")
 	ConditionReasonRegistryCacheGardenClusterCleanupFailed       = RuntimeConditionReason("RegistryCacheGardenClusterCleanupFailed")

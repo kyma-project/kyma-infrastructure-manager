@@ -52,6 +52,13 @@ func sFnFinalizeRegistryCache(ctx context.Context, m *fsm, s *systemState) (stat
 
 			return requeue()
 		}
+
+		s.instance.UpdateStatePending(
+			imv1.ConditionTypeRegistryCacheConfigured,
+			imv1.ConditionReasonRegistryCacheConfigured,
+			"True",
+			"Registry cache configured successfully",
+		)
 	}
 
 	return switchState(sFnConfigureSKR)
