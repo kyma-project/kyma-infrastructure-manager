@@ -7,6 +7,7 @@ import (
 	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	v12 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,21 +16,20 @@ import (
 	"slices"
 )
 
-const SecretNameFmt = "reg-cache-%s"
 const RuntimeSecretLabel = "kyma-project.io/runtime-id"
 const CacheIDAnnotation = "kyma-project.io/registry-cache-id"
 const CacheNameAnnotation = "kyma-project.io/registry-cache-name"
 const CacheNamespaceAnnotation = "kyma-project.io/registry-cache-namespace"
 
-type SecretSyncer struct {
+type GardenSecretSyncer struct {
 	GardenClient    client.Client
 	RuntimeClient   client.Client
 	RuntimeID       string
 	GardenNamespace string
 }
 
-func NewSecretSyncer(gardenClient, runtimeClient client.Client, gardenNamespace, runtimeID string) SecretSyncer {
-	return SecretSyncer{
+func NewGardenSecretSyncer(gardenClient, runtimeClient client.Client, gardenNamespace, runtimeID string) GardenSecretSyncer {
+	return GardenSecretSyncer{
 		GardenClient:    gardenClient,
 		RuntimeClient:   runtimeClient,
 		RuntimeID:       runtimeID,
@@ -37,13 +37,13 @@ func NewSecretSyncer(gardenClient, runtimeClient client.Client, gardenNamespace,
 	}
 }
 
-func (s SecretSyncer) CreateOrUpdate(ctx context.Context, registryCaches []imv1.ImageRegistryCache) error {
+func (s GardenSecretSyncer) CreateOrUpdate(ctx context.Context, registryCaches []imv1.ImageRegistryCache) error {
 
 	cachesWithSecret := getRegistryCachesWithSecret(registryCaches)
 
 	for _, cache := range cachesWithSecret {
 		var gardenerSecret v12.Secret
-		err := s.GardenClient.Get(ctx, client.ObjectKey{Name: GetGardenSecretName(cache.UID), Namespace: s.GardenNamespace}, &gardenerSecret)
+		err := s.GardenClient.Get(ctx, client.ObjectKey{Name: fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, cache.UID), Namespace: s.GardenNamespace}, &gardenerSecret)
 
 		if err != nil && !errors.IsNotFound(err) {
 			return err
@@ -65,7 +65,7 @@ func (s SecretSyncer) CreateOrUpdate(ctx context.Context, registryCaches []imv1.
 	return nil
 }
 
-func (s SecretSyncer) copySecretFromRuntimeToGardenCluster(ctx context.Context, cacheConfig imv1.ImageRegistryCache) error {
+func (s GardenSecretSyncer) copySecretFromRuntimeToGardenCluster(ctx context.Context, cacheConfig imv1.ImageRegistryCache) error {
 
 	var secret v12.Secret
 	err := s.RuntimeClient.Get(ctx, client.ObjectKey{Name: *cacheConfig.Config.SecretReferenceName, Namespace: cacheConfig.Namespace}, &secret)
@@ -76,7 +76,7 @@ func (s SecretSyncer) copySecretFromRuntimeToGardenCluster(ctx context.Context, 
 
 	newSecret := v12.Secret{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      GetGardenSecretName(cacheConfig.UID),
+			Name:      fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, cacheConfig.UID),
 			Namespace: s.GardenNamespace,
 			Labels: map[string]string{
 				RuntimeSecretLabel: s.RuntimeID,
@@ -94,7 +94,7 @@ func (s SecretSyncer) copySecretFromRuntimeToGardenCluster(ctx context.Context, 
 	return s.GardenClient.Create(ctx, &newSecret)
 }
 
-func (s SecretSyncer) updateSecretInGardenCluster(ctx context.Context, cacheConfig imv1.ImageRegistryCache, gardenerSecret v12.Secret) error {
+func (s GardenSecretSyncer) updateSecretInGardenCluster(ctx context.Context, cacheConfig imv1.ImageRegistryCache, gardenerSecret v12.Secret) error {
 	var runtimeSecret v12.Secret
 	err := s.RuntimeClient.Get(ctx, client.ObjectKey{Name: *cacheConfig.Config.SecretReferenceName, Namespace: cacheConfig.Namespace}, &runtimeSecret)
 
@@ -107,7 +107,7 @@ func (s SecretSyncer) updateSecretInGardenCluster(ctx context.Context, cacheConf
 	return s.GardenClient.Update(ctx, &gardenerSecret)
 }
 
-func (s SecretSyncer) Delete(ctx context.Context, registryCaches []imv1.ImageRegistryCache) error {
+func (s GardenSecretSyncer) Delete(ctx context.Context, registryCaches []imv1.ImageRegistryCache) error {
 
 	cachesWithSecret := getRegistryCachesWithSecret(registryCaches)
 
@@ -133,7 +133,7 @@ func (s SecretSyncer) Delete(ctx context.Context, registryCaches []imv1.ImageReg
 	return nil
 }
 
-func (s SecretSyncer) DeleteAll(ctx context.Context) error {
+func (s GardenSecretSyncer) DeleteAll(ctx context.Context) error {
 
 	var gardenSecrets v12.SecretList
 	err := s.GardenClient.List(ctx, &gardenSecrets, client.MatchingLabels{RuntimeSecretLabel: s.RuntimeID}, client.InNamespace(s.GardenNamespace))
@@ -173,16 +173,12 @@ func getRegistryCachesWithSecret(caches []imv1.ImageRegistryCache) []imv1.ImageR
 	return cachesWithSecret
 }
 
-func GetGardenSecretName(uid string) string {
-	return fmt.Sprintf(SecretNameFmt, uid)
-}
-
-func SecretMustBeRemoved(currentShoot *gardener.Shoot, runtime imv1.Runtime) (bool, error) {
+func GardenSecretNeedToBeRemoved(currentExtensions []gardener.Extension, desiredRegistryCacheConfig []imv1.ImageRegistryCache) (bool, error) {
 	var registryCacheExt *gardener.Extension
 
-	for _, ext := range currentShoot.Spec.Extensions {
-		if ext.Type == "registry-cache" {
-			if ext.Disabled != nil && *ext.Disabled {
+	for _, ext := range currentExtensions {
+		if ext.Type == extensions.RegistryCacheExtensionType {
+			if ext.Disabled != nil && !*ext.Disabled {
 				registryCacheExt = &ext
 			}
 		}
@@ -192,7 +188,7 @@ func SecretMustBeRemoved(currentShoot *gardener.Shoot, runtime imv1.Runtime) (bo
 		return false, nil
 	}
 
-	imageRegistryConfigWithSecrets := getRegistryCachesWithSecret(runtime.Spec.Caching)
+	imageRegistryConfigWithSecrets := getRegistryCachesWithSecret(desiredRegistryCacheConfig)
 
 	var registryConfig registrycacheext.RegistryConfig
 
@@ -203,7 +199,7 @@ func SecretMustBeRemoved(currentShoot *gardener.Shoot, runtime imv1.Runtime) (bo
 
 	for _, cache := range registryConfig.Caches {
 		secretNotReferencedInRuntimeCR := slices.ContainsFunc(imageRegistryConfigWithSecrets, func(c imv1.ImageRegistryCache) bool {
-			return c.Config.SecretReferenceName == cache.SecretReferenceName
+			return *cache.SecretReferenceName == fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, c.UID)
 		})
 
 		if !secretNotReferencedInRuntimeCR {

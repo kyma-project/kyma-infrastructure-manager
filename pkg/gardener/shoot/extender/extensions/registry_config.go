@@ -2,10 +2,10 @@ package extensions
 
 import (
 	"encoding/json"
+	"fmt"
 	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	registrycache2 "github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -13,6 +13,7 @@ import (
 )
 
 const RegistryCacheExtensionType = "registry-cache"
+const RegistryCacheSecretNameFmt = "reg-cache-%s"
 
 func NewRegistryCacheExtension(caches []imv1.ImageRegistryCache, existingRegistryCacheExt *gardener.Extension) (*gardener.Extension, error) {
 	if len(caches) > 0 {
@@ -122,7 +123,7 @@ func ToRegistryCacheExtension(caches []imv1.ImageRegistryCache) []registrycachee
 			RemoteURL:           c.Config.RemoteURL,
 			Volume:              volumeToCacheExtension(c.Config.Volume),
 			GarbageCollection:   garbageCollectionExtension(c.Config.GarbageCollection),
-			SecretReferenceName: ptr.To(registrycache2.GetGardenSecretName(c.UID)),
+			SecretReferenceName: ptr.To(fmt.Sprintf(RegistryCacheSecretNameFmt, c.UID)),
 			Proxy:               proxyExtension(c.Config.Proxy),
 		})
 	}

@@ -1,9 +1,10 @@
 package extender
 
 import (
+	"fmt"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	registrycache2 "github.com/kyma-project/infrastructure-manager/internal/registrycache"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	v1 "k8s.io/api/autoscaling/v1"
 	"slices"
 	"strings"
@@ -23,11 +24,11 @@ func NewResourcesExtenderForPatch(resources []gardener.NamedResourceReference) f
 		for _, cache := range r.Spec.Caching {
 			if cache.Config.SecretReferenceName != nil && *cache.Config.SecretReferenceName != "" {
 				shoot.Spec.Resources = append(shoot.Spec.Resources, gardener.NamedResourceReference{
-					Name: registrycache2.GetGardenSecretName(cache.UID),
+					Name: fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, cache.UID),
 					ResourceRef: v1.CrossVersionObjectReference{
 						Kind:       "Secret",
 						APIVersion: "v1",
-						Name:       registrycache2.GetGardenSecretName(cache.UID),
+						Name:       fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, cache.UID),
 					},
 				})
 			}

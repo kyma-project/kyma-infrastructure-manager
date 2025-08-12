@@ -27,7 +27,7 @@ func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (state
 		}
 
 		statusManager := registrycache.NewStatusManager(runtimeClient)
-		secretSyncer := registrycache.NewSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
+		secretSyncer := registrycache.NewGardenSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
 
 		m.log.V(log_level.DEBUG).Info("Registry cache CRs state set to Pending", "instance", s.instance.Name)
 		err = statusManager.SetStatusPending(ctx, s.instance, registrycacheapi.ConditionReasonRegistryCacheConfigured)
