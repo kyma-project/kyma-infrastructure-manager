@@ -7,12 +7,15 @@ import (
 	v12 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const SecretNameFmt = "reg-cache-%s"
 const RuntimeSecretLabel = "kyma-project.io/runtime-id"
 const CacheIDAnnotation = "kyma-project.io/registry-cache-id"
+const CacheNameAnnotation = "kyma-project.io/registry-cache-name"
+const CacheNamespaceAnnotation = "kyma-project.io/registry-cache-namespace"
 
 type SecretSyncer struct {
 	GardenClient    client.Client
@@ -30,25 +33,25 @@ func NewSecretSyncer(gardenClient, runtimeClient client.Client, gardenNamespace,
 	}
 }
 
-func (s SecretSyncer) CreateOrUpdate(registryCaches []imv1.ImageRegistryCache) error {
+func (s SecretSyncer) CreateOrUpdate(ctx context.Context, registryCaches []imv1.ImageRegistryCache) error {
 
 	cachesWithSecret := getRegistryCachesWithSecret(registryCaches)
 
 	for _, cache := range cachesWithSecret {
 		var gardenerSecret v12.Secret
-		err := s.GardenClient.Get(context.TODO(), client.ObjectKey{Name: getGardenSecretName(cache), Namespace: s.GardenNamespace}, &gardenerSecret)
+		err := s.GardenClient.Get(ctx, client.ObjectKey{Name: GetGardenSecretName(cache.UID), Namespace: s.GardenNamespace}, &gardenerSecret)
 
 		if err != nil && !errors.IsNotFound(err) {
 			return err
 		}
 
 		if err == nil {
-			err = s.updateSecretInGardenCluster(cache, gardenerSecret)
+			err = s.updateSecretInGardenCluster(ctx, cache, gardenerSecret)
 			if err != nil {
 				return fmt.Errorf("failed to update secret for registry cache %s: %w", cache.Name, err)
 			}
 		} else {
-			err = s.copySecretFromRuntimeToGardenCluster(cache)
+			err = s.copySecretFromRuntimeToGardenCluster(ctx, cache)
 			if err != nil {
 				return fmt.Errorf("failed to copy secret for registry cache %s: %w", cache.Name, err)
 			}
@@ -58,10 +61,10 @@ func (s SecretSyncer) CreateOrUpdate(registryCaches []imv1.ImageRegistryCache) e
 	return nil
 }
 
-func (s SecretSyncer) copySecretFromRuntimeToGardenCluster(cacheConfig imv1.ImageRegistryCache) error {
+func (s SecretSyncer) copySecretFromRuntimeToGardenCluster(ctx context.Context, cacheConfig imv1.ImageRegistryCache) error {
 
 	var secret v12.Secret
-	err := s.RuntimeClient.Get(context.TODO(), client.ObjectKey{Name: *cacheConfig.Config.SecretReferenceName, Namespace: cacheConfig.Namespace}, &secret)
+	err := s.RuntimeClient.Get(ctx, client.ObjectKey{Name: *cacheConfig.Config.SecretReferenceName, Namespace: cacheConfig.Namespace}, &secret)
 
 	if err != nil {
 		return err
@@ -69,24 +72,27 @@ func (s SecretSyncer) copySecretFromRuntimeToGardenCluster(cacheConfig imv1.Imag
 
 	newSecret := v12.Secret{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      getGardenSecretName(cacheConfig),
+			Name:      GetGardenSecretName(cacheConfig.UID),
 			Namespace: s.GardenNamespace,
 			Labels: map[string]string{
 				RuntimeSecretLabel: s.RuntimeID,
 			},
 			Annotations: map[string]string{
-				CacheIDAnnotation: cacheConfig.UID,
+				CacheIDAnnotation:        cacheConfig.UID,
+				CacheNameAnnotation:      cacheConfig.Name,
+				CacheNamespaceAnnotation: cacheConfig.Namespace,
 			},
 		},
-		Data: secret.Data,
+		Immutable: ptr.To(true),
+		Data:      secret.Data,
 	}
 
-	return s.GardenClient.Create(context.TODO(), &newSecret)
+	return s.GardenClient.Create(ctx, &newSecret)
 }
 
-func (s SecretSyncer) updateSecretInGardenCluster(cacheConfig imv1.ImageRegistryCache, gardenerSecret v12.Secret) error {
+func (s SecretSyncer) updateSecretInGardenCluster(ctx context.Context, cacheConfig imv1.ImageRegistryCache, gardenerSecret v12.Secret) error {
 	var runtimeSecret v12.Secret
-	err := s.RuntimeClient.Get(context.TODO(), client.ObjectKey{Name: *cacheConfig.Config.SecretReferenceName, Namespace: cacheConfig.Namespace}, &runtimeSecret)
+	err := s.RuntimeClient.Get(ctx, client.ObjectKey{Name: *cacheConfig.Config.SecretReferenceName, Namespace: cacheConfig.Namespace}, &runtimeSecret)
 
 	if err != nil {
 		return err
@@ -94,15 +100,15 @@ func (s SecretSyncer) updateSecretInGardenCluster(cacheConfig imv1.ImageRegistry
 
 	gardenerSecret.Data = runtimeSecret.Data
 
-	return s.GardenClient.Update(context.TODO(), &gardenerSecret)
+	return s.GardenClient.Update(ctx, &gardenerSecret)
 }
 
-func (s SecretSyncer) Delete(registryCaches []imv1.ImageRegistryCache) error {
+func (s SecretSyncer) Delete(ctx context.Context, registryCaches []imv1.ImageRegistryCache) error {
 
 	cachesWithSecret := getRegistryCachesWithSecret(registryCaches)
 
 	var gardenSecrets v12.SecretList
-	err := s.GardenClient.List(context.TODO(), &gardenSecrets, client.MatchingLabels{RuntimeSecretLabel: s.RuntimeID})
+	err := s.GardenClient.List(ctx, &gardenSecrets, client.MatchingLabels{RuntimeSecretLabel: s.RuntimeID}, client.InNamespace(s.GardenNamespace))
 
 	if err != nil {
 		return fmt.Errorf("failed to list garden secrets: %w", err)
@@ -112,11 +118,31 @@ func (s SecretSyncer) Delete(registryCaches []imv1.ImageRegistryCache) error {
 		registryCacheUID := gardenSecret.Annotations[CacheIDAnnotation]
 
 		if registryCacheUID != "" && !registryCacheUidExists(registryCacheUID, cachesWithSecret) {
-			err = s.GardenClient.Delete(context.TODO(), &gardenSecret)
+			err = s.GardenClient.Delete(ctx, &gardenSecret)
 
-			if err != nil {
+			if err != nil && !errors.IsNotFound(err) {
 				return fmt.Errorf("failed to delete unused garden secret %s: %w", gardenSecret.Name, err)
 			}
+		}
+	}
+
+	return nil
+}
+
+func (s SecretSyncer) DeleteAll(ctx context.Context) error {
+
+	var gardenSecrets v12.SecretList
+	err := s.GardenClient.List(ctx, &gardenSecrets, client.MatchingLabels{RuntimeSecretLabel: s.RuntimeID}, client.InNamespace(s.GardenNamespace))
+
+	if err != nil {
+		return fmt.Errorf("failed to list garden secrets: %w", err)
+	}
+
+	for _, gardenSecret := range gardenSecrets.Items {
+		err = s.GardenClient.Delete(ctx, &gardenSecret)
+
+		if err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("failed to delete unused garden secret %s: %w", gardenSecret.Name, err)
 		}
 	}
 
@@ -143,6 +169,6 @@ func getRegistryCachesWithSecret(caches []imv1.ImageRegistryCache) []imv1.ImageR
 	return cachesWithSecret
 }
 
-func getGardenSecretName(registryCaches imv1.ImageRegistryCache) string {
-	return fmt.Sprintf(SecretNameFmt, registryCaches.UID)
+func GetGardenSecretName(uid string) string {
+	return fmt.Sprintf(SecretNameFmt, uid)
 }

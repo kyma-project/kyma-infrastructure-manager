@@ -88,6 +88,7 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 		runtimeRegistryCacheConfig := imv1.ImageRegistryCache{
 			Name:      config.Name,
 			Namespace: config.Namespace,
+			UID:       string(config.UID),
 			Config:    config.Spec,
 		}
 		caches = append(caches, runtimeRegistryCacheConfig)
