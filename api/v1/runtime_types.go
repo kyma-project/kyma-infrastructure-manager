@@ -101,15 +101,7 @@ const (
 	ConditionReasonKymaSystemNSError        = RuntimeConditionReason("KymaSystemNSError")
 	ConditionReasonSeedNotFound             = RuntimeConditionReason("SeedNotFound")
 
-	ConditionReasonRegistryCacheConfigured                       = RuntimeConditionReason("RegistryCacheConfigured")
-	ConditionReasonRegistryCacheError                            = RuntimeConditionReason("RegistryCacheError")
-	ConditionReasonRegistryCacheGardenClusterConfigurationFailed = RuntimeConditionReason("RegistryCacheGardenClusterConfigurationFailed")
-	ConditionReasonRegistryCacheGardenClusterCleanupFailed       = RuntimeConditionReason("RegistryCacheGardenClusterCleanupFailed")
-	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
-	ConditionReasonOidcAndCMsConfigured     = RuntimeConditionReason("OidcAndConfigMapsConfigured")
-	ConditionReasonOidcError                = RuntimeConditionReason("OidcConfigurationErr")
-	ConditionReasonKymaSystemNSError        = RuntimeConditionReason("KymaSystemNSError")
-	ConditionReasonSeedNotFound             = RuntimeConditionReason("SeedNotFound")
+	ConditionReasonRegistryCacheConfigured = RuntimeConditionReason("RegistryCacheConfigured")
 
 	ConditionReasonRegistryCacheError                            = RuntimeConditionReason("RegistryCacheError")
 	ConditionReasonRegistryCacheGardenClusterConfigurationFailed = RuntimeConditionReason("RegistryCacheGardenClusterConfigurationFailed")
