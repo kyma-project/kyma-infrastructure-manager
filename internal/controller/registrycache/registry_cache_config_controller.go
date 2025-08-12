@@ -160,6 +160,6 @@ func (r *RegistryCacheConfigReconciler) SetupWithManager(mgr ctrl.Manager, numbe
 			predicate.LabelChangedPredicate{},
 			predicate.AnnotationChangedPredicate{},
 		)).
-		Named("custom-config-controller").
+		Named("registry-config-controller").
 		Complete(r)
 }
