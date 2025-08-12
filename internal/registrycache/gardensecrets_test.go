@@ -190,6 +190,16 @@ func TestGardenSecretSyncer(t *testing.T) {
 	})
 }
 
+func verifyGardenSecret(gardenSecret, registryCacheSecret *corev1.Secret, registryCache imv1.ImageRegistryCache, runtimeID string) {
+	Expect(gardenSecret.Labels[RuntimeSecretLabel]).To(Equal(runtimeID))
+	Expect(gardenSecret.Annotations[CacheIDAnnotation]).To(Equal(registryCache.UID))
+	Expect(gardenSecret.Annotations[CacheNameAnnotation]).To(Equal(registryCache.Name))
+	Expect(gardenSecret.Annotations[CacheNamespaceAnnotation]).To(Equal(registryCache.Namespace))
+
+	Expect(gardenSecret.Data).To(Equal(registryCacheSecret.Data))
+	Expect(*gardenSecret.Immutable).To(Equal(true))
+}
+
 func TestGardenSecretNeedToBeRemoved(t *testing.T) {
 	RegisterTestingT(t)
 
