@@ -13,7 +13,8 @@ import (
 )
 
 const RegistryCacheExtensionType = "registry-cache"
-const RegistryCacheSecretNameFmt = "reg-cache-%s"
+const RegistryCacheSecretPrefix = "reg-cache-"
+const RegistryCacheSecretNameFmt = RegistryCacheSecretPrefix + "%s"
 
 func NewRegistryCacheExtension(caches []imv1.ImageRegistryCache, existingRegistryCacheExt *gardener.Extension) (*gardener.Extension, error) {
 	if len(caches) > 0 {

@@ -14,7 +14,7 @@ func NewResourcesExtenderForPatch(resources []gardener.NamedResourceReference) f
 	return func(r imv1.Runtime, shoot *gardener.Shoot) error {
 
 		resources = slices.DeleteFunc(resources, func(r gardener.NamedResourceReference) bool {
-			return strings.Contains(r.Name, "reg-cache-")
+			return strings.Contains(r.Name, extensions.RegistryCacheSecretPrefix)
 		})
 
 		if resources != nil {
