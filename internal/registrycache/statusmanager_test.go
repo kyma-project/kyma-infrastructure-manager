@@ -3,6 +3,7 @@ package registrycache
 import (
 	"context"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	util "k8s.io/apimachinery/pkg/util/runtime"
 	"testing"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -18,19 +19,19 @@ func TestStatusManager(t *testing.T) {
 
 	// Setup fake runtime and registry cache objects
 	scheme := runtime.NewScheme()
-	_ = registrycache.AddToScheme(scheme)
+	util.Must(registrycache.AddToScheme(scheme))
 
 	runtimeInstance := &imv1.Runtime{
 		Spec: imv1.RuntimeSpec{
 			Caching: []imv1.ImageRegistryCache{
 				{
 					Name:      "cache1",
-					Namespace: "default",
+					Namespace: "test",
 					UID:       "uid1",
 				},
 				{
 					Name:      "cache2",
-					Namespace: "default",
+					Namespace: "test",
 					UID:       "uid2",
 				},
 			},
@@ -40,19 +41,19 @@ func TestStatusManager(t *testing.T) {
 	registryCache1 := &registrycache.RegistryCacheConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cache1",
-			Namespace: "default",
+			Namespace: "test",
 		},
 	}
 
 	registryCache2 := &registrycache.RegistryCacheConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cache2",
-			Namespace: "default",
+			Namespace: "test",
 		},
 	}
 
 	// Create a fake client with the registry cache objects
-	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(registryCache1, registryCache2).Build()
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(registryCache1, registryCache2).WithObjects(registryCache1, registryCache2).Build()
 
 	// Create the StatusManager
 	statusManager := NewStatusManager(fakeClient)
@@ -63,17 +64,17 @@ func TestStatusManager(t *testing.T) {
 
 		// Verify the status of the first registry cache
 		updatedRegistryCache1 := &registrycache.RegistryCacheConfig{}
-		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "cache1", Namespace: "default"}, updatedRegistryCache1)
+		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "cache1", Namespace: "test"}, updatedRegistryCache1)
 		Expect(err).To(BeNil())
-		Expect(updatedRegistryCache1.Status.Conditions[0].Reason).To(Equal(registrycache.ConditionReasonRegistryCacheConfigured))
-		Expect(updatedRegistryCache1.Status.Conditions[0].Status).To(Equal("True"))
+		Expect(updatedRegistryCache1.Status.Conditions[0].Reason).To(Equal(string(registrycache.ConditionReasonRegistryCacheConfigured)))
+		Expect(updatedRegistryCache1.Status.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
 
 		// Verify the status of the second registry cache
 		updatedRegistryCache2 := &registrycache.RegistryCacheConfig{}
-		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "cache2", Namespace: "default"}, updatedRegistryCache2)
+		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "cache2", Namespace: "test"}, updatedRegistryCache2)
 		Expect(err).To(BeNil())
-		Expect(updatedRegistryCache2.Status.Conditions[0].Reason).To(Equal(registrycache.ConditionReasonRegistryCacheConfigured))
-		Expect(updatedRegistryCache2.Status.Conditions[0].Status).To(Equal("True"))
+		Expect(updatedRegistryCache2.Status.Conditions[0].Reason).To(Equal(string(registrycache.ConditionReasonRegistryCacheConfigured)))
+		Expect(updatedRegistryCache2.Status.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
 	})
 
 	t.Run("SetStatusFailed", func(t *testing.T) {
@@ -82,18 +83,18 @@ func TestStatusManager(t *testing.T) {
 
 		// Verify the status of the first registry cache
 		updatedRegistryCache1 := &registrycache.RegistryCacheConfig{}
-		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "cache1", Namespace: "default"}, updatedRegistryCache1)
+		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "cache1", Namespace: "test"}, updatedRegistryCache1)
 		Expect(err).To(BeNil())
-		Expect(updatedRegistryCache1.Status.Conditions[0].Reason).To(Equal(registrycache.ConditionReasonRegistryCacheExtensionConfigurationFailed))
-		Expect(updatedRegistryCache1.Status.Conditions[0].Status).To(Equal("False"))
+		Expect(updatedRegistryCache1.Status.Conditions[0].Reason).To(Equal(string(registrycache.ConditionReasonRegistryCacheExtensionConfigurationFailed)))
+		Expect(updatedRegistryCache1.Status.Conditions[0].Status).To(Equal(metav1.ConditionFalse))
 		Expect(updatedRegistryCache1.Status.Conditions[0].Message).To(Equal("Error occurred"))
 
 		// Verify the status of the second registry cache
 		updatedRegistryCache2 := &registrycache.RegistryCacheConfig{}
-		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "cache2", Namespace: "default"}, updatedRegistryCache2)
+		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "cache2", Namespace: "test"}, updatedRegistryCache2)
 		Expect(err).To(BeNil())
-		Expect(updatedRegistryCache2.Status.Conditions[0].Reason).To(Equal(registrycache.ConditionReasonRegistryCacheExtensionConfigurationFailed))
-		Expect(updatedRegistryCache2.Status.Conditions[0].Status).To(Equal("False"))
+		Expect(updatedRegistryCache2.Status.Conditions[0].Reason).To(Equal(string(registrycache.ConditionReasonRegistryCacheExtensionConfigurationFailed)))
+		Expect(updatedRegistryCache2.Status.Conditions[0].Status).To(Equal(metav1.ConditionFalse))
 		Expect(updatedRegistryCache2.Status.Conditions[0].Message).To(Equal("Error occurred"))
 	})
 
@@ -103,16 +104,16 @@ func TestStatusManager(t *testing.T) {
 
 		// Verify the status of the first registry cache
 		updatedRegistryCache1 := &registrycache.RegistryCacheConfig{}
-		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "cache1", Namespace: "default"}, updatedRegistryCache1)
+		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "cache1", Namespace: "test"}, updatedRegistryCache1)
 		Expect(err).To(BeNil())
-		Expect(updatedRegistryCache1.Status.Conditions[0].Reason).To(Equal(registrycache.ConditionReasonRegistryCacheConfigured))
-		Expect(updatedRegistryCache1.Status.Conditions[0].Status).To(Equal("Unknown"))
+		Expect(updatedRegistryCache1.Status.Conditions[0].Reason).To(Equal(string(registrycache.ConditionReasonRegistryCacheConfigured)))
+		Expect(updatedRegistryCache1.Status.Conditions[0].Status).To(Equal(metav1.ConditionUnknown))
 
 		// Verify the status of the second registry cache
 		updatedRegistryCache2 := &registrycache.RegistryCacheConfig{}
-		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "cache2", Namespace: "default"}, updatedRegistryCache2)
+		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "cache2", Namespace: "test"}, updatedRegistryCache2)
 		Expect(err).To(BeNil())
-		Expect(updatedRegistryCache2.Status.Conditions[0].Reason).To(Equal(registrycache.ConditionReasonRegistryCacheConfigured))
-		Expect(updatedRegistryCache2.Status.Conditions[0].Status).To(Equal("Unknown"))
+		Expect(updatedRegistryCache2.Status.Conditions[0].Reason).To(Equal(string(registrycache.ConditionReasonRegistryCacheConfigured)))
+		Expect(updatedRegistryCache2.Status.Conditions[0].Status).To(Equal(metav1.ConditionUnknown))
 	})
 }
