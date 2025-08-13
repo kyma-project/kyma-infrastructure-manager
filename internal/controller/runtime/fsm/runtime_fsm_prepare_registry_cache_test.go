@@ -64,11 +64,16 @@ func TestFnPrepareRegistryCache(t *testing.T) {
 
 func makeInputRuntimeWithRegistryCache() imv1.Runtime {
 	return imv1.Runtime{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-runtime",
+			Namespace: "kcp-system",
+		},
 		Spec: imv1.RuntimeSpec{
 			Caching: []imv1.ImageRegistryCache{
 				{
 					Name:      "cache1",
 					Namespace: "default",
+					UID:       "uid1",
 					Config: registrycachev1beta1.RegistryCacheConfigSpec{
 						SecretReferenceName: ptr.To("secret1"),
 					},

@@ -2,6 +2,7 @@ package fsm
 
 import (
 	"context"
+	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	"testing"
 	"time"
 
@@ -39,7 +40,13 @@ func TestFnFinalizeRegistryCache(t *testing.T) {
 	secret1 := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "secret1",
-			Namespace: "default",
+			Namespace: "garden-",
+			Labels: map[string]string{
+				registrycache.RuntimeSecretLabel: "test-runtime",
+			},
+			Annotations: map[string]string{
+				registrycache.CacheIDAnnotation: "uid2",
+			},
 		},
 		Immutable: ptr.To(true),
 		Data: map[string][]byte{
