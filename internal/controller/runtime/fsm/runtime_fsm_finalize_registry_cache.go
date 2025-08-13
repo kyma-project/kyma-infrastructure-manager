@@ -12,6 +12,10 @@ import (
 
 func sFnFinalizeRegistryCache(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 
+	if !m.RegistryCacheConfigControllerEnabled {
+		return switchState(sFnConfigureSKR)
+	}
+
 	runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 	if err != nil {
 		s.instance.UpdateStatePending(

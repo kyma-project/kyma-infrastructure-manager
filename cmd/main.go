@@ -228,17 +228,18 @@ func main() {
 	}
 
 	cfg := fsm.RCCfg{
-		GardenerRequeueDuration:       defaultGardenerRequeueDuration,
-		RequeueDurationShootCreate:    defaultShootCreateRequeueDuration,
-		RequeueDurationShootDelete:    defaultShootDeleteRequeueDuration,
-		RequeueDurationShootReconcile: defaultShootReconcileRequeueDuration,
-		ControlPlaneRequeueDuration:   defaultControlPlaneRequeueDuration,
-		Finalizer:                     infrastructuremanagerv1.Finalizer,
-		ShootNamesapace:               gardenerNamespace,
-		Config:                        config,
-		AuditLogMandatory:             auditLogMandatory,
-		Metrics:                       metrics,
-		AuditLogging:                  auditLogDataMap,
+		GardenerRequeueDuration:              defaultGardenerRequeueDuration,
+		RequeueDurationShootCreate:           defaultShootCreateRequeueDuration,
+		RequeueDurationShootDelete:           defaultShootDeleteRequeueDuration,
+		RequeueDurationShootReconcile:        defaultShootReconcileRequeueDuration,
+		ControlPlaneRequeueDuration:          defaultControlPlaneRequeueDuration,
+		Finalizer:                            infrastructuremanagerv1.Finalizer,
+		ShootNamesapace:                      gardenerNamespace,
+		Config:                               config,
+		AuditLogMandatory:                    auditLogMandatory,
+		Metrics:                              metrics,
+		AuditLogging:                         auditLogDataMap,
+		RegistryCacheConfigControllerEnabled: registryCacheConfigControllerEnabled,
 	}
 
 	runtimeReconciler := runtimecontroller.NewRuntimeReconciler(

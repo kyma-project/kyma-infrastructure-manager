@@ -11,6 +11,10 @@ import (
 )
 
 func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+	if !m.RegistryCacheConfigControllerEnabled {
+		return switchState(sFnConfigureSKR)
+	}
+
 	if registryCacheExists(s.instance) {
 		m.log.V(log_level.DEBUG).Info("Registry cache configuration exists", "instance", s.instance.Name)
 		runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
