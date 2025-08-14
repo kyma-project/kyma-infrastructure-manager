@@ -95,6 +95,13 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	m.log.V(log_level.DEBUG).Info("Shoot converted successfully", "Name", updatedShoot.Name, "Namespace", updatedShoot.Namespace)
 
 	registryCacheSecretShouldBeRemoved, err := registrycache.GardenSecretNeedToBeRemoved(s.shoot.Spec.Extensions, s.instance.Spec.Caching)
+	if err != nil {
+		m.log.Error(err, "Failed to check if registry cache secret should be removed")
+
+		s.instance.UpdateStatePending(imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonRegistryCacheConfigured, "False", "Failed to check if registry cache secret should be removed")
+		return updateStatusAndRequeue()
+	}
+
 	workersShouldBeUpdated := !workersAreEqual(s.shoot.Spec.Provider.Workers, updatedShoot.Spec.Provider.Workers)
 
 	// The additional Update function is required to fully replace collections with the ones defined in updated runtime object.
