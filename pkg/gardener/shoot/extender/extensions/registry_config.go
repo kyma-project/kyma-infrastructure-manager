@@ -2,10 +2,10 @@ package extensions
 
 import (
 	"encoding/json"
+	"fmt"
 	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	registrycache2 "github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -13,9 +13,19 @@ import (
 )
 
 const RegistryCacheExtensionType = "registry-cache"
+const RegistryCacheSecretPrefix = "reg-cache-"
+const RegistryCacheSecretNameFmt = RegistryCacheSecretPrefix + "%s"
 
-func NewRegistryCacheExtension(caches []imv1.ImageRegistryCache) (*gardener.Extension, error) {
-	return extension(caches)
+func NewRegistryCacheExtension(caches []imv1.ImageRegistryCache, existingRegistryCacheExt *gardener.Extension) (*gardener.Extension, error) {
+	if len(caches) > 0 {
+		return extension(caches)
+	}
+
+	if existingRegistryCacheExt != nil {
+		return disabledExtension(existingRegistryCacheExt)
+	}
+
+	return nil, nil
 }
 
 func extension(caches []imv1.ImageRegistryCache) (*gardener.Extension, error) {
@@ -39,6 +49,35 @@ func extension(caches []imv1.ImageRegistryCache) (*gardener.Extension, error) {
 			Raw: providerConfigBytes,
 		},
 		Disabled: ptr.To(false),
+	}, nil
+}
+
+func disabledExtension(existingRegistryCacheExt *gardener.Extension) (*gardener.Extension, error) {
+	var providerConfig registrycacheext.RegistryConfig
+
+	err := json.Unmarshal(existingRegistryCacheExt.ProviderConfig.Raw, &providerConfig)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 0; i < len(providerConfig.Caches); i++ {
+		providerConfig.Caches[i].SecretReferenceName = nil
+	}
+
+	providerConfigBytes, err := json.Marshal(providerConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// In case the extension is configured, and the user removes registry cache we disable the extension.
+	// In order to be able to remove registry credentials secret the reference to the secret name needs to be removed.
+	return &gardener.Extension{
+		Type: RegistryCacheExtensionType,
+		ProviderConfig: &runtime.RawExtension{
+			Raw: providerConfigBytes,
+		},
+		Disabled: ptr.To(true),
 	}, nil
 }
 
@@ -85,7 +124,7 @@ func ToRegistryCacheExtension(caches []imv1.ImageRegistryCache) []registrycachee
 			RemoteURL:           c.Config.RemoteURL,
 			Volume:              volumeToCacheExtension(c.Config.Volume),
 			GarbageCollection:   garbageCollectionExtension(c.Config.GarbageCollection),
-			SecretReferenceName: ptr.To(registrycache2.GetGardenSecretName(c.UID)),
+			SecretReferenceName: ptr.To(fmt.Sprintf(RegistryCacheSecretNameFmt, c.UID)),
 			Proxy:               proxyExtension(c.Config.Proxy),
 		})
 	}

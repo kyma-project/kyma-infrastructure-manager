@@ -11,6 +11,10 @@ import (
 )
 
 func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+	if !m.RegistryCacheConfigControllerEnabled {
+		return switchState(sFnPatchExistingShoot)
+	}
+
 	if registryCacheExists(s.instance) {
 		m.log.V(log_level.DEBUG).Info("Registry cache configuration exists", "instance", s.instance.Name)
 		runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
@@ -27,7 +31,7 @@ func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (state
 		}
 
 		statusManager := registrycache.NewStatusManager(runtimeClient)
-		secretSyncer := registrycache.NewSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
+		secretSyncer := registrycache.NewGardenSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
 
 		m.log.V(log_level.DEBUG).Info("Registry cache CRs state set to Pending", "instance", s.instance.Name)
 		err = statusManager.SetStatusPending(ctx, s.instance, registrycacheapi.ConditionReasonRegistryCacheConfigured)

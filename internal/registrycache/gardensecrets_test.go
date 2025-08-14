@@ -3,7 +3,9 @@ package registrycache
 import (
 	"context"
 	"fmt"
+	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -16,7 +18,7 @@ import (
 	"testing"
 )
 
-func TestSecretSyncer(t *testing.T) {
+func TestGardenSecretSyncer(t *testing.T) {
 	RegisterTestingT(t)
 
 	scheme := runtime.NewScheme()
@@ -50,7 +52,7 @@ func TestSecretSyncer(t *testing.T) {
 		}
 
 		// when
-		secretSyncer := NewSecretSyncer(gardenClient, runtimeClient, gardenNamespace, runtimeID)
+		secretSyncer := NewGardenSecretSyncer(gardenClient, runtimeClient, gardenNamespace, runtimeID)
 		err := secretSyncer.CreateOrUpdate(context.Background(), registryCacheConfigs)
 
 		// then
@@ -61,13 +63,13 @@ func TestSecretSyncer(t *testing.T) {
 
 		Expect(len(secrets)).To(Equal(2))
 
-		gardenSecret1, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(SecretNameFmt, registryCacheWithSecret1.UID), gardenNamespace)
+		gardenSecret1, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, registryCacheWithSecret1.UID), gardenNamespace)
 		Expect(err).To(BeNil())
 		Expect(gardenSecret1).To(Not(BeNil()))
 
 		verifyGardenSecret(gardenSecret1, secret1, registryCacheWithSecret1, runtimeID)
 
-		gardenerSecret2, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(SecretNameFmt, registryCacheWithSecret2.UID), gardenNamespace)
+		gardenerSecret2, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, registryCacheWithSecret2.UID), gardenNamespace)
 		Expect(err).To(BeNil())
 		Expect(gardenerSecret2).To(Not(BeNil()))
 
@@ -100,8 +102,8 @@ func TestSecretSyncer(t *testing.T) {
 		annotations1 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret1.Name, registryCacheWithSecret1.Namespace, registryCacheWithSecret1.UID)
 		annotations2 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret2.Name, registryCacheWithSecret2.Namespace, registryCacheWithSecret2.UID)
 
-		gardenerSecret1 := fixRegistryCacheSecret(GetGardenSecretName(registryCacheWithSecret1.UID), gardenNamespace, labels1, annotations1, "user1", "password1")
-		gardenerSecret2 := fixRegistryCacheSecret(GetGardenSecretName(registryCacheWithSecret2.UID), gardenNamespace, labels2, annotations2, "user2", "password2")
+		gardenerSecret1 := fixRegistryCacheSecret(fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, registryCacheWithSecret1.UID), gardenNamespace, labels1, annotations1, "user1", "password1")
+		gardenerSecret2 := fixRegistryCacheSecret(fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, registryCacheWithSecret2.UID), gardenNamespace, labels2, annotations2, "user2", "password2")
 
 		gardenClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			gardenerSecret1,
@@ -109,7 +111,7 @@ func TestSecretSyncer(t *testing.T) {
 		).Build()
 
 		// when
-		secretSyncer := NewSecretSyncer(gardenClient, runtimeClient, gardenNamespace, runtimeID)
+		secretSyncer := NewGardenSecretSyncer(gardenClient, runtimeClient, gardenNamespace, runtimeID)
 		err := secretSyncer.CreateOrUpdate(context.Background(), registryCacheConfigs)
 
 		// then
@@ -120,13 +122,13 @@ func TestSecretSyncer(t *testing.T) {
 
 		Expect(len(secrets)).To(Equal(2))
 
-		updatedGardenerSecret1, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(SecretNameFmt, registryCacheWithSecret1.UID), gardenNamespace)
+		updatedGardenerSecret1, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, registryCacheWithSecret1.UID), gardenNamespace)
 		Expect(err).To(BeNil())
 		Expect(updatedGardenerSecret1).To(Not(BeNil()))
 
 		verifyGardenSecret(updatedGardenerSecret1, secret1, registryCacheWithSecret1, runtimeID)
 
-		updatedGardenerSecret2, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(SecretNameFmt, registryCacheWithSecret2.UID), gardenNamespace)
+		updatedGardenerSecret2, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, registryCacheWithSecret2.UID), gardenNamespace)
 		Expect(err).To(BeNil())
 		Expect(updatedGardenerSecret2).To(Not(BeNil()))
 
@@ -160,7 +162,7 @@ func TestSecretSyncer(t *testing.T) {
 		annotations1 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret1.Name, registryCacheWithSecret1.Namespace, registryCacheWithSecret1.UID)
 		annotations2 := fixRegistryCacheGardenSecretAnnotations("config-with-secret-2", "test", "id2")
 
-		gardenerSecret1 := fixRegistryCacheSecret(GetGardenSecretName(registryCacheWithSecret1.UID), gardenNamespace, labels1, annotations1, "user1", "password1")
+		gardenerSecret1 := fixRegistryCacheSecret(fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, registryCacheWithSecret1.UID), gardenNamespace, labels1, annotations1, "user1", "password1")
 		gardenerSecret2 := fixRegistryCacheSecret("reg-cache-id", gardenNamespace, labels2, annotations2, "user2", "password2")
 		gardenerSecret3 := fixRegistryCacheSecret("some-secret", "somens", labels2, annotations2, "user3", "password3")
 
@@ -171,7 +173,7 @@ func TestSecretSyncer(t *testing.T) {
 		).Build()
 
 		// when
-		secretSyncer := NewSecretSyncer(gardenClient, runtimeClient, gardenNamespace, runtimeID)
+		secretSyncer := NewGardenSecretSyncer(gardenClient, runtimeClient, gardenNamespace, runtimeID)
 		err := secretSyncer.Delete(context.Background(), registryCacheConfigs)
 
 		// then
@@ -182,9 +184,70 @@ func TestSecretSyncer(t *testing.T) {
 
 		Expect(len(secrets)).To(Equal(2))
 
-		updatedGardenerSecret1, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(SecretNameFmt, registryCacheWithSecret1.UID), gardenNamespace)
+		updatedGardenerSecret1, err := getGardenSecret(ctx, gardenClient, fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, registryCacheWithSecret1.UID), gardenNamespace)
 		Expect(err).To(BeNil())
 		Expect(updatedGardenerSecret1).To(Not(BeNil()))
+	})
+}
+
+func TestGardenSecretNeedToBeRemoved(t *testing.T) {
+	RegisterTestingT(t)
+
+	registryCacheWithSecret1 := fixRegistryCacheConfigWithSecret("config-with-secret-1", "test", "id1", "quay.io", "secret-1")
+	registryCacheWithSecret2 := fixRegistryCacheConfigWithSecret("config-with-secret-2", "test", "id2", "quay.io", "secret-2")
+
+	t.Run("Should return true if one secret is not referenced in the desired state", func(t *testing.T) {
+		// given
+		registryCacheExtension, err := extensions.NewRegistryCacheExtension([]imv1.ImageRegistryCache{registryCacheWithSecret1, registryCacheWithSecret2}, nil)
+		Expect(err).To(BeNil())
+
+		// when
+		remove, err := GardenSecretNeedToBeRemoved([]gardener.Extension{*registryCacheExtension}, []imv1.ImageRegistryCache{registryCacheWithSecret1})
+
+		// then
+		Expect(remove).To(Equal(true))
+		Expect(err).To(BeNil())
+	})
+
+	t.Run("Should return false if registry cache extension is not currently added", func(t *testing.T) {
+		// when
+		remove, err := GardenSecretNeedToBeRemoved([]gardener.Extension{}, []imv1.ImageRegistryCache{registryCacheWithSecret1})
+
+		// then
+		Expect(remove).To(Equal(false))
+		Expect(err).To(BeNil())
+	})
+
+	t.Run("Should return false if registry cache extension is currently disabled", func(t *testing.T) {
+		// given
+		registryCacheExtension, err := extensions.NewRegistryCacheExtension(nil, &gardener.Extension{
+			Type:     extensions.RegistryCacheExtensionType,
+			Disabled: ptr.To(true),
+			ProviderConfig: &runtime.RawExtension{
+				Raw: []byte("{}"),
+			},
+		})
+		Expect(err).To(BeNil())
+
+		// when
+		remove, err := GardenSecretNeedToBeRemoved([]gardener.Extension{*registryCacheExtension}, []imv1.ImageRegistryCache{registryCacheWithSecret1})
+
+		// then
+		Expect(remove).To(Equal(false))
+		Expect(err).To(BeNil())
+	})
+
+	t.Run("Should return false if all secrets referenced in the current extension config exist  ", func(t *testing.T) {
+		// given
+		registryCacheExtension, err := extensions.NewRegistryCacheExtension([]imv1.ImageRegistryCache{registryCacheWithSecret1}, nil)
+		Expect(err).To(BeNil())
+
+		// when
+		remove, err := GardenSecretNeedToBeRemoved([]gardener.Extension{*registryCacheExtension}, []imv1.ImageRegistryCache{registryCacheWithSecret1, registryCacheWithSecret2})
+
+		// then
+		Expect(remove).To(Equal(false))
+		Expect(err).To(BeNil())
 	})
 }
 

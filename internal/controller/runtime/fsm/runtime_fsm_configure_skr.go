@@ -212,8 +212,7 @@ func createOpenIDConnectResource(additionalOidcConfig imv1.OIDCConfig, oidcID in
 			RequiredClaims:       additionalOidcConfig.RequiredClaims,
 			SupportedSigningAlgs: toSupportedSigningAlgs(additionalOidcConfig.SigningAlgs),
 			JWKS: authenticationv1alpha1.JWKSSpec{
-				Keys: []byte(additionalOidcConfig.JWKS),
-				// FIXME: Distributed claims?
+				Keys: additionalOidcConfig.JWKS,
 			},
 		},
 	}

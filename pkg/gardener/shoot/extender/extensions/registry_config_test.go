@@ -49,7 +49,7 @@ func TestNewRegistryCacheExtension(t *testing.T) {
 		}
 
 		// when
-		registryCacheExtension, err := NewRegistryCacheExtension(caches)
+		registryCacheExtension, err := NewRegistryCacheExtension(caches, nil)
 
 		// then
 		require.NoError(t, err)
