@@ -97,9 +97,9 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	registryCacheSecretShouldBeRemoved, err := registrycache.GardenSecretNeedToBeRemoved(s.shoot.Spec.Extensions, s.instance.Spec.Caching)
 	workersShouldBeUpdated := !workersAreEqual(s.shoot.Spec.Provider.Workers, updatedShoot.Spec.Provider.Workers)
 
-	// The additional Update function is required to fully replace shoot Workers collection with workers defined in updated runtime object.
-	// This is a workaround for the sigs.k8s.io/controller-runtime/pkg/client, which does not support replacing the Workers collection with client.Patch
-	// This could caused some workers to be not removed from the shoot object during update
+	// The additional Update function is required to fully replace collections with the ones defined in updated runtime object.
+	// This is a workaround for the sigs.k8s.io/controller-runtime/pkg/client, which does not support replacing collections with client.Patch.
+	// The client is able to add an item to the collection, but not to remove it.
 	// More info: https://github.com/kyma-project/infrastructure-manager/issues/640
 
 	if workersShouldBeUpdated || registryCacheSecretShouldBeRemoved {

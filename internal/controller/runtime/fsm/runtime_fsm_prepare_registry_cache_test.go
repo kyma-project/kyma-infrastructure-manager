@@ -17,6 +17,7 @@ import (
 )
 
 func TestFnPrepareRegistryCache(t *testing.T) {
+	// given
 	testCtx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
@@ -47,15 +48,14 @@ func TestFnPrepareRegistryCache(t *testing.T) {
 			"password": []byte("password")},
 	}
 
-	// Setup fake FSM and runtime with caching enabled
 	fsm := setupFakeFSMForTest(testScheme, registryCacheConfig, secret1)
 	rt := makeInputRuntimeWithRegistryCache()
 	systemState := &systemState{instance: rt}
 
-	// Call the function
+	// when
 	nextState, res, err := sFnPrepareRegistryCache(testCtx, fsm, systemState)
 
-	// Assertions
+	// then
 	require.NoError(t, err)
 	require.Nil(t, res)
 	require.NotNil(t, nextState)

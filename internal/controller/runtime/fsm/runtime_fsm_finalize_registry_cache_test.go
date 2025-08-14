@@ -17,6 +17,7 @@ import (
 )
 
 func TestFnFinalizeRegistryCache(t *testing.T) {
+	// given
 	testCtx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
@@ -26,7 +27,6 @@ func TestFnFinalizeRegistryCache(t *testing.T) {
 
 	gomega.RegisterTestingT(t)
 
-	// Setup registry cache configuration and secret
 	registryCacheConfig := &registrycachev1beta1.RegistryCacheConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cache1",
@@ -55,15 +55,14 @@ func TestFnFinalizeRegistryCache(t *testing.T) {
 		},
 	}
 
-	// Setup fake FSM and runtime with caching enabled
 	fsm := setupFakeFSMForTest(testScheme, registryCacheConfig, secret1)
 	rt := makeInputRuntimeWithRegistryCache()
 	systemState := &systemState{instance: rt}
 
-	// Call the function
+	// When
 	nextState, res, err := sFnFinalizeRegistryCache(testCtx, fsm, systemState)
 
-	// Assertions
+	// Then
 	require.NoError(t, err)
 	require.Nil(t, res)
 	require.NotNil(t, nextState)
