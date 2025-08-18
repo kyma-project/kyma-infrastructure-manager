@@ -1,6 +1,7 @@
 package extender
 
 import (
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"testing"
 
@@ -48,7 +49,10 @@ func TestTolerationsExtender(t *testing.T) {
 			}
 
 			// when
-			err := ExtendWithTolerations(basicRuntime, &shoot)
+			extendWithTolerations := NewTolerationsExtender(config.TolerationsConfig{
+				"me-central2": {gardener.Toleration{Key: "ksa-assured-workload"}},
+			})
+			err := extendWithTolerations(basicRuntime, &shoot)
 			require.NoError(t, err)
 
 			// then
