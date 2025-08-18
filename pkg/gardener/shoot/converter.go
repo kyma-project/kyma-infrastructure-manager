@@ -114,8 +114,8 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.ControlPlaneConfig))
 
 	extendersForPatch = append(extendersForPatch,
-		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.Extensions),
-		extender2.NewResourcesExtenderForPatch(opts.Resources))
+		extender2.NewResourcesExtenderForPatch(opts.Resources),
+		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.Extensions))
 
 	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
 

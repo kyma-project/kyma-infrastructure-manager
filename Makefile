@@ -62,7 +62,8 @@ vet: ## Run go vet against code.
 
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -v -coverprofile=coverage.txt
+		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
+        go test $(PACKAGES_TO_TEST) -v -coverprofile=coverage.txt
 
 ##@ Build
 
@@ -154,6 +155,12 @@ KUBECTL ?= kubectl
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
+
+## Test helper
+# Get the module path to build a robust grep pattern
+MODULE_PATH := $(shell go list -m)
+# Define the list of packages to test, excluding anything under the top-level /test or named test_*
+PACKAGES_TO_TEST := $(shell go list ./... | grep -v "$(MODULE_PATH)/test")
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.5.0

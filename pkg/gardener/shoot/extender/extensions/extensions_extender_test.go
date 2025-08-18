@@ -2,6 +2,7 @@ package extensions
 
 import (
 	"encoding/json"
+	"fmt"
 	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
 	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"github.com/stretchr/testify/require"
@@ -36,6 +37,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 
 	registryCache := []imv1.ImageRegistryCache{
 		{
+			UID: "id1",
 			Config: registrycache.RegistryCacheConfigSpec{
 				Upstream: "ghcr.io",
 			},
@@ -359,10 +361,9 @@ func fixRegistryCacheExtension() gardener.Extension {
 		Type:     RegistryCacheExtensionType,
 		Disabled: ptr.To(false),
 		ProviderConfig: &runtime.RawExtension{
-			Raw: []byte(`apiVersion":"registry.extensions.gardener.cloud/v1alpha3","kind":"RegistryConfig","caches":{"upstream":"quay.io"}`),
+			Raw: []byte(`{"apiVersion":"registry.extensions.gardener.cloud/v1alpha3","kind":"RegistryConfig","caches":[{"upstream":"quay.io"}]}`),
 		},
 	}
-
 }
 
 func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extension, networkExtAdded bool, auditLogExtAdded bool, registryCacheExtAdded bool) map[string]int {
@@ -509,7 +510,7 @@ func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches 
 	assert.Equal(t, "RegistryConfig", registryConfig.Kind)
 	assert.Equal(t, caches[0].Config.Upstream, registryConfig.Caches[0].Upstream)
 	assert.Nil(t, caches[0].Config.GarbageCollection)
-	assert.Equal(t, caches[0].Config.SecretReferenceName, registryConfig.Caches[0].SecretReferenceName)
+	assert.Equal(t, fmt.Sprintf(RegistryCacheSecretNameFmt, caches[0].UID), *registryConfig.Caches[0].SecretReferenceName)
 	assert.Nil(t, registryConfig.Caches[0].Proxy)
 }
 

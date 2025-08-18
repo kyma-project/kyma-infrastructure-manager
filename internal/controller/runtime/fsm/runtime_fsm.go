@@ -25,16 +25,17 @@ type stateFn func(context.Context, *fsm, *systemState) (stateFn, *ctrl.Result, e
 
 // runtime reconciler specific configuration
 type RCCfg struct {
-	GardenerRequeueDuration       time.Duration
-	RequeueDurationShootCreate    time.Duration
-	RequeueDurationShootDelete    time.Duration
-	RequeueDurationShootReconcile time.Duration
-	ControlPlaneRequeueDuration   time.Duration
-	Finalizer                     string
-	ShootNamesapace               string
-	AuditLogMandatory             bool
-	Metrics                       metrics.Metrics
-	AuditLogging                  auditlogs.Configuration
+	GardenerRequeueDuration              time.Duration
+	RequeueDurationShootCreate           time.Duration
+	RequeueDurationShootDelete           time.Duration
+	RequeueDurationShootReconcile        time.Duration
+	ControlPlaneRequeueDuration          time.Duration
+	Finalizer                            string
+	ShootNamesapace                      string
+	AuditLogMandatory                    bool
+	Metrics                              metrics.Metrics
+	AuditLogging                         auditlogs.Configuration
+	RegistryCacheConfigControllerEnabled bool
 	config.Config
 }
 
