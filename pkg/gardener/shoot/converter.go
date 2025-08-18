@@ -49,7 +49,6 @@ type CreateOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
-	StructuredAuthEnabled bool
 }
 
 type WorkerZones struct {
