@@ -20,24 +20,26 @@ Highlights:
 - The registry cache configuration is stored in the `RegistryCacheConfig` CRD in the SKR cluster. The `RegistryCacheConfig` CRD is a part of the Kyma module.
 - The Registry Cache Controller synchronizes the registry cache configuration between the SKR and the Runtime CR.
 - The Runtime Controller:
-  - Configures the registry-cache extension 
+  - Configures the `registry-cache` extension 
   - Synchronizes credential secrets between the SKR and the Garden cluster 
   - Updates the status of the registry cache configuration in the SKR
+  - Removes credentials secrets from the Garden cluster when the registry cache configuration is removed from the SKR.
 - The Runtime Watcher triggers events to notify KIM that the configuration changed.
 - The Registry Cache Webhook validates the registry cache configuration in the Registry Cache CR.
 
 The operation flow is as follows:
 1. The user creates a `RegistryCacheConfig` CR with the cache configuration in the SKR.
-2. The Runtime Watcher triggers an event notifying KIM of the new configuration.
-3. The Registry Cache Config Controller (if the Registry Cache module is enabled) reads the configuration from the `RegistryCacheConfig` CR and applies it to the Runtime CR.
-4. The Runtime Controller synchronizes credential secrets between the SKR and the Garden cluster, and sets the registry cache configuration status in the SKR to `Pending`.
-5. The Runtime Controller configures the `registry-cache` extension.
-6. If the registry cache configuration is removed from the SKR, the Runtime Controller cleans up secrets from the Garden cluster.
-7. The Runtime Controller updates the registry cache configuration status in the SKR to Ready.
+2. The Registry Cache CR validating webhook verifies the configuration.
+3. The Runtime Watcher triggers an event notifying KIM of the new configuration.
+4. The Registry Cache Config Controller (if the Registry Cache module is enabled) reads the configuration from the `RegistryCacheConfig` CR and applies it to the Runtime CR.
+5. The Runtime Controller synchronizes credential secrets between the SKR and the Garden cluster, and sets the registry cache configuration status in the SKR to `Pending`.
+6. The Runtime Controller configures the `registry-cache` extension.
+7. If the registry cache configuration is removed from the SKR, the Runtime Controller cleans up secrets from the Garden cluster.
+8. The Runtime Controller updates the registry cache configuration status in the SKR to Ready.
 
 ## API
 
-The following API is defined for the registry cache configuration in the Kyma module. The `RegistryCacheConfig` CRD is used to store the registry cache configuration.
+The `RegistryCacheConfig` CRD is defined as follows.
 
 ```go
 type RegistryCacheConfigSpec struct {
