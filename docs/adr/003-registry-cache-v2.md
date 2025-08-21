@@ -15,7 +15,10 @@ Proposed
 
 # Decision
 
-The overall architecture is based on the following proposal: https://github.com/kyma-project/community/issues/992.
+The overall architecture is based on the following proposal: https://github.com/kyma-project/community/issues/992. The following diagram shows the proposed architecture:
+
+![](./assets/caching-in-kim-v2.drawio.svg)
+
 Highlights:
 - The registry cache configuration is stored in the `RegistryCacheConfig` CRD in the SKR cluster. The `RegistryCacheConfig` CRD is a part of the Kyma module.
 - The Registry Cache Controller synchronizes the registry cache configuration between the SKR and the Runtime CR.
