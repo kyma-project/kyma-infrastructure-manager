@@ -2,7 +2,7 @@
 This document defines the architecture and API for enabling registry cache in the Kyma runtime. 
 
 # Status
-Proposed
+Accepted
 
 # Requirements
 
