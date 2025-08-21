@@ -27,6 +27,7 @@ env:
 
 permissions:
   contents: read
+  
 jobs:
 # lint:
 ############################################################################################
@@ -64,6 +65,12 @@ jobs:
       with:
         name: "code-coverage"
         path: "coverage.txt"
+    - name: coveralls github action
+      uses: coverallsapp/github-action@v2.3.6
+      with:
+        format: golang
+        file: ./coverage.txt
+        fail-on-error: false
 
   code_coverage:
     name: "Code coverage report"
