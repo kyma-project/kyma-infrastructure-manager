@@ -26,7 +26,7 @@ Highlights:
   - Configures the `registry-cache` extension 
   - Synchronizes credential secrets between SKR and the Garden cluster 
   - Updates the status of the registry cache configuration in SKR
-  - Removes credentials secrets from the Garden cluster when the registry cache configuration is removed from the SKR.
+  - Removes credential secrets from the Garden cluster when the registry cache configuration is removed from SKR.
 - The Runtime Watcher triggers events to notify KIM that the configuration changed.
 - The Registry Cache Webhook validates the registry cache configuration in the Registry Cache CR.
 
