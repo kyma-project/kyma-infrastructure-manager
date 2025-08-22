@@ -28,7 +28,7 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 		return requeueAfter(m.GardenerRequeueDuration)
 	}
 
-	exposeShootStatusInfo(s)
+	logLastErrors(s, m)
 
 	patchShoot, err := shouldPatchShoot(&s.instance, s.shoot, &m.log)
 	if err != nil {
@@ -54,6 +54,24 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 	// All other runtimes in Ready and Failed state will be not processed to mitigate massive reconciliation during restart
 	m.log.Info("Stopping processing reconcile, exiting with no retry", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name, "function", "sFnSelectShootProcessing")
 	return stop()
+}
+
+func logLastErrors(s *systemState, m *fsm) {
+	status := s.shoot.Status
+	state := status.LastOperation.State
+	lastErrors := status.LastErrors
+	stateRequiresErrorLogging := state == gardener.LastOperationStatePending ||
+		state == gardener.LastOperationStateFailed ||
+		state == gardener.LastOperationStateError
+
+	if stateRequiresErrorLogging && len(lastErrors) > 0 {
+		var errorsDescriptions string
+		for i, lastError := range lastErrors {
+			errorsDescriptions += fmt.Sprintf("%d: %s; ", i+1, lastError.Description)
+		}
+		logMessage := fmt.Sprintf("runtimeID: %s, Last operation state: %s, last errors: %s", s.instance.Name, state, errorsDescriptions)
+		m.log.Info(logMessage)
+	}
 }
 
 func shouldPatchShoot(runtime *imv1.Runtime, shoot *gardener.Shoot, logger *logr.Logger) (bool, error) {
