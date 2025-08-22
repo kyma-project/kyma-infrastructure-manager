@@ -250,6 +250,7 @@ var _ = Describe("Runtime Controller", func() {
 				return true
 			}, time.Second*60, time.Second*3).Should(BeTrue())
 
+			Expect(runtime.Status.ShootLastOperation).To(Not(BeNil()))
 			Expect(customTracker.IsSequenceFullyUsed()).To(BeTrue())
 		})
 	})

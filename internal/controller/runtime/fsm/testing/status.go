@@ -1,7 +1,6 @@
 package testing
 
 import (
-	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,9 +19,6 @@ func PendingStatusShootPatched() imv1.RuntimeStatus {
 	}
 	meta.SetStatusCondition(&result.Conditions, condition)
 
-	result.ShootLastOperation = &gardener.LastOperation{
-		LastUpdateTime: metav1.Now(),
-	}
 	return result
 }
 
@@ -39,9 +35,6 @@ func PendingStatusShootNoChanged() imv1.RuntimeStatus {
 	}
 	meta.SetStatusCondition(&result.Conditions, condition)
 
-	result.ShootLastOperation = &gardener.LastOperation{
-		LastUpdateTime: metav1.Now(),
-	}
 	return result
 }
 
@@ -58,9 +51,6 @@ func PendingStatusAfterConflictErr() imv1.RuntimeStatus {
 	}
 	meta.SetStatusCondition(&result.Conditions, condition)
 
-	result.ShootLastOperation = &gardener.LastOperation{
-		LastUpdateTime: metav1.Now(),
-	}
 	return result
 }
 
@@ -77,9 +67,6 @@ func PendingStatusAfterForbiddenErr() imv1.RuntimeStatus {
 	}
 	meta.SetStatusCondition(&result.Conditions, condition)
 
-	result.ShootLastOperation = &gardener.LastOperation{
-		LastUpdateTime: metav1.Now(),
-	}
 	return result
 }
 
@@ -96,9 +83,6 @@ func FailedStatusPatchErr() imv1.RuntimeStatus {
 	}
 	meta.SetStatusCondition(&result.Conditions, condition)
 
-	result.ShootLastOperation = &gardener.LastOperation{
-		LastUpdateTime: metav1.Now(),
-	}
 	return result
 }
 
@@ -115,9 +99,6 @@ func FailedStatusUpdateError() imv1.RuntimeStatus {
 	}
 	meta.SetStatusCondition(&result.Conditions, condition)
 
-	result.ShootLastOperation = &gardener.LastOperation{
-		LastUpdateTime: metav1.Now(),
-	}
 	return result
 }
 
@@ -134,9 +115,6 @@ func FailedStatusAuditLogError() imv1.RuntimeStatus {
 	}
 	meta.SetStatusCondition(&result.Conditions, condition)
 
-	result.ShootLastOperation = &gardener.LastOperation{
-		LastUpdateTime: metav1.Now(),
-	}
 	return result
 }
 
@@ -153,8 +131,5 @@ func FailedStatusRegistryCache() imv1.RuntimeStatus {
 	}
 	meta.SetStatusCondition(&result.Conditions, condition)
 
-	result.ShootLastOperation = &gardener.LastOperation{
-		LastUpdateTime: metav1.Now(),
-	}
 	return result
 }

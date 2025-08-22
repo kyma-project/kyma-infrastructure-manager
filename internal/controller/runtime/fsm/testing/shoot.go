@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
+	"time"
 )
 
 var (
@@ -249,6 +250,7 @@ func TestShootForPatch() *gardener.Shoot {
 		Status: gardener.ShootStatus{
 			LastOperation: &gardener.LastOperation{
 				State: gardener.LastOperationStateSucceeded,
+				LastUpdateTime: metav1.Date(2025, time.August, 22, 10, 54, 50, 0, time.UTC),
 			},
 		},
 	}
@@ -278,6 +280,7 @@ func TestShootForUpdate() *gardener.Shoot {
 		Status: gardener.ShootStatus{
 			LastOperation: &gardener.LastOperation{
 				State: gardener.LastOperationStateSucceeded,
+				LastUpdateTime: metav1.Date(2025, time.August, 22, 10, 54, 50, 0, time.UTC),
 			},
 		},
 	}
