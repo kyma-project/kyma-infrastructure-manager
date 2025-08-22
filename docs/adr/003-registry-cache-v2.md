@@ -21,7 +21,7 @@ The overall architecture is based on the following proposal: https://github.com/
 
 Highlights:
 - The registry cache configuration is stored in the `RegistryCacheConfig` CRD in the SKR cluster. The `RegistryCacheConfig` CRD is a part of the Kyma module.
-- The Registry Cache Controller synchronizes the registry cache configuration between the SKR and the Runtime CR.
+- The Registry Cache Controller synchronizes the registry cache configuration between SKR and the Runtime CR.
 - The Runtime Controller:
   - Configures the `registry-cache` extension 
   - Synchronizes credential secrets between the SKR and the Garden cluster 
