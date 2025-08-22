@@ -10,7 +10,7 @@ Proposed
 - Credentials for the image registries should be stored in secrets on SKR, and transferred to Garden cluster.
 - The user should be able to view the status of the registry cache configuration.
 - The Gardener extension `registry-cache` is used to implement the registry cache functionality.
-- In the first phase KIM, will periodically pull the registry cache configuration from SKR.
+- In the first phase, KIM periodically pulls the registry cache configuration from SKR.
 - At some point, the Runtime Watcher is used to trigger events to notify KIM that the configuration has changed.
 
 # Decision
