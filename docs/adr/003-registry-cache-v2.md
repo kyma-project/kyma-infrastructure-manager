@@ -11,7 +11,7 @@ Proposed
 - The user should be able to view the status of the registry cache configuration.
 - The Gardener extension `registry-cache` will be used to implement the registry cache functionality.
 - In the first phase KIM, will periodically pull the registry cache configuration from SKR.
-- At some point, the Runtime Watcher will be used to trigger events to notify KIM that the configuration changed.
+- At some point, the Runtime Watcher is used to trigger events to notify KIM that the configuration has changed.
 
 # Decision
 
