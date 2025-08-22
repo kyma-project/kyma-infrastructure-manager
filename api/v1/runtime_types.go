@@ -159,6 +159,9 @@ type RuntimeStatus struct {
 
 	// ProvisioningCompleted indicates if the initial provisioning of the cluster is completed
 	ProvisioningCompleted bool `json:"provisioningCompleted,omitempty"`
+
+	ShootLastOperation *gardener.LastOperation `json:"shootLastOperation,omitempty" protobuf:"bytes,5,opt,name=lastOperation"`
+	ShootLastErrors    []gardener.LastError    `json:"shootLastErrors,omitempty" protobuf:"bytes,6,rep,name=lastErrors"`
 }
 
 type RuntimeShoot struct {

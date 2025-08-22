@@ -202,7 +202,7 @@ func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg stri
 
 		// We're retrying on Forbidden error because Gardener returns them from time too time for operations that are properly authorized.
 		if k8serrors.IsForbidden(err) {
-			m.log.Info("Gardener shoot for runtime is forbidden, retrying")
+			m.log.Error(err, "Gardener shoot for runtime is forbidden, retrying")
 
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRuntimeProvisioned,
