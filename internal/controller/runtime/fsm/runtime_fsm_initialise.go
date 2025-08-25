@@ -21,6 +21,8 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 	instanceHasFinalizer := controllerutil.ContainsFinalizer(&s.instance, m.Finalizer)
 	provisioningCondition := meta.FindStatusCondition(s.instance.Status.Conditions, string(imv1.ConditionTypeRuntimeProvisioned))
 
+	exposeShootStatusInfo(s)
+
 	if !instanceIsBeingDeleted && !instanceHasFinalizer {
 		return addFinalizerAndRequeue(ctx, m, s)
 	}
