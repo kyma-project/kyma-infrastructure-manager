@@ -403,6 +403,8 @@ spec:
                     type: string
                   networking:
                     properties:
+                      dualStack:
+                        type: boolean
                       nodes:
                         type: string
                       pods:
