@@ -1,8 +1,8 @@
 processor:
   ignoreTypes:
-    - "List$"
-    - "Status$"
+    # - "List$"
+    # - "Status$"
   ignoreFields:
-    - "status$"
+    # - "status$"
 render:
-  kubernetesVersion: 1.25
+  kubernetesVersion: 1.32
