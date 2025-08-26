@@ -36,24 +36,4 @@ jobs:
           files: ./config/crd/crd-docs.md
           generate_release_notes: true
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-#      - name: Create GitHub Release
-#        id: create_release
-#        uses: actions/create-release@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-#        with:
-#          tag_name: ${{ github.ref_name }}
-#          release_name: Release ${{ github.ref_name }}
-#          draft: false
-#          prerelease: false
-
-#      - name: Upload release asset
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-#        with:
-#          upload_url: ${{ steps.create_release.outputs.upload_url }}
-#          asset_path: ./config/crd/crd-docs.md
-#          asset_name: crd-docs.md
-#          asset_content_type: text/markdown
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
