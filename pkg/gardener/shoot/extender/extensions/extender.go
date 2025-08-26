@@ -2,7 +2,6 @@ package extensions
 
 import (
 	"encoding/json"
-	"k8s.io/utils/ptr"
 	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -64,7 +63,7 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 					return nil, nil
 				}
 
-				return NewRegistryCacheExtension(registryCache)
+				return NewRegistryCacheExtension(registryCache, nil)
 			},
 		},
 	}, nil)
@@ -117,19 +116,16 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensio
 		{
 			Type: RegistryCacheExtensionType,
 			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-
-				if len(runtime.Spec.Caching) > 0 {
-					return NewRegistryCacheExtension(runtime.Spec.Caching)
-				}
+				var existingExtension *gardener.Extension
 
 				for _, ext := range shoot.Spec.Extensions {
 					if ext.Type == RegistryCacheExtensionType {
-						ext.Disabled = ptr.To(true)
-						return &ext, nil
+						existingExtension = &ext
+						break
 					}
 				}
 
-				return nil, nil
+				return NewRegistryCacheExtension(runtime.Spec.Caching, existingExtension)
 			},
 		},
 	}, extensionsOnTheShoot)
@@ -137,7 +133,10 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensio
 
 func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensions []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		shoot.Spec.Extensions = currentGardenerExtensions
+
+		for _, currentExtension := range currentGardenerExtensions {
+			shoot.Spec.Extensions = append(shoot.Spec.Extensions, *currentExtension.DeepCopy())
+		}
 
 		for _, ext := range extensionsToApply {
 			gardenerExtension, err := ext.Create(runtime, *shoot)

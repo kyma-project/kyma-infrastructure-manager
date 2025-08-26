@@ -107,7 +107,6 @@ func main() {
 	var gardenerClusterCtrlWorkersCnt int
 	var converterConfigFilepath string
 	var auditLogMandatory bool
-	var structuredAuthEnabled bool
 	var registryCacheConfigControllerEnabled bool
 
 	//Kubebuilder related parameters:
@@ -137,7 +136,6 @@ func main() {
 
 	//Feature flags:
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration. When enabled this feature, a Shoot cluster will only be created when an auditlog tenant exists (this is defined in the auditlog mapping configuration file)")
-	flag.BoolVar(&structuredAuthEnabled, "structured-auth-enabled", false, "Feature flag to enable structured authentication. This new authentication approach was introduced as default in Kubernetes version 1.32")
 	flag.BoolVar(&registryCacheConfigControllerEnabled, "registry-cache-config-controller-enabled", false, "Feature flag to enable registry cache config controller")
 
 	opts := zap.Options{}
@@ -228,17 +226,18 @@ func main() {
 	}
 
 	cfg := fsm.RCCfg{
-		GardenerRequeueDuration:       defaultGardenerRequeueDuration,
-		RequeueDurationShootCreate:    defaultShootCreateRequeueDuration,
-		RequeueDurationShootDelete:    defaultShootDeleteRequeueDuration,
-		RequeueDurationShootReconcile: defaultShootReconcileRequeueDuration,
-		ControlPlaneRequeueDuration:   defaultControlPlaneRequeueDuration,
-		Finalizer:                     infrastructuremanagerv1.Finalizer,
-		ShootNamesapace:               gardenerNamespace,
-		Config:                        config,
-		AuditLogMandatory:             auditLogMandatory,
-		Metrics:                       metrics,
-		AuditLogging:                  auditLogDataMap,
+		GardenerRequeueDuration:              defaultGardenerRequeueDuration,
+		RequeueDurationShootCreate:           defaultShootCreateRequeueDuration,
+		RequeueDurationShootDelete:           defaultShootDeleteRequeueDuration,
+		RequeueDurationShootReconcile:        defaultShootReconcileRequeueDuration,
+		ControlPlaneRequeueDuration:          defaultControlPlaneRequeueDuration,
+		Finalizer:                            infrastructuremanagerv1.Finalizer,
+		ShootNamesapace:                      gardenerNamespace,
+		Config:                               config,
+		AuditLogMandatory:                    auditLogMandatory,
+		Metrics:                              metrics,
+		AuditLogging:                         auditLogDataMap,
+		RegistryCacheConfigControllerEnabled: registryCacheConfigControllerEnabled,
 	}
 
 	runtimeReconciler := runtimecontroller.NewRuntimeReconciler(

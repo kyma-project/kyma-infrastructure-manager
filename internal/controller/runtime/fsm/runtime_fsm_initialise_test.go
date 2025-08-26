@@ -2,6 +2,7 @@ package fsm
 
 import (
 	"context"
+	core_v1 "k8s.io/api/core/v1"
 	"time"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -26,6 +27,7 @@ var _ = Describe("KIM sFnInitialise", func() {
 
 	testScheme := runtime.NewScheme()
 	util.Must(imv1.AddToScheme(testScheme))
+	util.Must(core_v1.AddToScheme(testScheme))
 
 	withTestSchemeAndObjects := func(objs ...client.Object) fakeFSMOpt {
 		return func(fsm *fsm) error {
@@ -95,7 +97,7 @@ var _ = Describe("KIM sFnInitialise", func() {
 		Entry(
 			"should return nothing when CR is being deleted without finalizer and shoot is missing",
 			testCtx,
-			must(newFakeFSM, withTestFinalizer, withMockedMetrics(), withDefaultReconcileDuration()),
+			must(newFakeFSM, withFakedK8sClient(testScheme), withTestFinalizer, withMockedMetrics(), withDefaultReconcileDuration()),
 			&systemState{instance: testRtWithDeletionTimestamp},
 			testOpts{
 				MatchExpectedErr: BeNil(),

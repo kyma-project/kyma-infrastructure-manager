@@ -88,6 +88,7 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 		runtimeRegistryCacheConfig := imv1.ImageRegistryCache{
 			Name:      config.Name,
 			Namespace: config.Namespace,
+			UID:       string(config.UID),
 			Config:    config.Spec,
 		}
 		caches = append(caches, runtimeRegistryCacheConfig)
@@ -159,6 +160,6 @@ func (r *RegistryCacheConfigReconciler) SetupWithManager(mgr ctrl.Manager, numbe
 			predicate.LabelChangedPredicate{},
 			predicate.AnnotationChangedPredicate{},
 		)).
-		Named("custom-config-controller").
+		Named("registry-config-controller").
 		Complete(r)
 }

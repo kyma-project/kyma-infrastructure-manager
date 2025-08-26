@@ -22,6 +22,9 @@ func TestNewRegistryCacheExtension(t *testing.T) {
 		volumeQuantity := resource.MustParse("10Gi")
 		caches := []imv1.ImageRegistryCache{
 			{
+				Name:      "cache1",
+				Namespace: "test",
+				UID:       "id1",
 				Config: registrycache.RegistryCacheConfigSpec{
 					Upstream: "ghcr.io",
 					GarbageCollection: &registrycache.GarbageCollection{
@@ -46,7 +49,7 @@ func TestNewRegistryCacheExtension(t *testing.T) {
 		}
 
 		// when
-		registryCacheExtension, err := NewRegistryCacheExtension(caches)
+		registryCacheExtension, err := NewRegistryCacheExtension(caches, nil)
 
 		// then
 		require.NoError(t, err)
@@ -65,7 +68,7 @@ func TestNewRegistryCacheExtension(t *testing.T) {
 		assert.Equal(t, "RegistryConfig", providerConfig.Kind)
 		assert.Equal(t, "ghcr.io", providerConfig.Caches[0].Upstream)
 		assert.Equal(t, metav1.Duration{Duration: time.Hour * 24}, providerConfig.Caches[0].GarbageCollection.TTL)
-		assert.Equal(t, ptr.To("secret"), providerConfig.Caches[0].SecretReferenceName)
+		assert.Equal(t, "reg-cache-id1", *providerConfig.Caches[0].SecretReferenceName)
 		assert.Nil(t, providerConfig.Caches[0].Proxy)
 		assert.Equal(t, ptr.To("storageClass"), providerConfig.Caches[0].Volume.StorageClassName)
 

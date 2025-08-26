@@ -15,7 +15,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	// wait section
 	if !s.shoot.GetDeletionTimestamp().IsZero() {
 		m.log.V(log_level.DEBUG).Info("Waiting for shoot to be deleted", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
-		return requeueAfter(m.RequeueDurationShootDelete)
+		return updateStatusAndRequeueAfter(m.RequeueDurationShootDelete)
 	}
 
 	// action section

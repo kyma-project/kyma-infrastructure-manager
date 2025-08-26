@@ -3,8 +3,10 @@ package fsm
 import (
 	"context"
 	"fmt"
+	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
+	registrycacheapi "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"reflect"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -75,21 +77,51 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object, exiting with no retry")
 		m.Metrics.IncRuntimeFSMStopCounter()
+
+		runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
+		if err != nil {
+			m.log.Error(err, "Failed to get Runtime Client to set Registry Cache status")
+		}
+
+		statusManager := registrycache.NewStatusManager(runtimeClient)
+		err = statusManager.SetStatusFailed(ctx, s.instance, registrycacheapi.ConditionReasonRegistryCacheExtensionConfigurationFailed, "failed to apply registry cache configuration")
+		if err != nil {
+			m.log.Error(err, "Failed to get Runtime Client to set Registry Cache status")
+		}
+
 		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonConversionError, fmt.Sprintf("Runtime conversion error %v", err))
 	}
 
 	m.log.V(log_level.DEBUG).Info("Shoot converted successfully", "Name", updatedShoot.Name, "Namespace", updatedShoot.Namespace)
 
-	// The additional Update function is required to fully replace shoot Workers collection with workers defined in updated runtime object.
-	// This is a workaround for the sigs.k8s.io/controller-runtime/pkg/client, which does not support replacing the Workers collection with client.Patch
-	// This could caused some workers to be not removed from the shoot object during update
+	registryCacheSecretShouldBeRemoved, err := registrycache.GardenSecretNeedToBeRemoved(s.shoot.Spec.Extensions, s.instance.Spec.Caching)
+	if err != nil {
+		m.log.Error(err, "Failed to check if registry cache secret should be removed")
+
+		s.instance.UpdateStatePending(imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonRegistryCacheConfigured, "False", "Failed to check if registry cache secret should be removed")
+		return updateStatusAndRequeue()
+	}
+
+	workersShouldBeUpdated := !workersAreEqual(s.shoot.Spec.Provider.Workers, updatedShoot.Spec.Provider.Workers)
+
+	// The additional Update function is required to fully replace collections with the ones defined in updated runtime object.
+	// This is a workaround for the sigs.k8s.io/controller-runtime/pkg/client, which does not support replacing collections with client.Patch.
+	// The client is able to add an item to the collection, but not to remove it.
 	// More info: https://github.com/kyma-project/infrastructure-manager/issues/640
 
-	if !workersAreEqual(s.shoot.Spec.Provider.Workers, updatedShoot.Spec.Provider.Workers) {
+	if workersShouldBeUpdated || registryCacheSecretShouldBeRemoved {
 		copyShoot := s.shoot.DeepCopy()
-		copyShoot.Spec.Provider.Workers = updatedShoot.Spec.Provider.Workers
-		copyShoot.Spec.Provider.ControlPlaneConfig = updatedShoot.Spec.Provider.ControlPlaneConfig
-		copyShoot.Spec.Provider.InfrastructureConfig = updatedShoot.Spec.Provider.InfrastructureConfig
+
+		if workersShouldBeUpdated {
+			copyShoot.Spec.Provider.Workers = updatedShoot.Spec.Provider.Workers
+			copyShoot.Spec.Provider.ControlPlaneConfig = updatedShoot.Spec.Provider.ControlPlaneConfig
+			copyShoot.Spec.Provider.InfrastructureConfig = updatedShoot.Spec.Provider.InfrastructureConfig
+		}
+
+		if registryCacheSecretShouldBeRemoved {
+			copyShoot.Spec.Extensions = updatedShoot.Spec.Extensions
+			copyShoot.Spec.Resources = updatedShoot.Spec.Resources
+		}
 
 		updateErr := m.GardenClient.Update(ctx, copyShoot,
 			&client.UpdateOptions{
@@ -143,6 +175,16 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
 }
 
+func registryCacheExists(runtime imv1.Runtime) bool {
+	for _, cache := range runtime.Spec.Caching {
+		if cache.Config.SecretReferenceName != nil && *cache.Config.SecretReferenceName != "" {
+			return true
+		}
+	}
+
+	return false
+}
+
 func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg string) (stateFn, *ctrl.Result, error) {
 	if err != nil {
 		if k8serrors.IsConflict(err) {
@@ -160,7 +202,7 @@ func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg stri
 
 		// We're retrying on Forbidden error because Gardener returns them from time too time for operations that are properly authorized.
 		if k8serrors.IsForbidden(err) {
-			m.log.Info("Gardener shoot for runtime is forbidden, retrying")
+			m.log.Error(err, "Gardener shoot for runtime is forbidden, retrying")
 
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRuntimeProvisioned,

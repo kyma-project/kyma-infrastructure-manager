@@ -2,6 +2,9 @@ package fsm
 
 import (
 	"context"
+	"fmt"
+	"github.com/kyma-project/infrastructure-manager/internal/log_level"
+	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
@@ -18,6 +21,8 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 	instanceHasFinalizer := controllerutil.ContainsFinalizer(&s.instance, m.Finalizer)
 	provisioningCondition := meta.FindStatusCondition(s.instance.Status.Conditions, string(imv1.ConditionTypeRuntimeProvisioned))
 
+	exposeShootStatusInfo(s)
+
 	if !instanceIsBeingDeleted && !instanceHasFinalizer {
 		return addFinalizerAndRequeue(ctx, m, s)
 	}
@@ -26,6 +31,15 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 	if instanceIsBeingDeleted {
 		if s.shoot != nil {
 			return switchState(sFnDeleteKubeconfig)
+		}
+
+		m.log.V(log_level.DEBUG).Info("Deleting registry cache secrets for a runtime", "instance", s.instance.Name)
+		secretSyncer := registrycache.NewGardenSecretSyncer(m.GardenClient, nil, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
+		err := secretSyncer.DeleteAll(ctx)
+		if err != nil {
+			m.log.Error(err, "Failed to delete registry cache secrets during runtime deletion")
+
+			return updateStatusAndRequeue()
 		}
 
 		if instanceHasFinalizer {

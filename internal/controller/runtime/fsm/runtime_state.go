@@ -19,3 +19,10 @@ func (s *systemState) saveRuntimeStatus() {
 	}
 	s.snapshot = *result
 }
+
+func exposeShootStatusInfo(s *systemState) {
+	if s.shoot != nil {
+		s.instance.Status.ShootLastOperation = s.shoot.Status.LastOperation
+		s.instance.Status.ShootLastErrors = s.shoot.Status.LastErrors
+	}
+}

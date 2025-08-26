@@ -62,11 +62,12 @@ const (
 type RuntimeConditionType string
 
 const (
-	ConditionTypeRuntimeProvisioned     RuntimeConditionType = "Provisioned"
-	ConditionTypeRuntimeKubeconfigReady RuntimeConditionType = "KubeconfigReady"
-	ConditionTypeOidcAndCMsConfigured   RuntimeConditionType = "OidcAndConfigMapConfigured"
-	ConditionTypeRuntimeConfigured      RuntimeConditionType = "Configured"
-	ConditionTypeRuntimeDeprovisioned   RuntimeConditionType = "Deprovisioned"
+	ConditionTypeRuntimeProvisioned      RuntimeConditionType = "Provisioned"
+	ConditionTypeRuntimeKubeconfigReady  RuntimeConditionType = "KubeconfigReady"
+	ConditionTypeOidcAndCMsConfigured    RuntimeConditionType = "OidcAndConfigMapConfigured"
+	ConditionTypeRuntimeConfigured       RuntimeConditionType = "Configured"
+	ConditionTypeRuntimeDeprovisioned    RuntimeConditionType = "Deprovisioned"
+	ConditionTypeRegistryCacheConfigured RuntimeConditionType = "RegistryCacheConfigured"
 )
 
 type RuntimeConditionReason string
@@ -94,14 +95,17 @@ const (
 
 	ConditionReasonAuditLogError = RuntimeConditionReason("AuditLogErr")
 
-	ConditionReasonAdministratorsConfigured       = RuntimeConditionReason("AdministratorsConfigured")
-	ConditionReasonOidcAndCMsConfigured           = RuntimeConditionReason("OidcAndConfigMapsConfigured")
-	ConditionReasonOidcError                      = RuntimeConditionReason("OidcConfigurationErr")
-	ConditionReasonKymaSystemNSError              = RuntimeConditionReason("KymaSystemCreationErr")
-	ConditionReasonSeedNotFound                   = RuntimeConditionReason("SeedNotFound")
-	ConditionReasonRegistryCacheError             = RuntimeConditionReason("RegistryCacheConfigurationErr")
-	ConditionReasonSeedClusterPreProcessingError  = RuntimeConditionReason("SeedClusterPreProcessingErr")
-	ConditionReasonSeedClusterPostProcessingError = RuntimeConditionReason("SeedClusterPostProcessingErr")
+	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
+	ConditionReasonOidcAndCMsConfigured     = RuntimeConditionReason("OidcAndConfigMapsConfigured")
+	ConditionReasonOidcError                = RuntimeConditionReason("OidcConfigurationErr")
+	ConditionReasonKymaSystemNSError        = RuntimeConditionReason("KymaSystemNSError")
+	ConditionReasonSeedNotFound             = RuntimeConditionReason("SeedNotFound")
+
+	ConditionReasonRegistryCacheConfigured = RuntimeConditionReason("RegistryCacheConfigured")
+
+	ConditionReasonRegistryCacheError                            = RuntimeConditionReason("RegistryCacheError")
+	ConditionReasonRegistryCacheGardenClusterConfigurationFailed = RuntimeConditionReason("RegistryCacheGardenClusterConfigurationFailed")
+	ConditionReasonRegistryCacheGardenClusterCleanupFailed       = RuntimeConditionReason("RegistryCacheGardenClusterCleanupFailed")
 )
 
 //+kubebuilder:object:root=true
@@ -155,6 +159,13 @@ type RuntimeStatus struct {
 
 	// ProvisioningCompleted indicates if the initial provisioning of the cluster is completed
 	ProvisioningCompleted bool `json:"provisioningCompleted,omitempty"`
+
+	// LastOperation indicates the type and the state of the last operation of Gardener's `shoot`, along with a description
+	// message and a progress indicator.
+	ShootLastOperation *gardener.LastOperation `json:"shootLastOperation,omitempty" protobuf:"bytes,5,opt,name=lastOperation"`
+
+	// LastError indicates the last occurred error for an operation on a Gardener's `shoot` resource.
+	ShootLastErrors    []gardener.LastError    `json:"shootLastErrors,omitempty" protobuf:"bytes,6,rep,name=lastErrors"`
 }
 
 type RuntimeShoot struct {
