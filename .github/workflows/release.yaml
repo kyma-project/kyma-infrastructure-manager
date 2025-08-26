@@ -46,6 +46,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./crd-docs.md
+          asset_path: ./config/crd/crd-docs.md
           asset_name: crd-docs.md
           asset_content_type: text/markdown
