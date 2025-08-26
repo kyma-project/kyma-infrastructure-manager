@@ -25,6 +25,7 @@ jobs:
       - name: Generate CRD documentation
         run: |
           $HOME/go/bin/crd-ref-docs \
+            --renderer=markdown \
             --source-path=./api \
             --config=./config/crd/crd-doc-config.yaml \
             --output-path=./config/crd/crd-docs.md
