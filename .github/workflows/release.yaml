@@ -1,0 +1,39 @@
+name: Generate and Release CRD Docs
+
+on:
+  push:
+    tags:
+      - '*'  # Trigger on tag pushes
+
+jobs:
+  generate-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Needed for creating releases and uploading assets
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Install crd-ref-docs tool
+        run: go install github.com/elastic/crd-ref-docs@latest
+
+      - name: Generate CRD documentation
+        run: |
+          $HOME/go/bin/crd-ref-docs \
+            --renderer=markdown \
+            --source-path=./api \
+            --config=./config/crd/crd-doc-config.yaml \
+            --output-path=./config/crd/crd-docs.md
+
+      - name: Create Release and Generate Notes
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./config/crd/crd-docs.md
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
