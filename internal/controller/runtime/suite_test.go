@@ -251,8 +251,8 @@ func fixShootsSequenceForProvisioning(shoot *gardener_api.Shoot) []*gardener_api
 
 	pendingShoot.Status = gardener_api.ShootStatus{
 		LastOperation: &gardener_api.LastOperation{
-			Type:  gardener_api.LastOperationTypeCreate,
-			State: gardener_api.LastOperationStatePending,
+			Type:           gardener_api.LastOperationTypeCreate,
+			State:          gardener_api.LastOperationStatePending,
 			LastUpdateTime: metav1.Now(),
 		},
 	}
@@ -315,8 +315,8 @@ func fixShootsSequenceForUpdate(shoot *gardener_api.Shoot) []*gardener_api.Shoot
 
 	existingShoot.Status = gardener_api.ShootStatus{
 		LastOperation: &gardener_api.LastOperation{
-			Type:  gardener_api.LastOperationTypeReconcile,
-			State: gardener_api.LastOperationStateSucceeded,
+			Type:           gardener_api.LastOperationTypeReconcile,
+			State:          gardener_api.LastOperationStateSucceeded,
 			LastUpdateTime: metav1.Now(),
 		},
 	}
@@ -375,8 +375,8 @@ func fixShootsSequenceForDelete(shoot *gardener_api.Shoot) []*gardener_api.Shoot
 
 	currentShoot.Status = gardener_api.ShootStatus{
 		LastOperation: &gardener_api.LastOperation{
-			Type:  gardener_api.LastOperationTypeCreate,
-			State: gardener_api.LastOperationStateSucceeded,
+			Type:           gardener_api.LastOperationTypeCreate,
+			State:          gardener_api.LastOperationStateSucceeded,
 			LastUpdateTime: metav1.Now(),
 		},
 	}
