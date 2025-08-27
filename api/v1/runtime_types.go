@@ -165,7 +165,7 @@ type RuntimeStatus struct {
 	ShootLastOperation *gardener.LastOperation `json:"shootLastOperation,omitempty" protobuf:"bytes,5,opt,name=lastOperation"`
 
 	// LastError indicates the last occurred error for an operation on a Gardener's `shoot` resource.
-	ShootLastErrors    []gardener.LastError    `json:"shootLastErrors,omitempty" protobuf:"bytes,6,rep,name=lastErrors"`
+	ShootLastErrors []gardener.LastError `json:"shootLastErrors,omitempty" protobuf:"bytes,6,rep,name=lastErrors"`
 }
 
 type RuntimeShoot struct {

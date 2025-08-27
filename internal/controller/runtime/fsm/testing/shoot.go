@@ -249,7 +249,7 @@ func TestShootForPatch() *gardener.Shoot {
 		},
 		Status: gardener.ShootStatus{
 			LastOperation: &gardener.LastOperation{
-				State: gardener.LastOperationStateSucceeded,
+				State:          gardener.LastOperationStateSucceeded,
 				LastUpdateTime: metav1.Date(2025, time.August, 22, 10, 54, 50, 0, time.UTC),
 			},
 		},
@@ -279,7 +279,7 @@ func TestShootForUpdate() *gardener.Shoot {
 		},
 		Status: gardener.ShootStatus{
 			LastOperation: &gardener.LastOperation{
-				State: gardener.LastOperationStateSucceeded,
+				State:          gardener.LastOperationStateSucceeded,
 				LastUpdateTime: metav1.Date(2025, time.August, 22, 10, 54, 50, 0, time.UTC),
 			},
 		},
