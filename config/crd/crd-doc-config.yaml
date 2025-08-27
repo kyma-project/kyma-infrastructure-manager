@@ -1,8 +1,7 @@
 processor:
   ignoreTypes:
-    # - "List$"
-    # - "Status$"
+    # whole types can be ignored, please see https://github.com/elastic/crd-ref-docs?tab=readme-ov-file#configuration 
   ignoreFields:
-    # - "status$"
+    # concrete fields can be ignored, please see https://github.com/elastic/crd-ref-docs?tab=readme-ov-file#configuration 
 render:
   kubernetesVersion: 1.32
