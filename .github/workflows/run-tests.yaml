@@ -65,11 +65,34 @@ jobs:
       with:
         name: "code-coverage"
         path: "coverage.txt"
+    - name: filter out coverage
+      run: |
+        #!/bin/bash
+
+        filters=(
+            "mock"
+            "test"
+            "github.com/kyma-project/infrastructure-manager/api"
+        )
+
+        input="./coverage.txt"
+        output="./coverage-filtered.txt"
+
+        cp "$input" "$output"
+
+        for i in "${filters[@]}"; do
+          echo "filtering $i"
+          cp "$output" "$output~"
+          grep --invert-match $i "$output~" > "$output"
+          wc -l $output
+        done
+        rm "$output~"
+
     - name: coveralls github action
       uses: coverallsapp/github-action@v2.3.6
       with:
         format: golang
-        file: ./coverage.txt
+        file: ./coverage-filtered.txt
         fail-on-error: false
 
   code_coverage:
