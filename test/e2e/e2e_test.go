@@ -2,11 +2,12 @@ package e2e
 
 import (
 	"fmt"
+	"os/exec"
+	"time"
+
 	"github.com/kyma-project/infrastructure-manager/test/e2e/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"os/exec"
-	"time"
 )
 
 const (
@@ -43,6 +44,14 @@ var _ = Describe("Manager", Ordered, func() {
 				_, _ = fmt.Fprintf(GinkgoWriter, "Controller logs:\n %s", controllerLogs)
 			} else {
 				_, _ = fmt.Fprintf(GinkgoWriter, "Failed to get Controller logs: %s", err)
+				_, _ = fmt.Fprint(GinkgoWriter, "Describing the controller pod for more information")
+				cmd = exec.Command("kubectl", "describe", "pod", controllerPodName, "-n", namespace)
+				controllerDescribe, err := utils.Run(cmd)
+				if err != nil {
+					_, _ = fmt.Fprintf(GinkgoWriter, "Failed to describe the controller pod: %s", err)
+				} else {
+					_, _ = fmt.Fprintf(GinkgoWriter, "Controller pod description:\n %s", controllerDescribe)
+				}
 			}
 		}
 	})
