@@ -2,11 +2,12 @@ package e2e
 
 import (
 	"fmt"
-	"github.com/kyma-project/infrastructure-manager/test/e2e/utils"
 	"os"
 	"os/exec"
 	"testing"
 	"time"
+
+	"github.com/kyma-project/infrastructure-manager/test/e2e/utils"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -55,7 +56,7 @@ var _ = BeforeSuite(func() {
 	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to create K3d cluster")
 
 	By("building the Kyma Infrastructure Manager image")
-	cmd := exec.Command("make", "docker-build", fmt.Sprintf("IMG=%s", projectImage))
+	cmd := exec.Command("make", "docker-build-ci", fmt.Sprintf("IMG=%s", projectImage))
 	_, err = utils.Run(cmd)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to build the Kyma Infrastructure Manager image")
 
