@@ -93,8 +93,6 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred(), "Failed to create namespace")
 
 	By("installing ConfigMaps and Secrets for KIM controller")
-	cmd = exec.Command("ls -la", setupResourcesDir)
-	_, err = utils.Run(cmd)
 	cmd = exec.Command("kubectl", "apply", "-f", setupResourcesDir)
 	_, err = utils.Run(cmd)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to apply setup resources")
