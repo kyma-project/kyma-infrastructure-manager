@@ -15,9 +15,9 @@ const (
 	testInterval       = 5 * time.Second
 	createManifestPath = "test/e2e/resources/runtimes/test-simple-provision.yaml"
 	updateManifestPath = "test/e2e/resources/runtimes/test-simple-update.yaml"
-	// if changed you need also to update the test RuntimeCR files
-	runtimeName = "simple-prov"
 )
+
+var runtimeName string
 
 var _ = Describe("Manager", Ordered, func() {
 	var controllerPodName string
@@ -32,6 +32,10 @@ var _ = Describe("Manager", Ordered, func() {
 		cmd = exec.Command("make", "deploy", fmt.Sprintf("IMG=%s", projectImage))
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to deploy the controller-manager")
+
+		By("get the Runtime name from the manifest")
+		runtimeName, err = utils.FetchRuntimeCRName(createManifestPath)
+		Expect(err).NotTo(HaveOccurred(), "Failed to get the Runtime name from the manifest")
 	})
 
 	AfterEach(func() {
