@@ -179,5 +179,5 @@ $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 .PHONY: test-e2e
-test-e2e-local:
+test-e2e:
 	go test ./test/e2e -v -timeout 30m
