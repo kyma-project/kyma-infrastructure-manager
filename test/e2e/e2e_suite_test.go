@@ -56,7 +56,7 @@ var _ = BeforeSuite(func() {
 	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to create K3d cluster")
 
 	By("building the Kyma Infrastructure Manager image")
-	cmd := exec.Command("make", "docker-build-ci", fmt.Sprintf("IMG=%s", projectImage))
+	cmd := exec.Command("make", "docker-build-e2e", fmt.Sprintf("IMG=%s", projectImage))
 	_, err = utils.Run(cmd)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to build the Kyma Infrastructure Manager image")
 
