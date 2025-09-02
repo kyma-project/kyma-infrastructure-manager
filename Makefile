@@ -64,7 +64,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 docker-build: test ## Build docker image with the manager.
 	$(CONTAINER_TOOL) build -t ${IMG} .
 
-.PHONY: docker-build-ci
+.PHONY: docker-build-e2e
 docker-build-ci:
 	$(CONTAINER_TOOL) build -t ${IMG} .
 
