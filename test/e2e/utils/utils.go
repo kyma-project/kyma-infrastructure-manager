@@ -163,6 +163,18 @@ func CreateK3DCluster(name string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create k3d cluster %q: %w", name, err)
 	}
+
+	cmd = exec.Command("kubectl", "config", "current-context")
+	currentContext, err := Run(cmd)
+	if err != nil {
+		return fmt.Errorf("failed to get current kubectl context: %w", err)
+	}
+
+	err = checkKubeContext(currentContext, name)
+	if err != nil {
+		return fmt.Errorf("fatal: kubecontext missmatch: %w", err)
+	}
+
 	return nil
 }
 
@@ -173,4 +185,16 @@ func FetchRuntimeCRName(manifestPath string) (string, error) {
 		return "", fmt.Errorf("failed to fetch RuntimeCR name from manifest %q: %w", manifestPath, err)
 	}
 	return strings.TrimSpace(output), nil
+}
+
+func checkKubeContext(currentContext, clusterName string) error {
+	expectedContextName := "k3d-" + clusterName
+	currentContext = strings.TrimSpace(currentContext)
+
+	if currentContext != expectedContextName {
+		return fmt.Errorf("current kubectl context is %q, but expected %q. "+
+			"Please switch the context or re-create the cluster with the expected name",
+			currentContext, expectedContextName)
+	}
+	return nil
 }

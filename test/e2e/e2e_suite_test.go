@@ -109,15 +109,7 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	By("cleaning up the curl pod for metrics")
-	cmd := exec.Command("kubectl", "delete", "pod", "curl-metrics", "-n", namespace)
-	_, _ = utils.Run(cmd)
-
-	By("removing manager namespace")
-	cmd = exec.Command("kubectl", "delete", "ns", namespace)
-	_, _ = utils.Run(cmd)
-
 	By("removing the K3d cluster")
-	cmd = exec.Command("k3d", "cluster", "delete", k3dClusterName)
+	cmd := exec.Command("k3d", "cluster", "delete", k3dClusterName)
 	_, _ = utils.Run(cmd)
 })
