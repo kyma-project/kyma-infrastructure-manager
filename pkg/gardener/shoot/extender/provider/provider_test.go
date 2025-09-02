@@ -3,9 +3,9 @@ package provider
 import (
 	awsinfra "github.com/gardener/gardener-extension-provider-aws/pkg/apis/aws/v1alpha1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
-
 	"testing"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -636,6 +636,21 @@ func fixMultipleWorkers(workers []workerConfig) []gardener.Worker {
 			Minimum: w.hypescalerMin,
 			Maximum: w.hyperscalerMax,
 			Zones:   w.Zones,
+			Labels: map[string]string{
+				"worker-label1": "label-value-1",
+				"worker-label2": "label-value-2",
+			},
+			Annotations: map[string]string{
+				"worker-annotation1": "annotation-value-1",
+				"worker-annotation2": "annotation-value-2",
+			},
+			Taints: []corev1.Taint{
+				{
+					Key:    "taint-key",
+					Value:  "taint-value",
+					Effect: "taint-effect",
+				},
+			},
 		})
 	}
 	return result
@@ -724,6 +739,9 @@ func assertProviderMultipleWorkers(t *testing.T, runtimeShoot imv1.RuntimeShoot,
 		assert.Equal(t, expected.Minimum, worker.Minimum)
 		assert.Equal(t, expected.Maximum, worker.Maximum)
 		assert.Equal(t, expected.Machine.Type, worker.Machine.Type)
+		assert.Equal(t, expected.Labels, worker.Labels)
+		assert.Equal(t, expected.Annotations, worker.Annotations)
+		assert.Equal(t, expected.Taints, worker.Taints)
 
 		if expected.MaxSurge != nil {
 			assert.NotNil(t, worker.MaxSurge)
