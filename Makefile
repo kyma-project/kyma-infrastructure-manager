@@ -65,7 +65,7 @@ docker-build: test ## Build docker image with the manager.
 	$(CONTAINER_TOOL) build -t ${IMG} .
 
 .PHONY: docker-build-e2e
-docker-build-ci:
+docker-build-e2e:
 	$(CONTAINER_TOOL) build -t ${IMG} .
 
 .PHONY: docker-push
