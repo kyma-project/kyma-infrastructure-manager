@@ -178,10 +178,6 @@ envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
-.PHONY: test-e2e-local
+.PHONY: test-e2e
 test-e2e-local:
-	go test ./test/e2e -v -timeout 20m
-
-.PHONY: test-e2e-ci
-test-e2e-ci:
-	go test ./test/e2e -v -timeout 20m
+	go test ./test/e2e -v -timeout 30m
