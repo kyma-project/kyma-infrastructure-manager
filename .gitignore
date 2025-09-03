@@ -10,6 +10,9 @@
 bin/*
 Dockerfile.cross
 
+# Test conifg
+test/e2e/resources/*
+
 # Test binary, build with `go test -c`
 *.test
 
