@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	testTimeout        = 30 * time.Minute
-	testInterval       = 5 * time.Second
+	testTimeout        = 10 * time.Minute
+	testInterval       = 20 * time.Second
 	createManifestPath = "test/e2e/resources/runtimes/test-simple-provision.yaml"
 	updateManifestPath = "test/e2e/resources/runtimes/test-simple-update.yaml"
 )
