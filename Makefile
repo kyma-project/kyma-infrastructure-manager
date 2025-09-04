@@ -180,4 +180,8 @@ $(ENVTEST): $(LOCALBIN)
 
 .PHONY: test-e2e
 test-e2e:
+	@if [ -z "$(KUBECONFIG_K3D)" ]; then \
+		  echo "KUBECONFIG_K3D required variable is not provided. Aborting."; \
+		  exit 1; \
+	fi
 	go test ./test/e2e -v -timeout 30m

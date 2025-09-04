@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,7 +17,6 @@ import (
 const (
 	setupResourcesDir = "test/e2e/resources/setup"
 	namespace         = "kcp-system"
-	k3dClusterName    = "kim-e2e-k3d-cluster"
 )
 
 var (
@@ -30,7 +30,8 @@ var (
 
 	// projectImage is the name of the image which will be build and loaded
 	// with the code source changes to be tested.
-	projectImage = "kyma-infrastructure-manager:local"
+	projectImage   = "kyma-infrastructure-manager:local"
+	k3dClusterName = ""
 )
 
 // TestE2E runs the end-to-end (e2e) test suite for the project. These tests execute in an isolated,
@@ -51,12 +52,23 @@ func TestE2E(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	By("Creating a K3d cluster for e2e tests")
-	err := utils.CreateK3DCluster(k3dClusterName)
-	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to create K3d cluster")
+	By("Checking the cluster context")
+	k3dKubeconfig := os.Getenv("KUBECONFIG_K3D")
+	Expect(k3dKubeconfig).NotTo(BeEmpty())
+
+	err := os.Setenv("KUBECONFIG", k3dKubeconfig)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to set KUBECONFIG environment variable")
+
+	cmd := exec.Command("kubectl", "config", "current-context")
+	k3dClusterName, err = utils.Run(cmd)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to get current kubectl context")
+
+	k3dClusterName = strings.TrimSpace(k3dClusterName)
+	k3dClusterName = strings.TrimLeft(k3dClusterName, "k3d-")
+	_, _ = fmt.Fprintf(GinkgoWriter, "Current kubectl context is %s\n", k3dClusterName)
 
 	By("building the Kyma Infrastructure Manager image")
-	cmd := exec.Command("make", "docker-build-e2e", fmt.Sprintf("IMG=%s", projectImage))
+	cmd = exec.Command("make", "docker-build-e2e", fmt.Sprintf("IMG=%s", projectImage))
 	_, err = utils.Run(cmd)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to build the Kyma Infrastructure Manager image")
 
@@ -106,10 +118,4 @@ var _ = BeforeSuite(func() {
 	cmd = exec.Command("make", "manifests")
 	_, err = utils.Run(cmd)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to run make manifests")
-})
-
-var _ = AfterSuite(func() {
-	By("removing the K3d cluster")
-	cmd := exec.Command("k3d", "cluster", "delete", k3dClusterName)
-	_, _ = utils.Run(cmd)
 })
