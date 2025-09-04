@@ -64,7 +64,7 @@ var _ = BeforeSuite(func() {
 	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to get current kubectl context")
 
 	k3dClusterName = strings.TrimSpace(k3dClusterName)
-	k3dClusterName = strings.TrimLeft(k3dClusterName, "k3d-")
+	k3dClusterName = strings.TrimPrefix(k3dClusterName, "k3d-")
 	_, _ = fmt.Fprintf(GinkgoWriter, "Current kubectl context is %s\n", k3dClusterName)
 
 	By("building the Kyma Infrastructure Manager image")
