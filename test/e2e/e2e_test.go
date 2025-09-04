@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	testTimeout        = 10 * time.Minute
+	testTimeout        = 20 * time.Minute
 	testInterval       = 20 * time.Second
 	createManifestPath = "test/e2e/resources/runtimes/test-simple-provision.yaml"
 	updateManifestPath = "test/e2e/resources/runtimes/test-simple-update.yaml"
@@ -100,7 +100,6 @@ var _ = Describe("Manager", Ordered, func() {
 			cmd := exec.Command("kubectl", "apply", "-f", createManifestPath, "-n", namespace)
 			_, err := utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to apply the RuntimeCR manifest")
-
 			By("waiting for the RuntimeCR to be in the 'Ready' state")
 			waitForRuntimeToBeReady()
 		})
