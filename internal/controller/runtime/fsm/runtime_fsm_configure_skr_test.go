@@ -457,7 +457,7 @@ func TestSkrConfigState(t *testing.T) {
 			{
 				Type:    string(imv1.ConditionTypeOidcAndCMsConfigured),
 				Reason:  string(imv1.ConditionReasonKymaSystemNSError),
-				Status:  "False",
+				Status:  "Unknown",
 				Message: "Failed to create kyma-system namespace. Scheduling for retry",
 			},
 		}
