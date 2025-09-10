@@ -192,6 +192,9 @@ func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, existingInfrastru
 					return aws.GetInfrastructureConfigForPatch(workersCidr, zones, existingInfrastructureConfig)
 				}, aws.GetControlPlaneConfig)
 			}
+			if runtimeShoot.Networking.DualStack != nil && *runtimeShoot.Networking.DualStack == true {
+				return getConfigForProvider(runtimeShoot, aws.GetInfrastructureConfigDualStack, aws.GetControlPlaneConfigDualStack)
+			}
 			return getConfigForProvider(runtimeShoot, aws.GetInfrastructureConfig, aws.GetControlPlaneConfig)
 		}
 	case hyperscaler.TypeAzure:
