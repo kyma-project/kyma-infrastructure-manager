@@ -157,11 +157,11 @@ func GetProjectDir() (string, error) {
 	return wd, nil
 }
 
-func CreateK3DCluster(name string) error {
-	cmd := exec.Command("k3d", "cluster", "create", name)
-	_, err := Run(cmd)
+func FetchRuntimeCRName(manifestPath string) (string, error) {
+	cmd := exec.Command("yq", "e", ".metadata.name", manifestPath)
+	output, err := Run(cmd)
 	if err != nil {
-		return fmt.Errorf("failed to create k3d cluster %q: %w", name, err)
+		return "", fmt.Errorf("failed to fetch RuntimeCR name from manifest %q: %w", manifestPath, err)
 	}
-	return nil
+	return strings.TrimSpace(output), nil
 }
