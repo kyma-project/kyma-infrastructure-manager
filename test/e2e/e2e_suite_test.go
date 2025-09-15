@@ -67,6 +67,12 @@ var _ = BeforeSuite(func() {
 	k3dClusterName = strings.TrimPrefix(k3dClusterName, "k3d-")
 	_, _ = fmt.Fprintf(GinkgoWriter, "Current kubectl context is %s\n", k3dClusterName)
 
+	By("printing Kubernetes version")
+	cmd = exec.Command("kubectl", "version")
+	version, err := utils.Run(cmd)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to get Kubernetes version")
+	_, _ = fmt.Fprintf(GinkgoWriter, "Kubernetes version: %s\n", version)
+
 	By("building the Kyma Infrastructure Manager image")
 	cmd = exec.Command("make", "docker-build-e2e", fmt.Sprintf("IMG=%s", projectImage))
 	_, err = utils.Run(cmd)
