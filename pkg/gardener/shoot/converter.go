@@ -7,6 +7,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/restrictions"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -97,6 +98,8 @@ func NewConverterCreate(opts CreateOpts) Converter {
 				opts.AuditLogData))
 	}
 
+	extendersForCreate = append(extendersForCreate, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration, opts.Kubernetes.KubeApiServer.ExtendTokenExpiration))
+
 	return newConverter(opts.ConverterConfig, extendersForCreate...)
 }
 
@@ -124,6 +127,8 @@ func NewConverterPatch(opts PatchOpts) Converter {
 		extendersForPatch = append(extendersForPatch,
 			auditlogs.NewAuditlogExtenderForPatch(opts.AuditLog.PolicyConfigMapName))
 	}
+
+	extendersForPatch = append(extendersForPatch, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration, opts.Kubernetes.KubeApiServer.ExtendTokenExpiration))
 
 	return newConverter(opts.ConverterConfig, extendersForPatch...)
 }
