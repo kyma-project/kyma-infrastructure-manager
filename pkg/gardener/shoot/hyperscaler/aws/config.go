@@ -2,6 +2,7 @@ package aws
 
 import (
 	"encoding/json"
+
 	"github.com/gardener/gardener-extension-provider-aws/pkg/apis/aws/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -19,6 +20,10 @@ func GetInfrastructureConfig(workersCidr string, zones []string) ([]byte, error)
 		return nil, err
 	}
 
+	config.DualStack = &v1alpha1.DualStack{
+		Enabled: true,
+	}
+
 	return json.Marshal(config)
 }
 
@@ -32,7 +37,11 @@ func GetInfrastructureConfigForPatch(workersCidr string, zones []string, existin
 }
 
 func GetControlPlaneConfig(_ []string) ([]byte, error) {
-	return json.Marshal(NewControlPlaneConfig())
+	config := NewControlPlaneConfig()
+	config.LoadBalancerController = &v1alpha1.LoadBalancerControllerConfig{
+		Enabled: true,
+	}
+	return json.Marshal(config)
 }
 
 func GetWorkerConfig() ([]byte, error) {
@@ -121,28 +130,4 @@ func NewWorkerConfig() *v1alpha1.WorkerConfig {
 			HTTPPutResponseHopLimit: &hopLimit,
 		},
 	}
-}
-
-func GetInfrastructureConfigDualStack(cidr string, zones []string) ([]byte, error) {
-	config, err := NewInfrastructureConfig(cidr, zones)
-	if err != nil {
-		return nil, err
-	}
-	// extend the infrastructure config with dual stack support
-	config.DualStack = &v1alpha1.DualStack{
-		Enabled: true,
-	}
-
-	return json.Marshal(config)
-}
-
-func GetControlPlaneConfigDualStack(_ []string) ([]byte, error) {
-	config := NewControlPlaneConfig()
-
-	// extend the control plane config with dual stack support
-	config.LoadBalancerController = &v1alpha1.LoadBalancerControllerConfig{
-		Enabled: true,
-	}
-
-	return json.Marshal(config)
 }
