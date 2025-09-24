@@ -1,9 +1,10 @@
 package provider
 
 import (
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	"slices"
 	"sort"
+
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -191,9 +192,6 @@ func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, existingInfrastru
 				return getConfigForProvider(runtimeShoot, func(workersCidr string, zones []string) ([]byte, error) {
 					return aws.GetInfrastructureConfigForPatch(workersCidr, zones, existingInfrastructureConfig)
 				}, aws.GetControlPlaneConfig)
-			}
-			if runtimeShoot.Networking.DualStack != nil && *runtimeShoot.Networking.DualStack == true {
-				return getConfigForProvider(runtimeShoot, aws.GetInfrastructureConfigDualStack, aws.GetControlPlaneConfigDualStack)
 			}
 			return getConfigForProvider(runtimeShoot, aws.GetInfrastructureConfig, aws.GetControlPlaneConfig)
 		}
