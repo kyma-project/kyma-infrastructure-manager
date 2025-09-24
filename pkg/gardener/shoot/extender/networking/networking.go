@@ -8,21 +8,25 @@ import (
 
 func ExtendWithNetworking() func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		if isDualStackIPsEnabled(runtime.Spec.Shoot.Networking.DualStack, runtime.Spec.Shoot.Provider.Type) {
+		if canEnableDualStackIPs(runtime.Spec.Shoot.Provider.Type) {
 			extendWithDualIPs(shoot)
 		}
+		// if other provider is used, Gardener by default configures IPv4 only, so no action is needed
 		return nil
 	}
 }
 
-func isDualStackIPsEnabled(dualStack *bool, providerType string) bool {
-	if dualStack == nil {
-		return false
-	}
-	return *dualStack == true && (providerType == hyperscaler2.TypeGCP || providerType == hyperscaler2.TypeAWS)
+func canEnableDualStackIPs(providerType string) bool {
+	return providerType == hyperscaler2.TypeGCP || providerType == hyperscaler2.TypeAWS
 }
 
 func extendWithDualIPs(shoot *gardener.Shoot) {
-	shoot.Spec.Networking.IPFamilies = shoot.Spec.Networking.IPFamilies[:0] // reset existing IPFamilies
-	shoot.Spec.Networking.IPFamilies = append(shoot.Spec.Networking.IPFamilies, gardener.IPFamilyIPv4, gardener.IPFamilyIPv6)
+
+	if shoot.Spec.Networking == nil {
+		shoot.Spec.Networking = &gardener.Networking{
+			IPFamilies: []gardener.IPFamily{gardener.IPFamilyIPv4, gardener.IPFamilyIPv6},
+		}
+	} else {
+		shoot.Spec.Networking.IPFamilies = []gardener.IPFamily{gardener.IPFamilyIPv4, gardener.IPFamilyIPv6}
+	}
 }
