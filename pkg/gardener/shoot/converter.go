@@ -75,6 +75,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 
 	extendersForCreate = append(extendersForCreate,
 		provider.NewProviderExtenderForCreateOperation(
+			opts.Networking.EnableDualStackIP,
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
@@ -100,7 +101,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 
 	extendersForCreate = append(extendersForCreate, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration))
 
-	extendersForCreate = append(extendersForCreate, networking.ExtendWithNetworking())
+	extendersForCreate = append(extendersForCreate, networking.ExtendWithNetworking(opts.Networking.EnableDualStackIP))
 
 	return newConverter(opts.ConverterConfig, extendersForCreate...)
 }
@@ -129,8 +130,6 @@ func NewConverterPatch(opts PatchOpts) Converter {
 		extendersForPatch = append(extendersForPatch,
 			auditlogs.NewAuditlogExtenderForPatch(opts.AuditLog.PolicyConfigMapName))
 	}
-
-	extendersForPatch = append(extendersForPatch, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration))
 
 	return newConverter(opts.ConverterConfig, extendersForPatch...)
 }

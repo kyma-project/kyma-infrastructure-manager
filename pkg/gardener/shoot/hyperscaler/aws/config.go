@@ -20,6 +20,15 @@ func GetInfrastructureConfig(workersCidr string, zones []string) ([]byte, error)
 		return nil, err
 	}
 
+	return json.Marshal(config)
+}
+
+func GetInfrastructureConfigForDualStack(workersCidr string, zones []string) ([]byte, error) {
+	config, err := NewInfrastructureConfig(workersCidr, zones)
+	if err != nil {
+		return nil, err
+	}
+
 	config.DualStack = &v1alpha1.DualStack{
 		Enabled: true,
 	}
@@ -37,6 +46,10 @@ func GetInfrastructureConfigForPatch(workersCidr string, zones []string, existin
 }
 
 func GetControlPlaneConfig(_ []string) ([]byte, error) {
+	return json.Marshal(NewControlPlaneConfig())
+}
+
+func GetControlPlaneConfigForDualStack(_ []string) ([]byte, error) {
 	config := NewControlPlaneConfig()
 	config.LoadBalancerController = &v1alpha1.LoadBalancerControllerConfig{
 		Enabled: true,
