@@ -75,6 +75,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 
 	extendersForCreate = append(extendersForCreate,
 		provider.NewProviderExtenderForCreateOperation(
+			opts.Networking.EnableDualStackIP,
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
@@ -98,7 +99,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 				opts.AuditLogData))
 	}
 
-	extendersForCreate = append(extendersForCreate, networking.ExtendWithNetworking())
+	extendersForCreate = append(extendersForCreate, networking.ExtendWithNetworking(opts.Networking.EnableDualStackIP))
 
 	return newConverter(opts.ConverterConfig, extendersForCreate...)
 }

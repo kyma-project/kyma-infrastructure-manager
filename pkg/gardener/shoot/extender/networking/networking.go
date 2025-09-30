@@ -6,9 +6,9 @@ import (
 	hyperscaler2 "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 )
 
-func ExtendWithNetworking() func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func ExtendWithNetworking(enableDualStackIP bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		if canEnableDualStackIPs(runtime.Spec.Shoot.Provider.Type) {
+		if canEnableDualStackIPs(runtime.Spec.Shoot.Provider.Type) && enableDualStackIP {
 			extendWithDualIPs(shoot)
 		}
 		// if other provider is used, Gardener by default configures IPv4 only, so no action is needed
@@ -21,7 +21,6 @@ func canEnableDualStackIPs(providerType string) bool {
 }
 
 func extendWithDualIPs(shoot *gardener.Shoot) {
-
 	if shoot.Spec.Networking == nil {
 		shoot.Spec.Networking = &gardener.Networking{
 			IPFamilies: []gardener.IPFamily{gardener.IPFamilyIPv4, gardener.IPFamilyIPv6},

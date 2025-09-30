@@ -9,6 +9,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 )
 
 var expectedIPFamilies = []gardener.IPFamily{gardener.IPFamilyIPv4, gardener.IPFamilyIPv6}
@@ -20,7 +21,7 @@ func TestExtendWithNetworking(t *testing.T) {
 		shoot := testutils.FixEmptyGardenerShoot("test-shoot", "kcp-dev")
 
 		// when
-		networkExtender := ExtendWithNetworking()
+		networkExtender := ExtendWithNetworking(true)
 		err := networkExtender(runtime, &shoot)
 
 		// then
@@ -34,7 +35,7 @@ func TestExtendWithNetworking(t *testing.T) {
 		shoot := testutils.FixEmptyGardenerShoot("test-shoot", "kcp-dev")
 
 		// when
-		networkExtender := ExtendWithNetworking()
+		networkExtender := ExtendWithNetworking(true)
 		err := networkExtender(runtime, &shoot)
 
 		// then
@@ -49,12 +50,44 @@ func TestExtendWithNetworking(t *testing.T) {
 		shoot.Spec.Networking = &gardener.Networking{}
 
 		// when
-		networkExtender := ExtendWithNetworking()
+		networkExtender := ExtendWithNetworking(true)
 		err := networkExtender(runtime, &shoot)
 
 		// then
 		require.NoError(t, err)
 		assert.Nil(t, shoot.Spec.Networking.IPFamilies)
+	})
+
+	t.Run("Should do not configure an DualStackIP shoot if the IPv6 feature-flag is set to false", func(t *testing.T) {
+		// given
+		runtime := prepareRuntimeStub(hyperscaler.TypeAWS)
+		shoot := testutils.FixEmptyGardenerShoot("test-shoot", "kcp-dev")
+		shoot.Spec.Networking = &gardener.Networking{}
+
+		// when
+		networkExtender := ExtendWithNetworking(false)
+		err := networkExtender(runtime, &shoot)
+
+		// then
+		require.NoError(t, err)
+		assert.Nil(t, shoot.Spec.Networking.IPFamilies)
+	})
+
+	t.Run("Should append DualStackIP configuration to existing networking config", func(t *testing.T) {
+		// given
+		runtime := prepareRuntimeStub(hyperscaler.TypeAWS)
+		shoot := testutils.FixEmptyGardenerShoot("test-shoot", "kcp-dev")
+		shoot.Spec.Networking = &gardener.Networking{
+			Type: ptr.To("test-type"),
+		}
+
+		// when
+		networkExtender := ExtendWithNetworking(true)
+		err := networkExtender(runtime, &shoot)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, expectedIPFamilies, shoot.Spec.Networking.IPFamilies)
 	})
 }
 
