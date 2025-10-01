@@ -4,8 +4,8 @@ go 1.25.1
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/gardener/gardener v1.125.0
-	github.com/gardener/gardener-extension-provider-aws v1.63.0
+	github.com/gardener/gardener v1.127.1
+	github.com/gardener/gardener-extension-provider-aws v1.64.0
 	github.com/gardener/gardener-extension-provider-gcp v1.45.1
 	github.com/gardener/gardener-extension-provider-openstack v1.48.1
 	github.com/gardener/gardener-extension-registry-cache v0.17.1
