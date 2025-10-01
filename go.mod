@@ -1,6 +1,6 @@
 module github.com/kyma-project/infrastructure-manager
 
-go 1.24.7
+go 1.25.1
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
