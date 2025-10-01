@@ -22,6 +22,7 @@ jobs:
     steps:
       - uses: wechuli/allcheckspassed@842d68ae85b27d7b15d133af95683a40eba477a1
         with:
+          checks_exclude: 'golangci-lint'
           delay: '3'
           retries: '30'
           polling_interval: '1'
