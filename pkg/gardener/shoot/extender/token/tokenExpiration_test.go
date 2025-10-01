@@ -20,7 +20,7 @@ func TestNewExpirationTimeExtender(t *testing.T) {
 		}
 		extendTokenExpiration := ptr.To(true)
 
-		extender := NewExpirationTimeExtender(*maxTokenExpirationTime, *extendTokenExpiration)
+		extender := NewExpirationTimeExtender(*maxTokenExpirationTime, extendTokenExpiration)
 		shoot := testutils.FixEmptyGardenerShoot("test", "dev")
 
 		// when

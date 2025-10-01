@@ -78,7 +78,7 @@ type MachineImageConfig struct {
 }
 
 type KubeApiServer struct {
-	ExtendTokenExpiration bool            `json:"extendTokenExpiration" validate:"required"`
+	ExtendTokenExpiration *bool           `json:"extendTokenExpiration" validate:"required"`
 	MaxTokenExpiration    metav1.Duration `json:"maxTokenExpiration" validate:"required"`
 }
 

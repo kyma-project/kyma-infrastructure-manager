@@ -623,7 +623,7 @@ func Test_ConverterConfig_Load_OK(t *testing.T) {
 				},
 				KubeApiServer: config.KubeApiServer{
 					MaxTokenExpiration:    v1.Duration{Duration: 2592000 * time.Second},
-					ExtendTokenExpiration: true,
+					ExtendTokenExpiration: ptr.To(true),
 				},
 			},
 			DNS: config.DNSConfig{
