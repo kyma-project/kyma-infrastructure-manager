@@ -27,7 +27,9 @@ func TestNewExpirationTimeExtender(t *testing.T) {
 		err := extender(imv1.Runtime{}, &shoot)
 
 		// then
-		require.NoError(t, err)
+        require.NoError(t, err)
+		assert.Equal(t, *maxTokenExpirationTime, *shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration)
+		assert.Equal(t, *extendTokenExpiration, *shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.ExtendTokenExpiration)
 assert.Equal(t, maxTokenExpirationTime, *shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration)
 assert.Equal(t, *extendTokenExpiration, *shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.ExtendTokenExpiration)
 		assert.Equal(t, extendTokenExpiration, shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.ExtendTokenExpiration)
