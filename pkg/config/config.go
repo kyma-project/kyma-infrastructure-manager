@@ -77,6 +77,10 @@ type MachineImageConfig struct {
 
 type TolerationsConfig map[string][]gardener.Toleration
 
+type Networking struct {
+	EnableDualStackIP bool `json:"enableDualStackIP"`
+}
+
 type ConverterConfig struct {
 	Kubernetes        KubernetesConfig        `json:"kubernetes" validate:"required"`
 	DNS               DNSConfig               `json:"dns"`
@@ -86,6 +90,7 @@ type ConverterConfig struct {
 	AuditLog          AuditLogConfig          `json:"auditLogging" validate:"required"`
 	MaintenanceWindow MaintenanceWindowConfig `json:"maintenanceWindow"`
 	Tolerations       TolerationsConfig       `json:"tolerations"`
+	Networking        Networking              `json:"networking"`
 }
 
 // special case for own Gardener's DNS solution

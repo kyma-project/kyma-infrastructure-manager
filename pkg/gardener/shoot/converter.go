@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/networking"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/restrictions"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -74,6 +75,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 
 	extendersForCreate = append(extendersForCreate,
 		provider.NewProviderExtenderForCreateOperation(
+			opts.Networking.EnableDualStackIP,
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
@@ -96,6 +98,8 @@ func NewConverterCreate(opts CreateOpts) Converter {
 				opts.AuditLog.PolicyConfigMapName,
 				opts.AuditLogData))
 	}
+
+	extendersForCreate = append(extendersForCreate, networking.ExtendWithNetworking(opts.Networking.EnableDualStackIP))
 
 	return newConverter(opts.ConverterConfig, extendersForCreate...)
 }
