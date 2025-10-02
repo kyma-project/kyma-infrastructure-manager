@@ -5,6 +5,7 @@ import (
 	"io"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Config struct {
@@ -31,10 +32,11 @@ type DNSConfig struct {
 }
 
 type KubernetesConfig struct {
-	DefaultVersion                      string       `json:"defaultVersion" validate:"required"`
-	EnableKubernetesVersionAutoUpdate   bool         `json:"enableKubernetesVersionAutoUpdate"`
-	EnableMachineImageVersionAutoUpdate bool         `json:"enableMachineImageVersionVersionAutoUpdate"`
-	DefaultOperatorOidc                 OidcProvider `json:"defaultOperatorOidc" validate:"required"`
+	KubeApiServer                       KubeApiServer `json:"kubeApiServer" validate:"required"`
+	DefaultVersion                      string        `json:"defaultVersion" validate:"required"`
+	EnableKubernetesVersionAutoUpdate   bool          `json:"enableKubernetesVersionAutoUpdate"`
+	EnableMachineImageVersionAutoUpdate bool          `json:"enableMachineImageVersionVersionAutoUpdate"`
+	DefaultOperatorOidc                 OidcProvider  `json:"defaultOperatorOidc" validate:"required"`
 }
 
 type OidcProvider struct {
@@ -73,6 +75,11 @@ type GardenerConfig struct {
 type MachineImageConfig struct {
 	DefaultName    string `json:"defaultName" validate:"required"`
 	DefaultVersion string `json:"defaultVersion" validate:"required"`
+}
+
+type KubeApiServer struct {
+	ExtendTokenExpiration *bool           `json:"extendTokenExpiration" validate:"required"`
+	MaxTokenExpiration    metav1.Duration `json:"maxTokenExpiration" validate:"required"`
 }
 
 type TolerationsConfig map[string][]gardener.Toleration
