@@ -81,16 +81,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 			msgFailedToConfigureAuditlogs)
 	}
 
-	timeBoundaries, err := token.ValidateTokenExpirationTime(m.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
-	if err != nil {
-		m.log.Error(err, "Failed to convert token expiration time")
-		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(
-			&s.instance,
-			imv1.ConditionTypeRuntimeProvisioned,
-			imv1.ConditionReasonConversionError,
-			fmt.Sprintf("Token expiration time, invalid format %v", err))
-	}
+	timeBoundaries, _ := token.ValidateTokenExpirationTime(m.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
 	logTokenExpirationInfo(m.log, timeBoundaries)
 
 	shoot, err := convertCreate(&s.instance, gardener_shoot.CreateOpts{

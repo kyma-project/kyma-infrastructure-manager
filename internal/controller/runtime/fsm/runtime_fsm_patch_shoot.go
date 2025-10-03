@@ -62,16 +62,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			msgFailedStructuredConfigMap)
 	}
 
-	timeBoundaries, err := token.ValidateTokenExpirationTime(m.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
-	if err != nil {
-		m.log.Error(err, "Failed to convert token expiration time")
-		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(
-			&s.instance,
-			imv1.ConditionTypeRuntimeProvisioned,
-			imv1.ConditionReasonConversionError,
-			fmt.Sprintf("Token expiration time, invalid format %v", err))
-	}
+	timeBoundaries, _ := token.ValidateTokenExpirationTime(m.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
 	logTokenExpirationInfo(m.log, timeBoundaries)
 
 	// NOTE: In the future we want to pass the whole shoot object here
@@ -85,7 +76,6 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		Resources:             s.shoot.Spec.Resources,
 		InfrastructureConfig:  s.shoot.Spec.Provider.InfrastructureConfig,
 		ControlPlaneConfig:    s.shoot.Spec.Provider.ControlPlaneConfig,
-		Log:                   ptr.To(m.log),
 	})
 
 	if err != nil {

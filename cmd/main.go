@@ -27,6 +27,7 @@ import (
 
 	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
 	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	registrycacheapi "github.com/kyma-project/kim-snatch/api/v1beta1"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -222,6 +223,12 @@ func main() {
 	auditLogDataMap, err := loadAuditLogDataMap(config.ConverterConfig.AuditLog.TenantConfigPath)
 	if err != nil {
 		setupLog.Error(err, "invalid audit log tenant configuration")
+		os.Exit(1)
+	}
+
+	_, err = token.ValidateTokenExpirationTime(config.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
+	if err != nil {
+		setupLog.Error(err, "invalid token expiration format in converter configuration")
 		os.Exit(1)
 	}
 

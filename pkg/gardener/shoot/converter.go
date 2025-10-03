@@ -3,7 +3,6 @@ package shoot
 import (
 	"fmt"
 
-	"github.com/go-logr/logr"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/restrictions"
@@ -67,7 +66,6 @@ type PatchOpts struct {
 	Resources            []gardener.NamedResourceReference
 	InfrastructureConfig *runtime.RawExtension
 	ControlPlaneConfig   *runtime.RawExtension
-	Log                  *logr.Logger
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {
