@@ -3,11 +3,13 @@ package fsm
 import (
 	"context"
 	"fmt"
+	"reflect"
+
 	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
 	registrycacheapi "github.com/kyma-project/kim-snatch/api/v1beta1"
-	"reflect"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -59,6 +61,18 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			imv1.ConditionReasonOidcError,
 			msgFailedStructuredConfigMap)
 	}
+
+	timeBoundaries, err := token.ValidateTokenExpirationTime(m.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
+	if err != nil {
+		m.log.Error(err, "Failed to convert token expiration time")
+		m.Metrics.IncRuntimeFSMStopCounter()
+		return updateStatePendingWithErrorAndStop(
+			&s.instance,
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonConversionError,
+			fmt.Sprintf("Token expiration time, invalid format %v", err))
+	}
+	logTokenExpirationInfo(m.log, timeBoundaries)
 
 	// NOTE: In the future we want to pass the whole shoot object here
 	updatedShoot, err := convertPatch(&s.instance, gardener_shoot.PatchOpts{

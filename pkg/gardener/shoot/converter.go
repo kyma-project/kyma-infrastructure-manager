@@ -98,7 +98,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 				opts.AuditLogData))
 	}
 
-	extendersForCreate = append(extendersForCreate, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration, opts.Kubernetes.KubeApiServer.ExtendTokenExpiration))
+	extendersForCreate = append(extendersForCreate, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration))
 
 	return newConverter(opts.ConverterConfig, extendersForCreate...)
 }
@@ -128,7 +128,7 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			auditlogs.NewAuditlogExtenderForPatch(opts.AuditLog.PolicyConfigMapName))
 	}
 
-	extendersForPatch = append(extendersForPatch, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration, opts.Kubernetes.KubeApiServer.ExtendTokenExpiration))
+	extendersForPatch = append(extendersForPatch, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration))
 
 	return newConverter(opts.ConverterConfig, extendersForPatch...)
 }
