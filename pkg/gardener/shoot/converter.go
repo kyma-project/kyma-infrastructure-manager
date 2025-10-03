@@ -3,7 +3,6 @@ package shoot
 import (
 	"fmt"
 
-	"github.com/go-logr/logr"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/restrictions"
@@ -67,7 +66,6 @@ type PatchOpts struct {
 	Resources            []gardener.NamedResourceReference
 	InfrastructureConfig *runtime.RawExtension
 	ControlPlaneConfig   *runtime.RawExtension
-	Log                  *logr.Logger
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {
@@ -98,7 +96,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 				opts.AuditLogData))
 	}
 
-	extendersForCreate = append(extendersForCreate, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration, opts.Kubernetes.KubeApiServer.ExtendTokenExpiration))
+	extendersForCreate = append(extendersForCreate, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration))
 
 	return newConverter(opts.ConverterConfig, extendersForCreate...)
 }
@@ -128,7 +126,7 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			auditlogs.NewAuditlogExtenderForPatch(opts.AuditLog.PolicyConfigMapName))
 	}
 
-	extendersForPatch = append(extendersForPatch, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration, opts.Kubernetes.KubeApiServer.ExtendTokenExpiration))
+	extendersForPatch = append(extendersForPatch, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration))
 
 	return newConverter(opts.ConverterConfig, extendersForPatch...)
 }

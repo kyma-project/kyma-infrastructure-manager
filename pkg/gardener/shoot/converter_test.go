@@ -5,7 +5,6 @@ import (
 	"io"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
@@ -560,8 +559,7 @@ var testReader io.Reader = strings.NewReader(
 		"usernamePrefix": "-"
 		},
 		"kubeApiServer": {
-			"extendTokenExpiration": true,
-            "maxTokenExpiration": "2592000s"
+            "maxTokenExpiration": "721h"
 		}
   },
   "dns": {
@@ -622,8 +620,7 @@ func Test_ConverterConfig_Load_OK(t *testing.T) {
 					UsernamePrefix: "-",
 				},
 				KubeApiServer: config.KubeApiServer{
-					MaxTokenExpiration:    v1.Duration{Duration: 2592000 * time.Second},
-					ExtendTokenExpiration: ptr.To(true),
+					MaxTokenExpiration: "721h",
 				},
 			},
 			DNS: config.DNSConfig{
