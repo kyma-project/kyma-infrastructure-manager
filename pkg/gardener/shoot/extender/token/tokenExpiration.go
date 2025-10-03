@@ -9,8 +9,8 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-const upperBound = 7776000 // 90 days in seconds
-const lowerBound = 2592000 // 30 days in seconds
+const upperBound = 90 * 24 * time.Hour // 90 days in seconds
+const lowerBound = 30 * 24 * time.Hour // 30 days in seconds
 type TimeBoundaries struct {
 	TooShort   bool
 	TooLong    bool
@@ -45,15 +45,14 @@ func ValidateTokenExpirationTime(maxTokenExpiration string) (TimeBoundaries, err
 		return TimeBoundaries{NotDefined: true}, nil
 	}
 
-	parsedTokenExpirationTime, err := time.ParseDuration(maxTokenExpiration)
+	parsed, err := time.ParseDuration(maxTokenExpiration)
 	if err != nil {
 		return TimeBoundaries{}, err
 	}
 
-	seconds := parsedTokenExpirationTime.Seconds()
 	return TimeBoundaries{
-		TooShort:   seconds < lowerBound,
-		TooLong:    seconds > upperBound,
+		TooShort:   parsed < lowerBound,
+		TooLong:    parsed > upperBound,
 		NotDefined: false,
 	}, nil
 }
