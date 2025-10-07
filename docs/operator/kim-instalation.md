@@ -90,3 +90,10 @@ The following table describes the parameters within the JSON object provided to 
 | `converter.auditLogging.policyConfigMapName` | string | The name of the `ConfigMap` containing the audit logging policy. |
 | `converter.auditLogging.tenantConfigPath` | string | The file path inside the manager container where the audit log tenant configuration is located. |
 | `converter.maintenanceWindow.windowMapPath` | string | The file path inside the manager container where the maintenance window configuration `ConfigMap` is mounted. |
+
+**All the below fields are optional - if not specified KIM will apply default value**
+
+
+| Attribute(s) | Type | Description                                                                                                                                                                                                                                                 | Default |
+| :--- | :--- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-------|
+| `converter.kubernetes.kubeApiServer.maxTokenExpiration` | string | The maximum expiration time (in hours) for tokens issued by the Kubernetes API server. If provided time is shorter then 30 days, KIM will set expiration time to 30 days. If provided time is longer than 90 days, KIM will set expiration time to 90 days. | "720h" |
