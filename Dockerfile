@@ -31,4 +31,5 @@ WORKDIR /
 COPY --from=builder /project_workspace/manager .
 USER 65532:65532
 
+ENV GODEBUG=fips140=only
 ENTRYPOINT ["/manager"]
