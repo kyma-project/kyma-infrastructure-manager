@@ -3,11 +3,13 @@ package fsm
 import (
 	"context"
 	"fmt"
+	"reflect"
+
 	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
 	registrycacheapi "github.com/kyma-project/kim-snatch/api/v1beta1"
-	"reflect"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -60,6 +62,9 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			msgFailedStructuredConfigMap)
 	}
 
+	timeBoundaries, _ := token.ValidateTokenExpirationTime(m.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
+	logTokenExpirationInfo(m.log, timeBoundaries)
+
 	// NOTE: In the future we want to pass the whole shoot object here
 	updatedShoot, err := convertPatch(&s.instance, gardener_shoot.PatchOpts{
 		ConverterConfig:       m.ConverterConfig,
@@ -71,7 +76,6 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		Resources:             s.shoot.Spec.Resources,
 		InfrastructureConfig:  s.shoot.Spec.Provider.InfrastructureConfig,
 		ControlPlaneConfig:    s.shoot.Spec.Provider.ControlPlaneConfig,
-		Log:                   ptr.To(m.log),
 	})
 
 	if err != nil {

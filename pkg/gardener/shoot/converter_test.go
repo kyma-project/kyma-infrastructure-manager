@@ -557,6 +557,9 @@ var testReader io.Reader = strings.NewReader(
 		"signingAlgs": ["test-alg"],
 		"usernameClaim": "test-username-claim",
 		"usernamePrefix": "-"
+		},
+		"kubeApiServer": {
+            "maxTokenExpiration": "721h"
 		}
   },
   "dns": {
@@ -615,6 +618,9 @@ func Test_ConverterConfig_Load_OK(t *testing.T) {
 					SigningAlgs:    []string{"test-alg"},
 					UsernameClaim:  "test-username-claim",
 					UsernamePrefix: "-",
+				},
+				KubeApiServer: config.KubeApiServer{
+					MaxTokenExpiration: "721h",
 				},
 			},
 			DNS: config.DNSConfig{

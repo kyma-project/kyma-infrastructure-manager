@@ -3,11 +3,14 @@ package fsm
 import (
 	"context"
 	"fmt"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/go-logr/logr"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -78,6 +81,9 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 			msgFailedToConfigureAuditlogs)
 	}
 
+	timeBoundaries, _ := token.ValidateTokenExpirationTime(m.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
+	logTokenExpirationInfo(m.log, timeBoundaries)
+
 	shoot, err := convertCreate(&s.instance, gardener_shoot.CreateOpts{
 		ConverterConfig:       m.ConverterConfig,
 		AuditLogData:          data,
@@ -133,4 +139,16 @@ func convertCreate(instance *imv1.Runtime, opts gardener_shoot.CreateOpts) (gard
 	}
 
 	return newShoot, nil
+}
+
+func logTokenExpirationInfo(log logr.Logger, tokenLiveTime token.TimeBoundaries) {
+	if tokenLiveTime.NotDefined {
+		log.Info("Token expiration time is not defined, defaulting to minimum of 30 days.", "severity", "warning")
+	}
+	if tokenLiveTime.TooShort {
+		log.Info("Token expiration below allowed minimum, using minimum of 30 days.", "severity", "warning")
+	}
+	if tokenLiveTime.TooLong {
+		log.Info("Token expiration above allowed maximum, using maximum of 90 days.", "severity", "warning")
+	}
 }

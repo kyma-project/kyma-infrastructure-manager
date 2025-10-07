@@ -2,21 +2,22 @@ package e2e
 
 import (
 	"fmt"
+	"os/exec"
+	"time"
+
 	"github.com/kyma-project/infrastructure-manager/test/e2e/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"os/exec"
-	"time"
 )
 
 const (
-	testTimeout        = 30 * time.Minute
-	testInterval       = 5 * time.Second
+	testTimeout        = 20 * time.Minute
+	testInterval       = 20 * time.Second
 	createManifestPath = "test/e2e/resources/runtimes/test-simple-provision.yaml"
 	updateManifestPath = "test/e2e/resources/runtimes/test-simple-update.yaml"
-	// if changed you need also to update the test RuntimeCR files
-	runtimeName = "simple-prov"
 )
+
+var runtimeName string
 
 var _ = Describe("Manager", Ordered, func() {
 	var controllerPodName string
@@ -31,6 +32,10 @@ var _ = Describe("Manager", Ordered, func() {
 		cmd = exec.Command("make", "deploy", fmt.Sprintf("IMG=%s", projectImage))
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to deploy the controller-manager")
+
+		By("get the Runtime name from the manifest")
+		runtimeName, err = utils.FetchRuntimeCRName(createManifestPath)
+		Expect(err).NotTo(HaveOccurred(), "Failed to get the Runtime name from the manifest")
 	})
 
 	AfterEach(func() {
@@ -43,6 +48,14 @@ var _ = Describe("Manager", Ordered, func() {
 				_, _ = fmt.Fprintf(GinkgoWriter, "Controller logs:\n %s", controllerLogs)
 			} else {
 				_, _ = fmt.Fprintf(GinkgoWriter, "Failed to get Controller logs: %s", err)
+				_, _ = fmt.Fprint(GinkgoWriter, "Describing the controller pod for more information")
+				cmd = exec.Command("kubectl", "describe", "pod", controllerPodName, "-n", namespace)
+				controllerDescribe, err := utils.Run(cmd)
+				if err != nil {
+					_, _ = fmt.Fprintf(GinkgoWriter, "Failed to describe the controller pod: %s", err)
+				} else {
+					_, _ = fmt.Fprintf(GinkgoWriter, "Controller pod description:\n %s", controllerDescribe)
+				}
 			}
 		}
 	})
@@ -87,7 +100,6 @@ var _ = Describe("Manager", Ordered, func() {
 			cmd := exec.Command("kubectl", "apply", "-f", createManifestPath, "-n", namespace)
 			_, err := utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to apply the RuntimeCR manifest")
-
 			By("waiting for the RuntimeCR to be in the 'Ready' state")
 			waitForRuntimeToBeReady()
 		})
