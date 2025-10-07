@@ -224,7 +224,7 @@ func updateConditionFailed(rt *imv1.Runtime, reason imv1.RuntimeConditionReason,
 	rt.UpdateStatePending(
 		imv1.ConditionTypeOidcAndCMsConfigured,
 		reason,
-		string(metav1.ConditionFalse),
+		string(metav1.ConditionUnknown),
 		message,
 	)
 }
