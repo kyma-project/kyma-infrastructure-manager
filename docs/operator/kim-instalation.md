@@ -91,7 +91,7 @@ The following table describes the parameters within the JSON object provided to 
 | `converter.auditLogging.tenantConfigPath` | string | The file path inside the manager container where the audit log tenant configuration is located. |
 | `converter.maintenanceWindow.windowMapPath` | string | The file path inside the manager container where the maintenance window configuration `ConfigMap` is mounted. |
 
-**All the below fields are optional - if not specified KIM will apply default value**
+All the following fields are optional. If not specified otherwise, KIM applies the default value.
 
 
 | Attribute(s) | Type | Description                                                                                                                                                                                                                                                 | Default |
