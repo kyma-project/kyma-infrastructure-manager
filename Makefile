@@ -1,4 +1,4 @@
-
+#
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
@@ -51,11 +51,11 @@ vet: ## Run go vet against code.
 
 .PHONY: build
 build: manifests generate fmt vet ## Build manager binary.
-	go build -o bin/manager cmd/main.go
+	GOFIPS140=v1.0.0 go build -o bin/manager cmd/main.go
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./cmd/main.go
+	GOFIPS140=v1.0.0 go run ./cmd/main.go
 
 # If you wish built the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64 ). However, you must enable docker buildKit for it.
@@ -171,7 +171,7 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
 		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
-        go test $(PACKAGES_TO_TEST) -v -coverprofile=coverage.txt
+        GOFIPS140=v1.0.0 go test $(PACKAGES_TO_TEST) -v -coverprofile=coverage.txt
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
