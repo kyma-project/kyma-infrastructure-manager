@@ -13,7 +13,7 @@ require (
 	github.com/go-logr/logr v1.4.3
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/kyma-project/kim-snatch v0.0.0-20250821110608-68ad42e78d8e
-	github.com/onsi/ginkgo/v2 v2.25.3
+	github.com/onsi/ginkgo/v2 v2.26.0
 	github.com/onsi/gomega v1.38.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
@@ -72,6 +72,7 @@ require (
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.42.0 // indirect
+	golang.org/x/mod v0.28.0 // indirect
 	golang.org/x/net v0.44.0 // indirect
 	golang.org/x/oauth2 v0.31.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
@@ -81,7 +82,7 @@ require (
 	golang.org/x/time v0.13.0 // indirect
 	golang.org/x/tools v0.37.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
-	google.golang.org/protobuf v1.36.8 // indirect
+	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -98,6 +99,6 @@ replace (
 	golang.org/x/crypto => golang.org/x/crypto v0.42.0
 	golang.org/x/net => golang.org/x/net v0.44.0
 	golang.org/x/sys => golang.org/x/sys v0.35.0
-	golang.org/x/text => golang.org/x/text v0.28.0
-	golang.org/x/tools => golang.org/x/tools v0.36.0
+	golang.org/x/text => golang.org/x/text v0.29.0
+	golang.org/x/tools => golang.org/x/tools v0.37.0
 )
