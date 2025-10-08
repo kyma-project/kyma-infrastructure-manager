@@ -84,7 +84,7 @@ require (
 	golang.org/x/net v0.45.0 // indirect
 	golang.org/x/oauth2 v0.31.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/term v0.35.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
 	golang.org/x/time v0.13.0 // indirect
@@ -106,7 +106,7 @@ require (
 replace (
 	golang.org/x/crypto => golang.org/x/crypto v0.42.0
 	golang.org/x/net => golang.org/x/net v0.45.0
-	golang.org/x/sys => golang.org/x/sys v0.36.0
+	golang.org/x/sys => golang.org/x/sys v0.37.0
 	golang.org/x/text => golang.org/x/text v0.29.0
 	golang.org/x/tools => golang.org/x/tools v0.37.0
 )
