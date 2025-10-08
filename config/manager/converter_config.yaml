@@ -1,0 +1,18 @@
+
+# Source: infrastructure-manager/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: infrastructure-manager-converter-config
+  namespace: kcp-system
+  labels:
+    
+    helm.sh/chart: infrastructure-manager-1.28.1
+    app.kubernetes.io/name: infrastructure-manager
+    app.kubernetes.io/instance: infrastructure-manager
+    app.kubernetes.io/component: infrastructure-manager.kyma-project.io
+    app.kubernetes.io/version: "1.28.0"
+    app.kubernetes.io/managed-by: Helm
+data:
+  converter_config.json: "{\n  \"cluster\": {\n    \"defaultSharedIASTenant\": {\n      \"ClientID\": \"9bd05ed7-a930-44e6-8c79-e6defeb7dec9\",\n      \"GroupsClaim\": \"groups\",\n      \"IssuerURL\": \"https://kymatest.accounts400.ondemand.com\",\n      \"SigningAlgs\": [\n        \"RS256\"\n      ],\n      \"UsernameClaim\": \"sub\",\n      \"UsernamePrefix\": \"-\"\n    }\n  },\n  \"converter\": {\n    \"kubernetes\": {\n      \"defaultVersion\": \"1.33.3\",\n      \"enableKubernetesVersionAutoUpdate\": true,\n      \"enableMachineImageVersionAutoUpdate\": false,\n      \"defaultOperatorOidc\" : {\n        \"ClientID\" : \"24f1d3e7-abb7-425a-8272-db1441d39ff2\",\n        \"GroupsClaim\" : \"groups\",\n        \"IssuerURL\": \"https://kymatest.accounts400.ondemand.com\",\n        \"SigningAlgs\": [\"RS256\"],\n        \"UsernameClaim\": \"sub\",\n        \"UsernamePrefix\": \"qdrH4rb7:\"\n      },\n      \"kubeApiServer\": {\n        \"maxTokenExpiration\": \"720h\"\n      }\n    },\n    \"dns\": {\n      \"secretName\": \"aws-route53-secret-dev\",\n      \"domainPrefix\": \"dev.kyma.ondemand.com\",\n      \"providerType\": \"aws-route53\"\n    },\n    \"provider\": {\n      \"aws\": {\n        \"enableIMDSv2\": true\n      }\n    },\n    \"gardener\": {\n      \"projectName\": \"kyma-dev\"\n    },\n    \"machineImage\": {\n      \"defaultName\": \"gardenlinux\",\n      \"defaultVersion\": \"1877.4.0\"\n    },\n    \"auditLogging\": {\n      \"policyConfigMapName\": \"audit-policy\",\n      \"tenantConfigPath\": \"/gardener/tenant/config\"\n    },\n    \"maintenanceWindow\": {\n      \"windowMapPath\": \"/maintenance-window-config/config\"\n    },\n    \"tolerations\": {\n      \"me-central2\": [\n        { \"key\": \"ksa-assured-workload\" }\n      ]\n    }\n  }\n}\n"
+
