@@ -99,6 +99,6 @@ replace (
 	golang.org/x/crypto => golang.org/x/crypto v0.42.0
 	golang.org/x/net => golang.org/x/net v0.44.0
 	golang.org/x/sys => golang.org/x/sys v0.35.0
-	golang.org/x/text => golang.org/x/text v0.28.0
+	golang.org/x/text => golang.org/x/text v0.29.0
 	golang.org/x/tools => golang.org/x/tools v0.37.0
 )
