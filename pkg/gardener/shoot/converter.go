@@ -3,7 +3,6 @@ package shoot
 import (
 	"fmt"
 
-	"github.com/go-logr/logr"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/networking"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
