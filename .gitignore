@@ -13,6 +13,8 @@ Dockerfile.cross
 # Test conifg
 test/e2e/resources/*
 
+config/manager/converter_config.yaml
+
 # Test binary, build with `go test -c`
 *.test
 
