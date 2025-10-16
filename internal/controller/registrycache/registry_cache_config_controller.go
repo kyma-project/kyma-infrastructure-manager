@@ -7,8 +7,11 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
+	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -35,7 +38,10 @@ type RegistryCacheConfigReconciler struct {
 	RegistryCacheCreator RegistryCacheCreator
 }
 
-const fieldManagerName = "customconfigcontroller"
+const (
+	fieldManagerName        = "customconfigcontroller"
+	RegistryCacheModuleName = "registry-cache"
+)
 
 func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	r.Log.V(log_level.TRACE).Info(request.String())
@@ -60,6 +66,11 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 	if err := r.KcpClient.Get(ctx, types.NamespacedName{Name: runtimeID,
 		Namespace: request.Namespace,
 	}, &runtime); err != nil {
+		return requeueOnError(err)
+	}
+
+	runtimeClient, err := gardener.GetRuntimeClient(secret)
+	if err != nil {
 		return requeueOnError(err)
 	}
 
@@ -110,6 +121,26 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 		Requeue:      true,
 		RequeueAfter: 5 * time.Minute,
 	}, err
+}
+
+func registryCacheEnabled(ctx context.Context, runtimeClient client.Client) (bool, error) {
+	var kyma kyma.Kyma
+	err := runtimeClient.Get(ctx, types.NamespacedName{Name: "kyma", Namespace: "kyma-system"}, &kyma)
+	if err != nil {
+		return false, err
+	}
+
+	kymaModules := kyma.Status.Modules
+
+	for _, v := range kymaModules {
+		if v.Name == RegistryCacheModuleName {
+			return true, nil
+		}
+	}
+
+	// Fallback: search for crd
+	// This is a temporary solution until module is available to be installed
+
 }
 
 func requeueOnError(err error) (ctrl.Result, error) {
