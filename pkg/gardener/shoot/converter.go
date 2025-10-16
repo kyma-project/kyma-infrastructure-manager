@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/networking"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/restrictions"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
@@ -73,6 +74,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 
 	extendersForCreate = append(extendersForCreate,
 		provider.NewProviderExtenderForCreateOperation(
+			opts.Networking.EnableDualStackIP,
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
@@ -97,6 +99,8 @@ func NewConverterCreate(opts CreateOpts) Converter {
 	}
 
 	extendersForCreate = append(extendersForCreate, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration))
+
+	extendersForCreate = append(extendersForCreate, networking.ExtendWithNetworking(opts.Networking.EnableDualStackIP))
 
 	return newConverter(opts.ConverterConfig, extendersForCreate...)
 }
@@ -125,8 +129,6 @@ func NewConverterPatch(opts PatchOpts) Converter {
 		extendersForPatch = append(extendersForPatch,
 			auditlogs.NewAuditlogExtenderForPatch(opts.AuditLog.PolicyConfigMapName))
 	}
-
-	extendersForPatch = append(extendersForPatch, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration))
 
 	return newConverter(opts.ConverterConfig, extendersForPatch...)
 }

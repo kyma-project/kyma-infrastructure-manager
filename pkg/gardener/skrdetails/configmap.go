@@ -14,6 +14,7 @@ type KymaProvisioningInfo struct {
 	GlobalAccountID      string               `json:"globalAccountID,omitzero"`
 	SubaccountID         string               `json:"subaccountID,omitzero"`
 	InfrastructureConfig runtime.RawExtension `json:"infrastructureConfig,omitzero"`
+	NetworkDetails       NetworkDetails       `json:"networkDetails"`
 }
 
 type WorkerPools struct {
@@ -22,14 +23,14 @@ type WorkerPools struct {
 }
 type WorkerPool struct {
 	Name                  string `json:"name"`
-	MachiteType           string `json:"machineType"`
+	MachineType           string `json:"machineType"`
 	HighAvailabilityZones bool   `json:"haZones"`
 	AutoScalerMin         int32  `json:"autoScalerMin"`
 	AutoScalerMax         int32  `json:"autoScalerMax"`
 }
 
 type NetworkDetails struct {
-	Infrastructure runtime.RawExtension `json:"infrastructure"`
+	DualStackIPEnabled bool `json:"dualStackIPEnabled"`
 }
 
 func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaProvisioningInfo {
@@ -42,7 +43,7 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 		mainRuntimeCRWorker := runtime.Spec.Shoot.Provider.Workers[0]
 		kymaWorkerPool = WorkerPool{
 			Name:                  mainRuntimeCRWorker.Name,
-			MachiteType:           mainRuntimeCRWorker.Machine.Type,
+			MachineType:           mainRuntimeCRWorker.Machine.Type,
 			HighAvailabilityZones: IsHighAvailability(mainRuntimeCRWorker.Zones),
 			AutoScalerMin:         mainRuntimeCRWorker.Minimum,
 			AutoScalerMax:         mainRuntimeCRWorker.Maximum,
@@ -55,7 +56,7 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 		for _, worker := range *additionalWorkers {
 			customWorkerPools = append(customWorkerPools, WorkerPool{
 				Name:                  worker.Name,
-				MachiteType:           worker.Machine.Type,
+				MachineType:           worker.Machine.Type,
 				HighAvailabilityZones: IsHighAvailability(worker.Zones),
 				AutoScalerMin:         worker.Minimum,
 				AutoScalerMax:         worker.Maximum,
@@ -71,6 +72,9 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 		GlobalAccountID:      runtime.Labels["kyma-project.io/global-account-id"],
 		SubaccountID:         runtime.Labels["kyma-project.io/subaccount-id"],
 		InfrastructureConfig: *shoot.Spec.Provider.InfrastructureConfig,
+		NetworkDetails: NetworkDetails{
+			DualStackIPEnabled: IsDualStackEnabled(shoot),
+		},
 	}
 }
 

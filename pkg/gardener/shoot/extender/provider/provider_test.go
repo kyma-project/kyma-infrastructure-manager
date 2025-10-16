@@ -1,12 +1,13 @@
 package provider
 
 import (
+	"testing"
+
 	awsinfra "github.com/gardener/gardener-extension-provider-aws/pkg/apis/aws/v1alpha1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
-	"testing"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -30,7 +31,7 @@ func TestValidations(t *testing.T) {
 		}
 
 		// when
-		extender := NewProviderExtenderForCreateOperation(false, "", "")
+		extender := NewProviderExtenderForCreateOperation(false, false, "", "")
 		err := extender(rt, &shoot)
 
 		// then
@@ -142,6 +143,7 @@ func TestProviderExtenderForCreateMultipleWorkersAWS(t *testing.T) {
 	for tname, tc := range map[string]struct {
 		Runtime                    imv1.Runtime
 		EnableIMDSv2               bool
+		EnableDualStackIP          bool
 		DefaultMachineImageVersion string
 		DefaultMachineImageName    string
 		CurrentShootWorkers        []gardener.Worker
@@ -204,14 +206,14 @@ func TestProviderExtenderForCreateMultipleWorkersAWS(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderForCreateOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
+			extender := NewProviderExtenderForCreateOperation(tc.EnableDualStackIP, tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
 			err := extender(tc.Runtime, &shoot)
 
 			// then
 			require.NoError(t, err)
 
 			assertProviderMultipleWorkers(t, tc.Runtime.Spec.Shoot, shoot, tc.EnableIMDSv2, tc.ExpectedShootWorkers)
-			assertProviderSpecificConfigAWS(t, shoot, tc.ExpectedZonesCount)
+			assertProviderSpecificConfigAWS(t, shoot, tc.ExpectedZonesCount, tc.EnableDualStackIP)
 		})
 	}
 }
@@ -503,7 +505,7 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 			require.NoError(t, err)
 
 			assertProviderMultipleWorkers(t, tc.Runtime.Spec.Shoot, shoot, tc.EnableIMDSv2, tc.ExpectedShootWorkers)
-			assertProviderSpecificConfigAWS(t, shoot, tc.ExpectedZonesCount)
+			assertProviderSpecificConfigAWS(t, shoot, tc.ExpectedZonesCount, false)
 			assertExistingZonesAWSInfrastructureNotModified(t, tc.ExistingInfraConfig, shoot.Spec.Provider.InfrastructureConfig)
 		})
 	}
