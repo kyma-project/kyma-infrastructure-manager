@@ -134,14 +134,19 @@ var _ = Describe("Registry Cache Config Controller", func() {
 func fixRuntimeClientGetter() func(secret v1.Secret) (client.Client, error) {
 	return func(secret v1.Secret) (client.Client, error) {
 		runtimeClient, err := client.New(cfg, client.Options{Scheme: runtime.NewScheme()})
-		Expect(err).NotTo(HaveOccurred())
-		Expect(runtimeClient).NotTo(BeNil())
+		if err != nil {
+			return nil, err
+		}
 
 		err = v1.AddToScheme(runtimeClient.Scheme())
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			return nil, err
+		}
 
 		err = kyma.AddToScheme(runtimeClient.Scheme())
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			return nil, err
+		}
 
 		err = runtimeClient.Create(context.Background(), &kyma.Kyma{
 			ObjectMeta: metav1.ObjectMeta{
@@ -157,7 +162,9 @@ func fixRuntimeClientGetter() func(secret v1.Secret) (client.Client, error) {
 			},
 		})
 
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			return nil, err
+		}
 
 		testConfig1 := registrycache.RegistryCacheConfig{
 			ObjectMeta: metav1.ObjectMeta{
@@ -169,7 +176,9 @@ func fixRuntimeClientGetter() func(secret v1.Secret) (client.Client, error) {
 			},
 		}
 		err = runtimeClient.Create(context.Background(), &testConfig1)
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			return nil, err
+		}
 
 		testConfig2 := registrycache.RegistryCacheConfig{
 			ObjectMeta: metav1.ObjectMeta{
@@ -182,7 +191,9 @@ func fixRuntimeClientGetter() func(secret v1.Secret) (client.Client, error) {
 		}
 
 		err = runtimeClient.Create(context.Background(), &testConfig2)
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			return nil, err
+		}
 
 		if secret.Name == secretForClusterWithRegistryCacheConfig1 ||
 			secret.Name == secretForClusterWithRegistryCacheConfig2 {
