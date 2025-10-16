@@ -60,21 +60,32 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 
 	runtimeID := secret.Labels["kyma-project.io/runtime-id"]
 
-	r.Log.V(log_level.TRACE).Info("Getting runtime", "Name", runtimeID, "Namespace", request.Namespace)
-
-	var runtime imv1.Runtime
-	if err := r.KcpClient.Get(ctx, types.NamespacedName{Name: runtimeID,
-		Namespace: request.Namespace,
-	}, &runtime); err != nil {
-		return requeueOnError(err)
-	}
-
 	runtimeClient, err := gardener.GetRuntimeClient(secret)
 	if err != nil {
 		return requeueOnError(err)
 	}
 
-	return r.reconcileRegistryCacheConfig(ctx, secret, runtime)
+	registryCacheEnabled, err := registryCacheEnabled(ctx, runtimeClient, runtimeID)
+	if err != nil {
+		return requeueOnError(err)
+	}
+
+	if registryCacheEnabled {
+		r.Log.V(log_level.TRACE).Info("Getting runtime", "Name", runtimeID, "Namespace", request.Namespace)
+
+		var runtime imv1.Runtime
+		if err := r.KcpClient.Get(ctx, types.NamespacedName{Name: runtimeID,
+			Namespace: request.Namespace,
+		}, &runtime); err != nil {
+			return requeueOnError(err)
+		}
+
+		return r.reconcileRegistryCacheConfig(ctx, secret, runtime)
+	}
+
+	return ctrl.Result{
+		RequeueAfter: 5 * time.Minute,
+	}, err
 }
 
 func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context.Context, secret corev1.Secret, runtime imv1.Runtime) (ctrl.Result, error) {
@@ -123,9 +134,9 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 	}, err
 }
 
-func registryCacheEnabled(ctx context.Context, runtimeClient client.Client) (bool, error) {
+func registryCacheEnabled(ctx context.Context, runtimeClient client.Client, runtimeID string) (bool, error) {
 	var kyma kyma.Kyma
-	err := runtimeClient.Get(ctx, types.NamespacedName{Name: "kyma", Namespace: "kyma-system"}, &kyma)
+	err := runtimeClient.Get(ctx, types.NamespacedName{Name: "default", Namespace: "kyma-system"}, &kyma)
 	if err != nil {
 		return false, err
 	}
@@ -140,7 +151,16 @@ func registryCacheEnabled(ctx context.Context, runtimeClient client.Client) (boo
 
 	// Fallback: search for crd
 	// This is a temporary solution until module is available to be installed
+	var crd apiextensions.CustomResourceDefinition
+	crdErr := runtimeClient.Get(ctx, types.NamespacedName{Name: "registrycacheconfigs.core.kyma-project.io"}, &crd)
+	if crdErr != nil {
+		if apierrors.IsNotFound(crdErr) {
+			return false, nil
+		}
+		return false, crdErr
+	}
 
+	return true, nil
 }
 
 func requeueOnError(err error) (ctrl.Result, error) {
