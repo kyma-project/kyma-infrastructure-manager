@@ -26,7 +26,6 @@ import (
 	"time"
 
 	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
-	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	registrycacheapi "github.com/kyma-project/kim-snatch/api/v1beta1"
 
@@ -274,15 +273,7 @@ func main() {
 	refreshRuntimeMetrics(restConfig, logger, metrics)
 
 	if registryCacheConfigControllerEnabled {
-		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, func(secret corev1.Secret) (registrycachecontroller.RegistryCache, error) {
-			runtimeClient, err := gardener.GetRuntimeClient(secret)
-
-			if err != nil {
-				return nil, err
-			}
-
-			return registrycache.NewRuntimeConfigurationManager(context.Background(), runtimeClient), nil
-		})
+		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, gardener.GetRuntimeClient)
 		if err = registryCacheConfigReconciler.SetupWithManager(mgr, 1); err != nil {
 			setupLog.Error(err, "unable to setup registry cache config controller with Manager", "controller", "Runtime")
 			os.Exit(1)

@@ -4,14 +4,16 @@ import (
 	"context"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/registrycache/mocks"
 	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
+	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 )
 
@@ -129,15 +131,35 @@ var _ = Describe("Registry Cache Config Controller", func() {
 	})
 })
 
-func fixMockedRegistryCache() func(secret v1.Secret) (RegistryCache, error) {
-	callsMap := map[string]int{
-		secretForClusterWithRegistryCacheConfig1: 0,
-		secretForClusterWithRegistryCacheConfig2: 0,
-		secretNotManagedByKIM:                    0,
-	}
+func fixRuntimeClientGetter() func(secret v1.Secret) (client.Client, error) {
+	return func(secret v1.Secret) (client.Client, error) {
+		runtimeClient, err := client.New(cfg, client.Options{Scheme: runtime.NewScheme()})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(runtimeClient).NotTo(BeNil())
 
-	testConfig := []registrycache.RegistryCacheConfig{
-		{
+		err = v1.AddToScheme(runtimeClient.Scheme())
+		Expect(err).NotTo(HaveOccurred())
+
+		err = kyma.AddToScheme(runtimeClient.Scheme())
+		Expect(err).NotTo(HaveOccurred())
+
+		err = runtimeClient.Create(context.Background(), &kyma.Kyma{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kyma",
+				Namespace: "default",
+			},
+			Spec: kyma.KymaSpec{
+				Modules: []kyma.Module{
+					{
+						Name: "registry-cache",
+					},
+				},
+			},
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+
+		testConfig1 := registrycache.RegistryCacheConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "config1",
 				Namespace: "test",
@@ -145,8 +167,11 @@ func fixMockedRegistryCache() func(secret v1.Secret) (RegistryCache, error) {
 			Spec: registrycache.RegistryCacheConfigSpec{
 				Upstream: "docker.io",
 			},
-		},
-		{
+		}
+		err = runtimeClient.Create(context.Background(), &testConfig1)
+		Expect(err).NotTo(HaveOccurred())
+
+		testConfig2 := registrycache.RegistryCacheConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "config2",
 				Namespace: "test",
@@ -154,30 +179,17 @@ func fixMockedRegistryCache() func(secret v1.Secret) (RegistryCache, error) {
 			Spec: registrycache.RegistryCacheConfigSpec{
 				Upstream: "quay.io",
 			},
-		},
-	}
-
-	resultsMap := map[string][]registrycache.RegistryCacheConfig{
-		secretForClusterWithRegistryCacheConfig1: testConfig,
-		secretForClusterWithRegistryCacheConfig2: testConfig,
-		secretNotManagedByKIM:                    testConfig,
-	}
-
-	return func(secret v1.Secret) (RegistryCache, error) {
-
-		if _, found := callsMap[secret.Name]; !found {
-			return nil, errors.Errorf("unexpected secret name %s", secret.Name)
 		}
 
-		if callsMap[secret.Name] == 0 {
-			callsMap[secret.Name]++
-			return nil, errors.New("failed to get registry cache config")
+		err = runtimeClient.Create(context.Background(), &testConfig2)
+		Expect(err).NotTo(HaveOccurred())
+
+		if secret.Name == secretForClusterWithRegistryCacheConfig1 ||
+			secret.Name == secretForClusterWithRegistryCacheConfig2 {
+			return runtimeClient, nil
 		}
 
-		registryCacheMock := &mocks.RegistryCache{}
-		registryCacheMock.On("GetRegistryCacheConfig").Return(resultsMap[secret.Name], nil)
-
-		return registryCacheMock, nil
+		return nil, errors.New("failed to create runtime client")
 	}
 }
 
