@@ -7,7 +7,6 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	corev1 "k8s.io/api/core/v1"
@@ -36,6 +35,7 @@ type RegistryCacheConfigReconciler struct {
 	EventRecorder        record.EventRecorder
 	RequestID            atomic.Uint64
 	RegistryCacheCreator RegistryCacheCreator
+	RuntimeClientGetter  RuntimeClientGetter
 }
 
 const (
@@ -60,27 +60,30 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 
 	runtimeID := secret.Labels["kyma-project.io/runtime-id"]
 
-	runtimeClient, err := gardener.GetRuntimeClient(secret)
+	runtimeClient, err := r.RuntimeClientGetter(secret)
 	if err != nil {
+		r.Log.V(log_level.TRACE).Error(err, "Failed to get runtime client for runtime", "RuntimeID", runtimeID, "Namespace", secret.Namespace)
 		return requeueOnError(err)
 	}
 
-	registryCacheEnabled, err := registryCacheEnabled(ctx, runtimeClient, runtimeID)
+	registryCacheEnabled, err := registryCacheEnabled(ctx, runtimeClient)
 	if err != nil {
+		r.Log.V(log_level.TRACE).Error(err, "Failed to verify whether Registry Cache should be enabled", "RuntimeID", runtimeID, "Namespace", secret.Namespace)
 		return requeueOnError(err)
 	}
 
-	if registryCacheEnabled {
+	var runtime imv1.Runtime
+	if err := r.KcpClient.Get(ctx, types.NamespacedName{Name: runtimeID,
+		Namespace: request.Namespace,
+	}, &runtime); err != nil {
+		return requeueOnError(err)
+	}
+
+	if registryCacheEnabled ||
+		(registryCacheEnabled == false && len(runtime.Spec.Caching) > 0) {
 		r.Log.V(log_level.TRACE).Info("Getting runtime", "Name", runtimeID, "Namespace", request.Namespace)
 
-		var runtime imv1.Runtime
-		if err := r.KcpClient.Get(ctx, types.NamespacedName{Name: runtimeID,
-			Namespace: request.Namespace,
-		}, &runtime); err != nil {
-			return requeueOnError(err)
-		}
-
-		return r.reconcileRegistryCacheConfig(ctx, secret, runtime)
+		return r.reconcileRegistryCacheConfig(ctx, runtimeClient, runtime)
 	}
 
 	return ctrl.Result{
@@ -88,25 +91,18 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 	}, err
 }
 
-func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context.Context, secret corev1.Secret, runtime imv1.Runtime) (ctrl.Result, error) {
+func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context.Context, runtimeClient client.Client, runtime imv1.Runtime) (ctrl.Result, error) {
 
-	registryCache, err := r.RegistryCacheCreator(secret)
+	var registryCacheConfigs registrycache.RegistryCacheConfigList
+	err := runtimeClient.List(ctx, &registryCacheConfigs, &client.ListOptions{})
 	if err != nil {
-		r.Log.V(log_level.TRACE).Error(err, "Failed to get runtime client for runtime", "RuntimeID", runtime.Name, "Namespace", runtime.Namespace)
+		r.Log.V(log_level.TRACE).Error(err, "Failed to list registry cache configs", "RuntimeID", runtime.Name, "Namespace", runtime.Namespace)
 
 		return ctrl.Result{}, err
 	}
-
-	registryCacheConfigs, err := registryCache.GetRegistryCacheConfig()
-	if err != nil {
-		r.Log.V(log_level.TRACE).Error(err, "Failed to get registry cache config", "RuntimeID", runtime.Name, "Namespace", runtime.Namespace)
-
-		return ctrl.Result{}, err
-	}
-
 	//Synchronize runtime.spec.imageRegistryCache with valid Registry Cache configs (replace the old list in Runtime CR with a new one)
-	caches := make([]imv1.ImageRegistryCache, 0, len(registryCacheConfigs))
-	for _, config := range registryCacheConfigs {
+	caches := make([]imv1.ImageRegistryCache, 0, len(registryCacheConfigs.Items))
+	for _, config := range registryCacheConfigs.Items {
 		runtimeRegistryCacheConfig := imv1.ImageRegistryCache{
 			Name:      config.Name,
 			Namespace: config.Namespace,
@@ -134,7 +130,7 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 	}, err
 }
 
-func registryCacheEnabled(ctx context.Context, runtimeClient client.Client, runtimeID string) (bool, error) {
+func registryCacheEnabled(ctx context.Context, runtimeClient client.Client) (bool, error) {
 	var kyma kyma.Kyma
 	err := runtimeClient.Get(ctx, types.NamespacedName{Name: "default", Namespace: "kyma-system"}, &kyma)
 	if err != nil {
@@ -189,15 +185,16 @@ type RegistryCache interface {
 	GetRegistryCacheConfig() ([]registrycache.RegistryCacheConfig, error)
 }
 
-type RegistryCacheCreator func(secret corev1.Secret) (RegistryCache, error)
+type RegistryCacheCreator func(runtimeClient client.Client) (RegistryCache, error)
+type RuntimeClientGetter func(secret corev1.Secret) (client.Client, error)
 
-func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, registryCacheCreator RegistryCacheCreator) *RegistryCacheConfigReconciler {
+func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, runtimeClientGetter RuntimeClientGetter) *RegistryCacheConfigReconciler {
 	return &RegistryCacheConfigReconciler{
-		KcpClient:            mgr.GetClient(),
-		Scheme:               mgr.GetScheme(),
-		EventRecorder:        mgr.GetEventRecorderFor("runtime-controller"),
-		Log:                  logger,
-		RegistryCacheCreator: registryCacheCreator,
+		KcpClient:           mgr.GetClient(),
+		Scheme:              mgr.GetScheme(),
+		EventRecorder:       mgr.GetEventRecorderFor("runtime-controller"),
+		Log:                 logger,
+		RuntimeClientGetter: runtimeClientGetter,
 	}
 }
 
