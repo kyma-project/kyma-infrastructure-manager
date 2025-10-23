@@ -4,10 +4,10 @@ go 1.25.1
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/gardener/gardener v1.129.1
+	github.com/gardener/gardener v1.130.0
 	github.com/gardener/gardener-extension-provider-aws v1.64.1
 	github.com/gardener/gardener-extension-provider-gcp v1.46.0
-	github.com/gardener/gardener-extension-provider-openstack v1.49.1
+	github.com/gardener/gardener-extension-provider-openstack v1.50.0
 	github.com/gardener/gardener-extension-registry-cache v0.18.0
 	github.com/gardener/oidc-webhook-authenticator v0.38.0
 	github.com/go-logr/logr v1.4.3
@@ -88,7 +88,7 @@ require (
 	golang.org/x/term v0.36.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
-	golang.org/x/tools v0.37.0 // indirect
+	golang.org/x/tools v0.38.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
@@ -107,6 +107,6 @@ replace (
 	golang.org/x/crypto => golang.org/x/crypto v0.43.0
 	golang.org/x/net => golang.org/x/net v0.46.0
 	golang.org/x/sys => golang.org/x/sys v0.37.0
-	golang.org/x/text => golang.org/x/text v0.29.0
-	golang.org/x/tools => golang.org/x/tools v0.37.0
+	golang.org/x/text => golang.org/x/text v0.30.0
+	golang.org/x/tools => golang.org/x/tools v0.38.0
 )
