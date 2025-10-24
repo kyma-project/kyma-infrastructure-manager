@@ -37,7 +37,7 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "hack", "crd"), filepath.Join("..", "..", "..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "hack", "crd")},
 		ErrorIfCRDPathMissing: true,
 	}
 
@@ -64,7 +64,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	reconciler = NewRegistryCacheConfigReconciler(mgr, logger, fixRuntimeClientGetter())
+	reconciler = NewRegistryCacheConfigReconciler(mgr, logger, fixRuntimeClientGetter(fixRuntimeClients()))
 	Expect(reconciler).NotTo(BeNil())
 	err = reconciler.SetupWithManager(mgr, 1)
 	Expect(err).To(BeNil())

@@ -27,7 +27,7 @@ import (
 
 	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
-	registrycacheapi "github.com/kyma-project/kim-snatch/api/v1beta1"
+	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenerapis "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
