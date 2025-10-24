@@ -165,8 +165,8 @@ func fixRuntimeClient(objs ...client.Object) client.Client {
 func fixKymaCR() client.Object {
 	return &kyma.Kyma{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "kyma",
-			Namespace: "default",
+			Name:      "default",
+			Namespace: "kyma-system",
 		},
 		Spec: kyma.KymaSpec{
 			Channel: "stable",
@@ -184,23 +184,24 @@ func fixRegistryCache() []client.Object {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 		},
-	}, &registrycache.RegistryCacheConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "config1",
-			Namespace: "test",
-		},
-		Spec: registrycache.RegistryCacheConfigSpec{
-			Upstream: "docker.io",
-		},
-	}, &registrycache.RegistryCacheConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "config2",
-			Namespace: "test",
-		},
-		Spec: registrycache.RegistryCacheConfigSpec{
-			Upstream: "quay.io",
-		},
 	},
+		&registrycache.RegistryCacheConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "config1",
+				Namespace: "test",
+			},
+			Spec: registrycache.RegistryCacheConfigSpec{
+				Upstream: "docker.io",
+			},
+		}, &registrycache.RegistryCacheConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "config2",
+				Namespace: "test",
+			},
+			Spec: registrycache.RegistryCacheConfigSpec{
+				Upstream: "quay.io",
+			},
+		},
 	}
 }
 
