@@ -15,9 +15,9 @@ import (
 var expectedIPFamilies = []gardener.IPFamily{gardener.IPFamilyIPv4, gardener.IPFamilyIPv6}
 
 func TestExtendWithNetworking(t *testing.T) {
-	t.Run("Should configure an DualStackIP shoot if the provider is AWS", func(t *testing.T) {
+	t.Run("Should configure an DualStackIP shoot if the provider is AWS, landscape supports DualStack and DualStack is enabled on RuntimeCR", func(t *testing.T) {
 		// given
-		runtime := prepareRuntimeStub(hyperscaler.TypeAWS)
+		runtime := prepareRuntimeStub(hyperscaler.TypeAWS, true)
 		shoot := testutils.FixEmptyGardenerShoot("test-shoot", "kcp-dev")
 
 		// when
@@ -29,9 +29,9 @@ func TestExtendWithNetworking(t *testing.T) {
 		assert.Equal(t, expectedIPFamilies, shoot.Spec.Networking.IPFamilies)
 	})
 
-	t.Run("Should configure an DualStackIP shoot if the provider is GCP", func(t *testing.T) {
+	t.Run("Should configure an DualStackIP shoot if the provider is GCP, landscape supports DualStack and DualStack is enabled on RuntimeCR", func(t *testing.T) {
 		// given
-		runtime := prepareRuntimeStub(hyperscaler.TypeGCP)
+		runtime := prepareRuntimeStub(hyperscaler.TypeGCP, true)
 		shoot := testutils.FixEmptyGardenerShoot("test-shoot", "kcp-dev")
 
 		// when
@@ -45,7 +45,7 @@ func TestExtendWithNetworking(t *testing.T) {
 
 	t.Run("Should do not configure an DualStackIP shoot if the provider is other than AWS or GCP", func(t *testing.T) {
 		// given
-		runtime := prepareRuntimeStub(hyperscaler.TypeAzure)
+		runtime := prepareRuntimeStub(hyperscaler.TypeAzure, true)
 		shoot := testutils.FixEmptyGardenerShoot("test-shoot", "kcp-dev")
 		shoot.Spec.Networking = &gardener.Networking{}
 
@@ -58,9 +58,9 @@ func TestExtendWithNetworking(t *testing.T) {
 		assert.Nil(t, shoot.Spec.Networking.IPFamilies)
 	})
 
-	t.Run("Should do not configure an DualStackIP shoot if the IPv6 feature-flag is set to false", func(t *testing.T) {
+	t.Run("Should do not configure an DualStackIP shoot if the landscape do not supports DualStack", func(t *testing.T) {
 		// given
-		runtime := prepareRuntimeStub(hyperscaler.TypeAWS)
+		runtime := prepareRuntimeStub(hyperscaler.TypeAWS, true)
 		shoot := testutils.FixEmptyGardenerShoot("test-shoot", "kcp-dev")
 		shoot.Spec.Networking = &gardener.Networking{}
 
@@ -73,9 +73,24 @@ func TestExtendWithNetworking(t *testing.T) {
 		assert.Nil(t, shoot.Spec.Networking.IPFamilies)
 	})
 
+	t.Run("Should do not configure an DualStackIP shoot if the DualStack was disabled for RuntimeCR", func(t *testing.T) {
+		// given
+		runtime := prepareRuntimeStub(hyperscaler.TypeAWS, false)
+		shoot := testutils.FixEmptyGardenerShoot("test-shoot", "kcp-dev")
+		shoot.Spec.Networking = &gardener.Networking{}
+
+		// when
+		networkExtender := ExtendWithNetworking(true)
+		err := networkExtender(runtime, &shoot)
+
+		// then
+		require.NoError(t, err)
+		assert.Nil(t, shoot.Spec.Networking.IPFamilies)
+	})
+
 	t.Run("Should append DualStackIP configuration to existing networking config", func(t *testing.T) {
 		// given
-		runtime := prepareRuntimeStub(hyperscaler.TypeAWS)
+		runtime := prepareRuntimeStub(hyperscaler.TypeAWS, true)
 		shoot := testutils.FixEmptyGardenerShoot("test-shoot", "kcp-dev")
 		shoot.Spec.Networking = &gardener.Networking{
 			Type: ptr.To("test-type"),
@@ -91,12 +106,15 @@ func TestExtendWithNetworking(t *testing.T) {
 	})
 }
 
-func prepareRuntimeStub(providerType string) imv1.Runtime {
+func prepareRuntimeStub(providerType string, dualStack bool) imv1.Runtime {
 	return imv1.Runtime{
 		Spec: imv1.RuntimeSpec{
 			Shoot: imv1.RuntimeShoot{
 				Provider: imv1.Provider{
 					Type: providerType,
+				},
+				Networking: imv1.Networking{
+					DualStack: ptr.To(dualStack),
 				},
 			},
 		},

@@ -106,7 +106,8 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAWS, "", "", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Nodes:     "10.250.0.0/22",
+							DualStack: ptr.To(true),
 						},
 					},
 				},

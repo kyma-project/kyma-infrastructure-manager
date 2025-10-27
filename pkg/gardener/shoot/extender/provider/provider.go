@@ -18,7 +18,7 @@ import (
 )
 
 // InfrastructureConfig and ControlPlaneConfig are generated unless they are specified in the RuntimeCR
-func NewProviderExtenderForCreateOperation(enableDualStackIP bool, enableIMDSv2 bool, defMachineImgName, defMachineImgVer string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIMDSv2 bool, defMachineImgName, defMachineImgVer string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
 		provider.Type = rt.Spec.Shoot.Provider.Type
@@ -35,7 +35,9 @@ func NewProviderExtenderForCreateOperation(enableDualStackIP bool, enableIMDSv2 
 
 		workerZones := getNetworkingZonesFromWorkers(provider.Workers)
 
-		infraConfig, controlPlaneConf, err := getConfig(rt.Spec.Shoot, workerZones, enableDualStackIP, nil)
+		canEnableDualStack := rt.Spec.Shoot.Networking.DualStack != nil && *rt.Spec.Shoot.Networking.DualStack && infraSupportsDualStack
+
+		infraConfig, controlPlaneConf, err := getConfig(rt.Spec.Shoot, workerZones, canEnableDualStack, nil)
 		if err != nil {
 			return err
 		}
