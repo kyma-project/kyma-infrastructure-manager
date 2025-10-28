@@ -53,9 +53,7 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 
 	if !secretControlledByKIM(secret) {
 		r.Log.V(log_level.TRACE).Info("Secret doesn't contain kubeconfig for runtime", "Name", request.Name, "Namespace", request.Namespace)
-		return ctrl.Result{
-			Requeue: false,
-		}, nil
+		return ctrl.Result{}, nil
 	}
 
 	runtimeID := secret.Labels["kyma-project.io/runtime-id"]
@@ -103,7 +101,7 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 
 			return ctrl.Result{}, err
 		}
-		//Synchronize runtime.spec.imageRegistryCache with valid Registry Cache configs (replace the old list in Runtime CR with a new one)
+
 		for _, config := range registryCacheConfigs.Items {
 			runtimeRegistryCacheConfig := imv1.ImageRegistryCache{
 				Name:      config.Name,
@@ -114,9 +112,8 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 			caches = append(caches, runtimeRegistryCacheConfig)
 		}
 	}
-
-	runtime.Spec.Caching = caches
 	r.Log.Info(fmt.Sprintf("Updating runtime %s with registry cache config", runtime.Name))
+	runtime.Spec.Caching = caches
 	runtime.ManagedFields = nil
 	err := r.KcpClient.Patch(ctx, &runtime, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,
@@ -129,7 +126,6 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 	}
 
 	return ctrl.Result{
-		Requeue:      true,
 		RequeueAfter: 5 * time.Minute,
 	}, err
 }
@@ -166,9 +162,7 @@ func registryCacheEnabled(ctx context.Context, runtimeClient client.Client) (boo
 func requeueOnError(err error) (ctrl.Result, error) {
 
 	if err != nil && apierrors.IsNotFound(err) {
-		return ctrl.Result{
-			Requeue: false,
-		}, nil
+		return ctrl.Result{}, nil
 	}
 
 	return ctrl.Result{}, err
