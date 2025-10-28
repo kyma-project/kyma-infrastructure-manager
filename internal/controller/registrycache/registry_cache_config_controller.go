@@ -83,7 +83,7 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 		(registryCacheEnabled == false && len(runtime.Spec.Caching) > 0) {
 		r.Log.V(log_level.TRACE).Info("Getting runtime", "Name", runtimeID, "Namespace", request.Namespace)
 
-		return r.reconcileRegistryCacheConfig(ctx, runtimeClient, runtime)
+		return r.reconcileRegistryCacheConfig(ctx, runtimeClient, runtime, registryCacheEnabled)
 	}
 
 	return ctrl.Result{
@@ -91,30 +91,34 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 	}, err
 }
 
-func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context.Context, runtimeClient client.Client, runtime imv1.Runtime) (ctrl.Result, error) {
+func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context.Context, runtimeClient client.Client, runtime imv1.Runtime, enabled bool) (ctrl.Result, error) {
 
-	var registryCacheConfigs registrycache.RegistryCacheConfigList
-	err := runtimeClient.List(ctx, &registryCacheConfigs, &client.ListOptions{})
-	if err != nil {
-		r.Log.V(log_level.TRACE).Error(err, "Failed to list registry cache configs", "RuntimeID", runtime.Name, "Namespace", runtime.Namespace)
+	var caches []imv1.ImageRegistryCache
 
-		return ctrl.Result{}, err
-	}
-	//Synchronize runtime.spec.imageRegistryCache with valid Registry Cache configs (replace the old list in Runtime CR with a new one)
-	caches := make([]imv1.ImageRegistryCache, 0, len(registryCacheConfigs.Items))
-	for _, config := range registryCacheConfigs.Items {
-		runtimeRegistryCacheConfig := imv1.ImageRegistryCache{
-			Name:      config.Name,
-			Namespace: config.Namespace,
-			UID:       string(config.UID),
-			Config:    config.Spec,
+	if enabled {
+		var registryCacheConfigs registrycache.RegistryCacheConfigList
+		err := runtimeClient.List(ctx, &registryCacheConfigs, &client.ListOptions{})
+		if err != nil {
+			r.Log.V(log_level.TRACE).Error(err, "Failed to list registry cache configs", "RuntimeID", runtime.Name, "Namespace", runtime.Namespace)
+
+			return ctrl.Result{}, err
 		}
-		caches = append(caches, runtimeRegistryCacheConfig)
+		//Synchronize runtime.spec.imageRegistryCache with valid Registry Cache configs (replace the old list in Runtime CR with a new one)
+		for _, config := range registryCacheConfigs.Items {
+			runtimeRegistryCacheConfig := imv1.ImageRegistryCache{
+				Name:      config.Name,
+				Namespace: config.Namespace,
+				UID:       string(config.UID),
+				Config:    config.Spec,
+			}
+			caches = append(caches, runtimeRegistryCacheConfig)
+		}
 	}
+
 	runtime.Spec.Caching = caches
 	r.Log.Info(fmt.Sprintf("Updating runtime %s with registry cache config", runtime.Name))
 	runtime.ManagedFields = nil
-	err = r.KcpClient.Patch(ctx, &runtime, client.Apply, &client.PatchOptions{
+	err := r.KcpClient.Patch(ctx, &runtime, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
 	})
@@ -137,10 +141,10 @@ func registryCacheEnabled(ctx context.Context, runtimeClient client.Client) (boo
 		return false, err
 	}
 
-	kymaModules := kyma.Status.Modules
+	kymaModules := kyma.Spec.Modules
 
-	for _, v := range kymaModules {
-		if v.Name == RegistryCacheModuleName {
+	for _, m := range kymaModules {
+		if m.Name == RegistryCacheModuleName {
 			return true, nil
 		}
 	}

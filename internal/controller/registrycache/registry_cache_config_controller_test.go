@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -135,7 +136,7 @@ var _ = Describe("Registry Cache Config Controller", func() {
 
 func fixRuntimeClients() map[string]client.Client {
 	return map[string]client.Client{
-		runtimeWithoutRegistryCacheConfig: fixRuntimeClient(fixKymaCR()),
+		runtimeWithoutRegistryCacheConfig: fixRuntimeClient(append(fixRegistryCache(), fixKymaCR())...),
 		runtimeWithRegistryCacheEnabled:   fixRuntimeClient(append(fixRegistryCache(), fixKymaCR())...),
 		runtimeThatShouldNotBeModified:    fixRuntimeClient(),
 	}
@@ -158,6 +159,7 @@ func fixRuntimeClient(objs ...client.Object) client.Client {
 	_ = registrycache.AddToScheme(scheme)
 	_ = v1.AddToScheme(scheme)
 	_ = kyma.AddToScheme(scheme)
+	_ = apiextensions.AddToScheme(scheme)
 
 	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
 }
