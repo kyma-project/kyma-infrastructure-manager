@@ -34,7 +34,7 @@ type KubernetesConfig struct {
 	KubeApiServer                       KubeApiServer `json:"kubeApiServer"`
 	DefaultVersion                      string        `json:"defaultVersion" validate:"required"`
 	EnableKubernetesVersionAutoUpdate   bool          `json:"enableKubernetesVersionAutoUpdate"`
-	EnableMachineImageVersionAutoUpdate bool          `json:"enableMachineImageVersionVersionAutoUpdate"`
+	EnableMachineImageVersionAutoUpdate bool          `json:"enableMachineImageVersionAutoUpdate"`
 	DefaultOperatorOidc                 OidcProvider  `json:"defaultOperatorOidc" validate:"required"`
 }
 
