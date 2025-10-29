@@ -78,7 +78,7 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 	}
 
 	if registryCacheEnabled ||
-		(registryCacheEnabled == false && len(runtime.Spec.Caching) > 0) {
+		(!registryCacheEnabled && len(runtime.Spec.Caching) > 0) {
 		r.Log.V(log_level.TRACE).Info("Getting runtime", "Name", runtimeID, "Namespace", request.Namespace)
 
 		return r.reconcileRegistryCacheConfig(ctx, runtimeClient, runtime, registryCacheEnabled)
