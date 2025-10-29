@@ -131,13 +131,13 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 }
 
 func registryCacheEnabled(ctx context.Context, runtimeClient client.Client) (bool, error) {
-	var kyma kyma.Kyma
-	err := runtimeClient.Get(ctx, types.NamespacedName{Name: "default", Namespace: "kyma-system"}, &kyma)
+	var defaultKyma kyma.Kyma
+	err := runtimeClient.Get(ctx, types.NamespacedName{Name: "default", Namespace: "kyma-system"}, &defaultKyma)
 	if err != nil {
 		return false, err
 	}
 
-	kymaModules := kyma.Spec.Modules
+	kymaModules := defaultKyma.Spec.Modules
 
 	for _, m := range kymaModules {
 		if m.Name == RegistryCacheModuleName {
@@ -145,7 +145,7 @@ func registryCacheEnabled(ctx context.Context, runtimeClient client.Client) (boo
 		}
 	}
 
-	// Fallback: search for crd
+	// Fallback: search for CRD
 	// This is a temporary solution until module is available to be installed
 	var crd apiextensions.CustomResourceDefinition
 	crdErr := runtimeClient.Get(ctx, types.NamespacedName{Name: "registrycacheconfigs.core.kyma-project.io"}, &crd)

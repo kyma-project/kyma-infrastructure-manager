@@ -2,6 +2,8 @@ package gardener
 
 import (
 	"fmt"
+	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
+	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,6 +38,16 @@ func GetRuntimeClient(secret corev1.Secret) (client.Client, error) {
 	}
 
 	runtimeClientWithAdmin, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		return nil, err
+	}
+
+	err = registrycacheapi.AddToScheme(runtimeClientWithAdmin.Scheme())
+	if err != nil {
+		return nil, err
+	}
+
+	err = kyma.AddToScheme(runtimeClientWithAdmin.Scheme())
 	if err != nil {
 		return nil, err
 	}

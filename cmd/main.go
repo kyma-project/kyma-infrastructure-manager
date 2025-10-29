@@ -25,10 +25,6 @@ import (
 	"os"
 	"time"
 
-	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
-	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
-
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenerapis "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	gardeneroidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
@@ -37,12 +33,14 @@ import (
 	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	kubeconfigcontroller "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
+	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
 	runtimecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -313,11 +311,6 @@ func initGardenerClients(kubeconfigPath string, namespace string, timeout time.D
 	}
 
 	err = gardeneroidc.AddToScheme(gardenerClient.Scheme())
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to register Gardener schema")
-	}
-
-	err = registrycacheapi.AddToScheme(gardenerClient.Scheme())
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to register Gardener schema")
 	}
