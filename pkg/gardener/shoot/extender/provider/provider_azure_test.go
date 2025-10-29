@@ -2,6 +2,8 @@ package provider
 
 import (
 	"encoding/json"
+	"testing"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
@@ -12,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
-	"testing"
 )
 
 func TestProviderExtenderForCreateAzure(t *testing.T) {
@@ -81,7 +82,7 @@ func TestProviderExtenderForCreateAzure(t *testing.T) {
 
 			// when
 
-			extender := NewProviderExtenderForCreateOperation(false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
+			extender := NewProviderExtenderForCreateOperation(false, false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
 			err := extender(tc.Runtime, &shoot)
 
 			// then
@@ -411,7 +412,7 @@ func TestProviderExtenderForCreateMultipleWorkersAzure(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderForCreateOperation(false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
+			extender := NewProviderExtenderForCreateOperation(false, false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
 			err := extender(tc.Runtime, &shoot)
 
 			// then

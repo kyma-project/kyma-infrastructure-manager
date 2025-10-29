@@ -2,6 +2,8 @@ package provider
 
 import (
 	"encoding/json"
+	"testing"
+
 	awsext "github.com/gardener/gardener-extension-provider-aws/pkg/apis/aws/v1alpha1"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -12,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
-	"testing"
 )
 
 func TestProviderExtenderForCreateAWS(t *testing.T) {
@@ -20,6 +21,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 	for tname, tc := range map[string]struct {
 		Runtime                     imv1.Runtime
 		EnableIMDSv2                bool
+		EnableDualStackIP           bool
 		DefaultMachineImageVersion  string
 		ExpectedMachineImageVersion string
 		DefaultMachineImageName     string
@@ -39,6 +41,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 				},
 			},
 			EnableIMDSv2:                false,
+			EnableDualStackIP:           false,
 			DefaultMachineImageVersion:  "1312.3.0",
 			ExpectedMachineImageVersion: "1312.2.0",
 			ExpectedMachineImageName:    "gardenlinux",
@@ -56,6 +59,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 				},
 			},
 			EnableIMDSv2:                false,
+			EnableDualStackIP:           false,
 			DefaultMachineImageVersion:  "1312.3.0",
 			ExpectedMachineImageVersion: "1312.2.0",
 			ExpectedMachineImageName:    "gardenlinux",
@@ -73,6 +77,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 				},
 			},
 			EnableIMDSv2:                false,
+			EnableDualStackIP:           false,
 			DefaultMachineImageVersion:  "1312.3.0",
 			ExpectedMachineImageVersion: "1312.2.0",
 			ExpectedMachineImageName:    "gardenlinux",
@@ -90,6 +95,25 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 				},
 			},
 			EnableIMDSv2:                true,
+			EnableDualStackIP:           false,
+			DefaultMachineImageVersion:  "1312.3.0",
+			ExpectedMachineImageVersion: "1312.3.0",
+			ExpectedZonesCount:          3,
+		},
+		"Create dual stack IP provider config for AWS with worker config and three zones": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProvider(hyperscaler.TypeAWS, "", "", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+						Networking: imv1.Networking{
+							Nodes:     "10.250.0.0/22",
+							DualStack: ptr.To(true),
+						},
+					},
+				},
+			},
+			EnableIMDSv2:                true,
+			EnableDualStackIP:           true,
 			DefaultMachineImageVersion:  "1312.3.0",
 			ExpectedMachineImageVersion: "1312.3.0",
 			ExpectedZonesCount:          3,
@@ -101,14 +125,14 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 
 			// when
 
-			extender := NewProviderExtenderForCreateOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
+			extender := NewProviderExtenderForCreateOperation(tc.EnableDualStackIP, tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
 			err := extender(tc.Runtime, &shoot)
 
 			// then
 			require.NoError(t, err)
 
 			assertProvider(t, tc.Runtime.Spec.Shoot, shoot, tc.EnableIMDSv2, tc.ExpectedMachineImageName, tc.ExpectedMachineImageVersion)
-			assertProviderSpecificConfigAWS(t, shoot, tc.ExpectedZonesCount)
+			assertProviderSpecificConfigAWS(t, shoot, tc.ExpectedZonesCount, tc.EnableDualStackIP)
 		})
 	}
 }
@@ -270,7 +294,7 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 			require.NoError(t, err)
 
 			assertProvider(t, tc.Runtime.Spec.Shoot, shoot, tc.EnableIMDSv2, tc.ExpectedMachineImageName, tc.ExpectedMachineImageVersion)
-			assertProviderSpecificConfigAWS(t, shoot, tc.ExpectedZonesCount)
+			assertProviderSpecificConfigAWS(t, shoot, tc.ExpectedZonesCount, false)
 		})
 	}
 }
@@ -304,11 +328,20 @@ func fixAWSControlPlaneConfig() *runtime.RawExtension {
 	return &runtime.RawExtension{Raw: controlPlaneConfig}
 }
 
-func assertProviderSpecificConfigAWS(t *testing.T, shoot gardener.Shoot, expectedZonesCount int) {
+func assertProviderSpecificConfigAWS(t *testing.T, shoot gardener.Shoot, expectedZonesCount int, enableDualStackIP bool) {
 	var infrastructureConfig awsext.InfrastructureConfig
+	var controlPlaneConfig awsext.ControlPlaneConfig
 
 	err := json.Unmarshal(shoot.Spec.Provider.InfrastructureConfig.Raw, &infrastructureConfig)
 	require.NoError(t, err)
+
+	if enableDualStackIP {
+		err = json.Unmarshal(shoot.Spec.Provider.ControlPlaneConfig.Raw, &controlPlaneConfig)
+		require.NoError(t, err)
+
+		assert.Equal(t, true, infrastructureConfig.DualStack.Enabled)
+		assert.Equal(t, true, controlPlaneConfig.LoadBalancerController.Enabled)
+	}
 
 	assert.Equal(t, expectedZonesCount, len(infrastructureConfig.Networks.Zones))
 }

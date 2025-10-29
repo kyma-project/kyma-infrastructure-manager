@@ -2,6 +2,7 @@ package aws
 
 import (
 	"encoding/json"
+
 	"github.com/gardener/gardener-extension-provider-aws/pkg/apis/aws/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -22,6 +23,19 @@ func GetInfrastructureConfig(workersCidr string, zones []string) ([]byte, error)
 	return json.Marshal(config)
 }
 
+func GetInfrastructureConfigForDualStack(workersCidr string, zones []string) ([]byte, error) {
+	config, err := NewInfrastructureConfig(workersCidr, zones)
+	if err != nil {
+		return nil, err
+	}
+
+	config.DualStack = &v1alpha1.DualStack{
+		Enabled: true,
+	}
+
+	return json.Marshal(config)
+}
+
 func GetInfrastructureConfigForPatch(workersCidr string, zones []string, existingInfrastructureConfigBytes []byte) ([]byte, error) {
 	newConfig, err := NewInfrastructureConfigForPatch(workersCidr, zones, existingInfrastructureConfigBytes)
 	if err != nil {
@@ -33,6 +47,14 @@ func GetInfrastructureConfigForPatch(workersCidr string, zones []string, existin
 
 func GetControlPlaneConfig(_ []string) ([]byte, error) {
 	return json.Marshal(NewControlPlaneConfig())
+}
+
+func GetControlPlaneConfigForDualStack(_ []string) ([]byte, error) {
+	config := NewControlPlaneConfig()
+	config.LoadBalancerController = &v1alpha1.LoadBalancerControllerConfig{
+		Enabled: true,
+	}
+	return json.Marshal(config)
 }
 
 func GetWorkerConfig() ([]byte, error) {

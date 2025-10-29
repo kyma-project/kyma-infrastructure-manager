@@ -1,9 +1,10 @@
 package provider
 
 import (
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	"slices"
 	"sort"
+
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -17,7 +18,7 @@ import (
 )
 
 // InfrastructureConfig and ControlPlaneConfig are generated unless they are specified in the RuntimeCR
-func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName, defMachineImgVer string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIMDSv2 bool, defMachineImgName, defMachineImgVer string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
 		provider.Type = rt.Spec.Shoot.Provider.Type
@@ -34,7 +35,9 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 
 		workerZones := getNetworkingZonesFromWorkers(provider.Workers)
 
-		infraConfig, controlPlaneConf, err := getConfig(rt.Spec.Shoot, workerZones, nil)
+		canEnableDualStack := rt.Spec.Shoot.Networking.DualStack != nil && *rt.Spec.Shoot.Networking.DualStack && infraSupportsDualStack
+
+		infraConfig, controlPlaneConf, err := getConfig(rt.Spec.Shoot, workerZones, canEnableDualStack, nil)
 		if err != nil {
 			return err
 		}
@@ -92,7 +95,7 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 		} else {
 			mergedWorkerZones := append(workerZonesFromShoot, zonesAdded...)
 
-			infraConfig, controlPlaneConfig, err := getConfig(rt.Spec.Shoot, mergedWorkerZones, existingInfraConfig.Raw)
+			infraConfig, controlPlaneConfig, err := getConfig(rt.Spec.Shoot, mergedWorkerZones, false, existingInfraConfig.Raw)
 			if err != nil {
 				return err
 			}
@@ -169,7 +172,7 @@ func sortWorkersToShootOrder(runtimeWorkers []gardener.Worker, shootWorkers []ga
 type InfrastructureProviderFunc func(workersCidr string, zones []string) ([]byte, error)
 type ControlPlaneProviderFunc func(zones []string) ([]byte, error)
 
-func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, existingInfrastructureConfig []byte) (infrastructureConfig *runtime.RawExtension, controlPlaneConfig *runtime.RawExtension, err error) {
+func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, enableDualStack bool, existingInfrastructureConfig []byte) (infrastructureConfig *runtime.RawExtension, controlPlaneConfig *runtime.RawExtension, err error) {
 	getConfigForProvider := func(runtimeShoot imv1.RuntimeShoot, infrastructureConfigFunc InfrastructureProviderFunc, controlPlaneConfigFunc ControlPlaneProviderFunc) (*runtime.RawExtension, *runtime.RawExtension, error) {
 		infrastructureConfigBytes, err := infrastructureConfigFunc(runtimeShoot.Networking.Nodes, zones)
 		if err != nil {
@@ -191,6 +194,9 @@ func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, existingInfrastru
 				return getConfigForProvider(runtimeShoot, func(workersCidr string, zones []string) ([]byte, error) {
 					return aws.GetInfrastructureConfigForPatch(workersCidr, zones, existingInfrastructureConfig)
 				}, aws.GetControlPlaneConfig)
+			}
+			if enableDualStack {
+				return getConfigForProvider(runtimeShoot, aws.GetInfrastructureConfigForDualStack, aws.GetControlPlaneConfigForDualStack)
 			}
 			return getConfigForProvider(runtimeShoot, aws.GetInfrastructureConfig, aws.GetControlPlaneConfig)
 		}
