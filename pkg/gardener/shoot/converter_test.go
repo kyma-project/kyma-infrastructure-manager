@@ -282,7 +282,7 @@ func TestConverter(t *testing.T) {
 func assertShootFields(t *testing.T, runtime imv1.Runtime, shoot gardener.Shoot) {
 	assert.Equal(t, runtime.Spec.Shoot.Purpose, *shoot.Spec.Purpose)
 	assert.Equal(t, runtime.Spec.Shoot.Region, shoot.Spec.Region)
-	assert.Equal(t, runtime.Spec.Shoot.SecretBindingName, *shoot.Spec.SecretBindingName)
+	assert.Equal(t, runtime.Spec.Shoot.SecretBindingName, *shoot.Spec.SecretBindingName) //nolint:staticcheck
 	assert.Equal(t, runtime.Spec.Shoot.ControlPlane, shoot.Spec.ControlPlane)
 	assert.Equal(t, runtime.Spec.Shoot.Networking.Nodes, *shoot.Spec.Networking.Nodes)
 	assert.Equal(t, runtime.Spec.Shoot.Networking.Pods, *shoot.Spec.Networking.Pods)
