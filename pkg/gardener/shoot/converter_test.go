@@ -541,7 +541,7 @@ var testReader io.Reader = strings.NewReader(
   "kubernetes": {
 		"defaultVersion": "0.1.2.3",
 		"enableKubernetesVersionAutoUpdate": true,
-		"enableMachineImageVersionAutoUpdate": false,
+		"enableMachineImageVersionAutoUpdate": true,
 		"defaultOperatorOidc": {
 		"clientID": "test-clientID",
 		"groupsClaim": "test-group",
@@ -610,7 +610,7 @@ func Test_ConverterConfig_Load_OK(t *testing.T) {
 			Kubernetes: config.KubernetesConfig{
 				DefaultVersion:                      "0.1.2.3",
 				EnableKubernetesVersionAutoUpdate:   true,
-				EnableMachineImageVersionAutoUpdate: false,
+				EnableMachineImageVersionAutoUpdate: true,
 				DefaultOperatorOidc: config.OidcProvider{
 					ClientID:       "test-clientID",
 					GroupsClaim:    "test-group",

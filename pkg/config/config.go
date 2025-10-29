@@ -34,7 +34,7 @@ type KubernetesConfig struct {
 	KubeApiServer                       KubeApiServer `json:"kubeApiServer"`
 	DefaultVersion                      string        `json:"defaultVersion" validate:"required"`
 	EnableKubernetesVersionAutoUpdate   bool          `json:"enableKubernetesVersionAutoUpdate"`
-	EnableMachineImageVersionAutoUpdate bool          `json:"enableMachineImageVersionVersionAutoUpdate"`
+	EnableMachineImageVersionAutoUpdate bool          `json:"enableMachineImageVersionAutoUpdate"`
 	DefaultOperatorOidc                 OidcProvider  `json:"defaultOperatorOidc" validate:"required"`
 }
 
@@ -82,6 +82,10 @@ type KubeApiServer struct {
 
 type TolerationsConfig map[string][]gardener.Toleration
 
+type Networking struct {
+	EnableDualStackIP bool `json:"enableDualStackIP"`
+}
+
 type ConverterConfig struct {
 	Kubernetes        KubernetesConfig        `json:"kubernetes" validate:"required"`
 	DNS               DNSConfig               `json:"dns"`
@@ -91,6 +95,7 @@ type ConverterConfig struct {
 	AuditLog          AuditLogConfig          `json:"auditLogging" validate:"required"`
 	MaintenanceWindow MaintenanceWindowConfig `json:"maintenanceWindow"`
 	Tolerations       TolerationsConfig       `json:"tolerations"`
+	Networking        Networking              `json:"networking"`
 }
 
 // special case for own Gardener's DNS solution
