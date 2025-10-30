@@ -9,6 +9,7 @@ import (
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -54,6 +55,11 @@ func GetRuntimeClient(secret corev1.Secret) (client.Client, error) {
 	}
 
 	err = gardeneroidc.AddToScheme(runtimeClient.Scheme())
+	if err != nil {
+		return nil, err
+	}
+
+	err = apiextensions.AddToScheme(runtimeClient.Scheme())
 	if err != nil {
 		return nil, err
 	}
