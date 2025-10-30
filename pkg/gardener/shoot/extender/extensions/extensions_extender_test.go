@@ -510,7 +510,13 @@ func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches 
 	assert.Equal(t, "RegistryConfig", registryConfig.Kind)
 	assert.Equal(t, caches[0].Config.Upstream, registryConfig.Caches[0].Upstream)
 	assert.Nil(t, caches[0].Config.GarbageCollection)
-	assert.Equal(t, fmt.Sprintf(RegistryCacheSecretNameFmt, caches[0].UID), *registryConfig.Caches[0].SecretReferenceName)
+
+	if caches[0].Config.SecretReferenceName != nil {
+		assert.Equal(t, ptr.To(fmt.Sprintf(RegistryCacheSecretNameFmt, caches[0].UID)), registryConfig.Caches[0].SecretReferenceName)
+	} else {
+		assert.Nil(t, registryConfig.Caches[0].SecretReferenceName)
+	}
+
 	assert.Nil(t, registryConfig.Caches[0].Proxy)
 }
 
