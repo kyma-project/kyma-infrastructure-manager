@@ -116,6 +116,14 @@ func ToRegistryCacheExtension(caches []imv1.ImageRegistryCache) []registrycachee
 		}
 	}
 
+	secretReferenceName := func(cache imv1.ImageRegistryCache) *string {
+		if cache.Config.SecretReferenceName == nil || *cache.Config.SecretReferenceName == "" {
+			return nil
+		}
+
+		return ptr.To(fmt.Sprintf(RegistryCacheSecretNameFmt, cache.UID))
+	}
+
 	// Convert the registry cache to the internal format
 	registryCaches := make([]registrycacheext.RegistryCache, 0)
 	for _, c := range caches {
@@ -124,7 +132,7 @@ func ToRegistryCacheExtension(caches []imv1.ImageRegistryCache) []registrycachee
 			RemoteURL:           c.Config.RemoteURL,
 			Volume:              volumeToCacheExtension(c.Config.Volume),
 			GarbageCollection:   garbageCollectionExtension(c.Config.GarbageCollection),
-			SecretReferenceName: ptr.To(fmt.Sprintf(RegistryCacheSecretNameFmt, c.UID)),
+			SecretReferenceName: secretReferenceName(c),
 			Proxy:               proxyExtension(c.Config.Proxy),
 		})
 	}
