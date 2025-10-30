@@ -27,7 +27,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenerapis "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
-	gardeneroidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	"github.com/go-logr/logr"
 	validator "github.com/go-playground/validator/v10"
 	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -68,7 +67,6 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(infrastructuremanagerv1.AddToScheme(scheme))
 	utilruntime.Must(rbacv1.AddToScheme(scheme))
-	utilruntime.Must(gardeneroidc.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -306,11 +304,6 @@ func initGardenerClients(kubeconfigPath string, namespace string, timeout time.D
 	}
 
 	err = v1beta1.AddToScheme(gardenerClient.Scheme())
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to register Gardener schema")
-	}
-
-	err = gardeneroidc.AddToScheme(gardenerClient.Scheme())
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to register Gardener schema")
 	}

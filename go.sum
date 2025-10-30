@@ -180,8 +180,6 @@ github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0 h1:nHHjmvjitIiyP
 github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0/go.mod h1:YBCo4DoEeDndqvAn6eeu0vWM7QdXmHEeI9cFWplmBys=
 github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0SNc=
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
-github.com/kyma-project/kim-snatch v0.0.0-20250821110608-68ad42e78d8e h1:h60J8Eq/LCQ+pUlrPeKTYqYdmMVLEG/aWgP5cuCIcxs=
-github.com/kyma-project/kim-snatch v0.0.0-20250821110608-68ad42e78d8e/go.mod h1:dfVbiT5Lxgwge/n0fyHXvVl1KGcFg+rkfKG9flowUFk=
 github.com/kyma-project/lifecycle-manager/api v0.0.0-20250415061517-3922bac13370 h1:FHQvlODr7pYYJcYK93lS/EcigKLwVsZ5TP1O11/lIbI=
 github.com/kyma-project/lifecycle-manager/api v0.0.0-20250415061517-3922bac13370/go.mod h1:S023A+Htyp9zRDC+JXhu7qXjebO6jYzwQf4dlyTsZbk=
 github.com/kyma-project/registry-cache v0.0.0-20251023124504-71bc19cf102a h1:F9wkaorCIEJHY54kCLTIugAkRr7e3nnbfaowh3KoLHY=

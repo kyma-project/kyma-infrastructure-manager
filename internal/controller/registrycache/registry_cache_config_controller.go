@@ -10,7 +10,7 @@ import (
 	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	registrycache "github.com/kyma-project/registry-cache/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -27,15 +27,13 @@ import (
 // RegistryCacheConfigReconciler reconciles a secret object
 // nolint:revive
 type RegistryCacheConfigReconciler struct {
-	KcpClient client.Client
-	// RuntimeClient        client.Client // shouldn't be needed if we use RuntimeConfigurationManager?
-	Scheme               *runtime.Scheme
-	Log                  logr.Logger
-	Cfg                  fsm.RCCfg
-	EventRecorder        record.EventRecorder
-	RequestID            atomic.Uint64
-	RegistryCacheCreator RegistryCacheCreator
-	RuntimeClientGetter  RuntimeClientGetter
+	KcpClient           client.Client
+	Scheme              *runtime.Scheme
+	Log                 logr.Logger
+	Cfg                 fsm.RCCfg
+	EventRecorder       record.EventRecorder
+	RequestID           atomic.Uint64
+	RuntimeClientGetter RuntimeClientGetter
 }
 
 const (
@@ -178,12 +176,6 @@ func secretControlledByKIM(secret corev1.Secret) bool {
 	return ok && secret.Labels["operator.kyma-project.io/managed-by"] == "infrastructure-manager"
 }
 
-//go:generate mockery --name=RegistryCache
-type RegistryCache interface {
-	GetRegistryCacheConfig() ([]registrycache.RegistryCacheConfig, error)
-}
-
-type RegistryCacheCreator func(runtimeClient client.Client) (RegistryCache, error)
 type RuntimeClientGetter func(secret corev1.Secret) (client.Client, error)
 
 func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, runtimeClientGetter RuntimeClientGetter) *RegistryCacheConfigReconciler {
