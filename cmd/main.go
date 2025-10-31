@@ -25,25 +25,21 @@ import (
 	"os"
 	"time"
 
-	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
-	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
-	registrycacheapi "github.com/kyma-project/kim-snatch/api/v1beta1"
-
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenerapis "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
-	gardeneroidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	"github.com/go-logr/logr"
 	validator "github.com/go-playground/validator/v10"
 	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	kubeconfigcontroller "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
+	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
 	runtimecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -71,7 +67,6 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(infrastructuremanagerv1.AddToScheme(scheme))
 	utilruntime.Must(rbacv1.AddToScheme(scheme))
-	utilruntime.Must(gardeneroidc.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -274,15 +269,7 @@ func main() {
 	refreshRuntimeMetrics(restConfig, logger, metrics)
 
 	if registryCacheConfigControllerEnabled {
-		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, func(secret corev1.Secret) (registrycachecontroller.RegistryCache, error) {
-			runtimeClient, err := gardener.GetRuntimeClient(secret)
-
-			if err != nil {
-				return nil, err
-			}
-
-			return registrycache.NewRuntimeConfigurationManager(context.Background(), runtimeClient), nil
-		})
+		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, gardener.GetRuntimeClient)
 		if err = registryCacheConfigReconciler.SetupWithManager(mgr, 1); err != nil {
 			setupLog.Error(err, "unable to setup registry cache config controller with Manager", "controller", "Runtime")
 			os.Exit(1)
@@ -317,16 +304,6 @@ func initGardenerClients(kubeconfigPath string, namespace string, timeout time.D
 	}
 
 	err = v1beta1.AddToScheme(gardenerClient.Scheme())
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to register Gardener schema")
-	}
-
-	err = gardeneroidc.AddToScheme(gardenerClient.Scheme())
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to register Gardener schema")
-	}
-
-	err = registrycacheapi.AddToScheme(gardenerClient.Scheme())
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to register Gardener schema")
 	}

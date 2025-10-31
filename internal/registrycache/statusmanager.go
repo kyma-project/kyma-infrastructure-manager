@@ -3,7 +3,7 @@ package registrycache
 import (
 	"context"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
+	registrycache "github.com/kyma-project/registry-cache/api/v1beta1"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

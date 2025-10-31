@@ -1,7 +1,7 @@
 package extender
 
 import (
-	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
+	registrycache "github.com/kyma-project/registry-cache/api/v1beta1"
 	"k8s.io/utils/ptr"
 	"testing"
 

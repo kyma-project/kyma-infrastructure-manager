@@ -64,7 +64,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	reconciler = NewRegistryCacheConfigReconciler(mgr, logger, fixMockedRegistryCache())
+	reconciler = NewRegistryCacheConfigReconciler(mgr, logger, fixRuntimeClientGetter(fixRuntimeClients()))
 	Expect(reconciler).NotTo(BeNil())
 	err = reconciler.SetupWithManager(mgr, 1)
 	Expect(err).To(BeNil())
