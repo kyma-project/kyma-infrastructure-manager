@@ -39,6 +39,7 @@ type RegistryCacheConfigReconciler struct {
 const (
 	fieldManagerName        = "customconfigcontroller"
 	RegistryCacheModuleName = "registry-cache"
+	RuntimeIDLabel          = "kyma-project.io/runtime-id"
 )
 
 func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
@@ -54,7 +55,7 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 		return ctrl.Result{}, nil
 	}
 
-	runtimeID := secret.Labels["kyma-project.io/runtime-id"]
+	runtimeID := secret.Labels[RuntimeIDLabel]
 
 	runtimeClient, err := r.RuntimeClientGetter(secret)
 	if err != nil {
@@ -68,17 +69,28 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 		return requeueOnError(err)
 	}
 
-	var runtime imv1.Runtime
-	if err := r.KcpClient.Get(ctx, types.NamespacedName{Name: runtimeID,
-		Namespace: request.Namespace,
-	}, &runtime); err != nil {
+	var runtimeList imv1.RuntimeList
+
+	err = r.KcpClient.List(ctx, &runtimeList,
+		client.MatchingLabels(map[string]string{RuntimeIDLabel: runtimeID}))
+
+	if err != nil {
+		r.Log.V(log_level.TRACE).Error(err, "Failed to find runtime", "RuntimeID", runtimeID, "Namespace", secret.Namespace)
 		return requeueOnError(err)
 	}
 
-	if registryCacheEnabled || len(runtime.Spec.Caching) > 0 {
+	if len(runtimeList.Items) == 0 || len(runtimeList.Items) > 1 {
+		e := fmt.Errorf("expected to find one runtime for given runtime ID, found %d", len(runtimeList.Items))
+		r.Log.V(log_level.TRACE).Error(e, "RuntimeID", runtimeID, "Namespace", secret.Namespace)
+		return ctrl.Result{}, nil
+	}
+
+	runtimeToUpdate := runtimeList.Items[0]
+
+	if registryCacheEnabled || len(runtimeToUpdate.Spec.Caching) > 0 {
 		r.Log.V(log_level.TRACE).Info("Getting runtime", "Name", runtimeID, "Namespace", request.Namespace)
 
-		return r.reconcileRegistryCacheConfig(ctx, runtimeClient, runtime, registryCacheEnabled)
+		return r.reconcileRegistryCacheConfig(ctx, runtimeClient, runtimeToUpdate, registryCacheEnabled)
 	}
 
 	return ctrl.Result{
@@ -170,7 +182,7 @@ func secretControlledByKIM(secret corev1.Secret) bool {
 		return false
 	}
 
-	_, ok := secret.Labels["kyma-project.io/runtime-id"]
+	_, ok := secret.Labels[RuntimeIDLabel]
 
 	return ok && secret.Labels["operator.kyma-project.io/managed-by"] == "infrastructure-manager"
 }
