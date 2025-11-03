@@ -3,7 +3,7 @@ package extensions
 import (
 	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
+	registrycache "github.com/kyma-project/registry-cache/api/v1beta1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/resource"

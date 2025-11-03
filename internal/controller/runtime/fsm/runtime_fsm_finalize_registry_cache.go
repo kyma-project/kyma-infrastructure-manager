@@ -6,7 +6,7 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
-	registrycacheapi "github.com/kyma-project/kim-snatch/api/v1beta1"
+	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 

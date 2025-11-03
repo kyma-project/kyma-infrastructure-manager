@@ -4,7 +4,7 @@ import (
 	"context"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
-	registrycachev1beta1 "github.com/kyma-project/kim-snatch/api/v1beta1"
+	registrycachev1beta1 "github.com/kyma-project/registry-cache/api/v1beta1"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
