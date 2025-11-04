@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/gardener/gardener v1.130.0
 	github.com/gardener/gardener-extension-provider-aws v1.64.1
-	github.com/gardener/gardener-extension-provider-gcp v1.46.0
+	github.com/gardener/gardener-extension-provider-gcp v1.47.0
 	github.com/gardener/gardener-extension-provider-openstack v1.50.0
 	github.com/gardener/gardener-extension-registry-cache v0.18.0
 	github.com/gardener/oidc-webhook-authenticator v0.38.0
@@ -14,7 +14,7 @@ require (
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/kyma-project/lifecycle-manager/api v0.0.0-20250415061517-3922bac13370
 	github.com/kyma-project/registry-cache v0.0.0-20251023124504-71bc19cf102a
-	github.com/onsi/ginkgo/v2 v2.26.0
+	github.com/onsi/ginkgo/v2 v2.27.1
 	github.com/onsi/gomega v1.38.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
