@@ -13,6 +13,7 @@ const (
 	DefaultAzureCloudProfileName     = "az"
 	DefaultGCPCloudProfileName       = "gcp"
 	DefaultOpenStackCloudProfileName = "converged-cloud-kyma"
+	DefaultAlicloudCloudProfileName = "alicloud"
 )
 
 func ExtendWithCloudProfile(runtime imv1.Runtime, shoot *gardener.Shoot) error {
@@ -37,7 +38,7 @@ func getCloudProfileName(runtime imv1.Runtime) (string, error) {
 		return DefaultAzureCloudProfileName, nil
 	case hyperscaler.TypeOpenStack:
 		return DefaultOpenStackCloudProfileName, nil
-	}
+	case hyperscaler.TypeAlicloud:return DefaultAlicloudCloudProfileName, nil}
 
 	return "", errors.New("provider not supported")
 }

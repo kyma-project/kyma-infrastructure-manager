@@ -200,7 +200,7 @@ type APIServer struct {
 }
 
 type Provider struct {
-	//+kubebuilder:validation:Enum=aws;azure;gcp;openstack
+	//+kubebuilder:validation:Enum=aws;azure;gcp;openstack;alicloud
 	Type                 string                `json:"type"`
 	Workers              []gardener.Worker     `json:"workers"`
 	AdditionalWorkers    *[]gardener.Worker    `json:"additionalWorkers,omitempty"`

@@ -5,4 +5,5 @@ const (
 	TypeAzure     = "azure"
 	TypeGCP       = "gcp"
 	TypeOpenStack = "openstack"
+	TypeAlicloud = "alicloud"
 )

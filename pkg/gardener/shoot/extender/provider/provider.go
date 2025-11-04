@@ -9,6 +9,7 @@ import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/alicloud"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/aws"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/azure"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/gcp"
@@ -217,6 +218,10 @@ func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, enableDualStack b
 	case hyperscaler.TypeOpenStack:
 		{
 			return getConfigForProvider(runtimeShoot, openstack.GetInfrastructureConfig, openstack.GetControlPlaneConfig)
+		}
+	case hyperscaler.TypeAlicloud:
+		{
+			return getConfigForProvider(runtimeShoot, alicloud.GetInfrastructureConfig, alicloud.GetControlPlaneConfig)
 		}
 	default:
 		return nil, nil, errors.New("provider not supported")
