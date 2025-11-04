@@ -30,7 +30,7 @@ func TestControlPlaneConfig(t *testing.T) {
 func TestInfrastructureConfig(t *testing.T) {
 	t.Run("Create Infrastructure config", func(t *testing.T) {
 		// when
-		infrastructureConfigBytes, err := GetInfrastructureConfig("10.250.0.0/22", nil)
+		infrastructureConfigBytes, err := GetInfrastructureConfig("10.250.0.0/23", nil)
 
 		// then
 		require.NoError(t, err)
@@ -39,6 +39,6 @@ func TestInfrastructureConfig(t *testing.T) {
 		err = json.Unmarshal(infrastructureConfigBytes, &infrastructureConfig)
 		assert.NoError(t, err)
 
-		assert.Equal(t, "10.250.0.0/22", infrastructureConfig.Networks.Zones)
+		assert.Equal(t, "10.250.0.0/23", infrastructureConfig.Networks.Zones)
 	})
 }
