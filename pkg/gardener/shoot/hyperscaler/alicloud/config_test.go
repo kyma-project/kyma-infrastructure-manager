@@ -12,7 +12,7 @@ import (
 func TestControlPlaneConfig(t *testing.T) {
 	t.Run("Create Control Plane config", func(t *testing.T) {
 		// when
-		controlPlaneConfigBytes, err := GetControlPlaneConfig()
+		controlPlaneConfigBytes, err := GetControlPlaneConfig(nil)
 
 		// then
 		require.NoError(t, err)
@@ -24,6 +24,7 @@ func TestControlPlaneConfig(t *testing.T) {
 		assert.Equal(t, apiVersion, controlPlaneConfig.APIVersion)
 		assert.Equal(t, controlPlaneConfigKind, controlPlaneConfig.Kind)
 	})
+
 }
 
 func TestInfrastructureConfig(t *testing.T) {
