@@ -4,10 +4,10 @@ go 1.25.3
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/gardener/gardener v1.130.0
-	github.com/gardener/gardener-extension-provider-aws v1.64.1
+	github.com/gardener/gardener v1.131.1
+	github.com/gardener/gardener-extension-provider-aws v1.65.3
 	github.com/gardener/gardener-extension-provider-gcp v1.47.0
-	github.com/gardener/gardener-extension-provider-openstack v1.50.0
+	github.com/gardener/gardener-extension-provider-openstack v1.50.1
 	github.com/gardener/gardener-extension-registry-cache v0.18.0
 	github.com/gardener/oidc-webhook-authenticator v0.38.0
 	github.com/go-logr/logr v1.4.3
@@ -71,7 +71,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.67.1 // indirect
+	github.com/prometheus/common v0.67.2 // indirect
 	github.com/prometheus/procfs v0.19.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
