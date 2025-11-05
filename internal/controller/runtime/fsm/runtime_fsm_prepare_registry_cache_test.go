@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	registrycachev1beta1 "github.com/kyma-project/kim-snatch/api/v1beta1"
+	registrycachev1beta1 "github.com/kyma-project/registry-cache/api/v1beta1"
 	"github.com/onsi/gomega"
 	"github.com/stretchr/testify/require"
 )

@@ -4,14 +4,18 @@ import (
 	"context"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/registrycache/mocks"
-	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
+	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
+	registrycache "github.com/kyma-project/registry-cache/api/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"time"
 )
 
@@ -19,15 +23,17 @@ const (
 	secretForClusterWithRegistryCacheConfig1 = "kubeconfig-secret-for-cluster-with-cache-config1"
 	secretForClusterWithRegistryCacheConfig2 = "kubeconfig-secret-for-cluster-with-cache-config2"
 	secretNotManagedByKIM                    = "secret-not-managed-by-kim"
+	runtimeWithoutRegistryCacheConfig        = "test-runtime-without-registry-cache"
+	runtimeWithRegistryCacheEnabled          = "test-runtime-with-registry-cache-enabled"
+	runtimeThatShouldNotBeModified           = "test-runtime-that-should-not-be-modified"
 )
 
 var _ = Describe("Registry Cache Config Controller", func() {
 	Context("When reconciling a Secret resource", func() {
 		ctx := context.Background()
 
-		const runtimeWithoutRegistryCacheConfig = "test-runtime-without-registry-cache"
 		const shootNameForRuntimeWithoutRegistryCache = "shoot-without-registry-cache-ext"
-		const runtimeWithRegistryCacheEnabled = "test-runtime-with-registry-cache-enabled"
+
 		const shootNameForRuntimeWithRegistryCacheEnabled = "shoot-with-registry-cache-enabled-ext"
 
 		DescribeTable("Should update Runtime CR", func(newRuntime *imv1.Runtime, newSecret *v1.Secret) {
@@ -92,7 +98,6 @@ var _ = Describe("Registry Cache Config Controller", func() {
 
 		It("Should not update runtime when secret is not managed by KIM", func() {
 			const ShootName = "shoot-cluster-3"
-			const runtimeThatShouldNotBeModified = "test-runtime-that-should-not-be-modified"
 			const secretToIgnore = "secret-to-ignore"
 			const secretThatRefersNonExistentShoot = "secret-that-refers-non-existent-shoot"
 
@@ -129,15 +134,60 @@ var _ = Describe("Registry Cache Config Controller", func() {
 	})
 })
 
-func fixMockedRegistryCache() func(secret v1.Secret) (RegistryCache, error) {
-	callsMap := map[string]int{
-		secretForClusterWithRegistryCacheConfig1: 0,
-		secretForClusterWithRegistryCacheConfig2: 0,
-		secretNotManagedByKIM:                    0,
+func fixRuntimeClients() map[string]client.Client {
+	return map[string]client.Client{
+		runtimeWithoutRegistryCacheConfig: fixRuntimeClient(append(fixRegistryCache(), fixKymaCR())...),
+		runtimeWithRegistryCacheEnabled:   fixRuntimeClient(append(fixRegistryCache(), fixKymaCR())...),
+		runtimeThatShouldNotBeModified:    fixRuntimeClient(),
 	}
+}
 
-	testConfig := []registrycache.RegistryCacheConfig{
-		{
+func fixRuntimeClientGetter(runtimeClients map[string]client.Client) func(secret v1.Secret) (client.Client, error) {
+	return func(secret v1.Secret) (client.Client, error) {
+		runtimeID := secret.Labels["kyma-project.io/runtime-id"]
+		runtimeClient, exists := runtimeClients[runtimeID]
+		if !exists {
+			return nil, errors.New("runtime client not found")
+		}
+		return runtimeClient, nil
+	}
+}
+
+func fixRuntimeClient(objs ...client.Object) client.Client {
+	scheme := runtime.NewScheme()
+
+	_ = registrycache.AddToScheme(scheme)
+	_ = v1.AddToScheme(scheme)
+	_ = kyma.AddToScheme(scheme)
+	_ = apiextensions.AddToScheme(scheme)
+
+	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
+}
+
+func fixKymaCR() client.Object {
+	return &kyma.Kyma{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "default",
+			Namespace: "kyma-system",
+		},
+		Spec: kyma.KymaSpec{
+			Channel: "stable",
+			Modules: []kyma.Module{
+				{
+					Name: "registry-cache",
+				},
+			},
+		},
+	}
+}
+
+func fixRegistryCache() []client.Object {
+	return []client.Object{&v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test",
+		},
+	},
+		&registrycache.RegistryCacheConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "config1",
 				Namespace: "test",
@@ -145,8 +195,7 @@ func fixMockedRegistryCache() func(secret v1.Secret) (RegistryCache, error) {
 			Spec: registrycache.RegistryCacheConfigSpec{
 				Upstream: "docker.io",
 			},
-		},
-		{
+		}, &registrycache.RegistryCacheConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "config2",
 				Namespace: "test",
@@ -155,29 +204,6 @@ func fixMockedRegistryCache() func(secret v1.Secret) (RegistryCache, error) {
 				Upstream: "quay.io",
 			},
 		},
-	}
-
-	resultsMap := map[string][]registrycache.RegistryCacheConfig{
-		secretForClusterWithRegistryCacheConfig1: testConfig,
-		secretForClusterWithRegistryCacheConfig2: testConfig,
-		secretNotManagedByKIM:                    testConfig,
-	}
-
-	return func(secret v1.Secret) (RegistryCache, error) {
-
-		if _, found := callsMap[secret.Name]; !found {
-			return nil, errors.Errorf("unexpected secret name %s", secret.Name)
-		}
-
-		if callsMap[secret.Name] == 0 {
-			callsMap[secret.Name]++
-			return nil, errors.New("failed to get registry cache config")
-		}
-
-		registryCacheMock := &mocks.RegistryCache{}
-		registryCacheMock.On("GetRegistryCacheConfig").Return(resultsMap[secret.Name], nil)
-
-		return registryCacheMock, nil
 	}
 }
 

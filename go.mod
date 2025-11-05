@@ -1,25 +1,27 @@
 module github.com/kyma-project/infrastructure-manager
 
-go 1.25.1
+go 1.25.3
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/gardener/gardener v1.130.0
 	github.com/gardener/gardener-extension-provider-alicloud v1.66.0
-	github.com/gardener/gardener-extension-provider-aws v1.64.1
-	github.com/gardener/gardener-extension-provider-gcp v1.46.0
-	github.com/gardener/gardener-extension-provider-openstack v1.50.0
+	github.com/gardener/gardener-extension-provider-aws v1.65.3
+	github.com/gardener/gardener-extension-provider-gcp v1.47.0
+	github.com/gardener/gardener-extension-provider-openstack v1.50.1
 	github.com/gardener/gardener-extension-registry-cache v0.18.0
 	github.com/gardener/oidc-webhook-authenticator v0.38.0
 	github.com/go-logr/logr v1.4.3
 	github.com/go-playground/validator/v10 v10.28.0
-	github.com/kyma-project/kim-snatch v0.0.0-20250821110608-68ad42e78d8e
-	github.com/onsi/ginkgo/v2 v2.26.0
+	github.com/kyma-project/lifecycle-manager/api v0.0.0-20250415061517-3922bac13370
+	github.com/kyma-project/registry-cache v0.0.0-20251023124504-71bc19cf102a
+	github.com/onsi/ginkgo/v2 v2.27.1
 	github.com/onsi/gomega v1.38.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/stretchr/testify v1.11.1
 	k8s.io/api v0.34.1
+	k8s.io/apiextensions-apiserver v0.34.1
 	k8s.io/apimachinery v0.34.1
 	k8s.io/client-go v0.34.1
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
@@ -36,7 +38,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.10 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.11 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.22.1 // indirect
 	github.com/go-openapi/jsonreference v0.21.2 // indirect
@@ -70,8 +72,8 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.67.1 // indirect
-	github.com/prometheus/procfs v0.17.0 // indirect
+	github.com/prometheus/common v0.67.2 // indirect
+	github.com/prometheus/procfs v0.19.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
@@ -95,7 +97,6 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.34.1 // indirect
 	k8s.io/component-base v0.34.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912 // indirect

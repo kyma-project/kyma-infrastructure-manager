@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
+	registrycache "github.com/kyma-project/registry-cache/api/v1beta1"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"

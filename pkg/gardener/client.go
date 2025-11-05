@@ -2,10 +2,14 @@ package gardener
 
 import (
 	"fmt"
+	gardeneroidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
+	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
+	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -35,10 +39,30 @@ func GetRuntimeClient(secret corev1.Secret) (client.Client, error) {
 		return nil, err
 	}
 
-	runtimeClientWithAdmin, err := client.New(restConfig, client.Options{})
+	runtimeClient, err := client.New(restConfig, client.Options{})
 	if err != nil {
 		return nil, err
 	}
 
-	return runtimeClientWithAdmin, nil
+	err = registrycacheapi.AddToScheme(runtimeClient.Scheme())
+	if err != nil {
+		return nil, err
+	}
+
+	err = kyma.AddToScheme(runtimeClient.Scheme())
+	if err != nil {
+		return nil, err
+	}
+
+	err = gardeneroidc.AddToScheme(runtimeClient.Scheme())
+	if err != nil {
+		return nil, err
+	}
+
+	err = apiextensions.AddToScheme(runtimeClient.Scheme())
+	if err != nil {
+		return nil, err
+	}
+
+	return runtimeClient, nil
 }
