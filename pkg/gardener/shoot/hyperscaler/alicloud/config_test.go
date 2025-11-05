@@ -27,18 +27,99 @@ func TestControlPlaneConfig(t *testing.T) {
 
 }
 
+//func TestInfrastructureConfig(t *testing.T) {
+//	t.Run("Create Infrastructure config", func(t *testing.T) {
+//		// when
+//		infrastructureConfigBytes, err := GetInfrastructureConfig("10.250.0.0/23", nil)
+//
+//		// then
+//		require.NoError(t, err)
+//
+//		var infrastructureConfig v1alpha1.InfrastructureConfig
+//		err = json.Unmarshal(infrastructureConfigBytes, &infrastructureConfig)
+//		assert.NoError(t, err)
+//
+//		assert.Equal(t, "10.250.0.0/23", infrastructureConfig.Networks.Zones)
+//	})
+//}
+
 func TestInfrastructureConfig(t *testing.T) {
-	t.Run("Create Infrastructure config", func(t *testing.T) {
-		// when
-		infrastructureConfigBytes, err := GetInfrastructureConfig("10.250.0.0/23", nil)
+	for tname, tcase := range map[string]struct {
+		givenNodesCidr string
+		givenZoneNames []string
+		expectedZones  []v1alpha1.Zone
+	}{
+		"Regular 10.250.0.0/16": {
+			givenNodesCidr: "10.250.0.0/16",
+			givenZoneNames: []string{
+				"eu-central-1a",
+				"eu-central-1b",
+				"eu-central-1c",
+			},
+			expectedZones: []v1alpha1.Zone{
+				{
+					Name:    "eu-central-1a",
+					Workers: "10.250.0.0/19",
+				},
+				{
+					Name:    "eu-central-1b",
+					Workers: "10.250.64.0/19",
+				},
+				{
+					Name:    "eu-central-1c",
+					Workers: "10.250.128.0/19",
+				},
+			},
+		},
+		"Regular 10.180.0.0/23": {
+			givenNodesCidr: "10.180.0.0/23",
+			givenZoneNames: []string{
+				"eu-central-1a",
+				"eu-central-1b",
+				"eu-central-1c",
+			},
+			expectedZones: []v1alpha1.Zone{
+				{
+					Name:    "eu-central-1a",
+					Workers: "10.180.0.0/26",
+				},
+				{
+					Name:    "eu-central-1b",
+					Workers: "10.180.0.128/26",
+				},
+				{
+					Name:    "eu-central-1c",
+					Workers: "10.180.1.0/26",
+				},
+			},
+		},
+	} {
+		t.Run(tname, func(t *testing.T) {
+			// when
+			infrastructureConfigBytes, err := GetInfrastructureConfig(tcase.givenNodesCidr, tcase.givenZoneNames)
 
-		// then
-		require.NoError(t, err)
+			// then
+			assert.NoError(t, err)
 
-		var infrastructureConfig v1alpha1.InfrastructureConfig
-		err = json.Unmarshal(infrastructureConfigBytes, &infrastructureConfig)
-		assert.NoError(t, err)
+			// when
+			var infrastructureConfig v1alpha1.InfrastructureConfig
+			err = json.Unmarshal(infrastructureConfigBytes, &infrastructureConfig)
 
-		assert.Equal(t, "10.250.0.0/23", infrastructureConfig.Networks.Zones)
-	})
+			// then
+			require.NoError(t, err)
+			assert.Equal(t, apiVersion, infrastructureConfig.APIVersion)
+			assert.Equal(t, infrastructureConfigKind, infrastructureConfig.Kind)
+
+			assert.Equal(t, tcase.givenNodesCidr, *infrastructureConfig.Networks.VPC.CIDR)
+			for i, actualZone := range infrastructureConfig.Networks.Zones {
+				assertIPRanges(t, tcase.expectedZones[i], actualZone)
+			}
+		})
+	}
+}
+
+func assertIPRanges(t *testing.T, expectedZone v1alpha1.Zone, actualZone v1alpha1.Zone) {
+	assert.Equal(t, expectedZone.Name, actualZone.Name)
+	assert.Equal(t, expectedZone.Worker, actualZone.Worker)
+	assert.Equal(t, expectedZone.Workers, actualZone.Workers)
 }

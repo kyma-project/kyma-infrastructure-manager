@@ -22,23 +22,21 @@ func GetControlPlaneConfig(_ []string) ([]byte, error) {
 }
 
 func NewInfrastructureConfig(workerCIDR string, zones []string) v1alpha1.InfrastructureConfig {
-	var networkZones = make([]v1alpha1.Zone, len(zones))
-	for i, zone := range zones {
-		networkZones[i] = v1alpha1.Zone{
-			Name: zone,
-			Workers: workerCIDR,
-		}
+	generatedZones, err := generateZones(workerCIDR, zones)
+
+	if err != nil {
+		return v1alpha1.InfrastructureConfig{}
 	}
 
-	return v1alpha1.InfrastructureConfig {
+	return v1alpha1.InfrastructureConfig{
 
 		TypeMeta: v1.TypeMeta{
 			Kind:       infrastructureConfigKind,
 			APIVersion: apiVersion,
 		},
 		Networks: v1alpha1.Networks{
-			VPC:   v1alpha1.VPC{CIDR: &workerCIDR}, //TODO: verify if this is correct
-			Zones: networkZones,
+			VPC:   v1alpha1.VPC{CIDR: &workerCIDR},
+			Zones: generatedZones,
 		},
 	}
 }
