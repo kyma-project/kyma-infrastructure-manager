@@ -69,11 +69,11 @@ func TestInfrastructureConfig(t *testing.T) {
 				},
 				{
 					Name:    "eu-central-1b",
-					Workers: "10.180.0.128/26",
+					Workers: "10.180.0.64/26",
 				},
 				{
 					Name:    "eu-central-1c",
-					Workers: "10.180.1.0/26",
+					Workers: "10.180.0.128/26",
 				},
 			},
 		},
