@@ -11,358 +11,358 @@ import (
 func TestZonesWithCustomNodeIPRange(t *testing.T) {
 
 	for tname, tcase := range map[string]struct {
-		givenNodesCidr     string
+		givenNodesCidr string
 		givenZoneNames []string
 		expectedZones  []alicloud.Zone
 	}{
 		"one zone and Default 10.250.0.0/16": {
 			givenNodesCidr: "10.250.0.0/16",
-			givenZoneNames: []string{"1"},
+			givenZoneNames: []string{"eu-central-1a"},
 			expectedZones: []alicloud.Zone{
 				{
-					Name: "1",
+					Name:    "eu-central-1a",
 					Workers: "10.250.0.0/19",
 				},
 			},
 		},
 		"two zones and Default 10.250.0.0/16": {
 			givenNodesCidr: "10.250.0.0/16",
-			givenZoneNames: []string{"2", "3"},
+			givenZoneNames: []string{"eu-central-1b", "eu-central-1c"},
 			expectedZones: []alicloud.Zone{
 				{
-					Name: "2",
+					Name:    "eu-central-1b",
 					Workers: "10.250.0.0/19",
 				},
 				{
-					Name: "3",
+					Name:    "eu-central-1c",
 					Workers: "10.250.32.0/19",
 				},
 			},
 		},
 		"three zones and Default 10.250.0.0/16": {
 			givenNodesCidr: "10.250.0.0/16",
-			givenZoneNames: []string{"1", "2", "3"},
+			givenZoneNames: []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"},
 			expectedZones: []alicloud.Zone{
 				{
-					Name: "1",
+					Name:    "eu-central-1a",
 					Workers: "10.250.0.0/19",
 				},
 				{
-					Name: "2",
+					Name:    "eu-central-1b",
 					Workers: "10.250.32.0/19",
 				},
 				{
-					Name: "3",
+					Name:    "eu-central-1c",
 					Workers: "10.250.64.0/19",
 				},
 			},
 		},
 		"three zones reverse order and Default 10.250.0.0/16": {
 			givenNodesCidr: "10.250.0.0/16",
-			givenZoneNames: []string{"3", "2", "1"},
+			givenZoneNames: []string{"eu-central-1c", "eu-central-1b", "eu-central-1a"},
 			expectedZones: []alicloud.Zone{
 				{
-					Name: "3",
+					Name:    "eu-central-1c",
 					Workers: "10.250.0.0/19",
 				},
 				{
-					Name: "2",
+					Name:    "eu-central-1b",
 					Workers: "10.250.32.0/19",
 				},
 				{
-					Name: "1",
+					Name:    "eu-central-1a",
 					Workers: "10.250.64.0/19",
 				},
 			},
 		},
 		"four zones and Default 10.250.0.0/16": {
 			givenNodesCidr: "10.250.0.0/16",
-			givenZoneNames: []string{"1", "2", "3", "4"},
+			givenZoneNames: []string{"eu-central-1a", "eu-central-1b", "eu-central-1c", "eu-central-1d"},
 			expectedZones: []alicloud.Zone{
 				{
-					Name: "1",
+					Name:    "eu-central-1a",
 					Workers: "10.250.0.0/19",
 				},
 				{
-					Name: "2",
+					Name:    "eu-central-1b",
 					Workers: "10.250.32.0/19",
 				},
 				{
-					Name: "3",
+					Name:    "eu-central-1c",
 					Workers: "10.250.64.0/19",
 				},
 				{
-					Name: "4",
+					Name:    "eu-central-1d",
 					Workers: "10.250.96.0/19",
 				},
 			},
 		},
 		"five zones and Default 10.250.0.0/16": {
 			givenNodesCidr: "10.250.0.0/16",
-			givenZoneNames: []string{"1", "2", "3", "4", "5"},
+			givenZoneNames: []string{"eu-central-1a", "eu-central-1b", "eu-central-1c", "eu-central-1d", "eu-central-1e"},
 			expectedZones: []alicloud.Zone{
 				{
-					Name: "1",
+					Name:    "eu-central-1a",
 					Workers: "10.250.0.0/19",
 				},
 				{
-					Name: "2",
+					Name:    "eu-central-1b",
 					Workers: "10.250.32.0/19",
 				},
 				{
-					Name: "3",
+					Name:    "eu-central-1c",
 					Workers: "10.250.64.0/19",
 				},
 				{
-					Name: "4",
+					Name:    "eu-central-1d",
 					Workers: "10.250.96.0/19",
 				},
 				{
-					Name: "5",
+					Name:    "eu-central-1e",
 					Workers: "10.250.128.0/19",
 				},
 			},
 		},
 		"six zones and Default 10.250.0.0/16": {
 			givenNodesCidr: "10.250.0.0/16",
-			givenZoneNames: []string{"1", "2", "3", "4", "5", "6"},
+			givenZoneNames: []string{"eu-central-1a", "eu-central-1b", "eu-central-1c", "eu-central-1d", "eu-central-1e", "eu-central-1f"},
 			expectedZones: []alicloud.Zone{
 				{
-					Name: "1",
+					Name:    "eu-central-1a",
 					Workers: "10.250.0.0/19",
 				},
 				{
-					Name: "2",
+					Name:    "eu-central-1b",
 					Workers: "10.250.32.0/19",
 				},
 				{
-					Name: "3",
+					Name:    "eu-central-1c",
 					Workers: "10.250.64.0/19",
 				},
 				{
-					Name: "4",
+					Name:    "eu-central-1d",
 					Workers: "10.250.96.0/19",
 				},
 				{
-					Name: "5",
+					Name:    "eu-central-1e",
 					Workers: "10.250.128.0/19",
 				},
 				{
-					Name: "6",
+					Name:    "eu-central-1f",
 					Workers: "10.250.160.0/19",
 				},
 			},
 		},
 		"seven zones and Default 10.250.0.0/16": {
 			givenNodesCidr: "10.250.0.0/16",
-			givenZoneNames: []string{"1", "2", "3", "4", "5", "6", "7"},
+			givenZoneNames: []string{"eu-central-1a", "eu-central-1b", "eu-central-1c", "eu-central-1d", "eu-central-1e", "eu-central-1f", "eu-central-1g"},
 			expectedZones: []alicloud.Zone{
 				{
-					Name: "1",
+					Name:    "eu-central-1a",
 					Workers: "10.250.0.0/19",
 				},
 				{
-					Name: "2",
+					Name:    "eu-central-1b",
 					Workers: "10.250.32.0/19",
 				},
 				{
-					Name: "3",
+					Name:    "eu-central-1c",
 					Workers: "10.250.64.0/19",
 				},
 				{
-					Name: "4",
+					Name:    "eu-central-1d",
 					Workers: "10.250.96.0/19",
 				},
 				{
-					Name: "5",
+					Name:    "eu-central-1e",
 					Workers: "10.250.128.0/19",
 				},
 				{
-					Name: "6",
+					Name:    "eu-central-1f",
 					Workers: "10.250.160.0/19",
 				},
 				{
-					Name: "7",
+					Name:    "eu-central-1g",
 					Workers: "10.250.192.0/19",
 				},
 			},
 		},
 		"eight zones and Default 10.250.0.0/16": {
 			givenNodesCidr: "10.250.0.0/16",
-			givenZoneNames: []string{"1", "2", "3", "4", "5", "6", "7", "8"},
+			givenZoneNames: []string{"eu-central-1a", "eu-central-1b", "eu-central-1c", "eu-central-1d", "eu-central-1e", "eu-central-1f", "eu-central-1g", "eu-central-1h"},
 			expectedZones: []alicloud.Zone{
 				{
-					Name: "1",
+					Name:    "eu-central-1a",
 					Workers: "10.250.0.0/19",
 				},
 				{
-					Name: "2",
+					Name:    "eu-central-1b",
 					Workers: "10.250.32.0/19",
 				},
 				{
-					Name: "3",
+					Name:    "eu-central-1c",
 					Workers: "10.250.64.0/19",
 				},
 				{
-					Name: "4",
+					Name:    "eu-central-1d",
 					Workers: "10.250.96.0/19",
 				},
 				{
-					Name: "5",
+					Name:    "eu-central-1e",
 					Workers: "10.250.128.0/19",
 				},
 				{
-					Name: "6",
+					Name:    "eu-central-1f",
 					Workers: "10.250.160.0/19",
 				},
 				{
-					Name: "7",
+					Name:    "eu-central-1g",
 					Workers: "10.250.192.0/19",
 				},
 				{
-					Name: "8",
+					Name:    "eu-central-1h",
 					Workers: "10.250.224.0/19",
 				},
 			},
 		},
 		"three zones and 10.180.0.0/17": {
 			givenNodesCidr: "10.180.0.0/17",
-			givenZoneNames: []string{"1", "2", "3"},
+			givenZoneNames: []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"},
 			expectedZones: []alicloud.Zone{
 				{
-					Name: "1",
+					Name:    "eu-central-1a",
 					Workers: "10.180.0.0/20",
 				},
 				{
-					Name: "2",
+					Name:    "eu-central-1b",
 					Workers: "10.180.16.0/20",
 				},
 				{
-					Name: "3",
+					Name:    "eu-central-1c",
 					Workers: "10.180.32.0/20",
 				},
 			},
 		},
 		"single zone and 10.250.0.0/22": {
 			givenNodesCidr: "10.250.0.0/22",
-			givenZoneNames: []string{"1"},
+			givenZoneNames: []string{"eu-central-1a"},
 			expectedZones: []alicloud.Zone{
 				{
-					Name: "1",
+					Name:    "eu-central-1a",
 					Workers: "10.250.0.0/25",
 				},
 			},
 		},
 		"eight zones and 10.250.0.0/22": {
 			givenNodesCidr: "10.250.0.0/22",
-			givenZoneNames: []string{"1", "2", "3", "4", "5", "6", "7", "8"},
+			givenZoneNames: []string{"eu-central-1a", "eu-central-1b", "eu-central-1c", "eu-central-1d", "eu-central-1e", "eu-central-1f", "eu-central-1g", "eu-central-1h"},
 			expectedZones: []alicloud.Zone{
 				{
-					Name: "1",
+					Name:    "eu-central-1a",
 					Workers: "10.250.0.0/25",
 				},
 				{
-					Name: "2",
+					Name:    "eu-central-1b",
 					Workers: "10.250.0.128/25",
 				},
 				{
-					Name: "3",
+					Name:    "eu-central-1c",
 					Workers: "10.250.1.0/25",
 				},
 				{
-					Name: "4",
+					Name:    "eu-central-1d",
 					Workers: "10.250.1.128/25",
 				},
 				{
-					Name: "5",
+					Name:    "eu-central-1e",
 					Workers: "10.250.2.0/25",
 				},
 				{
-					Name: "6",
+					Name:    "eu-central-1f",
 					Workers: "10.250.2.128/25",
 				},
 				{
-					Name: "7",
+					Name:    "eu-central-1g",
 					Workers: "10.250.3.0/25",
 				},
 				{
-					Name: "8",
+					Name:    "eu-central-1h",
 					Workers: "10.250.3.128/25",
 				},
 			},
 		},
 		"eight zones and 10.250.0.0/23": {
 			givenNodesCidr: "10.250.0.0/23",
-			givenZoneNames: []string{"1", "2", "3", "4", "5", "6", "7", "8"},
+			givenZoneNames: []string{"eu-central-1a", "eu-central-1b", "eu-central-1c", "eu-central-1d", "eu-central-1e", "eu-central-1f", "eu-central-1g", "eu-central-1h"},
 			expectedZones: []alicloud.Zone{
 				{
-					Name: "1",
+					Name:    "eu-central-1a",
 					Workers: "10.250.0.0/26",
 				},
 				{
-					Name: "2",
+					Name:    "eu-central-1b",
 					Workers: "10.250.0.64/26",
 				},
 				{
-					Name: "3",
+					Name:    "eu-central-1c",
 					Workers: "10.250.0.128/26",
 				},
 				{
-					Name: "4",
+					Name:    "eu-central-1d",
 					Workers: "10.250.0.192/26",
 				},
 				{
-					Name: "5",
+					Name:    "eu-central-1e",
 					Workers: "10.250.1.0/26",
 				},
 				{
-					Name: "6",
+					Name:    "eu-central-1f",
 					Workers: "10.250.1.64/26",
 				},
 				{
-					Name: "7",
+					Name:    "eu-central-1g",
 					Workers: "10.250.1.128/26",
 				},
 				{
-					Name: "8",
+					Name:    "eu-central-1h",
 					Workers: "10.250.1.192/26",
 				},
 			},
 		},
 		"eight zones and 10.250.0.0/24": {
 			givenNodesCidr: "10.250.0.0/24",
-			givenZoneNames: []string{"1", "2", "3", "4", "5", "6", "7", "8"},
+			givenZoneNames: []string{"eu-central-1a", "eu-central-1b", "eu-central-1c", "eu-central-1d", "eu-central-1e", "eu-central-1f", "eu-central-1g", "eu-central-1h"},
 			expectedZones: []alicloud.Zone{
 				{
-					Name: "1",
+					Name:    "eu-central-1a",
 					Workers: "10.250.0.0/27",
 				},
 				{
-					Name: "2",
+					Name:    "eu-central-1b",
 					Workers: "10.250.0.32/27",
 				},
 				{
-					Name: "3",
+					Name:    "eu-central-1c",
 					Workers: "10.250.0.64/27",
 				},
 				{
-					Name: "4",
+					Name:    "eu-central-1d",
 					Workers: "10.250.0.96/27",
 				},
 				{
-					Name: "5",
+					Name:    "eu-central-1e",
 					Workers: "10.250.0.128/27",
 				},
 				{
-					Name: "6",
+					Name:    "eu-central-1f",
 					Workers: "10.250.0.160/27",
 				},
 				{
-					Name: "7",
+					Name:    "eu-central-1g",
 					Workers: "10.250.0.192/27",
 				},
 				{
-					Name: "8",
+					Name:    "eu-central-1h",
 					Workers: "10.250.0.224/27",
 				},
 			},
@@ -390,35 +390,35 @@ func TestZonesWithCustomNodeIPRange(t *testing.T) {
 		"should return error when more than 8 zones provided": {
 			givenNodesCidr: "10.250.0.0/16",
 			givenZoneNames: []string{
-				"1",
-				"2",
-				"3",
-				"4",
-				"5",
-				"6",
-				"7",
-				"8",
-				"9",
+				"eu-central-1a",
+				"eu-central-1b",
+				"eu-central-1c",
+				"eu-central-1d",
+				"eu-central-1e",
+				"eu-central-1f",
+				"eu-central-1g",
+				"eu-central-1h",
+				"eu-central-1i",
 			},
 		},
 		"should return error when when prefix is too big for ex 10.250.0.0/25": {
 			givenNodesCidr: "10.250.0.0/25",
 			message:        "CIDR prefix length must be less than or equal to 24",
 			givenZoneNames: []string{
-				"1",
+				"eu-central-1a",
 			},
 		},
 		"should return error when when prefix is too small for ex 10.250.0.0/15": {
 			givenNodesCidr: "10.250.0.0/15",
 			message:        "CIDR prefix length must be bigger than or equal to 16",
 			givenZoneNames: []string{
-				"1",
+				"eu-central-1a",
 			},
 		},
 		"should return error when cannot parse nodes CIDR": {
 			givenNodesCidr: "888.888.888.0/77",
 			givenZoneNames: []string{
-				"1",
+				"eu-central-1a",
 			},
 			message: "failed to parse worker network CIDR",
 		},

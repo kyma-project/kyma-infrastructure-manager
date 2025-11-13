@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	subNetworkBitsSize              = 3
-	cidrLength                      = 32
-	maxNumberOfZones                = 8
+	subNetworkBitsSize = 3
+	cidrLength         = 32
+	maxNumberOfZones   = 8
 )
 
 func generateZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, error) {
@@ -36,7 +36,6 @@ func generateZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, erro
 	if prefixLength < 16 {
 		return nil, errors.New("CIDR prefix length must be bigger than or equal to 16")
 	}
-
 
 	workerNetworkPrefixLength := prefixLength + subNetworkBitsSize
 	workerPrefix, err := cidr.Addr().Prefix(workerNetworkPrefixLength)
@@ -70,7 +69,7 @@ func generateZones(workerCidr string, zoneNames []string) ([]v1alpha1.Zone, erro
 
 		zoneIPValue.Add(zoneIPValue, delta)
 		zones = append(zones, v1alpha1.Zone{
-			Name: fmt.Sprintf("%v", name),
+			Name:    fmt.Sprintf("%v", name),
 			Workers: zoneWorkerCidr.String(),
 		})
 	}
