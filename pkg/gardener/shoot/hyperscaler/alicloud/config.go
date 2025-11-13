@@ -14,18 +14,22 @@ const (
 )
 
 func GetInfrastructureConfig(workerCIDR string, zones []string) ([]byte, error) {
-	return json.Marshal(NewInfrastructureConfig(workerCIDR, zones))
+	config, err := NewInfrastructureConfig(workerCIDR, zones)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(config)
 }
 
 func GetControlPlaneConfig(_ []string) ([]byte, error) {
 	return json.Marshal(NewControlPlaneConfig())
 }
 
-func NewInfrastructureConfig(workerCIDR string, zones []string) v1alpha1.InfrastructureConfig {
+func NewInfrastructureConfig(workerCIDR string, zones []string) (v1alpha1.InfrastructureConfig, error) {
 	generatedZones, err := generateZones(workerCIDR, zones)
 
 	if err != nil {
-		return v1alpha1.InfrastructureConfig{}
+		return v1alpha1.InfrastructureConfig{}, err
 	}
 
 	return v1alpha1.InfrastructureConfig{
@@ -38,7 +42,7 @@ func NewInfrastructureConfig(workerCIDR string, zones []string) v1alpha1.Infrast
 			VPC:   v1alpha1.VPC{CIDR: &workerCIDR},
 			Zones: generatedZones,
 		},
-	}
+	}, nil
 }
 
 func NewControlPlaneConfig() *v1alpha1.ControlPlaneConfig {

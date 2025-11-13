@@ -152,7 +152,7 @@ func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
 		Spec: gardener.ShootSpec{
 			Purpose:           &runtime.Spec.Shoot.Purpose,
 			Region:            runtime.Spec.Shoot.Region,
-			SecretBindingName: &runtime.Spec.Shoot.SecretBindingName,
+			CredentialsBindingName: &runtime.Spec.Shoot.SecretBindingName,
 			Networking: &gardener.Networking{
 				Type:     runtime.Spec.Shoot.Networking.Type,
 				Nodes:    &runtime.Spec.Shoot.Networking.Nodes,
