@@ -55,12 +55,12 @@ jobs:
     - name: Set up go environment
       uses: actions/setup-go@v6
       with:
-        go-version: 1.25.3
+        go-version: 1.25.4
 ############################################################################################
     - name: Run unit tests
       run: make test
     - name: Upload coverage artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: success() || failure()
       with:
         name: "code-coverage"
