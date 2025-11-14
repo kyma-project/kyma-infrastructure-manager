@@ -37,6 +37,11 @@ func TestExtendWithCloudProfile(t *testing.T) {
 			providerType:    hyperscaler.TypeOpenStack,
 			expectedProfile: ptr.To(DefaultOpenStackCloudProfileName),
 		},
+		{
+			name:            "Set cloud profile for alicloud",
+			providerType:    hyperscaler.TypeAlicloud,
+			expectedProfile: ptr.To(DefaultAlicloudCloudProfileName),
+		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			// given

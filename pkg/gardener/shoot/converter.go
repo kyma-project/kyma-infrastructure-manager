@@ -150,8 +150,8 @@ func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
 			Namespace: fmt.Sprintf("garden-%s", c.config.Gardener.ProjectName),
 		},
 		Spec: gardener.ShootSpec{
-			Purpose:           &runtime.Spec.Shoot.Purpose,
-			Region:            runtime.Spec.Shoot.Region,
+			Purpose:                &runtime.Spec.Shoot.Purpose,
+			Region:                 runtime.Spec.Shoot.Region,
 			SecretBindingName: &runtime.Spec.Shoot.SecretBindingName,
 			Networking: &gardener.Networking{
 				Type:     runtime.Spec.Shoot.Networking.Type,

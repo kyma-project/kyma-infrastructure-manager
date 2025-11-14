@@ -53,6 +53,8 @@ github.com/gardener/etcd-druid/api v0.33.0 h1:YwgsYYldaLig2laJMAAMX/dg9/XsQx/LPz
 github.com/gardener/etcd-druid/api v0.33.0/go.mod h1:Qpl1PDJ+bKa6OPWk4o7WBzvjPqZc/CxIXbiTkdRhCrg=
 github.com/gardener/gardener v1.130.0 h1:QXON/Iryrl9iVe6UpS/xI0qyNvvp006yzSH0tzXOW+4=
 github.com/gardener/gardener v1.130.0/go.mod h1:/jTlpdWehsTIXwgX6l4Rt+Yj+X0dQy+pvriniQ4zbbU=
+github.com/gardener/gardener-extension-provider-alicloud v1.66.0 h1:kuVF6GIH3mt89kVBrKDTwV1mj0TiiiKpnpfBsP6Q9qw=
+github.com/gardener/gardener-extension-provider-alicloud v1.66.0/go.mod h1:SgFjkYAgmvOY0yXLHCUQDvmRikgZaIOvTJFVt3zgkVU=
 github.com/gardener/gardener-extension-provider-aws v1.65.3 h1:AypUBNQYPAVcKSmmrFBQ1MH7yA6O+J2sACSAeyVuE5A=
 github.com/gardener/gardener-extension-provider-aws v1.65.3/go.mod h1:brg4SCwprGi5/tU3XfcZvzBKVsWhlhHh1tiFsKg1xYQ=
 github.com/gardener/gardener-extension-provider-gcp v1.47.0 h1:oxhKnxzgBuzg1gTNzHFIn/oyk0o9X/f5CY1wh4c2WOI=
