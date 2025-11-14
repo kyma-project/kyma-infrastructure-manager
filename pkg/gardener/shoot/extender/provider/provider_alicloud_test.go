@@ -299,6 +299,7 @@ func assertProviderSpecificConfigAlicloud(t *testing.T, shoot gardener.Shoot, ex
 	require.NoError(t, err)
 
 	err = json.Unmarshal(shoot.Spec.Provider.ControlPlaneConfig.Raw, &controlPlaneConfig)
+	require.NoError(t, err)
 
 	assert.Equal(t, expectedZonesCount, len(infrastructureConfig.Networks.Zones))
 }
