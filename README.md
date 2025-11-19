@@ -1,9 +1,9 @@
 [![REUSE status](https://api.reuse.software/badge/github.com/kyma-project/infrastructure-manager)](https://api.reuse.software/info/github.com/kyma-project/infrastructure-manager)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kyma-project/infrastructure-manager)](https://goreportcard.com/report/github.com/kyma-project/infrastructure-manager)
-[![unit tests](https://badgen.net/github/checks/kyma-project/kyma-infrastructure-manager/main/unit-tests)](https://github.com/kyma-project/kyma-infrastructure-manager/actions/workflows/run-tests.yaml)
+[![unit tests](https://badgers.space/github/checks/kyma-project/kyma-infrastructure-manager/main/unit-tests)](https://github.com/kyma-project/kyma-infrastructure-manager/actions/workflows/run-tests.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/kyma-project/kyma-infrastructure-manager/badge.svg?branch=main)](https://coveralls.io/github/kyma-project/kyma-infrastructure-manager?branch=main)
-[![golangci lint](https://badgen.net/github/checks/kyma-project/kyma-infrastructure-manager/main/golangci-lint)](https://github.com/kyma-project/kyma-infrastructure-manager/actions/workflows/golangci-lint.yaml)
-[![latest release](https://badgen.net/github/release/kyma-project/kyma-infrastructure-manager)](https://github.com/kyma-project/kyma-infrastructure-manager/releases/latest)
+[![golangci lint](https://badgers.space/github/checks/kyma-project/kyma-infrastructure-manager/main/golangci-lint)](https://github.com/kyma-project/kyma-infrastructure-manager/actions/workflows/golangci-lint.yaml)
+[![latest release](https://badgers.space/github/release/kyma-project/kyma-infrastructure-manager)](https://github.com/kyma-project/kyma-infrastructure-manager/releases/latest)
 
 # Kyma Infrastructure Manager
 
