@@ -104,6 +104,11 @@ func main() {
 	var converterConfigFilepath string
 	var auditLogMandatory bool
 	var registryCacheConfigControllerEnabled bool
+	var skrPresetWebhookEnabled bool
+	var skrPresetWebhookManifestsPath string
+	var skrPresetWebhookConfigPath string
+	var skrPresetPullSecretName string
+	var skrPresetClusterTrustBundle string
 
 	//Kubebuilder related parameters:
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to. Monitoring and alerting tools can use this endpoint to collect application specific metrics during runtime")
@@ -133,6 +138,13 @@ func main() {
 	//Feature flags:
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration. When enabled this feature, a Shoot cluster will only be created when an auditlog tenant exists (this is defined in the auditlog mapping configuration file)")
 	flag.BoolVar(&registryCacheConfigControllerEnabled, "registry-cache-config-controller-enabled", false, "Feature flag to enable registry cache config controller")
+	flag.BoolVar(&skrPresetWebhookEnabled, "skr-preset-webhook-enabled", false, "Feature flag to enable skr preset webhook")
+
+	// SKR preset webhook configuration
+	flag.StringVar(&skrPresetWebhookManifestsPath, "skr-preset-webhook-manifests-path", "/webhook/manifests.yaml", "File path to the manifests containing preset webhook.")
+	flag.StringVar(&skrPresetWebhookConfigPath, "skr-preset-webhook-config-path", "/skr-preset-webhook-config/config.yaml", "File path to the preset webhook configuration.")
+	flag.StringVar(&skrPresetPullSecretName, "skr-preset-pull-secret-name", "", "Name of the secret containing the pull secret to be transferred to SKR.")
+	flag.StringVar(&skrPresetClusterTrustBundle, "skr-preset-cluster-trust-bundle", "", "Cluster trust bundle to be transferred to SKR.")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
