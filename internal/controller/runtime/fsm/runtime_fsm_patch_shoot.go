@@ -138,6 +138,26 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		}
 	}
 
+	someFeatureFlag := true
+	bindingShouldBePatched := someFeatureFlag && s.shoot.Spec.SecretBindingName != nil && *s.shoot.Spec.SecretBindingName != ""
+	if (bindingShouldBePatched){
+		copyShoot := s.shoot.DeepCopy()
+		copyShoot.Spec.CredentialsBindingName = ptr.To(s.instance.Spec.Shoot.SecretBindingName)
+		copyShoot.Spec.SecretBindingName = nil
+
+		updateErr := m.GardenClient.Update(ctx, copyShoot,
+			&client.UpdateOptions{
+				FieldManager:    fieldManagerName,
+			})
+
+		nextState, res, err := handleUpdateError(updateErr, m, s, "Failed to update shoot object with new CredentialsBinding, exiting with no retry", "Gardener API shoot update error")
+		if nextState != nil {
+			return nextState, res, err
+		}
+	}
+
+	//patchCorrectBindingName(s, &updatedShoot)
+
 	patchErr := m.GardenClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
@@ -177,6 +197,16 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	)
 
 	return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
+}
+
+// patchCorrectBindingName patches the secret binding name or credentials binding name depending on which field is used in the existing shoot spec.
+// This is yet another workaround for the fact that it's not possible to at the same time remove one of the fields and set the other using server-side apply.
+func patchCorrectBindingName(s *systemState, updatedShoot *gardener.Shoot) {
+	if s.shoot.Spec.SecretBindingName != nil && *s.shoot.Spec.SecretBindingName != "" {
+		updatedShoot.Spec.SecretBindingName = ptr.To(s.instance.Spec.Shoot.SecretBindingName)
+	} else {
+		updatedShoot.Spec.CredentialsBindingName = ptr.To(s.instance.Spec.Shoot.SecretBindingName)
+	}
 }
 
 func registryCacheExists(runtime imv1.Runtime) bool {

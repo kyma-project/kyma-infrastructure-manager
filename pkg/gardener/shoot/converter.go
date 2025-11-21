@@ -152,7 +152,8 @@ func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
 		Spec: gardener.ShootSpec{
 			Purpose:                &runtime.Spec.Shoot.Purpose,
 			Region:                 runtime.Spec.Shoot.Region,
-			SecretBindingName: &runtime.Spec.Shoot.SecretBindingName,
+			//SecretBindingName: nil,
+			//CredentialsBindingName: &runtime.Spec.Shoot.SecretBindingName,
 			Networking: &gardener.Networking{
 				Type:     runtime.Spec.Shoot.Networking.Type,
 				Nodes:    &runtime.Spec.Shoot.Networking.Nodes,
@@ -162,6 +163,8 @@ func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
 			ControlPlane: runtime.Spec.Shoot.ControlPlane,
 		},
 	}
+
+	//TODO: if CredentialsBinding resource is created,
 
 	for _, extend := range c.extenders {
 		if err := extend(runtime, &shoot); err != nil {
