@@ -36,6 +36,7 @@ type RCCfg struct {
 	Metrics                              metrics.Metrics
 	AuditLogging                         auditlogs.Configuration
 	RegistryCacheConfigControllerEnabled bool
+	RuntimeBootstrapperEnabled           bool
 	config.Config
 }
 

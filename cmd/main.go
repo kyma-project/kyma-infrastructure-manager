@@ -252,6 +252,7 @@ func main() {
 		Metrics:                              metrics,
 		AuditLogging:                         auditLogDataMap,
 		RegistryCacheConfigControllerEnabled: registryCacheConfigControllerEnabled,
+		RuntimeBootstrapperEnabled:           runtimeBootstrapperEnabled,
 	}
 
 	runtimeReconciler := runtimecontroller.NewRuntimeReconciler(
