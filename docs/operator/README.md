@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Kyma Infrastructure Manager (KIM) manages the lifecycle of SAP BTP, Kyma runtime, using SAP Gardener to create and manage Kubernetes cluster infrastructure components. KIM translates Kubernetes cluster-related requirements for Kyma runtime into Gardener's Shoot definitions, managing their creation, update, and deletion. While Gardener reconciles a Kubernetes cluster, KIM monitors its progress, reacting to failures and ensuring the cluster is prepared tor run the Kyma software.
+Kyma Infrastructure Manager (KIM) manages the lifecycle of SAP BTP, Kyma runtime, using SAP Gardener to create and manage Kubernetes cluster infrastructure components. KIM translates Kubernetes cluster-related requirements for Kyma runtime into Gardener's Shoot definitions, managing their creation, update, and deletion. While Gardener reconciles a Kubernetes cluster, KIM monitors its progress, reacting to failures and ensuring the cluster is prepared to run the Kyma software.
 
 ## Stakeholder Expectations
 
@@ -60,7 +60,7 @@ https://github.com/kyma-project/kyma-infrastructure-manager/tree/1.24.0/config/c
 
 #### State Machine
 
-The reconciliation process is implemented using a [state machine pattern](https://en.wikipedia.org/wiki/Finite-state_machine). Each state represents a reconciliation step, and transitions to subsequent steps based on a step's return value.
+The reconciliation process is implemented using a [state machine pattern](https://en.wikipedia.org/wiki/Finite-state_machine). Each state represents a reconciliation step. Transitions to subsequent steps occur based on the return value of a step.
 
 #### Sub-Components
 
@@ -100,6 +100,5 @@ KIM can be configured uaing command-line parameters. Supported parameters are de
 * Extensibility: Ensures easy extensibility by employing the following software patterns:  
     * State machine pattern for process flow control.
     * Chain of responsibility pattern for rendering the Shoot definitions.
-*  Reliability: Monitoring tools detect throughout degradation and long-running reconciliation processes, triggering alerts for any SLA violations.
+* Reliability: Monitoring tools detect throughput degradation and long-running reconciliation processes, triggering alerts for any SLA violations.
 * Security: Adheres to SAP product standards during development; threat modeling workshops are executed annually.
-
