@@ -92,7 +92,7 @@ In addition to the standard Pod resource indicators such as CPU and memory, KIM 
 
 ### Configuration Parameters
 
-KIM can be configured uaing command-line parameters. Supported parameters are described in [Kyma Infrastructure Manager Configuration](https://github.com/kyma-project/kyma-infrastructure-manager/blob/main/docs/operator/kim-configuration.md).
+KIM can be configured using command-line parameters. Supported parameters are described in [Kyma Infrastructure Manager Configuration](https://github.com/kyma-project/kyma-infrastructure-manager/blob/main/docs/operator/kim-configuration.md).
 
 ## Quality Requirements
 
