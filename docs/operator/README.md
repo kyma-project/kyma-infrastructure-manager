@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Kyma Infrastructure Manager (KIM) manages the lifecycle of SAP BTP, Kyma runtime, using SAP Gardener to create and manage Kubernetes cluster infrastructure components. KIM translates Kubernetes cluster-related requirements for Kyma runtime into Gardener's Shoot definitions, managing their creation, update, and deletion. While Gardener reconciles a Kubernetes cluster, KIM monitors its progress, reacting to failures and ensuring the cluster is prepared for running the Kyma software.
+Kyma Infrastructure Manager (KIM) manages the lifecycle of SAP BTP, Kyma runtime, using SAP Gardener to create and manage Kubernetes cluster infrastructure components. KIM translates Kubernetes cluster-related requirements for Kyma runtime into Gardener's Shoot definitions, managing their creation, update, and deletion. While Gardener reconciles a Kubernetes cluster, KIM monitors its progress, reacting to failures and ensuring the cluster is prepared tor run the Kyma software.
 
 ## Stakeholder Expectations
 
@@ -14,7 +14,7 @@ In addition to the Kubernetes infrastructure alignment, KIM provides cluster acc
 
 ## Context and Scope
 
-With Kyma Environment Broker (KEB) and Lifecycle Manager, KIM builds the foundation for Kyma runtime, with all backend services running within KCP.
+With Kyma Environment Broker (KEB) and Lifecycle Manager, KIM builds the foundation for the Kyma runtime, with all backend services running within KCP.
 
 ## Architecture
 
@@ -32,7 +32,7 @@ With Kyma Environment Broker (KEB) and Lifecycle Manager, KIM builds the foundat
 1. When you request a Kyma runtime using BTP, KEB processes the request, creating or updating a Runtime CR instance that describes the Kubernetes cluster's infrastructure.
 2. KIM detects the change in the Runtime CR and triggers the reconciliation process.
 3. KIM converts the information into a Shoot definition for Gardener.
-4. After the cluster is created, KIM generates RuntimeKubeconfig CR, which includes data required for fetching and rotating the cluster kubeconfig.
+4. After the cluster is created, KIM generates a RuntimeKubeconfig CR, which includes data required for fetching and rotating the cluster kubeconfig.
 5. KIM fetches the kubeconfig from Gardener and stores it in a Secret in the KCP cluster.
 
 ### Architectural Decisions
@@ -50,7 +50,7 @@ The data model consists of two CRDs:
 * Runtime CRD - Stores cluster data within instances of the CRD.
 * RuntimeKubeconfig CRD - Stores kubeconfig-related metadata in entities of the CRD.
 
-For more information on the structure and purpose of different fields in these resources, see the CRD files. URL-Pattern for these files is:
+For more information on the structure and purpose of various fields, see the CRD files. The URL pattern for these files is:
 
 `https://github.com/kyma-project/kyma-infrastructure-manager/tree/{KIM_VERSION}/config/crd/bases`
 
@@ -60,7 +60,7 @@ https://github.com/kyma-project/kyma-infrastructure-manager/tree/1.24.0/config/c
 
 #### State Machine
 
-The reconciliation process is implemented using a [state machine pattern](https://en.wikipedia.org/wiki/Finite-state_machine). Each state represents a reconciliation step, and transitions to subsequent steps occur based on a step's return value.
+The reconciliation process is implemented using a [state machine pattern](https://en.wikipedia.org/wiki/Finite-state_machine). Each state represents a reconciliation step, and transitions to subsequent steps based on a step's return value.
 
 #### Sub-Components
 
@@ -92,7 +92,7 @@ In addition to the standard Pod resource indicators such as CPU and memory, KIM 
 
 ### Configuration Parameters
 
-KIM can be configured via command-line parameters. Supported parameters are described in [Kyma Infrastructure Manager Configuration](https://github.com/kyma-project/kyma-infrastructure-manager/blob/main/docs/operator/kim-configuration.md).
+KIM can be configured uaing command-line parameters. Supported parameters are described in [Kyma Infrastructure Manager Configuration](https://github.com/kyma-project/kyma-infrastructure-manager/blob/main/docs/operator/kim-configuration.md).
 
 ## Quality Requirements
 
