@@ -16,12 +16,6 @@ In addition to the Kubernetes infrastructure alignment, KIM provides cluster acc
 
 With Kyma Environment Broker (KEB) and Lifecycle Manager, KIM builds the foundation for Kyma runtime, with all backend services running within KCP.
 
-Kyma runs three different control planes, each deploying a KIM instance:
-
-1. DEV: For development and integration of KCP components
-2. STAGE: Running the current or next release candidates of the KCP components; used to stabilize these components
-3. PROD: Including the stabilized components and managing productive Kyma runtimes
-
 ## Architecture
 
 ### Components
