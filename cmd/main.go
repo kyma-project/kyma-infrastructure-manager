@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 	"io"
 	"os"
 	"time"
@@ -255,10 +256,24 @@ func main() {
 		RuntimeBootstrapperEnabled:           runtimeBootstrapperEnabled,
 	}
 
+	runtimeClientGetter := fsm.NewRuntimeClientGetter(mgr.GetClient())
+
+	runtimeBootstrapperInstaller, err := rtbootstrapper.NewInstaller(rtbootstrapper.Config{
+		PullSecretName:         runtimeBootstrapperPullSecretName,
+		ClusterTrustBundleName: runtimeBootstrapperClusterTrustBundle,
+		ManifestsPath:          runtimeBootstrapperManifestsPath, ConfigPath: runtimeBootstrapperConfigPath,
+	}, mgr.GetClient(), runtimeClientGetter)
+
+	if err != nil {
+		setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
+		os.Exit(1)
+	}
+
 	runtimeReconciler := runtimecontroller.NewRuntimeReconciler(
 		mgr,
 		gardenerClient,
-		fsm.NewRuntimeClientGetter(mgr.GetClient()),
+		runtimeClientGetter,
+		runtimeBootstrapperInstaller,
 		logger,
 		cfg,
 	)
