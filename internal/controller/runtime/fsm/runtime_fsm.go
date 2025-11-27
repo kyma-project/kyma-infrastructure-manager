@@ -57,7 +57,7 @@ type K8s struct {
 	record.EventRecorder
 	GardenClient                 client.Client
 	RuntimeClientGetter          RuntimeClientGetter
-	RuntimeBootstrapperInstaller rtbootstrapper.Installer
+	RuntimeBootstrapperInstaller *rtbootstrapper.Installer
 }
 
 type Fsm interface {

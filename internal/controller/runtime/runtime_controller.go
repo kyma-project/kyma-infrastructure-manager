@@ -45,7 +45,7 @@ type RuntimeReconciler struct {
 	EventRecorder                record.EventRecorder
 	RequestID                    atomic.Uint64
 	RuntimeClientGetter          fsm.RuntimeClientGetter
-	RuntimeBootstrapperInstaller rtbootstrapper.Installer
+	RuntimeBootstrapperInstaller *rtbootstrapper.Installer
 }
 
 //+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=runtimes,verbs=get;list;watch;create;update;patch,namespace=kcp-system
@@ -84,15 +84,16 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 	return stateFSM.Run(ctx, runtime)
 }
 
-func NewRuntimeReconciler(mgr ctrl.Manager, gardenClient client.Client, runtimeClientGetter fsm.RuntimeClientGetter, RuntimeBootstrapperInstaller rtbootstrapper.Installer, logger logr.Logger, cfg fsm.RCCfg) *RuntimeReconciler {
+func NewRuntimeReconciler(mgr ctrl.Manager, gardenClient client.Client, runtimeClientGetter fsm.RuntimeClientGetter, RuntimeBootstrapperInstaller *rtbootstrapper.Installer, logger logr.Logger, cfg fsm.RCCfg) *RuntimeReconciler {
 	return &RuntimeReconciler{
-		KcpClient:           mgr.GetClient(),
-		Scheme:              mgr.GetScheme(),
-		GardenClient:        gardenClient,
-		EventRecorder:       mgr.GetEventRecorderFor("runtime-controller"),
-		Log:                 logger,
-		Cfg:                 cfg,
-		RuntimeClientGetter: runtimeClientGetter,
+		KcpClient:                    mgr.GetClient(),
+		Scheme:                       mgr.GetScheme(),
+		GardenClient:                 gardenClient,
+		EventRecorder:                mgr.GetEventRecorderFor("runtime-controller"),
+		Log:                          logger,
+		Cfg:                          cfg,
+		RuntimeClientGetter:          runtimeClientGetter,
+		RuntimeBootstrapperInstaller: RuntimeBootstrapperInstaller,
 	}
 }
 

@@ -33,13 +33,13 @@ type RuntimeClientGetter interface {
 	Get(ctx context.Context, runtime imv1.Runtime) (client.Client, error)
 }
 
-func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter RuntimeClientGetter) (Installer, error) {
+func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter RuntimeClientGetter) (*Installer, error) {
 	err := validate(config)
 	if err != nil {
-		return Installer{}, err
+		return nil, err
 	}
 
-	return Installer{
+	return &Installer{
 		config:              config,
 		kcpClient:           kcpClient,
 		runtimeClientGetter: runtimeClientGetter,
