@@ -3,7 +3,6 @@ package fsm
 import (
 	"context"
 	"fmt"
-	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 	"reflect"
 	"runtime"
 	"time"
@@ -57,7 +56,7 @@ type K8s struct {
 	record.EventRecorder
 	GardenClient                 client.Client
 	RuntimeClientGetter          RuntimeClientGetter
-	RuntimeBootstrapperInstaller *rtbootstrapper.Installer
+	RuntimeBootstrapperInstaller RuntimeBootstrapperInstaller
 }
 
 type Fsm interface {
