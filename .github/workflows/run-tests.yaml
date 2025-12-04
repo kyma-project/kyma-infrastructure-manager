@@ -55,8 +55,8 @@ jobs:
     - name: Set up go environment
       uses: actions/setup-go@v6
       with:
-        go-version: `1.25.5`
-############################################################################################
+        go-version-file: 'go.mod'
+      ############################################################################################
     - name: Run unit tests
       run: make test
     - name: Upload coverage artifact
