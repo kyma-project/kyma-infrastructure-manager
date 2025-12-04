@@ -109,6 +109,16 @@ func Test_sFnInitializeRuntimeBootstrapper_StatusError(t *testing.T) {
 	require.Nil(t, res)
 	require.NotNil(t, next)
 	require.Contains(t, next.name(), "sFnUpdateStatus")
+
+	expectedRuntimeConditions := []metav1.Condition{
+		{
+			Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
+			Reason:  string(imv1.ConditionReasonRuntimeBootstrapperStatusUnknown),
+			Status:  "False",
+			Message: "Runtime bootstrapper status check failed",
+		},
+	}
+	assertEqualConditions(t, expectedRuntimeConditions, ss.instance.Status.Conditions)
 }
 
 func Test_sFnInitializeRuntimeBootstrapper_InstallError(t *testing.T) {
@@ -140,6 +150,16 @@ func Test_sFnInitializeRuntimeBootstrapper_InstallError(t *testing.T) {
 	require.Nil(t, res)
 	require.NotNil(t, next)
 	require.Contains(t, next.name(), "sFnUpdateStatus")
+
+	expectedRuntimeConditions := []metav1.Condition{
+		{
+			Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
+			Reason:  string(imv1.ConditionReasonRuntimeBootstrapperInstallationFailed),
+			Status:  "False",
+			Message: "Runtime bootstrapper installation failed",
+		},
+	}
+	assertEqualConditions(t, expectedRuntimeConditions, ss.instance.Status.Conditions)
 }
 
 func Test_sFnInitializeRuntimeBootstrapper_FailedStatus(t *testing.T) {
@@ -170,6 +190,16 @@ func Test_sFnInitializeRuntimeBootstrapper_FailedStatus(t *testing.T) {
 	require.Nil(t, res)
 	require.NotNil(t, next)
 	require.Contains(t, next.name(), "sFnUpdateStatus")
+
+	expectedRuntimeConditions := []metav1.Condition{
+		{
+			Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
+			Reason:  string(imv1.ConditionReasonRuntimeBootstrapperInstallationFailed),
+			Status:  "False",
+			Message: "Runtime bootstrapper installation failed",
+		},
+	}
+	assertEqualConditions(t, expectedRuntimeConditions, ss.instance.Status.Conditions)
 }
 
 func Test_sFnInitializeRuntimeBootstrapper_InProgress(t *testing.T) {
@@ -200,6 +230,16 @@ func Test_sFnInitializeRuntimeBootstrapper_InProgress(t *testing.T) {
 	require.Nil(t, res)
 	require.NotNil(t, next)
 	require.Contains(t, next.name(), "sFnUpdateStatus")
+
+	expectedRuntimeConditions := []metav1.Condition{
+		{
+			Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
+			Reason:  string(imv1.ConditionReasonRuntimeBootstrapperInstallationInProgress),
+			Status:  "False",
+			Message: "Runtime bootstrapper installation in progress",
+		},
+	}
+	assertEqualConditions(t, expectedRuntimeConditions, ss.instance.Status.Conditions)
 }
 
 func minimalRuntime() imv1.Runtime {
