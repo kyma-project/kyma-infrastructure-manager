@@ -138,8 +138,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		}
 	}
 
-	someFeatureFlag := true
-	bindingShouldBePatched := someFeatureFlag && s.shoot.Spec.SecretBindingName != nil && *s.shoot.Spec.SecretBindingName != ""
+	bindingShouldBePatched := m.ConverterConfig.Gardener.EnableCredentialBinding && s.shoot.Spec.SecretBindingName != nil && *s.shoot.Spec.SecretBindingName != ""
 	if bindingShouldBePatched {
 		copyShoot := s.shoot.DeepCopy()
 		copyShoot.Spec.CredentialsBindingName = ptr.To(s.instance.Spec.Shoot.SecretBindingName)
@@ -155,8 +154,6 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			return nextState, res, err
 		}
 	}
-
-	//patchCorrectBindingName(s, &updatedShoot)
 
 	patchErr := m.GardenClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,
