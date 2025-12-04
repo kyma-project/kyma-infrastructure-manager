@@ -24,7 +24,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Disabled(t *testing.T) {
 	ss := &systemState{instance: minimalRuntime()}
 
 	// when
-	next, res, err := sFnInitializeRuntimeBootstrapper(nil, f, ss)
+	next, res, err := sFnInitializeRuntimeBootstrapper(context.Background(), f, ss)
 
 	// then
 	require.NoError(t, err)
