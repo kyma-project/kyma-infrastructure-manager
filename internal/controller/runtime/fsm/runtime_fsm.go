@@ -37,6 +37,7 @@ type RCCfg struct {
 	AuditLogging                         auditlogs.Configuration
 	RegistryCacheConfigControllerEnabled bool
 	RuntimeBootstrapperEnabled           bool
+	RuntimeBootstrapperInstaller         RuntimeBootstrapperInstaller
 	config.Config
 }
 
@@ -54,9 +55,8 @@ type Watch = func(src source.Source, eventhandler handler.EventHandler, predicat
 type K8s struct {
 	KcpClient client.Client
 	record.EventRecorder
-	GardenClient                 client.Client
-	RuntimeClientGetter          RuntimeClientGetter
-	RuntimeBootstrapperInstaller RuntimeBootstrapperInstaller
+	GardenClient        client.Client
+	RuntimeClientGetter RuntimeClientGetter
 }
 
 type Fsm interface {

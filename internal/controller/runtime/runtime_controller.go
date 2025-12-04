@@ -18,7 +18,6 @@ package runtime
 
 import (
 	"context"
-	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 	"sync/atomic"
 
 	"github.com/go-logr/logr"
@@ -39,13 +38,12 @@ type RuntimeReconciler struct {
 	KcpClient client.Client
 	Scheme    *runtime.Scheme
 	// GardenClient is the client for the Garden cluster, used to manage shoots (please see the docs: https://github.com/gardener/gardener/blob/master/docs/concepts/architecture.md).
-	GardenClient                 client.Client
-	Log                          logr.Logger
-	Cfg                          fsm.RCCfg
-	EventRecorder                record.EventRecorder
-	RequestID                    atomic.Uint64
-	RuntimeClientGetter          fsm.RuntimeClientGetter
-	RuntimeBootstrapperInstaller *rtbootstrapper.Installer
+	GardenClient        client.Client
+	Log                 logr.Logger
+	Cfg                 fsm.RCCfg
+	EventRecorder       record.EventRecorder
+	RequestID           atomic.Uint64
+	RuntimeClientGetter fsm.RuntimeClientGetter
 }
 
 //+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=runtimes,verbs=get;list;watch;create;update;patch,namespace=kcp-system
@@ -74,26 +72,24 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		log,
 		r.Cfg,
 		fsm.K8s{
-			KcpClient:                    r.KcpClient,
-			GardenClient:                 r.GardenClient,
-			EventRecorder:                r.EventRecorder,
-			RuntimeClientGetter:          r.RuntimeClientGetter,
-			RuntimeBootstrapperInstaller: r.RuntimeBootstrapperInstaller,
+			KcpClient:           r.KcpClient,
+			GardenClient:        r.GardenClient,
+			EventRecorder:       r.EventRecorder,
+			RuntimeClientGetter: r.RuntimeClientGetter,
 		})
 
 	return stateFSM.Run(ctx, runtime)
 }
 
-func NewRuntimeReconciler(mgr ctrl.Manager, gardenClient client.Client, runtimeClientGetter fsm.RuntimeClientGetter, RuntimeBootstrapperInstaller *rtbootstrapper.Installer, logger logr.Logger, cfg fsm.RCCfg) *RuntimeReconciler {
+func NewRuntimeReconciler(mgr ctrl.Manager, gardenClient client.Client, runtimeClientGetter fsm.RuntimeClientGetter, logger logr.Logger, cfg fsm.RCCfg) *RuntimeReconciler {
 	return &RuntimeReconciler{
-		KcpClient:                    mgr.GetClient(),
-		Scheme:                       mgr.GetScheme(),
-		GardenClient:                 gardenClient,
-		EventRecorder:                mgr.GetEventRecorderFor("runtime-controller"),
-		Log:                          logger,
-		Cfg:                          cfg,
-		RuntimeClientGetter:          runtimeClientGetter,
-		RuntimeBootstrapperInstaller: RuntimeBootstrapperInstaller,
+		KcpClient:           mgr.GetClient(),
+		Scheme:              mgr.GetScheme(),
+		GardenClient:        gardenClient,
+		EventRecorder:       mgr.GetEventRecorderFor("runtime-controller"),
+		Log:                 logger,
+		Cfg:                 cfg,
+		RuntimeClientGetter: runtimeClientGetter,
 	}
 }
 
