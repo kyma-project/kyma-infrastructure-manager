@@ -140,7 +140,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	someFeatureFlag := true
 	bindingShouldBePatched := someFeatureFlag && s.shoot.Spec.SecretBindingName != nil && *s.shoot.Spec.SecretBindingName != ""
-	if (bindingShouldBePatched){
+	if bindingShouldBePatched {
 		copyShoot := s.shoot.DeepCopy()
 		copyShoot.Spec.CredentialsBindingName = ptr.To(s.instance.Spec.Shoot.SecretBindingName)
 		copyShoot.Spec.SecretBindingName = nil

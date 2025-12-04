@@ -24,7 +24,7 @@ func main() {
 	var dryRun bool
 
 	//Gardener related parameters:
-	flag.StringVar(&gardenerKubeconfigPath, "gardener-kubeconfig-path", "/gardener/kubeconfig/kubeconfig", "Path to the kubeconfig file by KIM to access the for Gardener cluster")
+	flag.StringVar(&gardenerKubeconfigPath, "gardener-kubeconfig-path", "/gardener/kubeconfig/kubeconfig", "Path to the kubeconfig file for accessing the Gardener cluster")
 	flag.StringVar(&gardenerProjectName, "gardener-project-name", "gardener-project", "Name of the Gardener project which is used for storing Shoot definitions")
 	flag.BoolVar(&dryRun, "dry-run", true, "Indicates whether to perform a dry run or actually make changes")
 	flag.Parse()
