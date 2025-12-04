@@ -39,7 +39,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Ready(t *testing.T) {
 	defer cancel()
 
 	inst := NewMockRuntimeBootstrapperInstaller(t)
-	inst.EXPECT().Status(mockCtx(), "test-runtime").Return(rtbootstrapper.StatusReady, nil)
+	inst.EXPECT().Status(mock.Anything, "test-runtime").Return(rtbootstrapper.StatusReady, nil)
 
 	f := &fsm{
 		RCCfg: RCCfg{
@@ -79,49 +79,43 @@ func Test_sFnInitializeRuntimeBootstrapper_Errors(t *testing.T) {
 		name                 string
 		mockSetup            func(inst *MockRuntimeBootstrapperInstaller)
 		expectedNextContains string
-		expectedConditions   []metav1.Condition
+		expectedCondition    metav1.Condition
 	}{
 		{
 			name: "StatusError",
 			mockSetup: func(inst *MockRuntimeBootstrapperInstaller) {
-				inst.EXPECT().Status(mockCtx(), "test-runtime").Return(rtbootstrapper.InstallationStatus(0), errors.New("status failed"))
+				inst.EXPECT().Status(mock.Anything, "test-runtime").Return(rtbootstrapper.InstallationStatus(0), errors.New("status failed"))
 			},
-			expectedConditions: []metav1.Condition{
-				{
-					Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
-					Reason:  string(imv1.ConditionReasonRuntimeBootstrapperStatusUnknown),
-					Status:  "False",
-					Message: "Runtime bootstrapper status check failed",
-				},
+			expectedCondition: metav1.Condition{
+				Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
+				Reason:  string(imv1.ConditionReasonRuntimeBootstrapperStatusUnknown),
+				Status:  "False",
+				Message: "Runtime bootstrapper status check failed",
 			},
 		},
 		{
 			name: "InstallError",
 			mockSetup: func(inst *MockRuntimeBootstrapperInstaller) {
-				inst.EXPECT().Status(mockCtx(), "test-runtime").Return(rtbootstrapper.StatusNotStarted, nil)
-				inst.EXPECT().Install(mockCtx(), "test-runtime").Return(errors.New("install failed"))
+				inst.EXPECT().Status(mock.Anything, "test-runtime").Return(rtbootstrapper.StatusNotStarted, nil)
+				inst.EXPECT().Install(mock.Anything, "test-runtime").Return(errors.New("install failed"))
 			},
-			expectedConditions: []metav1.Condition{
-				{
-					Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
-					Reason:  string(imv1.ConditionReasonRuntimeBootstrapperInstallationFailed),
-					Status:  "False",
-					Message: "Runtime bootstrapper installation failed",
-				},
+			expectedCondition: metav1.Condition{
+				Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
+				Reason:  string(imv1.ConditionReasonRuntimeBootstrapperInstallationFailed),
+				Status:  "False",
+				Message: "Runtime bootstrapper installation failed",
 			},
 		},
 		{
 			name: "FailedStatus",
 			mockSetup: func(inst *MockRuntimeBootstrapperInstaller) {
-				inst.EXPECT().Status(mockCtx(), "test-runtime").Return(rtbootstrapper.StatusFailed, nil)
+				inst.EXPECT().Status(mock.Anything, "test-runtime").Return(rtbootstrapper.StatusFailed, nil)
 			},
-			expectedConditions: []metav1.Condition{
-				{
-					Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
-					Reason:  string(imv1.ConditionReasonRuntimeBootstrapperInstallationFailed),
-					Status:  "False",
-					Message: "Runtime bootstrapper installation failed",
-				},
+			expectedCondition: metav1.Condition{
+				Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
+				Reason:  string(imv1.ConditionReasonRuntimeBootstrapperInstallationFailed),
+				Status:  "False",
+				Message: "Runtime bootstrapper installation failed",
 			},
 		},
 	}
@@ -145,7 +139,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Errors(t *testing.T) {
 			require.Nil(t, res)
 			require.NotNil(t, next)
 			require.Contains(t, next.name(), "sFnUpdateStatus")
-			assertEqualConditions(t, tc.expectedConditions, ss.instance.Status.Conditions)
+			assertEqualConditions(t, []metav1.Condition{tc.expectedCondition}, ss.instance.Status.Conditions)
 		})
 	}
 }
@@ -156,7 +150,7 @@ func Test_sFnInitializeRuntimeBootstrapper_InProgress(t *testing.T) {
 	defer cancel()
 
 	inst := NewMockRuntimeBootstrapperInstaller(t)
-	inst.EXPECT().Status(mockCtx(), "test-runtime").Return(rtbootstrapper.StatusInProgress, nil)
+	inst.EXPECT().Status(mock.Anything, "test-runtime").Return(rtbootstrapper.StatusInProgress, nil)
 
 	f := &fsm{
 		RCCfg: RCCfg{
@@ -195,6 +189,3 @@ func minimalRuntime() imv1.Runtime {
 		},
 	}
 }
-
-// mockCtx is a loose matcher for context.Context used in mock expectations.
-func mockCtx() interface{} { return mock.Anything }
