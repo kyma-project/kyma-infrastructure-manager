@@ -55,7 +55,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Ready(t *testing.T) {
 			Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
 			Reason:  string(imv1.ConditionReasonRuntimeBootstrapperConfigured),
 			Status:  "True",
-			Message: "Runtime bootstrapper installation completed",
+			Message: msgInstallationCompleted,
 		},
 	}
 
@@ -90,7 +90,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Errors(t *testing.T) {
 				Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
 				Reason:  string(imv1.ConditionReasonRuntimeBootstrapperStatusUnknown),
 				Status:  "False",
-				Message: "Runtime bootstrapper status check failed",
+				Message: msgStatusCheckFailed,
 			},
 		},
 		{
@@ -103,7 +103,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Errors(t *testing.T) {
 				Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
 				Reason:  string(imv1.ConditionReasonRuntimeBootstrapperInstallationFailed),
 				Status:  "False",
-				Message: "Runtime bootstrapper installation failed",
+				Message: msgInstallationFailed,
 			},
 		},
 		{
@@ -115,7 +115,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Errors(t *testing.T) {
 				Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
 				Reason:  string(imv1.ConditionReasonRuntimeBootstrapperInstallationFailed),
 				Status:  "False",
-				Message: "Runtime bootstrapper installation failed",
+				Message: msgInstallationFailed,
 			},
 		},
 	}
@@ -175,7 +175,7 @@ func Test_sFnInitializeRuntimeBootstrapper_InProgress(t *testing.T) {
 			Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
 			Reason:  string(imv1.ConditionReasonRuntimeBootstrapperInstallationInProgress),
 			Status:  "False",
-			Message: "Runtime bootstrapper installation in progress",
+			Message: msgInstallationInProgress,
 		},
 	}
 	assertEqualConditions(t, expectedRuntimeConditions, ss.instance.Status.Conditions)

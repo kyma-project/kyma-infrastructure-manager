@@ -59,6 +59,7 @@ type K8s struct {
 	RuntimeClientGetter RuntimeClientGetter
 }
 
+//mockery:generate: false
 type Fsm interface {
 	Run(ctx context.Context, v imv1.Runtime) (ctrl.Result, error)
 }
