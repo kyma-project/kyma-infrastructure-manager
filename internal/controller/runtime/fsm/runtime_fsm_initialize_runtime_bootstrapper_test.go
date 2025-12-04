@@ -61,6 +61,15 @@ func Test_sFnInitializeRuntimeBootstrapper_Ready(t *testing.T) {
 
 	ss := &systemState{instance: minimalRuntime()}
 
+	expectedRuntimeConditions := []metav1.Condition{
+		{
+			Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
+			Reason:  string(imv1.ConditionReasonRuntimeBootstrapperConfigured),
+			Status:  "True",
+			Message: "Runtime bootstrapper installation completed",
+		},
+	}
+
 	// when
 	next, res, err := sFnInitializeRuntimeBootstrapper(ctx, f, ss)
 
@@ -69,6 +78,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Ready(t *testing.T) {
 	require.Nil(t, res)
 	require.NotNil(t, next)
 	require.Contains(t, next.name(), "sFnFinalizeRegistryCache")
+	assertEqualConditions(t, expectedRuntimeConditions, ss.instance.Status.Conditions)
 }
 
 func Test_sFnInitializeRuntimeBootstrapper_StatusError(t *testing.T) {
