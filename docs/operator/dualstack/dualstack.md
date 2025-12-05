@@ -8,7 +8,8 @@ This feature is only available for newly created Kyma runtime instances. For exi
 
 When you create a Kyma cluster with dual-stack support, each deployed Pod automatically retrieves two IP addresses (IPv4 and IPv6). To enable IPv6 for service instances, add `IPv6` in the  **ipFamilies** field.
 
-
+> [!WARNING]
+> The Kyma Istio module currently does not support dual-stack mode. Any traffic sent or received through the IPv6 network is not part of the Istio service mesh. Consequently, the Istio module does not protect IPv6 traffic, either by transparent encryption or by offering additional security mechanisms (for example, authentication).
 
 ### Procedure
 
