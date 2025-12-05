@@ -9,9 +9,8 @@ This feature is only available for newly created Kyma runtime instances. For exi
 When you create a Kyma cluster with dual-stack support, each deployed Pod automatically retrieves two IP addresses (IPv4 and IPv6). To enable IPv6 for service instances, add `IPv6` in the  **ipFamilies** field.
 
 
-## External Load Balancer
 
-### Amazon Web Services
+### Procedure
 
 When creating a service instance of type `LoadBalancer` in Kubernetes, add the following annotation to the service to activate the dual-stack support in the AWS load balancer:
 
