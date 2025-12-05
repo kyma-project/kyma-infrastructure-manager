@@ -12,7 +12,7 @@ When you create a Kyma cluster with dual-stack support, each deployed Pod automa
 
 ### Procedure
 
-When creating a service instance of type `LoadBalancer` in Kubernetes, add the following annotation to the service to activate the dual-stack support in the AWS load balancer:
+Create a service instance of type `LoadBalancer` in your Kyma cluster. In the service manifest, add the **ipFamilyPolicy** field with the value `RequireDualStack`, and add the value `IPv6` in the **ipFamilies** field.
 
 ```
 apiVersion: v1
