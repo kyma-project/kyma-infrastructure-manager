@@ -68,8 +68,8 @@ type MaintenanceWindowConfig struct {
 }
 
 type GardenerConfig struct {
-	ProjectName string `json:"projectName" validate:"required"`
-	EnableCredentialBinding bool `json:"enableCredentialBinding"`
+	ProjectName             string `json:"projectName" validate:"required"`
+	EnableCredentialBinding bool   `json:"enableCredentialBinding"`
 }
 
 type MachineImageConfig struct {

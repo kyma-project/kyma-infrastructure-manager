@@ -146,7 +146,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 		updateErr := m.GardenClient.Update(ctx, copyShoot,
 			&client.UpdateOptions{
-				FieldManager:    fieldManagerName,
+				FieldManager: fieldManagerName,
 			})
 
 		nextState, res, err := handleUpdateError(updateErr, m, s, "Failed to update shoot object with new CredentialsBinding, exiting with no retry", "Gardener API shoot update error")

@@ -14,7 +14,6 @@ import (
 	"log"
 )
 
-
 func main() {
 
 	ctx := context.Background()
@@ -29,41 +28,41 @@ func main() {
 	flag.BoolVar(&dryRun, "dry-run", true, "Indicates whether to perform a dry run or actually make changes")
 	flag.Parse()
 
-		cfg, err := clientcmd.BuildConfigFromFlags("", gardenerKubeconfigPath)
-		if err != nil {
-			log.Fatalf("failed to build kubeconfig: %v", err)
-		}
+	cfg, err := clientcmd.BuildConfigFromFlags("", gardenerKubeconfigPath)
+	if err != nil {
+		log.Fatalf("failed to build kubeconfig: %v", err)
+	}
 
-		coreGardenerClient, err := coreclientset.NewForConfig(cfg)
-		if err != nil {
-			log.Fatalf("failed to create gardener client: %v", err)
-		}
+	coreGardenerClient, err := coreclientset.NewForConfig(cfg)
+	if err != nil {
+		log.Fatalf("failed to create gardener client: %v", err)
+	}
 
-		securityGardenerClient, err := securityclientset.NewForConfig(cfg)
-		if err != nil {
-			log.Fatalf("failed to create gardener client: %v", err)
-		}
+	securityGardenerClient, err := securityclientset.NewForConfig(cfg)
+	if err != nil {
+		log.Fatalf("failed to create gardener client: %v", err)
+	}
 
-		projectNamespace := "garden-" + gardenerProjectName
-		list, err := coreGardenerClient.CoreV1beta1().SecretBindings(projectNamespace).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			log.Fatalf("failed to list SecretBindings: %v", err)
-		}
+	projectNamespace := "garden-" + gardenerProjectName
+	list, err := coreGardenerClient.CoreV1beta1().SecretBindings(projectNamespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		log.Fatalf("failed to list SecretBindings: %v", err)
+	}
 
-		for _, secretBinding := range list.Items {
-			fmt.Printf("SecretBinding: %s/%s\n", secretBinding.Namespace, secretBinding.Name)
-			credentialBinding := createCredentialBinding(secretBinding)
+	for _, secretBinding := range list.Items {
+		fmt.Printf("SecretBinding: %s/%s\n", secretBinding.Namespace, secretBinding.Name)
+		credentialBinding := createCredentialBinding(secretBinding)
 
-			if dryRun {
-				fmt.Printf("Following CredentialBinding would be created: %v\n", credentialBinding)
-			} else {
-				_, err := securityGardenerClient.SecurityV1alpha1().CredentialsBindings(projectNamespace).Create(ctx, &credentialBinding, metav1.CreateOptions{})
-				if err != nil {
-					log.Fatalf("failed to create CredentialBinding for SecretBinding %s/%s: %v", secretBinding.Namespace, secretBinding.Name, err)
-				}
-				fmt.Printf("CredentialBinding %s/%s created successfully\n", credentialBinding.Namespace, credentialBinding.Name)
+		if dryRun {
+			fmt.Printf("Following CredentialBinding would be created: %v\n", credentialBinding)
+		} else {
+			_, err := securityGardenerClient.SecurityV1alpha1().CredentialsBindings(projectNamespace).Create(ctx, &credentialBinding, metav1.CreateOptions{})
+			if err != nil {
+				log.Fatalf("failed to create CredentialBinding for SecretBinding %s/%s: %v", secretBinding.Namespace, secretBinding.Name, err)
 			}
+			fmt.Printf("CredentialBinding %s/%s created successfully\n", credentialBinding.Namespace, credentialBinding.Name)
 		}
+	}
 }
 
 func createCredentialBinding(secretBinding gardener_core.SecretBinding) gardener_security.CredentialsBinding {
