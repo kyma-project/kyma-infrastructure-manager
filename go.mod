@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/gardener/gardener v1.131.2
 	github.com/gardener/gardener-extension-provider-alicloud v1.66.1
-	github.com/gardener/gardener-extension-provider-aws v1.65.3
+	github.com/gardener/gardener-extension-provider-aws v1.66.1
 	github.com/gardener/gardener-extension-provider-gcp v1.47.0
 	github.com/gardener/gardener-extension-provider-openstack v1.51.0
 	github.com/gardener/gardener-extension-registry-cache v0.18.0
