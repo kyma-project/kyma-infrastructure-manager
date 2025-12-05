@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	api "k8s.io/apimachinery/pkg/runtime"
 	util "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/utils/ptr"
 )
 
 func TestFSMPatchShoot(t *testing.T) {
@@ -208,6 +209,17 @@ func setupFakeFSMForTest(scheme *api.Scheme, objs ...client.Object) *fsm {
 		withTestFinalizer,
 		withShootNamespace("garden-"),
 		withFakedK8sClient(scheme, objs...),
+		withFakeEventRecorder(1),
+		withDefaultReconcileDuration(),
+	)
+}
+
+func setupFakeFSMUpdatePatchForTest(scheme *api.Scheme, objs ...client.Object) *fsm {
+	return must(newFakeFSM,
+		withMockedMetrics(),
+		withTestFinalizer,
+		withShootNamespace("garden-"),
+		withFakedK8sClientWithActualUpdateAndPatch(scheme, objs...),
 		withFakeEventRecorder(1),
 		withDefaultReconcileDuration(),
 	)
@@ -457,4 +469,50 @@ func TestWorkersAreEqual(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_SFnPatchExistingShoot_CredentialsBindingPatched(t *testing.T) {
+	RegisterTestingT(t)
+	testCtx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	testScheme := api.NewScheme()
+	util.Must(imv1.AddToScheme(testScheme))
+	util.Must(gardener.AddToScheme(testScheme))
+	util.Must(core_v1.AddToScheme(testScheme))
+
+	// Prepare runtime and shoot
+	inputRuntime := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
+	// Ensure runtime has the secret that should be propagated to CredentialsBindingName
+	inputRuntime.Spec.Shoot.SecretBindingName = "runtime-secret"
+
+	// Create FSM and enable credential binding in converter config
+	f := setupFakeFSMUpdatePatchForTest(testScheme, inputRuntime)
+	f.ConverterConfig.Gardener.EnableCredentialBinding = true
+
+	// Create a shoot that has SecretBindingName set (so bindingShouldBePatched will be true)
+	shoot := fsm_testing.TestShootForPatch()
+	shoot.Spec.SecretBindingName = ptr.To("existing-shoot-secret")
+
+	// Persist shoot into fake GardenClient
+	createErr := f.GardenClient.Create(testCtx, shoot)
+	Expect(createErr).To(BeNil())
+
+	// Call the function under test
+	sFn, res, err := sFnPatchExistingShoot(testCtx, f, &systemState{instance: *inputRuntime, shoot: shoot})
+	Expect(err).To(BeNil())
+	Expect(res).To(BeNil())
+
+	// Fetch the Shoot from the fake GardenClient and assert it was updated with CredentialsBindingName and SecretBindingName cleared
+	gotShoot := &gardener.Shoot{}
+	getErr := f.GardenClient.Get(testCtx, client.ObjectKey{Name: shoot.Name, Namespace: shoot.Namespace}, gotShoot)
+	Expect(getErr).To(BeNil())
+
+	// CredentialsBindingName should be set to runtime secret and SecretBindingName should be nil
+	Expect(gotShoot.Spec.CredentialsBindingName).To(Not(BeNil()))
+	Expect(*gotShoot.Spec.CredentialsBindingName).To(Equal(inputRuntime.Spec.Shoot.SecretBindingName))
+	Expect(gotShoot.Spec.SecretBindingName).To(BeNil())
+
+	// Next state should be update status (or other valid step); ensure no panic and a state is returned
+	Expect(sFn).To(Not(BeNil()))
 }
