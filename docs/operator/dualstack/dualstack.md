@@ -54,7 +54,6 @@ spec:
 > [!WARNING]
 The Kyma Istio module currently does not support the dual stack mode. Any traffic sent or received through the IPv6 network won't be part of the Istio service mesh. Consequently, Istio won't protect any IPv6 traffic, neither by transparent encryption nor by offering additional security mechanisms (for example, authentication).
 
-## Appendix
-* [Gardener documentation - Creating IPv4/6 AWS Ingress](https://gardener.cloud/docs/guides/networking/dual-stack-ipv4-ipv6-ingress-aws/#creating-an-ipv4-ipv6-dual-stack-ingress)
-
+## Related Information
+* [Gardener documentation: Creating an IPv4/6 (dual-stack) Ingress](https://gardener.cloud/docs/guides/networking/dual-stack-ipv4-ipv6-ingress-aws/#creating-an-ipv4-ipv6-dual-stack-ingress)
 
