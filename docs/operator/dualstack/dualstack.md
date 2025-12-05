@@ -17,31 +17,6 @@ When creating a service instance of type `LoadBalancer` in Kubernetes, add the f
 ```
 apiVersion: v1
 kind: Service
-metadata:
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-ip-address-type: dualstack
-    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
-    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: instance
-    service.beta.kubernetes.io/aws-load-balancer-type: external
-...
-spec:
-  ipFamilyPolicy: RequireDualStack
-  ipFamilies:
-    - IPv6
-    - IPv4
-...
-```
-
-> [!TIP]
-> The AWS load balancer supports the translation of data packages between IPv4 and IPv6 in both directions. If your Kyma runtime is hosted on AWS but supports only IPv4, the load balancer can handle IPv6 communication between the Internet and your Kyma runtime. Create the service as described above to retrieve a load balancer that supports both IPv4 and IPv6.
-
-### Google Cloud
-
-To create a dual-stack load balancer in Google Cloud, use the following configuration in the service manifest:
-
-```
-apiVersion: v1
-kind: Service
 ...
 spec:
   ipFamilyPolicy: RequireDualStack
