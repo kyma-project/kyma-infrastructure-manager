@@ -1,6 +1,7 @@
 # Kyma Runtime with Dual-Stack Support
 
-On the Google Cloud and Amazon Web Services IaaS providers, SAP BTP, Kyma runtime can support both Internet Protocol (IP) versions IPv4 and IPv6 in parallel (dual stack).
+Learn how to apply dual-stack support in Kyma instances.
+
 
 ## Context
 
