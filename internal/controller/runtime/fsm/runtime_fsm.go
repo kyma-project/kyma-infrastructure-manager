@@ -3,6 +3,7 @@ package fsm
 import (
 	"context"
 	"fmt"
+	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 	"reflect"
 	"runtime"
 	"time"
@@ -36,6 +37,7 @@ type RCCfg struct {
 	Metrics                              metrics.Metrics
 	AuditLogging                         auditlogs.Configuration
 	RegistryCacheConfigControllerEnabled bool
+	RuntimeBootstrapperEnabled           bool
 	config.Config
 }
 
@@ -53,8 +55,9 @@ type Watch = func(src source.Source, eventhandler handler.EventHandler, predicat
 type K8s struct {
 	KcpClient client.Client
 	record.EventRecorder
-	GardenClient        client.Client
-	RuntimeClientGetter RuntimeClientGetter
+	GardenClient                 client.Client
+	RuntimeClientGetter          RuntimeClientGetter
+	RuntimeBootstrapperInstaller *rtbootstrapper.Installer
 }
 
 type Fsm interface {

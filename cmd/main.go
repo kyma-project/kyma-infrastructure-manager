@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 	"io"
 	"os"
 	"time"
@@ -104,6 +105,11 @@ func main() {
 	var converterConfigFilepath string
 	var auditLogMandatory bool
 	var registryCacheConfigControllerEnabled bool
+	var runtimeBootstrapperEnabled bool
+	var runtimeBootstrapperManifestsPath string
+	var runtimeBootstrapperConfigPath string
+	var runtimeBootstrapperPullSecretName string
+	var runtimeBootstrapperClusterTrustBundle string
 
 	//Kubebuilder related parameters:
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to. Monitoring and alerting tools can use this endpoint to collect application specific metrics during runtime")
@@ -133,6 +139,13 @@ func main() {
 	//Feature flags:
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration. When enabled this feature, a Shoot cluster will only be created when an auditlog tenant exists (this is defined in the auditlog mapping configuration file)")
 	flag.BoolVar(&registryCacheConfigControllerEnabled, "registry-cache-config-controller-enabled", false, "Feature flag to enable registry cache config controller")
+	flag.BoolVar(&runtimeBootstrapperEnabled, "runtime-bootstrapper-enabled", false, "Feature flag to enable runtime bootstrapper")
+
+	// Runtime bootstrapper configuration
+	flag.StringVar(&runtimeBootstrapperManifestsPath, "runtime-bootstrapper-manifests-path", "/webhook/manifests.yaml", "File path to the manifests containing runtime bootstrapper.")
+	flag.StringVar(&runtimeBootstrapperConfigPath, "runtime-bootstrapper-config-path", "/skr-preset-webhook-config/config.yaml", "File path to the runtime bootstrapper.")
+	flag.StringVar(&runtimeBootstrapperPullSecretName, "runtime-bootstrapper-pull-secret-name", "", "Name of the pull secret to be copied to SKR.")
+	flag.StringVar(&runtimeBootstrapperClusterTrustBundle, "runtime-bootstrapper-cluster-trust-bundle", "", "Cluster trust bundle to be copied to SKR.")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
@@ -240,12 +253,27 @@ func main() {
 		Metrics:                              metrics,
 		AuditLogging:                         auditLogDataMap,
 		RegistryCacheConfigControllerEnabled: registryCacheConfigControllerEnabled,
+		RuntimeBootstrapperEnabled:           runtimeBootstrapperEnabled,
+	}
+
+	runtimeClientGetter := fsm.NewRuntimeClientGetter(mgr.GetClient())
+
+	runtimeBootstrapperInstaller, err := rtbootstrapper.NewInstaller(rtbootstrapper.Config{
+		PullSecretName:         runtimeBootstrapperPullSecretName,
+		ClusterTrustBundleName: runtimeBootstrapperClusterTrustBundle,
+		ManifestsPath:          runtimeBootstrapperManifestsPath, ConfigPath: runtimeBootstrapperConfigPath,
+	}, mgr.GetClient(), runtimeClientGetter)
+
+	if err != nil {
+		setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
+		os.Exit(1)
 	}
 
 	runtimeReconciler := runtimecontroller.NewRuntimeReconciler(
 		mgr,
 		gardenerClient,
-		fsm.NewRuntimeClientGetter(mgr.GetClient()),
+		runtimeClientGetter,
+		runtimeBootstrapperInstaller,
 		logger,
 		cfg,
 	)
