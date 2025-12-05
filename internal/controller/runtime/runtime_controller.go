@@ -74,11 +74,10 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		log,
 		r.Cfg,
 		fsm.K8s{
-			KcpClient:                    r.KcpClient,
-			GardenClient:                 r.GardenClient,
-			EventRecorder:                r.EventRecorder,
-			RuntimeClientGetter:          r.RuntimeClientGetter,
-			RuntimeBootstrapperInstaller: r.RuntimeBootstrapperInstaller,
+			KcpClient:           r.KcpClient,
+			GardenClient:        r.GardenClient,
+			EventRecorder:       r.EventRecorder,
+			RuntimeClientGetter: r.RuntimeClientGetter,
 		})
 
 	return stateFSM.Run(ctx, runtime)

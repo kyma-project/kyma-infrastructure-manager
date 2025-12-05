@@ -8,6 +8,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+const (
+	msgStatusCheckFailed      = "Runtime bootstrapper status check failed"
+	msgInstallationFailed     = "Runtime bootstrapper installation failed"
+	msgInstallationInProgress = "Runtime bootstrapper installation in progress"
+	msgInstallationCompleted  = "Runtime bootstrapper installation completed"
+)
+
 func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	if !m.RuntimeBootstrapperEnabled || m.RuntimeBootstrapperInstaller == nil {
 		m.log.V(log_level.DEBUG).Info("Runtime bootstrapper installation is disabled")
@@ -21,7 +28,7 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 			imv1.ConditionTypeRuntimeBootstrapperReady,
 			imv1.ConditionReasonRuntimeBootstrapperStatusUnknown,
 			"False",
-			err.Error(),
+			msgStatusCheckFailed,
 		)
 		return updateStatusAndRequeue()
 	}
@@ -36,14 +43,14 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 					imv1.ConditionTypeRuntimeBootstrapperReady,
 					imv1.ConditionReasonRuntimeBootstrapperInstallationFailed,
 					"False",
-					err.Error(),
+					msgInstallationFailed,
 				)
 			} else {
 				s.instance.UpdateStatePending(
 					imv1.ConditionTypeRuntimeBootstrapperReady,
 					imv1.ConditionReasonRuntimeBootstrapperInstallationInProgress,
 					"False",
-					"Runtime bootstrapper installation in progress",
+					msgInstallationInProgress,
 				)
 			}
 
@@ -56,7 +63,7 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 				imv1.ConditionTypeRuntimeBootstrapperReady,
 				imv1.ConditionReasonRuntimeBootstrapperInstallationInProgress,
 				"False",
-				"Runtime bootstrapper installation in progress",
+				msgInstallationInProgress,
 			)
 
 			return updateStatusAndRequeue()
@@ -68,7 +75,7 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 				imv1.ConditionTypeRuntimeBootstrapperReady,
 				imv1.ConditionReasonRuntimeBootstrapperInstallationFailed,
 				"False",
-				"Runtime bootstrapper installation failed",
+				msgInstallationFailed,
 			)
 			return updateStatusAndRequeue()
 		}
@@ -77,7 +84,7 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 			imv1.ConditionTypeRuntimeBootstrapperReady,
 			imv1.ConditionReasonRuntimeBootstrapperConfigured,
 			"True",
-			"Runtime bootstrapper installation completed",
+			msgInstallationCompleted,
 		)
 	}
 
