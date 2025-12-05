@@ -274,6 +274,7 @@ func main() {
 		mgr,
 		gardenerClient,
 		runtimeClientGetter,
+		runtimeBootstrapperInstaller,
 		logger,
 		cfg,
 	)

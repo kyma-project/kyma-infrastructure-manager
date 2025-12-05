@@ -3,7 +3,6 @@ package fsm
 import (
 	"context"
 	"fmt"
-	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 	"reflect"
 	"runtime"
 	"time"
@@ -56,9 +55,8 @@ type Watch = func(src source.Source, eventhandler handler.EventHandler, predicat
 type K8s struct {
 	KcpClient client.Client
 	record.EventRecorder
-	GardenClient                 client.Client
-	RuntimeClientGetter          RuntimeClientGetter
-	RuntimeBootstrapperInstaller *rtbootstrapper.Installer
+	GardenClient        client.Client
+	RuntimeClientGetter RuntimeClientGetter
 }
 
 //mockery:generate: false
