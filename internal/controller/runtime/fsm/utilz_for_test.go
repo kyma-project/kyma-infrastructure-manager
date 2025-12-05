@@ -8,7 +8,6 @@ import (
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
 	metrics_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
 	fsm_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
-	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
@@ -21,7 +20,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"time"
 )
@@ -112,11 +110,7 @@ var (
 		k8sClient := fake.NewClientBuilder().
 			WithScheme(scheme).
 			WithObjects(objs...).
-			WithStatusSubresource(objs...).
-			WithInterceptorFuncs(interceptor.Funcs{
-				Patch:  fsm_testing.GetFakePatchInterceptorFn(true),
-				Update: fsm_testing.GetFakeUpdateInterceptorFn(true),
-			}).Build()
+			WithStatusSubresource(objs...).Build()
 
 		runtimeClientGetter := &fsm_mocks.RuntimeClientGetter{}
 		runtimeClientGetter.On("Get", mock.Anything, mock.Anything).Return(k8sClient, nil)
@@ -135,11 +129,7 @@ var (
 		k8sClient := fake.NewClientBuilder().
 			WithScheme(scheme).
 			WithObjects(objs...).
-			WithStatusSubresource(objs...).
-			WithInterceptorFuncs(interceptor.Funcs{
-				Patch:  fsm_testing.GetFakePatchInterceptorFn(true),
-				Update: fsm_testing.GetFakeUpdateInterceptorFn(true),
-			}).Build()
+			WithStatusSubresource(objs...).Build()
 
 		runtimeClientGetter := &fsm_mocks.RuntimeClientGetter{}
 		runtimeClientGetter.On("Get", mock.Anything, mock.Anything).Return(nil, err)
@@ -159,11 +149,7 @@ var (
 		k8sClient := fake.NewClientBuilder().
 			WithScheme(scheme).
 			WithObjects(objs...).
-			WithStatusSubresource(objs...).
-			WithInterceptorFuncs(interceptor.Funcs{
-				Patch:  fsm_testing.GetFakePatchInterceptorFn(false),
-				Update: fsm_testing.GetFakeUpdateInterceptorFn(false),
-			}).Build()
+			WithStatusSubresource(objs...).Build()
 
 		return func(fsm *fsm) error {
 			fsm.KcpClient = k8sClient
@@ -180,11 +166,7 @@ var (
 		k8sClient := fake.NewClientBuilder().
 			WithScheme(scheme).
 			WithObjects(objs...).
-			WithStatusSubresource(objs...).
-			WithInterceptorFuncs(interceptor.Funcs{
-				Patch:  fsm_testing.GetFakePatchInterceptorFnError(err),
-				Update: fsm_testing.GetFakeUpdateInterceptorFn(true),
-			}).Build()
+			WithStatusSubresource(objs...).Build()
 
 		return func(fsm *fsm) error {
 			fsm.KcpClient = k8sClient
@@ -201,11 +183,7 @@ var (
 		k8sClient := fake.NewClientBuilder().
 			WithScheme(scheme).
 			WithObjects(objs...).
-			WithStatusSubresource(objs...).
-			WithInterceptorFuncs(interceptor.Funcs{
-				Patch:  fsm_testing.GetFakePatchInterceptorFn(true),
-				Update: fsm_testing.GetFakeUpdateInterceptorFnError(err),
-			}).Build()
+			WithStatusSubresource(objs...).Build()
 
 		return func(fsm *fsm) error {
 			fsm.KcpClient = k8sClient

@@ -100,29 +100,3 @@ func GetFakeInterceptorThatThrowsErrorOnNSCreation() func(ctx context.Context, c
 		return client.Create(ctx, obj, opts...)
 	}
 }
-
-func GetFakePatchInterceptorFnError(returnedError *k8s_errors.StatusError) func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
-	return func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
-		return returnedError
-	}
-}
-
-func GetFakeUpdateInterceptorFnError(returnedError *k8s_errors.StatusError) func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
-	return func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
-		return returnedError
-	}
-}
-
-func GetFakeUpdateInterceptorFn(incGeneration bool) func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
-	return func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
-		shoot, ok := obj.(*gardener_api.Shoot)
-		if !ok {
-			return client.Update(ctx, obj, opts...)
-		}
-		// Update the generation to simulate shoot object being updated using interceptor function.
-		if incGeneration {
-			shoot.Generation++
-		}
-		return nil
-	}
-}
