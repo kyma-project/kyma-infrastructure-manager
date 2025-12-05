@@ -145,6 +145,41 @@ func Test_sFnInitializeRuntimeBootstrapper_Errors(t *testing.T) {
 }
 
 func Test_sFnInitializeRuntimeBootstrapper_InProgress(t *testing.T) {
+	// New subtest: Unknown status should set Pending with StatusUnknown reason and msgStatusCheckFailed
+	t.Run("StatusNotStarted", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		inst := NewMockRuntimeBootstrapperInstaller(t)
+		inst.EXPECT().Install(mock.Anything, "test-runtime").Return(nil)
+		inst.EXPECT().Status(mock.Anything, "test-runtime").Return(rtbootstrapper.StatusNotStarted, nil)
+
+		f := &fsm{
+			RCCfg: RCCfg{
+				RuntimeBootstrapperEnabled:   true,
+				RuntimeBootstrapperInstaller: inst,
+			},
+		}
+		ss := &systemState{instance: minimalRuntime()}
+
+		next, res, err := sFnInitializeRuntimeBootstrapper(ctx, f, ss)
+
+		require.NoError(t, err)
+		require.Nil(t, res)
+		require.NotNil(t, next)
+		require.Contains(t, next.name(), "sFnUpdateStatus")
+
+		expectedRuntimeConditions := []metav1.Condition{
+			{
+				Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
+				Reason:  string(imv1.ConditionReasonRuntimeBootstrapperInstallationInProgress),
+				Status:  "False",
+				Message: msgInstallationInProgress,
+			},
+		}
+		assertEqualConditions(t, expectedRuntimeConditions, ss.instance.Status.Conditions)
+	})
+
 	// given
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
