@@ -82,5 +82,5 @@ func (r *Installer) Install(ctx context.Context, runtime imv1.Runtime) error {
 }
 
 func (r *Installer) Status(ctx context.Context, runtime imv1.Runtime) (InstallationStatus, error) {
-	return StatusReady, nil
+	return StatusNotStarted, nil
 }
