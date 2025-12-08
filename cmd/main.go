@@ -21,10 +21,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 	"io"
 	"os"
 	"time"
+
+	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenerapis "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
@@ -107,7 +108,7 @@ func main() {
 	var registryCacheConfigControllerEnabled bool
 	var runtimeBootstrapperEnabled bool
 	var runtimeBootstrapperManifestsPath string
-	var runtimeBootstrapperConfigPath string
+	var runtimeBootstrapperConfigName string
 	var runtimeBootstrapperPullSecretName string
 	var runtimeBootstrapperClusterTrustBundle string
 
@@ -143,7 +144,7 @@ func main() {
 
 	// Runtime bootstrapper configuration
 	flag.StringVar(&runtimeBootstrapperManifestsPath, "runtime-bootstrapper-manifests-path", "/webhook/manifests.yaml", "File path to the manifests containing runtime bootstrapper.")
-	flag.StringVar(&runtimeBootstrapperConfigPath, "runtime-bootstrapper-config-path", "/skr-preset-webhook-config/config.yaml", "File path to the runtime bootstrapper.")
+	flag.StringVar(&runtimeBootstrapperConfigName, "runtime-bootstrapper-config-name", "rt-bootstrapper-config", "Name of the the runtime bootstrapper Config Map.")
 	flag.StringVar(&runtimeBootstrapperPullSecretName, "runtime-bootstrapper-pull-secret-name", "", "Name of the pull secret to be copied to SKR.")
 	flag.StringVar(&runtimeBootstrapperClusterTrustBundle, "runtime-bootstrapper-cluster-trust-bundle", "", "Cluster trust bundle to be copied to SKR.")
 
@@ -261,7 +262,7 @@ func main() {
 	runtimeBootstrapperInstaller, err := rtbootstrapper.NewInstaller(rtbootstrapper.Config{
 		PullSecretName:         runtimeBootstrapperPullSecretName,
 		ClusterTrustBundleName: runtimeBootstrapperClusterTrustBundle,
-		ManifestsPath:          runtimeBootstrapperManifestsPath, ConfigPath: runtimeBootstrapperConfigPath,
+		ManifestsPath:          runtimeBootstrapperManifestsPath, ConfigName: runtimeBootstrapperConfigName,
 	}, mgr.GetClient(), runtimeClientGetter)
 
 	if err != nil {

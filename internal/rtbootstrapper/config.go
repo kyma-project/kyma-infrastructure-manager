@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const fieldManagerName = "kim"
+const fieldManagerName = "kim-bootstrapper"
 
 type Configurator struct {
 	kcpClient           client.Client
@@ -60,21 +60,11 @@ func getControlPlaneResource[T client.Object](ctx context.Context, kcpClient cli
 }
 
 func (c *Configurator) prepareConfigMap(ctx context.Context) (*corev1.ConfigMap, error) {
-	resource, err := getControlPlaneResource[*corev1.ConfigMap](ctx, c.kcpClient, c.config.ConfigName)
-	if err != nil {
-		return nil, err
-	}
-
-	return resource, nil
+	return getControlPlaneResource[*corev1.ConfigMap](ctx, c.kcpClient, c.config.ConfigName)
 }
 
 func (c *Configurator) preparePullSecret(ctx context.Context) (*corev1.Secret, error) {
-	resource, err := getControlPlaneResource[*corev1.Secret](ctx, c.kcpClient, c.config.PullSecretName)
-	if err != nil {
-		return nil, err
-	}
-
-	return resource, nil
+	return getControlPlaneResource[*corev1.Secret](ctx, c.kcpClient, c.config.PullSecretName)
 }
 
 func (c *Configurator) applyResourcesToRuntimeCluster(ctx context.Context, runtimeClient client.Client, secret *corev1.Secret, configMap *corev1.ConfigMap) error {
