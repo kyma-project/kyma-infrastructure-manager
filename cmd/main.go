@@ -246,7 +246,7 @@ func main() {
 	runtimeBootstrapperInstaller, err := rtbootstrapper.NewInstaller(rtbootstrapper.Config{
 		PullSecretName:         runtimeBootstrapperPullSecretName,
 		ClusterTrustBundleName: runtimeBootstrapperClusterTrustBundle,
-		ManifestsPath:          runtimeBootstrapperManifestsPath, ConfigPath: runtimeBootstrapperConfigPath,
+		ManifestsPath:          runtimeBootstrapperManifestsPath, ConfigName: runtimeBootstrapperConfigName,
 	}, mgr.GetClient(), runtimeClientGetter)
 
 	if err != nil {
