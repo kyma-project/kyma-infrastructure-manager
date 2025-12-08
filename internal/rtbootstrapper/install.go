@@ -2,6 +2,7 @@ package rtbootstrapper
 
 import (
 	"context"
+
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -25,7 +26,7 @@ type Config struct {
 	PullSecretName         string
 	ClusterTrustBundleName string
 	ManifestsPath          string
-	ConfigPath             string
+	ConfigName             string
 }
 
 //go:generate mockery --name=RuntimeClientGetter
@@ -50,7 +51,7 @@ func validate(config Config) error {
 	return nil
 }
 
-func (r *Installer) Install(context context.Context, runtimeID string) error {
+func (r *Installer) Install(context context.Context, runtime imv1.Runtime) error {
 	return nil
 }
 
