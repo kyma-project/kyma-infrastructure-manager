@@ -219,7 +219,7 @@ func setupFakeFSMUpdatePatchForTest(scheme *api.Scheme, objs ...client.Object) *
 		withMockedMetrics(),
 		withTestFinalizer,
 		withShootNamespace("garden-"),
-		withFakedK8sClientWithActualUpdateAndPatch(scheme, objs...),
+		withFakedK8sClientWithFakeUpdateAndPatch(scheme, objs...),
 		withFakeEventRecorder(1),
 		withDefaultReconcileDuration(),
 	)
@@ -492,7 +492,7 @@ func Test_SFnPatchExistingShoot_CredentialsBindingPatched(t *testing.T) {
 
 	// Create a shoot that has SecretBindingName set (so bindingShouldBePatched will be true)
 	shoot := fsm_testing.TestShootForPatch()
-	shoot.Spec.SecretBindingName = ptr.To("existing-shoot-secret")
+	shoot.Spec.SecretBindingName = ptr.To("existing-shoot-secret") //nolint:staticcheck
 
 	// Persist shoot into fake GardenClient
 	createErr := f.GardenClient.Create(testCtx, shoot)

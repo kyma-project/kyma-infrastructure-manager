@@ -168,7 +168,7 @@ var (
 		}
 	}
 
-	withFakedK8sClientWithActualUpdateAndPatch = func(
+	withFakedK8sClientWithFakeUpdateAndPatch = func(
 		scheme *runtime.Scheme,
 		objs ...client.Object) fakeFSMOpt {
 

@@ -138,14 +138,14 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		}
 	}
 
-	bindingShouldBePatched := m.ConverterConfig.Gardener.EnableCredentialBinding && s.shoot.Spec.SecretBindingName != nil && *s.shoot.Spec.SecretBindingName != ""
+	bindingShouldBePatched := m.ConverterConfig.Gardener.EnableCredentialBinding && s.shoot.Spec.SecretBindingName != nil && *s.shoot.Spec.SecretBindingName != "" //nolint:staticcheck
 	// Gardener is not handling properly the change from SecretBindingName to CredentialsBindingName with the Patch operation.
 	// Therefore, we need to do an additional Update operation to set the CredentialsBindingName and remove the SecretBindingName.
 	// This update can be removed after migration to CredentialsBinding is completed and all runtimes are using it.
 	if bindingShouldBePatched {
 		copyShoot := s.shoot.DeepCopy()
 		copyShoot.Spec.CredentialsBindingName = ptr.To(s.instance.Spec.Shoot.SecretBindingName)
-		copyShoot.Spec.SecretBindingName = nil
+		copyShoot.Spec.SecretBindingName = nil //nolint:staticcheck
 
 		updateErr := m.GardenClient.Update(ctx, copyShoot,
 			&client.UpdateOptions{

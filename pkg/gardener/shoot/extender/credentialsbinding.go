@@ -14,9 +14,9 @@ func ExtendWithCredentialsBinding(credentialBindingEnabled bool) func(runtime im
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		if credentialBindingEnabled {
 			shoot.Spec.CredentialsBindingName = ptr.To(runtime.Spec.Shoot.SecretBindingName)
-			shoot.Spec.SecretBindingName = nil
+			shoot.Spec.SecretBindingName = nil //nolint:staticcheck
 		} else {
-			shoot.Spec.SecretBindingName = ptr.To(runtime.Spec.Shoot.SecretBindingName)
+			shoot.Spec.SecretBindingName = ptr.To(runtime.Spec.Shoot.SecretBindingName) //nolint:staticcheck
 		}
 
 		return nil
