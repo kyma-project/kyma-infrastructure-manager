@@ -3,8 +3,6 @@ package rtbootstrapper
 import (
 	"context"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -33,7 +31,6 @@ type Config struct {
 //go:generate mockery --name=RuntimeClientGetter
 type RuntimeClientGetter interface {
 	Get(ctx context.Context, runtime imv1.Runtime) (client.Client, error)
-	GetDynamic(ctx context.Context, runtime imv1.Runtime) (*dynamic.DynamicClient, *discovery.DiscoveryClient, error)
 }
 
 func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter RuntimeClientGetter) (*Installer, error) {
