@@ -11,6 +11,7 @@ import (
 )
 
 //go:generate mockery --name=RuntimeClientGetter
+//mockery:generate: false
 type RuntimeClientGetter interface {
 	Get(ctx context.Context, runtime imv1.Runtime) (client.Client, error)
 }

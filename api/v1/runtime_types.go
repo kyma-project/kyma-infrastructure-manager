@@ -61,12 +61,13 @@ const (
 type RuntimeConditionType string
 
 const (
-	ConditionTypeRuntimeProvisioned      RuntimeConditionType = "Provisioned"
-	ConditionTypeRuntimeKubeconfigReady  RuntimeConditionType = "KubeconfigReady"
-	ConditionTypeOidcAndCMsConfigured    RuntimeConditionType = "OidcAndConfigMapConfigured"
-	ConditionTypeRuntimeConfigured       RuntimeConditionType = "Configured"
-	ConditionTypeRuntimeDeprovisioned    RuntimeConditionType = "Deprovisioned"
-	ConditionTypeRegistryCacheConfigured RuntimeConditionType = "RegistryCacheConfigured"
+	ConditionTypeRuntimeProvisioned       RuntimeConditionType = "Provisioned"
+	ConditionTypeRuntimeKubeconfigReady   RuntimeConditionType = "KubeconfigReady"
+	ConditionTypeOidcAndCMsConfigured     RuntimeConditionType = "OidcAndConfigMapConfigured"
+	ConditionTypeRuntimeConfigured        RuntimeConditionType = "Configured"
+	ConditionTypeRuntimeDeprovisioned     RuntimeConditionType = "Deprovisioned"
+	ConditionTypeRegistryCacheConfigured  RuntimeConditionType = "RegistryCacheConfigured"
+	ConditionTypeRuntimeBootstrapperReady RuntimeConditionType = "RuntimeBootstrapperReady"
 )
 
 type RuntimeConditionReason string
@@ -105,6 +106,11 @@ const (
 	ConditionReasonRegistryCacheError                            = RuntimeConditionReason("RegistryCacheError")
 	ConditionReasonRegistryCacheGardenClusterConfigurationFailed = RuntimeConditionReason("RegistryCacheGardenClusterConfigurationFailed")
 	ConditionReasonRegistryCacheGardenClusterCleanupFailed       = RuntimeConditionReason("RegistryCacheGardenClusterCleanupFailed")
+
+	ConditionReasonRuntimeBootstrapperStatusUnknown          = RuntimeConditionReason("RuntimeBootstrapperStatusUnknown")
+	ConditionReasonRuntimeBootstrapperInstallationFailed     = RuntimeConditionReason("RuntimeBootstrapperInstallationFailed")
+	ConditionReasonRuntimeBootstrapperInstallationInProgress = RuntimeConditionReason("RuntimeBootstrapperInstallationInProgress")
+	ConditionReasonRuntimeBootstrapperConfigured             = RuntimeConditionReason("RuntimeBootstrapperConfigured")
 )
 
 //+kubebuilder:object:root=true
