@@ -27,9 +27,14 @@ func ExtendWithCloudProfile(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return nil
 }
 
+const CloudProfileKind = "CloudProfile"
+
 func CreateCloudProfileReference(cloudProfileName string) *gardener.CloudProfileReference {
 	return &gardener.CloudProfileReference{
-		Kind: "CloudProfile",
+		Kind: CloudProfileKind,
+		Name: cloudProfileName,
+	}
+}
 		Name: cloudProfileName,
 	}
 }
