@@ -6,10 +6,12 @@ import (
 	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/dynamic"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/client-go/discovery"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -65,4 +67,23 @@ func GetRuntimeClient(secret corev1.Secret) (client.Client, error) {
 	}
 
 	return runtimeClient, nil
+}
+
+func GetDynamicRuntimeClient(secret corev1.Secret) (*dynamic.DynamicClient, *discovery.DiscoveryClient, error) {
+	restConfig, err := clientcmd.RESTConfigFromKubeConfig(secret.Data[kubeconfigSecretKey])
+	if err != nil {
+		return nil, nil, err
+	}
+
+	dynClient, err := dynamic.NewForConfig(restConfig)
+	if err != nil {
+		return nil, nil, fmt.Errorf("creating dynamic client: %w", err)
+	}
+
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
+	if err != nil {
+		return nil, nil, fmt.Errorf("creating discovery client: %w", err)
+	}
+
+	return dynClient, discoveryClient, nil
 }
