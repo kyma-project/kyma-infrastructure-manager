@@ -149,7 +149,7 @@ var _ = BeforeSuite(func() {
 		RequeueDurationShootDelete:    3 * time.Second,
 	}
 
-	runtimeReconciler = NewRuntimeReconciler(mgr, gardenerTestClient, runtimeClientGetterMock, logger, fsmCfg)
+	runtimeReconciler = NewRuntimeReconciler(mgr, gardenerTestClient, runtimeClientGetterMock, nil, logger, fsmCfg)
 	Expect(runtimeReconciler).NotTo(BeNil())
 	err = runtimeReconciler.SetupWithManager(mgr, 1)
 	Expect(err).To(BeNil())
