@@ -17,18 +17,25 @@ import (
 )
 
 type ManifestApplier struct {
-	manifestsPath       string
-	runtimeClientGetter RuntimeClientGetter
+	manifestsPath              string
+	runtimeDynamicClientGetter RuntimeDynamicClientGetter
 }
 
-func (ma ManifestApplier) ApplyManifests(runtime imv1.Runtime) error {
+func NewManifestApplier(manifestsPath string, runtimeClientGetter RuntimeDynamicClientGetter) (*ManifestApplier, error) {
+	return &ManifestApplier{
+		manifestsPath:              manifestsPath,
+		runtimeDynamicClientGetter: runtimeClientGetter,
+	}, nil
+}
+
+func (ma ManifestApplier) ApplyManifests(ctx context.Context, runtime imv1.Runtime) error {
 	f, err := os.Open(ma.manifestsPath)
 	if err != nil {
 		return fmt.Errorf("opening file: %w", err)
 	}
 	defer f.Close()
 
-	dynamicClient, discoveryClient, err := ma.runtimeClientGetter.GetDynamic(context.Background(), runtime)
+	dynamicClient, discoveryClient, err := ma.runtimeDynamicClientGetter.Get(ctx, runtime)
 	if err != nil {
 		return fmt.Errorf("getting dynamic client: %w", err)
 	}
@@ -41,8 +48,6 @@ func (ma ManifestApplier) ApplyManifests(runtime imv1.Runtime) error {
 
 	defaultNamespace := "default"
 	decoder := yaml.NewYAMLOrJSONDecoder(f, 4096)
-
-	ctx := context.Background()
 
 	for {
 		u := &unstructured.Unstructured{}

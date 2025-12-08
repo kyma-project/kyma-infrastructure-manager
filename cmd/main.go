@@ -241,12 +241,13 @@ func main() {
 	}
 
 	runtimeClientGetter := fsm.NewRuntimeClientGetter(mgr.GetClient())
+	runtimeDynamicClientGetter := fsm.NewRuntimeDynamicClientGetter(mgr.GetClient())
 
 	runtimeBootstrapperInstaller, err := rtbootstrapper.NewInstaller(rtbootstrapper.Config{
 		PullSecretName:         runtimeBootstrapperPullSecretName,
 		ClusterTrustBundleName: runtimeBootstrapperClusterTrustBundle,
 		ManifestsPath:          runtimeBootstrapperManifestsPath, ConfigPath: runtimeBootstrapperConfigPath,
-	}, mgr.GetClient(), runtimeClientGetter)
+	}, mgr.GetClient(), runtimeClientGetter, runtimeDynamicClientGetter)
 
 	if err != nil {
 		setupLog.Error(err, "unable to initialize runtime bootstrapper installer")

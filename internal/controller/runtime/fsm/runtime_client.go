@@ -16,15 +16,28 @@ import (
 //mockery:generate: false
 type RuntimeClientGetter interface {
 	Get(ctx context.Context, runtime imv1.Runtime) (client.Client, error)
-	GetDynamic(ctx context.Context, runtime imv1.Runtime) (*dynamic.DynamicClient, *discovery.DiscoveryClient, error)
+}
+
+type DynamicRuntimeClientGetter interface {
+	Get(ctx context.Context, runtime imv1.Runtime) (*dynamic.DynamicClient, *discovery.DiscoveryClient, error)
 }
 
 type runtimeClientGetter struct {
 	kcpClient client.Client
 }
 
+type runtimeDynamicClientGetter struct {
+	kcpClient client.Client
+}
+
 func NewRuntimeClientGetter(kcpClient client.Client) RuntimeClientGetter {
 	return &runtimeClientGetter{
+		kcpClient: kcpClient,
+	}
+}
+
+func NewRuntimeDynamicClientGetter(kcpClient client.Client) DynamicRuntimeClientGetter {
+	return &runtimeDynamicClientGetter{
 		kcpClient: kcpClient,
 	}
 }
@@ -38,7 +51,7 @@ func (r *runtimeClientGetter) Get(ctx context.Context, runtime imv1.Runtime) (cl
 	return gardener.GetRuntimeClient(secret)
 }
 
-func (r *runtimeClientGetter) GetDynamic(ctx context.Context, runtime imv1.Runtime) (*dynamic.DynamicClient, *discovery.DiscoveryClient, error) {
+func (r *runtimeDynamicClientGetter) Get(ctx context.Context, runtime imv1.Runtime) (*dynamic.DynamicClient, *discovery.DiscoveryClient, error) {
 	secret, err := getKubeconfigSecret(ctx, r.kcpClient, runtime.Labels[imv1.LabelKymaRuntimeID], runtime.Namespace)
 	if err != nil {
 		return nil, nil, err
