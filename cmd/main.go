@@ -241,6 +241,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	runtimeClientGetter := fsm.NewRuntimeClientGetter(mgr.GetClient())
+
+	runtimeBootstrapperInstaller, err := rtbootstrapper.NewInstaller(rtbootstrapper.Config{
+		PullSecretName:         runtimeBootstrapperPullSecretName,
+		ClusterTrustBundleName: runtimeBootstrapperClusterTrustBundle,
+		ManifestsPath:          runtimeBootstrapperManifestsPath, ConfigPath: runtimeBootstrapperConfigPath,
+	}, mgr.GetClient(), runtimeClientGetter)
+
+	if err != nil {
+		setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
+		os.Exit(1)
+	}
+
 	cfg := fsm.RCCfg{
 		GardenerRequeueDuration:              defaultGardenerRequeueDuration,
 		RequeueDurationShootCreate:           defaultShootCreateRequeueDuration,
@@ -255,19 +268,7 @@ func main() {
 		AuditLogging:                         auditLogDataMap,
 		RegistryCacheConfigControllerEnabled: registryCacheConfigControllerEnabled,
 		RuntimeBootstrapperEnabled:           runtimeBootstrapperEnabled,
-	}
-
-	runtimeClientGetter := fsm.NewRuntimeClientGetter(mgr.GetClient())
-
-	runtimeBootstrapperInstaller, err := rtbootstrapper.NewInstaller(rtbootstrapper.Config{
-		PullSecretName:         runtimeBootstrapperPullSecretName,
-		ClusterTrustBundleName: runtimeBootstrapperClusterTrustBundle,
-		ManifestsPath:          runtimeBootstrapperManifestsPath, ConfigName: runtimeBootstrapperConfigName,
-	}, mgr.GetClient(), runtimeClientGetter)
-
-	if err != nil {
-		setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
-		os.Exit(1)
+		RuntimeBootstrapperInstaller:         runtimeBootstrapperInstaller,
 	}
 
 	runtimeReconciler := runtimecontroller.NewRuntimeReconciler(
