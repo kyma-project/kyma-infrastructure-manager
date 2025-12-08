@@ -13,6 +13,7 @@ const (
 	DefaultGCPCloudProfileName       = "gcp"
 	DefaultOpenStackCloudProfileName = "converged-cloud-kyma"
 	DefaultAlicloudCloudProfileName  = "alicloud"
+	CloudProfileKind = "CloudProfile"
 )
 
 func ExtendWithCloudProfile(runtime imv1.Runtime, shoot *gardener.Shoot) error {
@@ -27,14 +28,9 @@ func ExtendWithCloudProfile(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return nil
 }
 
-const CloudProfileKind = "CloudProfile"
-
 func CreateCloudProfileReference(cloudProfileName string) *gardener.CloudProfileReference {
 	return &gardener.CloudProfileReference{
 		Kind: CloudProfileKind,
-		Name: cloudProfileName,
-	}
-}
 		Name: cloudProfileName,
 	}
 }
