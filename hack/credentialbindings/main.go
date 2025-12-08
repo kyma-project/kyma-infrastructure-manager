@@ -58,7 +58,7 @@ func main() {
 		} else {
 			_, err := securityGardenerClient.SecurityV1alpha1().CredentialsBindings(projectNamespace).Create(ctx, &credentialBinding, metav1.CreateOptions{})
 			if err != nil {
-				log.Fatalf("failed to create CredentialBinding for SecretBinding %s/%s: %v", secretBinding.Namespace, secretBinding.Name, err)
+				log.Printf("failed to create CredentialBinding for SecretBinding %s/%s: %v", secretBinding.Namespace, secretBinding.Name, err)
 			}
 			fmt.Printf("CredentialBinding %s/%s created successfully\n", credentialBinding.Namespace, credentialBinding.Name)
 		}

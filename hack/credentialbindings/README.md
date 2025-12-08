@@ -1,5 +1,5 @@
 
-# CredentialBindings Migration Tool
+# CredentialsBindings Migration Tool
 
 This tool migrates Gardener `SecretBinding` resources to `CredentialsBinding` resources in a specified Gardener project namespace.
 
