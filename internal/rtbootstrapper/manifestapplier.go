@@ -21,11 +21,11 @@ type ManifestApplier struct {
 	runtimeDynamicClientGetter RuntimeDynamicClientGetter
 }
 
-func NewManifestApplier(manifestsPath string, runtimeClientGetter RuntimeDynamicClientGetter) (*ManifestApplier, error) {
+func NewManifestApplier(manifestsPath string, runtimeClientGetter RuntimeDynamicClientGetter) *ManifestApplier {
 	return &ManifestApplier{
 		manifestsPath:              manifestsPath,
 		runtimeDynamicClientGetter: runtimeClientGetter,
-	}, nil
+	}
 }
 
 func (ma ManifestApplier) ApplyManifests(ctx context.Context, runtime imv1.Runtime) error {
@@ -54,12 +54,11 @@ func (ma ManifestApplier) ApplyManifests(ctx context.Context, runtime imv1.Runti
 		err = decoder.Decode(u)
 		if err != nil {
 			if err == io.EOF {
-				break // processed all docs
+				break
 			}
 			return fmt.Errorf("decoding YAML: %w", err)
 		}
 
-		// Skip empty docs
 		if u.GetKind() == "" {
 			continue
 		}
@@ -79,7 +78,6 @@ func applyObject(
 	obj *unstructured.Unstructured,
 	defaultNamespace string,
 ) error {
-	// Determine GVR and whether it's namespaced
 	gvk := obj.GroupVersionKind()
 
 	mapping, err := mapper.RESTMapping(schema.GroupKind{
@@ -92,7 +90,6 @@ func applyObject(
 
 	gvr := mapping.Resource
 
-	// Decide namespace
 	ns := obj.GetNamespace()
 	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
 		if ns == "" {
@@ -100,7 +97,6 @@ func applyObject(
 			obj.SetNamespace(ns)
 		}
 	} else {
-		// cluster-scoped, namespace must be empty
 		ns = ""
 		obj.SetNamespace("")
 	}
@@ -117,19 +113,15 @@ func applyObject(
 		dr = dynClient.Resource(gvr).Namespace(ns)
 	}
 
-	// Try to get existing
 	current, err := dr.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		// If not found -> create
 		if errors.IsNotFound(err) {
-			fmt.Printf("Creating %s %s/%s\n", gvk.Kind, ns, name)
 			_, err = dr.Create(ctx, obj, metav1.CreateOptions{})
 			return err
 		}
 		return fmt.Errorf("getting existing %s %s/%s: %w", gvk.Kind, ns, name, err)
 	}
 
-	// Keep resourceVersion so the Update succeeds
 	obj.SetResourceVersion(current.GetResourceVersion())
 	_, err = dr.Update(ctx, obj, metav1.UpdateOptions{})
 	return err

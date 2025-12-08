@@ -33,14 +33,16 @@ type Config struct {
 	ConfigPath             string
 }
 
-//go:generate mockery --name=RuntimeClientGetter
+//mockery:generate: true
 type RuntimeClientGetter interface {
 	Get(ctx context.Context, runtime imv1.Runtime) (client.Client, error)
 }
 
 // TODO: consider using one interface with two methods
+//
+//mockery:generate: true
 type RuntimeDynamicClientGetter interface {
-	Get(ctx context.Context, runtime imv1.Runtime) (*dynamic.DynamicClient, *discovery.DiscoveryClient, error)
+	Get(ctx context.Context, runtime imv1.Runtime) (dynamic.Interface, discovery.DiscoveryInterface, error)
 }
 
 func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter RuntimeClientGetter, runtimeDynamicClientGetter RuntimeDynamicClientGetter) (*Installer, error) {
@@ -73,12 +75,7 @@ func validate(config Config) error {
 }
 
 func (r *Installer) Install(ctx context.Context, runtime imv1.Runtime) error {
-	manifestApplier, err := NewManifestApplier(r.config.ManifestsPath, r.runtimeDynamicClientGetter)
-	if err != nil {
-		return err
-	}
-
-	return manifestApplier.ApplyManifests(ctx, runtime)
+	return NewManifestApplier(r.config.ManifestsPath, r.runtimeDynamicClientGetter).ApplyManifests(ctx, runtime)
 }
 
 func (r *Installer) Status(ctx context.Context, runtime imv1.Runtime) (InstallationStatus, error) {
