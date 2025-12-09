@@ -11,26 +11,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type ManifestApplier struct {
 	manifestsPath              string
-	deploymentName             string
-	deploymentNamespace        string
+	deploymentName             types.NamespacedName
 	runtimeDynamicClientGetter RuntimeDynamicClientGetter
 	runtimeClientGetter        RuntimeClientGetter
 }
 
-func NewManifestApplier(manifestsPath string, runtimeClientGetter RuntimeClientGetter, runtimeDynamicClientGetter RuntimeDynamicClientGetter) *ManifestApplier {
+func NewManifestApplier(manifestsPath string, deploymentName types.NamespacedName, runtimeClientGetter RuntimeClientGetter, runtimeDynamicClientGetter RuntimeDynamicClientGetter) *ManifestApplier {
 	return &ManifestApplier{
 		manifestsPath:              manifestsPath,
 		runtimeDynamicClientGetter: runtimeDynamicClientGetter,
 		runtimeClientGetter:        runtimeClientGetter,
+		deploymentName:             deploymentName,
 	}
 }
 
@@ -141,7 +141,7 @@ func (ma ManifestApplier) Status(ctx context.Context, runtime imv1.Runtime) (Ins
 		return StatusFailed, fmt.Errorf("getting runtime client: %w", err)
 	}
 
-	err = runtimeClient.Get(ctx, client.ObjectKey{Name: ma.deploymentName, Namespace: ma.deploymentNamespace}, &deployment)
+	err = runtimeClient.Get(ctx, ma.deploymentName, &deployment)
 	if err != nil && errors.IsNotFound(err) {
 		return StatusNotStarted, nil
 	}

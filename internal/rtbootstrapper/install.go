@@ -4,6 +4,7 @@ import (
 	"context"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"os"
@@ -26,11 +27,11 @@ const (
 )
 
 type Config struct {
-	PullSecretName         string
-	ClusterTrustBundleName string
-	ManifestsPath          string
-	DeploymentName         string
-	ConfigPath             string
+	PullSecretName           string
+	ClusterTrustBundleName   string
+	ManifestsPath            string
+	DeploymentNamespacedName string
+	ConfigPath               string
 }
 
 //mockery:generate: true
@@ -54,7 +55,7 @@ func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter Ru
 	return &Installer{
 		config:          config,
 		kcpClient:       kcpClient,
-		manifestApplier: NewManifestApplier(config.ManifestsPath, runtimeClientGetter, runtimeDynamicClientGetter),
+		manifestApplier: NewManifestApplier(config.ManifestsPath, types.NamespacedName{Name: config.DeploymentNamespacedName, Namespace: "default"}, runtimeClientGetter, runtimeDynamicClientGetter),
 	}, nil
 }
 

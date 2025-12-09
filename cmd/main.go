@@ -246,11 +246,11 @@ func main() {
 	runtimeDynamicClientGetter := fsm.NewRuntimeDynamicClientGetter(mgr.GetClient())
 
 	runtimeBootstrapperInstaller, err := rtbootstrapper.NewInstaller(rtbootstrapper.Config{
-		PullSecretName:         runtimeBootstrapperPullSecretName,
-		ClusterTrustBundleName: runtimeBootstrapperClusterTrustBundle,
-		ManifestsPath:          runtimeBootstrapperManifestsPath,
-		ConfigPath:             runtimeBootstrapperConfigPath,
-		DeploymentName:         runtimeBootstrapperDeploymentName,
+		PullSecretName:           runtimeBootstrapperPullSecretName,
+		ClusterTrustBundleName:   runtimeBootstrapperClusterTrustBundle,
+		ManifestsPath:            runtimeBootstrapperManifestsPath,
+		ConfigPath:               runtimeBootstrapperConfigPath,
+		DeploymentNamespacedName: runtimeBootstrapperDeploymentName,
 	}, mgr.GetClient(), runtimeClientGetter, runtimeDynamicClientGetter)
 
 	if err != nil {
