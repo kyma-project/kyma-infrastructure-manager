@@ -19,7 +19,7 @@ type RuntimeClientGetter interface {
 }
 
 type DynamicRuntimeClientGetter interface {
-	Get(ctx context.Context, runtime imv1.Runtime) (*dynamic.DynamicClient, *discovery.DiscoveryClient, error)
+	Get(ctx context.Context, runtime imv1.Runtime) (dynamic.Interface, discovery.DiscoveryInterface, error)
 }
 
 type runtimeClientGetter struct {
@@ -51,7 +51,7 @@ func (r *runtimeClientGetter) Get(ctx context.Context, runtime imv1.Runtime) (cl
 	return gardener.GetRuntimeClient(secret)
 }
 
-func (r *runtimeDynamicClientGetter) Get(ctx context.Context, runtime imv1.Runtime) (*dynamic.DynamicClient, *discovery.DiscoveryClient, error) {
+func (r *runtimeDynamicClientGetter) Get(ctx context.Context, runtime imv1.Runtime) (dynamic.Interface, discovery.DiscoveryInterface, error) {
 	secret, err := getKubeconfigSecret(ctx, r.kcpClient, runtime.Labels[imv1.LabelKymaRuntimeID], runtime.Namespace)
 	if err != nil {
 		return nil, nil, err
