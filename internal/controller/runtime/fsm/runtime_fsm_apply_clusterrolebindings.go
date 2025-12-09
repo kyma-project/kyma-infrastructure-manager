@@ -24,10 +24,9 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 	runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 	if err != nil {
 		// TODO: This probably should be replaced with requeue logic, as we do in other places
-		s.instance.UpdateStatePending(
+		s.instance.UpdateStateFailed(
 			imv1.ConditionTypeRuntimeConfigured,
 			imv1.ConditionReasonConfigurationErr,
-			string(metav1.ConditionFalse),
 			"failed to update kubeconfig admin access",
 		)
 
@@ -36,7 +35,7 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 	// list existing cluster role bindings
 	var crbList rbacv1.ClusterRoleBindingList
 	if err := runtimeClient.List(ctx, &crbList); err != nil {
-		updateCRBApplyFailed(&s.instance)
+		updateCRBApplyPending(&s.instance)
 		m.log.Info("Cannot list Cluster Role Bindings on shoot, scheduling for retry")
 		return requeue()
 	}
@@ -49,7 +48,7 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 		newAddCRBs(ctx, runtimeClient, missing),
 	} {
 		if err := fn(); err != nil {
-			updateCRBApplyFailed(&s.instance)
+			updateCRBApplyPending(&s.instance)
 			m.log.Info("Cannot setup Cluster Role Bindings on shoot, scheduling for retry")
 			return requeue()
 		}
@@ -211,7 +210,7 @@ var newAddCRBs = func(ctx context.Context, runtimeClient client.Client, crbs []r
 	}
 }
 
-func updateCRBApplyFailed(rt *imv1.Runtime) {
+func updateCRBApplyPending(rt *imv1.Runtime) {
 	rt.UpdateStatePending(
 		imv1.ConditionTypeRuntimeConfigured,
 		imv1.ConditionReasonConfigurationErr,

@@ -264,11 +264,7 @@ func (k *Runtime) UpdateStateReady(c RuntimeConditionType, r RuntimeConditionRea
 }
 
 func (k *Runtime) UpdateStateDeletion(c RuntimeConditionType, r RuntimeConditionReason, status, msg string) {
-	if status != "False" {
-		k.Status.State = RuntimeStateTerminating
-	} else {
-		k.Status.State = RuntimeStateFailed
-	}
+	k.Status.State = RuntimeStateTerminating
 
 	condition := metav1.Condition{
 		Type:               string(c),
@@ -284,7 +280,7 @@ func (k *Runtime) UpdateStateFailed(c RuntimeConditionType, r RuntimeConditionRe
 	k.Status.State = RuntimeStateFailed
 	condition := metav1.Condition{
 		Type:               string(c),
-		Status:             "False",
+		Status:             metav1.ConditionFalse,
 		LastTransitionTime: metav1.Now(),
 		Reason:             string(r),
 		Message:            msg,
