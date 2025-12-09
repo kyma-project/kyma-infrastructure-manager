@@ -41,10 +41,9 @@ func sFnWaitForShootReconcile(_ context.Context, m *fsm, s *systemState) (stateF
 		msg := fmt.Sprintf("error during cluster processing: reconcilation failed for shoot %s, reason: %s, exiting with no retry", s.shoot.Name, reason)
 		m.log.Info(msg)
 
-		s.instance.UpdateStatePending(
+		s.instance.UpdateStateFailed(
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonProcessingErr,
-			"False",
 			string(reason),
 		)
 		m.Metrics.IncRuntimeFSMStopCounter()

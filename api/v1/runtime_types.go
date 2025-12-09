@@ -280,12 +280,20 @@ func (k *Runtime) UpdateStateDeletion(c RuntimeConditionType, r RuntimeCondition
 	meta.SetStatusCondition(&k.Status.Conditions, condition)
 }
 
-func (k *Runtime) UpdateStatePending(c RuntimeConditionType, r RuntimeConditionReason, status, msg string) {
-	if status == "False" {
-		k.Status.State = RuntimeStateFailed
-	} else {
-		k.Status.State = RuntimeStatePending
+func (k *Runtime) UpdateStateFailed(c RuntimeConditionType, r RuntimeConditionReason, msg string) {
+	k.Status.State = RuntimeStateFailed
+	condition := metav1.Condition{
+		Type:               string(c),
+		Status:             "False",
+		LastTransitionTime: metav1.Now(),
+		Reason:             string(r),
+		Message:            msg,
 	}
+	meta.SetStatusCondition(&k.Status.Conditions, condition)
+}
+
+func (k *Runtime) UpdateStatePending(c RuntimeConditionType, r RuntimeConditionReason, status, msg string) {
+	k.Status.State = RuntimeStatePending
 
 	condition := metav1.Condition{
 		Type:               string(c),

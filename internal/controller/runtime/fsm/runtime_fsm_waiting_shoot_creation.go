@@ -34,10 +34,9 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 	case gardener.LastOperationStateProcessing, gardener.LastOperationStatePending, gardener.LastOperationStateAborted, gardener.LastOperationStateError:
 		if stateNoMatchingSeeds(s.shoot) {
 			m.log.Info(fmt.Sprintf("Shoot %s has no matching seeds, setting error state", s.shoot.Name))
-			s.instance.UpdateStatePending(
+			s.instance.UpdateStateFailed(
 				imv1.ConditionTypeRuntimeProvisioned,
 				imv1.ConditionReasonCreationError,
-				"False",
 				"Shoot creation failed, no matching seeds")
 			return updateStatusAndStop()
 		}
@@ -69,10 +68,9 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 		msg := fmt.Sprintf("Provisioning failed for shoot: %s ! Last state: %s, Description: %s", s.shoot.Name, s.shoot.Status.LastOperation.State, s.shoot.Status.LastOperation.Description)
 		m.log.Info(msg)
 
-		s.instance.UpdateStatePending(
+		s.instance.UpdateStateFailed(
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonCreationError,
-			"False",
 			"Shoot creation failed")
 
 		m.Metrics.IncRuntimeFSMStopCounter()

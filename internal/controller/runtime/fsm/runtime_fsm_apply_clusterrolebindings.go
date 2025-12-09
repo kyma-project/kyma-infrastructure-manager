@@ -23,7 +23,14 @@ var (
 func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 	if err != nil {
-		updateCRBApplyFailed(&s.instance)
+		// TODO: This probably should be replaced with requeue logic, as we do in other places
+		s.instance.UpdateStatePending(
+			imv1.ConditionTypeRuntimeConfigured,
+			imv1.ConditionReasonConfigurationErr,
+			string(metav1.ConditionFalse),
+			"failed to update kubeconfig admin access",
+		)
+
 		return updateStatusAndStopWithError(err)
 	}
 	// list existing cluster role bindings

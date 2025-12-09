@@ -36,7 +36,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	if err != nil && m.AuditLogMandatory {
 		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(
+		return updateStateFailedWithErrorAndStop(
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonAuditLogError,
@@ -55,7 +55,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	if err != nil {
 		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(
+		return updateStateFailedWithErrorAndStop(
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonOidcError,
@@ -93,7 +93,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			m.log.Error(err, "Failed to get Runtime Client to set Registry Cache status")
 		}
 
-		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonConversionError, fmt.Sprintf("Runtime conversion error %v", err))
+		return updateStateFailedWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonConversionError, fmt.Sprintf("Runtime conversion error %v", err))
 	}
 
 	m.log.V(log_level.DEBUG).Info("Shoot converted successfully", "Name", updatedShoot.Name, "Namespace", updatedShoot.Namespace)
@@ -220,7 +220,7 @@ func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg stri
 
 		m.log.Error(err, errMsg)
 		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("%s: %v", statusMsg, err))
+		return updateStateFailedWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("%s: %v", statusMsg, err))
 	}
 
 	return nil, nil, nil
@@ -269,9 +269,9 @@ func convertPatch(instance *imv1.Runtime, opts gardener_shoot.PatchOpts) (garden
 	return newShoot, nil
 }
 
-func updateStatePendingWithErrorAndStop(instance *imv1.Runtime,
+func updateStateFailedWithErrorAndStop(instance *imv1.Runtime,
 	//nolint:unparam
 	c imv1.RuntimeConditionType, r imv1.RuntimeConditionReason, msg string) (stateFn, *ctrl.Result, error) {
-	instance.UpdateStatePending(c, r, "False", msg)
+	instance.UpdateStateFailed(c, r, msg)
 	return updateStatusAndStop()
 }
