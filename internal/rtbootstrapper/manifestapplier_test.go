@@ -5,7 +5,9 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/dynamic/fake"
 	clientgotesting "k8s.io/client-go/testing"
@@ -14,18 +16,53 @@ import (
 
 func TestManifestApplier_Apply_FromFile_ConfigMap(t *testing.T) {
 	// given
-	runtime := minimalRuntime()
 	runtimeDynamicClientGetter := NewMockRuntimeDynamicClientGetter(t)
-	fakeClient := &fake.FakeDynamicClient{}
 
-	runtimeDynamicClientGetter.EXPECT().Get(mock.Anything, runtime).Return(fakeClient, &fakediscovery.FakeDiscovery{
+	scheme := runtime.NewScheme()
+	_ = corev1.AddToScheme(scheme)
+
+	fakeClient := fake.NewSimpleDynamicClient(scheme)
+
+	fakeDiscovery := &fakediscovery.FakeDiscovery{
 		Fake:               &clientgotesting.Fake{},
 		FakedServerVersion: nil,
-	}, nil)
+	}
+
+	fakeDiscovery.Resources = []*metav1.APIResourceList{
+		{
+			GroupVersion: "v1",
+			APIResources: []metav1.APIResource{
+				{
+					Name:         "configmaps",
+					SingularName: "configmap",
+					Namespaced:   true,
+					Kind:         "ConfigMap",
+					Verbs:        []string{"get", "list", "create", "update", "patch", "delete"},
+				},
+			},
+		},
+		{
+			GroupVersion: "apps/v1",
+			APIResources: []metav1.APIResource{
+				{
+					Name:         "deployments",
+					SingularName: "deployment",
+					Namespaced:   true,
+					Kind:         "Deployment",
+					Verbs:        []string{"get", "list", "create", "update", "patch", "delete"},
+				},
+			},
+		},
+	}
+
+	runtime := minimalRuntime()
+	runtimeDynamicClientGetter.EXPECT().Get(mock.Anything, runtime).Return(fakeClient, fakeDiscovery, nil)
 	applier := NewManifestApplier("./test/manifests.yaml", runtimeDynamicClientGetter)
 
 	// when
 	err := applier.ApplyManifests(context.Background(), runtime)
+
+	// then
 	require.NoError(t, err)
 }
 
