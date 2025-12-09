@@ -66,7 +66,6 @@ func TestManifestApplier_Apply_FromFile_ConfigMap(t *testing.T) {
 	// then
 	require.NoError(t, err)
 
-	// verify ConfigMap created
 	cmGVR := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"}
 	cm, err := fakeClient.Resource(cmGVR).Namespace("default").Get(context.Background(), "testcm", metav1.GetOptions{})
 	require.NoError(t, err)
@@ -74,7 +73,6 @@ func TestManifestApplier_Apply_FromFile_ConfigMap(t *testing.T) {
 	require.Equal(t, "testcm", cm.GetName())
 	require.Equal(t, "default", cm.GetNamespace())
 
-	// verify Deployment created
 	deployGVR := schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
 	depl, err := fakeClient.Resource(deployGVR).Namespace("default").Get(context.Background(), "testdepl", metav1.GetOptions{})
 	require.NoError(t, err)
@@ -83,8 +81,36 @@ func TestManifestApplier_Apply_FromFile_ConfigMap(t *testing.T) {
 	require.Equal(t, "default", depl.GetNamespace())
 }
 
-func TestManifestApplier_Apply_FromFile_InvalidYAML(t *testing.T) {
+func TestManifestApplier_ManifestErrors(t *testing.T) {
+	// given
+	scheme := runtime.NewScheme()
+	_ = corev1.AddToScheme(scheme)
 
+	fakeClient := fake.NewSimpleDynamicClient(scheme)
+
+	fakeDiscovery := &fakediscovery.FakeDiscovery{
+		Fake:               &clientgotesting.Fake{},
+		FakedServerVersion: nil,
+	}
+
+	runtimeDynamicClientGetter := NewMockRuntimeDynamicClientGetter(t)
+	runtimeDynamicClientGetter.EXPECT().Get(mock.Anything, mock.Anything).Return(fakeClient, fakeDiscovery, nil)
+
+	//when
+	applier := NewManifestApplier("./testdata/invalid.yaml", runtimeDynamicClientGetter)
+	err := applier.ApplyManifests(context.Background(), minimalRuntime())
+
+	// then
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "decoding YAML")
+
+	// when
+	applier = NewManifestApplier("notexistent", runtimeDynamicClientGetter)
+	err = applier.ApplyManifests(context.Background(), minimalRuntime())
+
+	// then
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no such file or directory")
 }
 
 func minimalRuntime() imv1.Runtime {
