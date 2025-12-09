@@ -58,7 +58,7 @@ func TestManifestApplier_Apply_FromFile_ConfigMap(t *testing.T) {
 
 	runtime := minimalRuntime()
 	runtimeDynamicClientGetter.EXPECT().Get(mock.Anything, runtime).Return(fakeClient, fakeDiscovery, nil)
-	applier := NewManifestApplier("./testdata/manifests.yaml", runtimeDynamicClientGetter)
+	applier := NewManifestApplier("./testdata/manifests.yaml", nil, runtimeDynamicClientGetter)
 
 	// when
 	err := applier.ApplyManifests(context.Background(), runtime)
@@ -97,7 +97,7 @@ func TestManifestApplier_ManifestErrors(t *testing.T) {
 	runtimeDynamicClientGetter.EXPECT().Get(mock.Anything, mock.Anything).Return(fakeClient, fakeDiscovery, nil)
 
 	//when
-	applier := NewManifestApplier("./testdata/invalid.yaml", runtimeDynamicClientGetter)
+	applier := NewManifestApplier("./testdata/invalid.yaml", nil, runtimeDynamicClientGetter)
 	err := applier.ApplyManifests(context.Background(), minimalRuntime())
 
 	// then
@@ -105,7 +105,7 @@ func TestManifestApplier_ManifestErrors(t *testing.T) {
 	require.Contains(t, err.Error(), "decoding YAML")
 
 	// when
-	applier = NewManifestApplier("notexistent", runtimeDynamicClientGetter)
+	applier = NewManifestApplier("notexistent", nil, runtimeDynamicClientGetter)
 	err = applier.ApplyManifests(context.Background(), minimalRuntime())
 
 	// then

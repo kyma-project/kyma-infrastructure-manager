@@ -110,6 +110,7 @@ func main() {
 	var runtimeBootstrapperConfigPath string
 	var runtimeBootstrapperPullSecretName string
 	var runtimeBootstrapperClusterTrustBundle string
+	var runtimeBootstrapperDeploymentName string
 
 	//Kubebuilder related parameters:
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to. Monitoring and alerting tools can use this endpoint to collect application specific metrics during runtime")
@@ -146,6 +147,7 @@ func main() {
 	flag.StringVar(&runtimeBootstrapperConfigPath, "runtime-bootstrapper-config-path", "/skr-preset-webhook-config/config.yaml", "File path to the runtime bootstrapper.")
 	flag.StringVar(&runtimeBootstrapperPullSecretName, "runtime-bootstrapper-pull-secret-name", "", "Name of the pull secret to be copied to SKR.")
 	flag.StringVar(&runtimeBootstrapperClusterTrustBundle, "runtime-bootstrapper-cluster-trust-bundle", "", "Cluster trust bundle to be copied to SKR.")
+	flag.StringVar(&runtimeBootstrapperDeploymentName, "runtime-bootstrapper-deployment-name", "", "Name of the deployment to be observed to verify if installation succeeded.")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
@@ -246,7 +248,9 @@ func main() {
 	runtimeBootstrapperInstaller, err := rtbootstrapper.NewInstaller(rtbootstrapper.Config{
 		PullSecretName:         runtimeBootstrapperPullSecretName,
 		ClusterTrustBundleName: runtimeBootstrapperClusterTrustBundle,
-		ManifestsPath:          runtimeBootstrapperManifestsPath, ConfigPath: runtimeBootstrapperConfigPath,
+		ManifestsPath:          runtimeBootstrapperManifestsPath,
+		ConfigPath:             runtimeBootstrapperConfigPath,
+		DeploymentName:         runtimeBootstrapperDeploymentName,
 	}, mgr.GetClient(), runtimeClientGetter, runtimeDynamicClientGetter)
 
 	if err != nil {
