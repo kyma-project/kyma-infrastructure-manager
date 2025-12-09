@@ -5,6 +5,7 @@ import (
 	"fmt"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"io"
+	v1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,17 +15,22 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type ManifestApplier struct {
 	manifestsPath              string
+	deploymentName             string
+	deploymentNamespace        string
 	runtimeDynamicClientGetter RuntimeDynamicClientGetter
+	runtimeClientGetter        RuntimeClientGetter
 }
 
-func NewManifestApplier(manifestsPath string, runtimeClientGetter RuntimeDynamicClientGetter) *ManifestApplier {
+func NewManifestApplier(manifestsPath string, runtimeClientGetter RuntimeClientGetter, runtimeDynamicClientGetter RuntimeDynamicClientGetter) *ManifestApplier {
 	return &ManifestApplier{
 		manifestsPath:              manifestsPath,
-		runtimeDynamicClientGetter: runtimeClientGetter,
+		runtimeDynamicClientGetter: runtimeDynamicClientGetter,
+		runtimeClientGetter:        runtimeClientGetter,
 	}
 }
 
@@ -125,4 +131,75 @@ func applyObject(
 	obj.SetResourceVersion(current.GetResourceVersion())
 	_, err = dr.Update(ctx, obj, metav1.UpdateOptions{})
 	return err
+}
+
+func (ma ManifestApplier) Status(ctx context.Context, runtime imv1.Runtime) (InstallationStatus, error) {
+	var deployment v1.Deployment
+
+	runtimeClient, err := ma.runtimeClientGetter.Get(ctx, runtime)
+	if err != nil {
+		return StatusFailed, fmt.Errorf("getting runtime client: %w", err)
+	}
+
+	err = runtimeClient.Get(ctx, client.ObjectKey{Name: ma.deploymentName, Namespace: ma.deploymentNamespace}, &deployment)
+	if err != nil && errors.IsNotFound(err) {
+		return StatusNotStarted, nil
+	}
+
+	if err != nil {
+		return StatusFailed, fmt.Errorf("getting deployment: %w", err)
+	}
+
+	if isDeploymentReady(&deployment) {
+		return StatusReady, nil
+	}
+
+	if isDeploymentProgressing(&deployment) {
+		return StatusInProgress, nil
+	}
+
+	// When we got here the timeout occurred
+	return StatusFailed, nil
+}
+
+func isDeploymentReady(dep *v1.Deployment) bool {
+	if dep.Status.UpdatedReplicas < *dep.Spec.Replicas {
+		return false
+	}
+	if dep.Status.ReadyReplicas < *dep.Spec.Replicas {
+		return false
+	}
+
+	available := false
+	progressing := false
+
+	for _, cond := range dep.Status.Conditions {
+		switch cond.Type {
+		case v1.DeploymentAvailable:
+			if cond.Status == "True" {
+				available = true
+			}
+		case v1.DeploymentProgressing:
+			if cond.Status == "True" {
+				progressing = true
+			}
+		}
+	}
+
+	return available && progressing
+}
+
+func isDeploymentProgressing(dep *v1.Deployment) bool {
+	progressing := false
+
+	for _, cond := range dep.Status.Conditions {
+		switch cond.Type {
+		case v1.DeploymentProgressing:
+			if cond.Status == "True" {
+				progressing = true
+			}
+		}
+	}
+
+	return progressing
 }

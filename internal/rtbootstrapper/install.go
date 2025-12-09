@@ -11,16 +11,15 @@ import (
 )
 
 type Installer struct {
-	config                     Config
-	kcpClient                  client.Client
-	runtimeClientGetter        RuntimeClientGetter
-	runtimeDynamicClientGetter RuntimeDynamicClientGetter
+	config          Config
+	kcpClient       client.Client
+	manifestApplier *ManifestApplier
 }
 
 type InstallationStatus int
 
 const (
-	StatusNotStarted InstallationStatus = iota
+	StatusNotStarted = iota
 	StatusInProgress
 	StatusReady
 	StatusFailed
@@ -30,6 +29,7 @@ type Config struct {
 	PullSecretName         string
 	ClusterTrustBundleName string
 	ManifestsPath          string
+	DeploymentName         string
 	ConfigPath             string
 }
 
@@ -52,10 +52,9 @@ func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter Ru
 	}
 
 	return &Installer{
-		config:                     config,
-		kcpClient:                  kcpClient,
-		runtimeClientGetter:        runtimeClientGetter,
-		runtimeDynamicClientGetter: runtimeDynamicClientGetter,
+		config:          config,
+		kcpClient:       kcpClient,
+		manifestApplier: NewManifestApplier(config.ManifestsPath, runtimeClientGetter, runtimeDynamicClientGetter),
 	}, nil
 }
 
@@ -75,9 +74,9 @@ func validate(config Config) error {
 }
 
 func (r *Installer) Install(ctx context.Context, runtime imv1.Runtime) error {
-	return NewManifestApplier(r.config.ManifestsPath, r.runtimeDynamicClientGetter).ApplyManifests(ctx, runtime)
+	return r.manifestApplier.ApplyManifests(ctx, runtime)
 }
 
 func (r *Installer) Status(ctx context.Context, runtime imv1.Runtime) (InstallationStatus, error) {
-	return StatusNotStarted, nil
+	return r.manifestApplier.Status(ctx, runtime)
 }
