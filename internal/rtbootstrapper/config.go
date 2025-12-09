@@ -51,20 +51,27 @@ func (c *Configurator) Configure(ctx context.Context, runtime imv1.Runtime) erro
 	return c.applyResourcesToRuntimeCluster(ctx, runtimeClient, pullSecret, configMap)
 }
 
-func getControlPlaneResource[T client.Object](ctx context.Context, kcpClient client.Client, name string) (T, error) {
-	var resource T
+func getControlPlaneResource[T client.Object](ctx context.Context, kcpClient client.Client, name string, resource T) error {
 	if err := kcpClient.Get(ctx, client.ObjectKey{Name: name, Namespace: "kcp-system"}, resource); err != nil {
-		return resource, fmt.Errorf("failed to get resource %s: %w", name, err)
+		return fmt.Errorf("failed to get resource %s: %w", name, err)
 	}
-	return resource, nil
+	return nil
 }
 
 func (c *Configurator) prepareConfigMap(ctx context.Context) (*corev1.ConfigMap, error) {
-	return getControlPlaneResource[*corev1.ConfigMap](ctx, c.kcpClient, c.config.ConfigName)
+	cm := &corev1.ConfigMap{}
+	if err := getControlPlaneResource[*corev1.ConfigMap](ctx, c.kcpClient, c.config.ConfigName, cm); err != nil {
+		return nil, err
+	}
+	return cm, nil
 }
 
 func (c *Configurator) preparePullSecret(ctx context.Context) (*corev1.Secret, error) {
-	return getControlPlaneResource[*corev1.Secret](ctx, c.kcpClient, c.config.PullSecretName)
+	sec := &corev1.Secret{}
+	if err := getControlPlaneResource[*corev1.Secret](ctx, c.kcpClient, c.config.PullSecretName, sec); err != nil {
+		return nil, err
+	}
+	return sec, nil
 }
 
 func (c *Configurator) applyResourcesToRuntimeCluster(ctx context.Context, runtimeClient client.Client, secret *corev1.Secret, configMap *corev1.ConfigMap) error {
@@ -75,7 +82,7 @@ func (c *Configurator) applyResourcesToRuntimeCluster(ctx context.Context, runti
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      configMap.Name,
-			Namespace: configMap.Namespace,
+			Namespace: "kyma-system",
 		},
 		Data: configMap.Data,
 	}
@@ -97,7 +104,7 @@ func (c *Configurator) applyResourcesToRuntimeCluster(ctx context.Context, runti
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      secret.Name,
-				Namespace: secret.Namespace,
+				Namespace: "kyma-system",
 			},
 			Data: secret.Data,
 			Type: secret.Type,
