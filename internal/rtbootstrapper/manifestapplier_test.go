@@ -8,6 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/dynamic/fake"
 	clientgotesting "k8s.io/client-go/testing"
@@ -57,13 +58,29 @@ func TestManifestApplier_Apply_FromFile_ConfigMap(t *testing.T) {
 
 	runtime := minimalRuntime()
 	runtimeDynamicClientGetter.EXPECT().Get(mock.Anything, runtime).Return(fakeClient, fakeDiscovery, nil)
-	applier := NewManifestApplier("./test/manifests.yaml", runtimeDynamicClientGetter)
+	applier := NewManifestApplier("./testdata/manifests.yaml", runtimeDynamicClientGetter)
 
 	// when
 	err := applier.ApplyManifests(context.Background(), runtime)
 
 	// then
 	require.NoError(t, err)
+
+	// verify ConfigMap created
+	cmGVR := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"}
+	cm, err := fakeClient.Resource(cmGVR).Namespace("default").Get(context.Background(), "testcm", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, "ConfigMap", cm.GetKind())
+	require.Equal(t, "testcm", cm.GetName())
+	require.Equal(t, "default", cm.GetNamespace())
+
+	// verify Deployment created
+	deployGVR := schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
+	depl, err := fakeClient.Resource(deployGVR).Namespace("default").Get(context.Background(), "testdepl", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, "Deployment", depl.GetKind())
+	require.Equal(t, "testdepl", depl.GetName())
+	require.Equal(t, "default", depl.GetNamespace())
 }
 
 func TestManifestApplier_Apply_FromFile_InvalidYAML(t *testing.T) {

@@ -1,16 +1,14 @@
 apiVersion: v1
 data:
-  one: two
+  one: "two"
 kind: ConfigMap
 metadata:
-  creationTimestamp: null
-  name: test
+  name: testcm
   namespace: default
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  creationTimestamp: null
   labels:
     app: testdepl
   name: testdepl
@@ -23,7 +21,6 @@ spec:
   strategy: {}
   template:
     metadata:
-      creationTimestamp: null
       labels:
         app: testdepl
     spec:
