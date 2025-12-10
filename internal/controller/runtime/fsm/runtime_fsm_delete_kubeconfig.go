@@ -24,9 +24,13 @@ func sFnDeleteKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 	if err != nil {
 		if !k8serrors.IsNotFound(err) {
 			m.log.Error(err, "GardenerCluster CR read error", "Name", runtimeID)
-			s.instance.UpdateStateFailed(imv1.RuntimeStateTerminating, imv1.ConditionReasonKubernetesAPIErr, err.Error())
 			m.Metrics.IncRuntimeFSMStopCounter()
-			return updateStatusAndStop()
+
+			return updateStateFailedWithErrorAndStop(
+				&s.instance,
+				imv1.RuntimeStateTerminating,
+				imv1.ConditionReasonKubernetesAPIErr,
+				"Failed to get GardenerCluster CR")
 		}
 
 		// out section
