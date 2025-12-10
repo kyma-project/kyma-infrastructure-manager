@@ -29,7 +29,7 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 			metav1.ConditionFalse,
 			"failed to get runtime client",
 		)
-		m.log.Error(err, "Failed to get runtime client: %v", err)
+		m.log.Error(err, "Failed to get runtime client")
 
 		return updateStatusAndRequeueAfter(m.ControlPlaneRequeueDuration)
 	}
