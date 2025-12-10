@@ -46,7 +46,7 @@ func TestNamespaceCreateState(t *testing.T) {
 
 		expectedRuntimeConditions := []metav1.Condition{
 			{
-				Type:    string(imv1.ConditionTypeRuntimeKubeconfigReady),
+				Type:    string(imv1.ConditionTypeKymaSystemCreated),
 				Reason:  string(imv1.ConditionReasonKymaSystemNSReady),
 				Status:  "True",
 				Message: "Creation of kyma-system Namespace",
@@ -102,7 +102,7 @@ func TestNamespaceCreateState(t *testing.T) {
 
 		expectedRuntimeConditions := []metav1.Condition{
 			{
-				Type:    string(imv1.ConditionTypeRuntimeKubeconfigReady),
+				Type:    string(imv1.ConditionTypeKymaSystemCreated),
 				Reason:  string(imv1.ConditionReasonKymaSystemNSReady),
 				Status:  "True",
 				Message: "Creation of kyma-system Namespace",
@@ -145,7 +145,7 @@ func TestNamespaceCreateState(t *testing.T) {
 
 		expectedRuntimeConditions := []metav1.Condition{
 			{
-				Type:    string(imv1.ConditionTypeRuntimeKubeconfigReady),
+				Type:    string(imv1.ConditionTypeKymaSystemCreated),
 				Reason:  string(imv1.ConditionReasonKymaSystemNSError),
 				Status:  "False",
 				Message: runtimeClientError.Error(),
@@ -209,7 +209,7 @@ func TestNamespaceCreateState(t *testing.T) {
 
 		expectedRuntimeConditions := []metav1.Condition{
 			{
-				Type:    string(imv1.ConditionTypeRuntimeKubeconfigReady),
+				Type:    string(imv1.ConditionTypeKymaSystemCreated),
 				Reason:  string(imv1.ConditionReasonKymaSystemNSError),
 				Status:  "False",
 				Message: "simulated error to for tests that expect an error when creating a namespace",
