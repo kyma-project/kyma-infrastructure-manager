@@ -85,7 +85,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Errors(t *testing.T) {
 		{
 			name: "StatusError",
 			mockSetup: func(inst *MockRuntimeBootstrapperInstaller, runtime imv1.Runtime) {
-				inst.EXPECT().Status(mock.Anything, runtime).Return(rtbootstrapper.InstallationStatus(0), errors.New("status failed"))
+				inst.EXPECT().Status(mock.Anything, runtime).Return(rtbootstrapper.StatusFailed, errors.New("status failed"))
 			},
 			expectedCondition: metav1.Condition{
 				Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),

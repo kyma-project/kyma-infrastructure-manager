@@ -17,13 +17,13 @@ type Installer struct {
 	manifestApplier *ManifestApplier
 }
 
-type InstallationStatus int
+type InstallationStatus string
 
 const (
-	StatusNotStarted = iota
-	StatusInProgress
-	StatusReady
-	StatusFailed
+	StatusNotStarted InstallationStatus = "NotStarted"
+	StatusInProgress InstallationStatus = "InProgress"
+	StatusReady      InstallationStatus = "Ready"
+	StatusFailed     InstallationStatus = "Failed"
 )
 
 type Config struct {

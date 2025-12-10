@@ -163,15 +163,11 @@ func (ma ManifestApplier) Status(ctx context.Context, runtime imv1.Runtime) (Ins
 }
 
 func isDeploymentReady(dep *v1.Deployment) bool {
-	if dep.Status.UpdatedReplicas < *dep.Spec.Replicas {
-		return false
-	}
 	if dep.Status.ReadyReplicas < *dep.Spec.Replicas {
 		return false
 	}
 
 	available := false
-	progressing := false
 
 	for _, cond := range dep.Status.Conditions {
 		switch cond.Type {
@@ -179,14 +175,10 @@ func isDeploymentReady(dep *v1.Deployment) bool {
 			if cond.Status == "True" {
 				available = true
 			}
-		case v1.DeploymentProgressing:
-			if cond.Status == "True" {
-				progressing = true
-			}
 		}
 	}
 
-	return available && progressing
+	return available
 }
 
 func isDeploymentProgressing(dep *v1.Deployment) bool {
