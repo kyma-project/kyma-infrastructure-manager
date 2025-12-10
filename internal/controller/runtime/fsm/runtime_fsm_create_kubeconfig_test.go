@@ -103,13 +103,13 @@ var _ = Describe("KIM sFnCreateKubeconfig", func() {
 			},
 		),
 		Entry(
-			"should return sFnInitializeRuntimeBootstrapper when GardenCluster CR exists and is in ready state",
+			"should return sFnCreateKymaNamespace when GardenCluster CR exists and is in ready state",
 			testCtx,
 			must(newFakeFSM, withTestFinalizer, withTestSchemeAndObjects(testGardenerCRStateReady), withMockedMetrics(), withDefaultReconcileDuration()),
 			&systemState{instance: *inputRtWithLabelsAndCondition, shoot: &testShoot},
 			testOpts{
 				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnInitializeRuntimeBootstrapper"),
+				MatchNextFnState: haveName("sFnCreateKymaNamespace"),
 			},
 		),
 		Entry(

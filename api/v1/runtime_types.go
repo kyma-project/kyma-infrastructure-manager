@@ -64,6 +64,7 @@ const (
 	ConditionTypeRuntimeProvisioned       RuntimeConditionType = "Provisioned"
 	ConditionTypeRuntimeKubeconfigReady   RuntimeConditionType = "KubeconfigReady"
 	ConditionTypeOidcAndCMsConfigured     RuntimeConditionType = "OidcAndConfigMapConfigured"
+	ConditionTypeKymaSystemCreated        RuntimeConditionType = "KymaSystemNSCreated"
 	ConditionTypeRuntimeConfigured        RuntimeConditionType = "Configured"
 	ConditionTypeRuntimeDeprovisioned     RuntimeConditionType = "Deprovisioned"
 	ConditionTypeRegistryCacheConfigured  RuntimeConditionType = "RegistryCacheConfigured"
@@ -98,7 +99,9 @@ const (
 	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
 	ConditionReasonOidcAndCMsConfigured     = RuntimeConditionReason("OidcAndConfigMapsConfigured")
 	ConditionReasonOidcError                = RuntimeConditionReason("OidcConfigurationErr")
+	ConditionReasonCMError                  = RuntimeConditionReason("ConfigMapErr")
 	ConditionReasonKymaSystemNSError        = RuntimeConditionReason("KymaSystemNSError")
+	ConditionReasonKymaSystemNSReady        = RuntimeConditionReason("KymaSystemNSReady")
 	ConditionReasonSeedNotFound             = RuntimeConditionReason("SeedNotFound")
 
 	ConditionReasonRegistryCacheConfigured = RuntimeConditionReason("RegistryCacheConfigured")
