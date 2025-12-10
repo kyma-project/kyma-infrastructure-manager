@@ -30,10 +30,9 @@ func sFnHandleKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 	if err != nil {
 		if !k8serrors.IsNotFound(err) {
 			m.log.Error(err, "GardenerCluster CR read error", "name", runtimeID)
-			s.instance.UpdateStatePending(
+			s.instance.UpdateStateFailed(
 				imv1.ConditionTypeRuntimeKubeconfigReady,
 				imv1.ConditionReasonKubernetesAPIErr,
-				"False",
 				err.Error(),
 			)
 			m.Metrics.IncRuntimeFSMStopCounter()
@@ -44,17 +43,16 @@ func sFnHandleKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 		err = m.KcpClient.Create(ctx, makeGardenerClusterForRuntime(s.instance, s.shoot))
 		if err != nil {
 			m.log.Error(err, "GardenerCluster CR create error", "name", runtimeID)
-			s.instance.UpdateStatePending(
+			s.instance.UpdateStateFailed(
 				imv1.ConditionTypeRuntimeKubeconfigReady,
 				imv1.ConditionReasonKubernetesAPIErr,
-				"False",
 				err.Error(),
 			)
 			m.Metrics.IncRuntimeFSMStopCounter()
 			return updateStatusAndStop()
 		}
 
-		s.instance.UpdateStatePending(imv1.ConditionTypeRuntimeKubeconfigReady, imv1.ConditionReasonGardenerCRCreated, "Unknown", "Gardener Cluster CR created, waiting for readiness")
+		s.instance.UpdateStatePending(imv1.ConditionTypeRuntimeKubeconfigReady, imv1.ConditionReasonGardenerCRCreated, metav1.ConditionUnknown, "Gardener Cluster CR created, waiting for readiness")
 		return updateStatusAndRequeueAfter(m.ControlPlaneRequeueDuration)
 	}
 

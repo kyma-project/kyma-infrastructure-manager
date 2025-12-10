@@ -23,15 +23,22 @@ var (
 func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 	if err != nil {
-		updateCRBApplyFailed(&s.instance)
-		return updateStatusAndStopWithError(err)
+		s.instance.UpdateStatePending(
+			imv1.ConditionTypeRuntimeConfigured,
+			imv1.ConditionReasonConfigurationErr,
+			metav1.ConditionFalse,
+			"failed to get runtime client",
+		)
+		m.log.Error(err, "Failed to get runtime client")
+
+		return updateStatusAndRequeueAfter(m.ControlPlaneRequeueDuration)
 	}
 	// list existing cluster role bindings
 	var crbList rbacv1.ClusterRoleBindingList
 	if err := runtimeClient.List(ctx, &crbList); err != nil {
-		updateCRBApplyFailed(&s.instance)
+		updateCRBApplyPending(&s.instance)
 		m.log.Info("Cannot list Cluster Role Bindings on shoot, scheduling for retry")
-		return requeue()
+		return updateStatusAndRequeueAfter(m.ControlPlaneRequeueDuration)
 	}
 
 	removed := getRemoved(crbList.Items, s.instance.Spec.Security.Administrators)
@@ -42,9 +49,9 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 		newAddCRBs(ctx, runtimeClient, missing),
 	} {
 		if err := fn(); err != nil {
-			updateCRBApplyFailed(&s.instance)
+			updateCRBApplyPending(&s.instance)
 			m.log.Info("Cannot setup Cluster Role Bindings on shoot, scheduling for retry")
-			return requeue()
+			return updateStatusAndRequeueAfter(m.ControlPlaneRequeueDuration)
 		}
 		logDeletedClusterRoleBindings(removed, m, s)
 	}
@@ -204,11 +211,11 @@ var newAddCRBs = func(ctx context.Context, runtimeClient client.Client, crbs []r
 	}
 }
 
-func updateCRBApplyFailed(rt *imv1.Runtime) {
+func updateCRBApplyPending(rt *imv1.Runtime) {
 	rt.UpdateStatePending(
 		imv1.ConditionTypeRuntimeConfigured,
 		imv1.ConditionReasonConfigurationErr,
-		string(metav1.ConditionFalse),
+		metav1.ConditionFalse,
 		"failed to update kubeconfig admin access",
 	)
 }
