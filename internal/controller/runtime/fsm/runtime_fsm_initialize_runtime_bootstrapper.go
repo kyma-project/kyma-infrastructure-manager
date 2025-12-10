@@ -5,6 +5,7 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -27,7 +28,7 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRuntimeBootstrapperReady,
 			imv1.ConditionReasonRuntimeBootstrapperStatusUnknown,
-			"False",
+			metav1.ConditionFalse,
 			msgStatusCheckFailed,
 		)
 		return updateStatusAndRequeue()
@@ -42,14 +43,14 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 				s.instance.UpdateStatePending(
 					imv1.ConditionTypeRuntimeBootstrapperReady,
 					imv1.ConditionReasonRuntimeBootstrapperInstallationFailed,
-					"False",
+					metav1.ConditionFalse,
 					msgInstallationFailed,
 				)
 			} else {
 				s.instance.UpdateStatePending(
 					imv1.ConditionTypeRuntimeBootstrapperReady,
 					imv1.ConditionReasonRuntimeBootstrapperInstallationInProgress,
-					"False",
+					metav1.ConditionFalse,
 					msgInstallationInProgress,
 				)
 			}
@@ -62,7 +63,7 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRuntimeBootstrapperReady,
 				imv1.ConditionReasonRuntimeBootstrapperInstallationInProgress,
-				"False",
+				metav1.ConditionFalse,
 				msgInstallationInProgress,
 			)
 
@@ -74,7 +75,7 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRuntimeBootstrapperReady,
 				imv1.ConditionReasonRuntimeBootstrapperInstallationFailed,
-				"False",
+				metav1.ConditionFalse,
 				msgInstallationFailed,
 			)
 			return updateStatusAndRequeue()
@@ -83,7 +84,7 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRuntimeBootstrapperReady,
 			imv1.ConditionReasonRuntimeBootstrapperConfigured,
-			"True",
+			metav1.ConditionTrue,
 			msgInstallationCompleted,
 		)
 	}
