@@ -22,7 +22,7 @@ func ensureStatusConditionIsSetAndContinue(instance *imv1.Runtime, condType imv1
 
 func ensureTerminatingStatusConditionAndContinue(instance *imv1.Runtime, condType imv1.RuntimeConditionType, condReason imv1.RuntimeConditionReason, message string, next stateFn) (stateFn, *ctrl.Result, error) {
 	if !instance.IsStateWithConditionAndStatusSet(imv1.RuntimeStateTerminating, condType, condReason, "True") {
-		instance.UpdateStateDeletion(condType, condReason, "True", message)
+		instance.UpdateStateDeletion(condType, condReason, metav1.ConditionTrue, message)
 		return updateStatusAndRequeue()
 	}
 	return switchState(next)

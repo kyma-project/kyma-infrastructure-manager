@@ -263,12 +263,12 @@ func (k *Runtime) UpdateStateReady(c RuntimeConditionType, r RuntimeConditionRea
 	meta.SetStatusCondition(&k.Status.Conditions, condition)
 }
 
-func (k *Runtime) UpdateStateDeletion(c RuntimeConditionType, r RuntimeConditionReason, status, msg string) {
+func (k *Runtime) UpdateStateDeletion(c RuntimeConditionType, r RuntimeConditionReason, status metav1.ConditionStatus, msg string) {
 	k.Status.State = RuntimeStateTerminating
 
 	condition := metav1.Condition{
 		Type:               string(c),
-		Status:             metav1.ConditionStatus(status),
+		Status:             status,
 		LastTransitionTime: metav1.Now(),
 		Reason:             string(r),
 		Message:            msg,
