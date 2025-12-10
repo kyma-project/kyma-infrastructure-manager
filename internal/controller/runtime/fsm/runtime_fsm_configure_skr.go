@@ -46,7 +46,7 @@ func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctr
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeOidcAndCMsConfigured,
 			imv1.ConditionReasonOidcAndCMsConfigured,
-			"True",
+			metav1.ConditionTrue,
 			"OIDC extension disabled",
 		)
 
@@ -66,7 +66,7 @@ func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctr
 	s.instance.UpdateStatePending(
 		imv1.ConditionTypeOidcAndCMsConfigured,
 		imv1.ConditionReasonOidcAndCMsConfigured,
-		"True",
+		metav1.ConditionTrue,
 		"OIDC and kyma-provisioning-info configuration completed",
 	)
 
@@ -224,7 +224,7 @@ func updateConditionFailed(rt *imv1.Runtime, reason imv1.RuntimeConditionReason,
 	rt.UpdateStatePending(
 		imv1.ConditionTypeOidcAndCMsConfigured,
 		reason,
-		string(metav1.ConditionUnknown),
+		metav1.ConditionUnknown,
 		message,
 	)
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
@@ -52,7 +53,7 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonInitialized,
-			"Unknown",
+			metav1.ConditionUnknown,
 			"Runtime initialized",
 		)
 		return updateStatusAndRequeue()

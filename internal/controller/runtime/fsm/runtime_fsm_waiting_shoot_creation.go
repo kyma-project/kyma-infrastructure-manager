@@ -3,6 +3,7 @@ package fsm
 import (
 	"context"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -13,7 +14,7 @@ import (
 
 func ensureStatusConditionIsSetAndContinue(instance *imv1.Runtime, condType imv1.RuntimeConditionType, condReason imv1.RuntimeConditionReason, message string, next stateFn) (stateFn, *ctrl.Result, error) {
 	if !instance.IsStateWithConditionAndStatusSet(imv1.RuntimeStatePending, condType, condReason, "True") {
-		instance.UpdateStatePending(condType, condReason, "True", message)
+		instance.UpdateStatePending(condType, condReason, metav1.ConditionTrue, message)
 		return updateStatusAndRequeue()
 	}
 	return switchState(next)
@@ -21,7 +22,7 @@ func ensureStatusConditionIsSetAndContinue(instance *imv1.Runtime, condType imv1
 
 func ensureTerminatingStatusConditionAndContinue(instance *imv1.Runtime, condType imv1.RuntimeConditionType, condReason imv1.RuntimeConditionReason, message string, next stateFn) (stateFn, *ctrl.Result, error) {
 	if !instance.IsStateWithConditionAndStatusSet(imv1.RuntimeStateTerminating, condType, condReason, "True") {
-		instance.UpdateStateDeletion(condType, condReason, "True", message)
+		instance.UpdateStateDeletion(condType, condReason, metav1.ConditionTrue, message)
 		return updateStatusAndRequeue()
 	}
 	return switchState(next)
@@ -34,10 +35,9 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 	case gardener.LastOperationStateProcessing, gardener.LastOperationStatePending, gardener.LastOperationStateAborted, gardener.LastOperationStateError:
 		if stateNoMatchingSeeds(s.shoot) {
 			m.log.Info(fmt.Sprintf("Shoot %s has no matching seeds, setting error state", s.shoot.Name))
-			s.instance.UpdateStatePending(
+			s.instance.UpdateStateFailed(
 				imv1.ConditionTypeRuntimeProvisioned,
 				imv1.ConditionReasonCreationError,
-				"False",
 				"Shoot creation failed, no matching seeds")
 			return updateStatusAndStop()
 		}
@@ -47,7 +47,7 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonShootCreationPending,
-			"Unknown",
+			metav1.ConditionUnknown,
 			"Shoot creation in progress")
 
 		return updateStatusAndRequeueAfter(m.RequeueDurationShootCreate)
@@ -61,7 +61,7 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRuntimeProvisioned,
 				imv1.ConditionReasonShootCreationPending,
-				"Unknown",
+				metav1.ConditionUnknown,
 				"Retryable gardener errors during cluster provisioning")
 			return updateStatusAndRequeueAfter(m.RequeueDurationShootCreate)
 		}
@@ -69,10 +69,9 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 		msg := fmt.Sprintf("Provisioning failed for shoot: %s ! Last state: %s, Description: %s", s.shoot.Name, s.shoot.Status.LastOperation.State, s.shoot.Status.LastOperation.Description)
 		m.log.Info(msg)
 
-		s.instance.UpdateStatePending(
+		s.instance.UpdateStateFailed(
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonCreationError,
-			"False",
 			"Shoot creation failed")
 
 		m.Metrics.IncRuntimeFSMStopCounter()
