@@ -147,7 +147,7 @@ func main() {
 	flag.StringVar(&runtimeBootstrapperConfigPath, "runtime-bootstrapper-config-path", "/skr-preset-webhook-config/config.yaml", "File path to the runtime bootstrapper.")
 	flag.StringVar(&runtimeBootstrapperPullSecretName, "runtime-bootstrapper-pull-secret-name", "", "Name of the pull secret to be copied to SKR.")
 	flag.StringVar(&runtimeBootstrapperClusterTrustBundle, "runtime-bootstrapper-cluster-trust-bundle", "", "Cluster trust bundle to be copied to SKR.")
-	flag.StringVar(&runtimeBootstrapperDeploymentName, "runtime-bootstrapper-deployment-name", "", "Name of the deployment to be observed to verify if installation succeeded.")
+	flag.StringVar(&runtimeBootstrapperDeploymentName, "runtime-bootstrapper-deployment-namespaced-name", "kyma-system/rt-bootstrapper-controller-manager", "Name of the deployment to be observed to verify if installation succeeded. Expected format: <namespace>/<name>")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)

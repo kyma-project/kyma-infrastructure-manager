@@ -9,6 +9,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 )
 
 type Installer struct {
@@ -55,7 +56,7 @@ func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter Ru
 	return &Installer{
 		config:          config,
 		kcpClient:       kcpClient,
-		manifestApplier: NewManifestApplier(config.ManifestsPath, types.NamespacedName{Name: config.DeploymentNamespacedName, Namespace: "default"}, runtimeClientGetter, runtimeDynamicClientGetter),
+		manifestApplier: NewManifestApplier(config.ManifestsPath, toNamespacedName(config.DeploymentNamespacedName), runtimeClientGetter, runtimeDynamicClientGetter),
 	}, nil
 }
 
@@ -68,6 +69,11 @@ func validate(config Config) error {
 		return errors.Wrapf(err, "manifests path %s is invalid", config.ManifestsPath)
 	}
 
+	deploymentNameParts := strings.Split(config.DeploymentNamespacedName, string(types.Separator))
+
+	if len(deploymentNameParts) != 2 || deploymentNameParts[0] == "" || deploymentNameParts[1] == "" {
+		return errors.New("deployment namespaced name is invalid")
+	}
 	// TODO: consider validating is file contains valid yaml
 	// TODO: add validations for pull secret and configuration
 
@@ -80,4 +86,12 @@ func (r *Installer) Install(ctx context.Context, runtime imv1.Runtime) error {
 
 func (r *Installer) Status(ctx context.Context, runtime imv1.Runtime) (InstallationStatus, error) {
 	return r.manifestApplier.Status(ctx, runtime)
+}
+
+func toNamespacedName(namespacedName string) types.NamespacedName {
+	nameAndNamespace := strings.Split(namespacedName, string(types.Separator))
+	return types.NamespacedName{
+		Name:      nameAndNamespace[1],
+		Namespace: nameAndNamespace[0],
+	}
 }
