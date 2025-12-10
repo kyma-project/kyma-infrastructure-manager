@@ -36,12 +36,8 @@ func TestNamespaceCreateState(t *testing.T) {
 			RuntimeClientGetter: runtimeClientGetter,
 		}}
 
-		runtimeStub := runtimeForTest()
-		shootStub := fsm_testing.TestShootForPatch()
-
 		systemState := &systemState{
-			instance: runtimeStub,
-			shoot:    shootStub,
+			instance: runtimeForTest(),
 		}
 
 		expectedRuntimeConditions := []metav1.Condition{
@@ -92,12 +88,8 @@ func TestNamespaceCreateState(t *testing.T) {
 			RuntimeClientGetter: runtimeClientGetter,
 		}}
 
-		runtimeStub := runtimeForTest()
-		shootStub := fsm_testing.TestShootForPatch()
-
 		systemState := &systemState{
-			instance: runtimeStub,
-			shoot:    shootStub,
+			instance: runtimeForTest(),
 		}
 
 		expectedRuntimeConditions := []metav1.Condition{
@@ -135,12 +127,8 @@ func TestNamespaceCreateState(t *testing.T) {
 			},
 		}
 
-		runtimeStub := runtimeForTest()
-		shootStub := fsm_testing.TestShootForPatch()
-
 		systemState := &systemState{
-			instance: runtimeStub,
-			shoot:    shootStub,
+			instance: runtimeForTest(),
 		}
 
 		expectedRuntimeConditions := []metav1.Condition{
@@ -185,12 +173,8 @@ func TestNamespaceCreateState(t *testing.T) {
 			},
 		}
 
-		runtimeStub := runtimeForTest()
-		shootStub := fsm_testing.TestShootForPatch()
-
 		systemState := &systemState{
-			instance: runtimeStub,
-			shoot:    shootStub,
+			instance: runtimeForTest(),
 		}
 
 		// when

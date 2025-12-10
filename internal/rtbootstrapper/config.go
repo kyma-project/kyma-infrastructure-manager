@@ -41,8 +41,6 @@ func (c *Configurator) Configure(ctx context.Context, runtime imv1.Runtime) erro
 		}
 	}
 
-	// TODO: in future, add support for config.ClusterTrustBundleName, as optional parameter
-
 	runtimeClient, err := c.runtimeClientGetter.Get(ctx, runtime)
 	if err != nil {
 		return fmt.Errorf("failed to get runtimeClient: %w", err)
@@ -51,7 +49,7 @@ func (c *Configurator) Configure(ctx context.Context, runtime imv1.Runtime) erro
 	return c.applyResourcesToRuntimeCluster(ctx, runtimeClient, pullSecret, configMap)
 }
 
-func getControlPlaneResource[T client.Object](ctx context.Context, kcpClient client.Client, name string, resource T) error {
+func getResource[T client.Object](ctx context.Context, kcpClient client.Client, name string, resource T) error {
 	if err := kcpClient.Get(ctx, client.ObjectKey{Name: name, Namespace: "kcp-system"}, resource); err != nil {
 		return fmt.Errorf("failed to get resource %s: %w", name, err)
 	}
@@ -60,7 +58,7 @@ func getControlPlaneResource[T client.Object](ctx context.Context, kcpClient cli
 
 func (c *Configurator) prepareConfigMap(ctx context.Context) (*corev1.ConfigMap, error) {
 	cm := &corev1.ConfigMap{}
-	if err := getControlPlaneResource[*corev1.ConfigMap](ctx, c.kcpClient, c.config.ConfigName, cm); err != nil {
+	if err := getResource[*corev1.ConfigMap](ctx, c.kcpClient, c.config.ConfigName, cm); err != nil {
 		return nil, err
 	}
 	return cm, nil
@@ -68,7 +66,7 @@ func (c *Configurator) prepareConfigMap(ctx context.Context) (*corev1.ConfigMap,
 
 func (c *Configurator) preparePullSecret(ctx context.Context) (*corev1.Secret, error) {
 	sec := &corev1.Secret{}
-	if err := getControlPlaneResource[*corev1.Secret](ctx, c.kcpClient, c.config.PullSecretName, sec); err != nil {
+	if err := getResource[*corev1.Secret](ctx, c.kcpClient, c.config.PullSecretName, sec); err != nil {
 		return nil, err
 	}
 	return sec, nil
@@ -107,7 +105,7 @@ func (c *Configurator) applyResourcesToRuntimeCluster(ctx context.Context, runti
 				Namespace: "kyma-system",
 			},
 			Data: secret.Data,
-			Type: secret.Type,
+			Type: corev1.SecretTypeDockerConfigJson,
 		}
 
 		err = runtimeClient.Patch(ctx, secretToApply, client.Apply, &client.PatchOptions{

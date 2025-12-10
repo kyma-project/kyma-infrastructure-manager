@@ -40,8 +40,7 @@ func sFnCreateKymaNamespace(ctx context.Context, m *fsm, s *systemState) (stateF
 func createKymaSystemNamespace(ctx context.Context, m *fsm, s *systemState) error {
 	kymaSystemNs := v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "kyma-system",
-			Namespace: "",
+			Name: "kyma-system",
 		},
 	}
 
