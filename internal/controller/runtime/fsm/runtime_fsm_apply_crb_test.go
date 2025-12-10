@@ -230,7 +230,8 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 		Entry("error getting client", tcApplySfn{
 			instance: testRuntime,
 			expected: tcSfnExpected{
-				err: testErr,
+				err:    testErr,
+				result: ctrl.Result{RequeueAfter: defaultControlPlaneRequeueDuration},
 			},
 			fsm: must(
 				newFakeFSM,
