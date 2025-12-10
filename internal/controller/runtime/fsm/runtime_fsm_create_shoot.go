@@ -3,6 +3,7 @@ package fsm
 import (
 	"context"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/go-logr/logr"
@@ -30,7 +31,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRuntimeProvisioned,
 				imv1.ConditionReasonGardenerError,
-				"False",
+				metav1.ConditionFalse,
 				msg,
 			)
 			return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
@@ -104,7 +105,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonGardenerError,
-			"False",
+			metav1.ConditionFalse,
 			fmt.Sprintf("Gardener API create error: %v", err),
 		)
 		return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
@@ -119,7 +120,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	s.instance.UpdateStatePending(
 		imv1.ConditionTypeRuntimeProvisioned,
 		imv1.ConditionReasonShootCreationPending,
-		"Unknown",
+		metav1.ConditionUnknown,
 		"Shoot is pending",
 	)
 

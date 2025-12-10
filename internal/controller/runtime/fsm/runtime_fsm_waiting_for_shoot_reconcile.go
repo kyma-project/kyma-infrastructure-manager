@@ -3,6 +3,7 @@ package fsm
 import (
 	"context"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -19,7 +20,7 @@ func sFnWaitForShootReconcile(_ context.Context, m *fsm, s *systemState) (stateF
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonProcessing,
-			"Unknown",
+			metav1.ConditionUnknown,
 			"Shoot update is in progress")
 
 		return updateStatusAndRequeueAfter(m.RequeueDurationShootReconcile)
@@ -33,7 +34,7 @@ func sFnWaitForShootReconcile(_ context.Context, m *fsm, s *systemState) (stateF
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRuntimeProvisioned,
 				imv1.ConditionReasonShootCreationPending,
-				"Unknown",
+				metav1.ConditionUnknown,
 				"Retryable gardener errors during cluster reconcile")
 			return updateStatusAndRequeueAfter(m.RequeueDurationShootReconcile)
 		}
