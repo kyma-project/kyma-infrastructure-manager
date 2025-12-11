@@ -48,14 +48,14 @@ type RuntimeDynamicClientGetter interface {
 	Get(ctx context.Context, runtime imv1.Runtime) (dynamic.Interface, discovery.DiscoveryInterface, error)
 }
 
-func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter RuntimeClientGetter, runtimeDynamicClientGetter RuntimeDynamicClientGetter) (*Installer, error) {
+func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter RuntimeClientGetter, runtimeDynamicClientGetter RuntimeDynamicClientGetter) *Installer {
 
 	return &Installer{
 		config:          config,
 		kcpClient:       kcpClient,
 		manifestApplier: NewManifestApplier(config.ManifestsPath, toNamespacedName(config.DeploymentNamespacedName), runtimeClientGetter, runtimeDynamicClientGetter),
 		configurator:    NewConfigurator(kcpClient, runtimeClientGetter, config),
-	}, nil
+	}
 }
 
 func (r *Installer) Install(ctx context.Context, runtime imv1.Runtime) error {

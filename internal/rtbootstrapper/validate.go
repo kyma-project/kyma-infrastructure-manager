@@ -3,6 +3,7 @@ package rtbootstrapper
 import (
 	"context"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -15,11 +16,11 @@ type Validator struct {
 	configurator *Configurator
 }
 
-func NewValidator(config Config, kcpClient client.Client, runtimeClientGetter RuntimeClientGetter) *Validator {
+func NewValidator(config Config, kcpClient client.Client) *Validator {
 	return &Validator{
 		config:       config,
 		kcpClient:    kcpClient,
-		configurator: NewConfigurator(kcpClient, runtimeClientGetter, config),
+		configurator: NewConfigurator(kcpClient, nil, config),
 	}
 }
 
@@ -43,12 +44,20 @@ func (v Validator) Validate(ctx context.Context) error {
 		return errors.New("config name is required")
 	}
 
-	if !v.configurator.ValidateConfigMap(ctx) {
+	var configMap corev1.ConfigMap
+	if err := getResource(ctx, v.kcpClient, v.config.ConfigName, &configMap); err != nil {
 		return errors.New("unable to find Runtime Bootstrapper ConfigMap in KCP cluster")
 	}
 
-	if !v.configurator.ValidatePullSecretConfig(ctx, v.config) {
-		return errors.New("unable to find Runtime Bootstrapper PullSecret in KCP cluster")
+	if v.config.PullSecretName != "" {
+		var secret corev1.Secret
+		if err := getResource(ctx, v.kcpClient, v.config.PullSecretName, &secret); err != nil {
+			return errors.New("unable to find Runtime Bootstrapper PullSecret in KCP cluster")
+		}
+
+		if secret.Type != corev1.SecretTypeDockercfg {
+			return errors.New("pull secret has invalid type, expected kubernetes.io/dockerconfigjson")
+		}
 	}
 
 	return nil

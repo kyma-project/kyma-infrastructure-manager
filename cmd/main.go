@@ -244,19 +244,26 @@ func main() {
 	}
 
 	runtimeClientGetter := fsm.NewRuntimeClientGetter(mgr.GetClient())
-	runtimeDynamicClientGetter := fsm.NewRuntimeDynamicClientGetter(mgr.GetClient())
 
-	runtimeBootstrapperInstaller, err := rtbootstrapper.NewInstaller(rtbootstrapper.Config{
-		PullSecretName:           runtimeBootstrapperPullSecretName,
-		ClusterTrustBundleName:   runtimeBootstrapperClusterTrustBundle,
-		ManifestsPath:            runtimeBootstrapperManifestsPath,
-		ConfigName:               runtimeBootstrapperConfigName,
-		DeploymentNamespacedName: runtimeBootstrapperDeploymentName,
-	}, mgr.GetClient(), runtimeClientGetter, runtimeDynamicClientGetter)
+	var runtimeBootstrapperInstaller *rtbootstrapper.Installer
+	var runtimeDynamicClientGetter fsm.DynamicRuntimeClientGetter
 
-	if err != nil {
-		setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
-		os.Exit(1)
+	if runtimeBootstrapperEnabled {
+		runtimeDynamicClientGetter = fsm.NewRuntimeDynamicClientGetter(mgr.GetClient())
+
+		rtbConfig := rtbootstrapper.Config{
+			PullSecretName:           runtimeBootstrapperPullSecretName,
+			ClusterTrustBundleName:   runtimeBootstrapperClusterTrustBundle,
+			ManifestsPath:            runtimeBootstrapperManifestsPath,
+			ConfigName:               runtimeBootstrapperConfigName,
+			DeploymentNamespacedName: runtimeBootstrapperDeploymentName,
+		}
+
+		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(mgr, rtbConfig, runtimeClientGetter, runtimeDynamicClientGetter)
+		if err != nil {
+			setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
+			os.Exit(1)
+		}
 	}
 
 	cfg := fsm.RCCfg{
@@ -419,4 +426,27 @@ func restrictWatchedNamespace() cache.Options {
 			},
 		},
 	}
+}
+
+func configureRuntimeBootstrapper(mgr ctrl.Manager, config rtbootstrapper.Config, runtimeClientGetter fsm.RuntimeClientGetter, runtimeDynamicClientGetter fsm.DynamicRuntimeClientGetter) (*rtbootstrapper.Installer, error) {
+	// This is a bit ugly but we need to use a use separate client for validation
+	// mgr.Client cannpt be used prior to starting the manager
+	// We could either start the manager first and then validate the config
+	// or create a separate client as done below
+	cfg, err := ctrl.GetConfig()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
+	}
+
+	directClient, err := client.New(cfg, client.Options{Scheme: scheme})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
+	}
+
+	err = rtbootstrapper.NewValidator(config, directClient).Validate(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	return rtbootstrapper.NewInstaller(config, mgr.GetClient(), runtimeClientGetter, runtimeDynamicClientGetter), nil
 }

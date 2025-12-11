@@ -49,21 +49,6 @@ func (c *Configurator) Configure(ctx context.Context, runtime imv1.Runtime) erro
 	return c.applyResourcesToRuntimeCluster(ctx, runtimeClient, pullSecret, configMap)
 }
 
-func (c *Configurator) ValidatePullSecretConfig(ctx context.Context, config Config) bool {
-	if config.PullSecretName != "" {
-		_, err := c.getPullSecret(ctx)
-
-		return err == nil
-	}
-	return true
-}
-
-func (c *Configurator) ValidateConfigMap(ctx context.Context) bool {
-	_, err := c.getConfigMap(ctx)
-
-	return err == nil
-}
-
 func getResource[T client.Object](ctx context.Context, kcpClient client.Client, name string, resource T) error {
 	if err := kcpClient.Get(ctx, client.ObjectKey{Name: name, Namespace: "kcp-system"}, resource); err != nil {
 		return fmt.Errorf("failed to get resource %s: %w", name, err)
