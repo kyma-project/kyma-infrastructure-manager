@@ -71,7 +71,7 @@ func Test_Configure(t *testing.T) {
 		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "registry-credentials", Namespace: "kyma-system"}, &skrSecret)
 		require.NoError(t, err)
 
-		assert.Equal(t, corev1.SecretTypeDockerConfigJson, skrSecret.Type)
+		assert.Equal(t, pullSecret.Type, skrSecret.Type)
 		assert.NotNil(t, skrSecret.Data[corev1.DockerConfigJsonKey])
 		assert.Equal(t, pullSecret.Data[corev1.DockerConfigJsonKey], skrSecret.Data[corev1.DockerConfigJsonKey])
 		assert.Equal(t, "registry-credentials", skrSecret.Name)

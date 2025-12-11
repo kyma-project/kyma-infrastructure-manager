@@ -122,7 +122,7 @@ func (c *Configurator) applyResourcesToRuntimeCluster(ctx context.Context, runti
 				Namespace: "kyma-system",
 			},
 			Data: secret.Data,
-			Type: corev1.SecretTypeDockerConfigJson,
+			Type: secret.Type,
 		}
 
 		err = runtimeClient.Patch(ctx, secretToApply, client.Apply, &client.PatchOptions{
