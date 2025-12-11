@@ -2,6 +2,7 @@ package rtbootstrapper
 
 import (
 	"context"
+
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -32,7 +33,7 @@ type Config struct {
 	ClusterTrustBundleName   string
 	ManifestsPath            string
 	DeploymentNamespacedName string
-	ConfigPath               string
+	ConfigName               string
 }
 
 //mockery:generate: true

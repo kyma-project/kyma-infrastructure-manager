@@ -3,6 +3,7 @@ package fsm
 import (
 	"context"
 	"fmt"
+
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	corev1 "k8s.io/api/core/v1"

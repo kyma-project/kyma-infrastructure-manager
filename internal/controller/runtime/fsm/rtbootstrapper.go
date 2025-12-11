@@ -11,3 +11,8 @@ type RuntimeBootstrapperInstaller interface {
 	Install(context context.Context, runtime imv1.Runtime) error
 	Status(context context.Context, runtime imv1.Runtime) (rtbootstrapper.InstallationStatus, error)
 }
+
+//mockery:generate: true
+type RuntimeBootstrapperConfigurator interface {
+	Configure(context context.Context, runtime imv1.Runtime) error
+}

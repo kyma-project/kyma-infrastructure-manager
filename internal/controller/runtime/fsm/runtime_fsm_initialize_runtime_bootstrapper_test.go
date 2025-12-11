@@ -3,13 +3,14 @@ package fsm
 import (
 	"context"
 	"errors"
+	"testing"
+	"time"
+
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
-	"time"
 )
 
 func Test_sFnInitializeRuntimeBootstrapper_Disabled(t *testing.T) {

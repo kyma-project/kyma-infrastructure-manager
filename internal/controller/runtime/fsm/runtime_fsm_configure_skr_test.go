@@ -301,20 +301,13 @@ func TestSkrConfigState(t *testing.T) {
 		assert.NoError(t, fsmErr)
 
 		// then
-		var kymaSystemNs core_v1.Namespace
-		nsKey := client.ObjectKey{
-			Name:      "kyma-system",
-			Namespace: "",
-		}
-		err := fakeClient.Get(ctx, nsKey, &kymaSystemNs)
-		assert.NoError(t, err)
 
 		var detailsCM core_v1.ConfigMap
 		cmKey := client.ObjectKey{
 			Name:      "kyma-provisioning-info",
 			Namespace: "kyma-system",
 		}
-		err = fakeClient.Get(ctx, cmKey, &detailsCM)
+		err := fakeClient.Get(ctx, cmKey, &detailsCM)
 		assert.NoError(t, err)
 		assert.NotNil(t, detailsCM.Data)
 		assert.NotNil(t, detailsCM.Data["details"])
@@ -431,19 +424,11 @@ func TestSkrConfigState(t *testing.T) {
 			shoot:    shootStub,
 		}
 
-		var kymaSystemNs core_v1.Namespace
-
 		// when
 		stateFn, _, fsmErr := sFnConfigureSKR(ctx, testFsm, systemState)
 		assert.NoError(t, fsmErr)
 
 		// then
-		nsKey := client.ObjectKey{
-			Name:      "kyma-system",
-			Namespace: "",
-		}
-		err := fakeClient.Get(ctx, nsKey, &kymaSystemNs)
-		assert.True(t, errors.IsNotFound(err))
 
 		var detailsCM core_v1.ConfigMap
 		cmKey := client.ObjectKey{
@@ -457,9 +442,9 @@ func TestSkrConfigState(t *testing.T) {
 		expectedRuntimeConditions := []metav1.Condition{
 			{
 				Type:    string(imv1.ConditionTypeOidcAndCMsConfigured),
-				Reason:  string(imv1.ConditionReasonKymaSystemNSError),
+				Reason:  string(imv1.ConditionReasonCMError),
 				Status:  "Unknown",
-				Message: "Failed to create kyma-system namespace. Scheduling for retry",
+				Message: "Failed to apply kyma-provisioning-info config map, scheduling for retry - simulated error to for tests that expect an error when applying a configmap",
 			},
 		}
 		assertEqualConditions(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)
