@@ -259,7 +259,7 @@ func main() {
 			DeploymentNamespacedName: runtimeBootstrapperDeploymentName,
 		}
 
-		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(mgr, rtbConfig, runtimeClientGetter, runtimeDynamicClientGetter)
+		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(mgr.GetClient(), rtbConfig, runtimeClientGetter, runtimeDynamicClientGetter)
 		if err != nil {
 			setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
 			os.Exit(1)
