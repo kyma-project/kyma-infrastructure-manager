@@ -3,13 +3,14 @@ package fsm
 import (
 	"context"
 	"errors"
+	"testing"
+	"time"
+
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
-	"time"
 )
 
 func Test_sFnInitializeRuntimeBootstrapper_Disabled(t *testing.T) {
@@ -97,7 +98,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Errors(t *testing.T) {
 			name: "InstallError",
 			mockSetup: func(inst *MockRuntimeBootstrapperInstaller) {
 				inst.EXPECT().Status(mock.Anything, "test-runtime").Return(rtbootstrapper.StatusNotStarted, nil)
-				inst.EXPECT().Install(mock.Anything, "test-runtime").Return(errors.New("install failed"))
+				inst.EXPECT().Install(mock.Anything, minimalRuntime()).Return(errors.New("install failed"))
 			},
 			expectedCondition: metav1.Condition{
 				Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
@@ -169,7 +170,7 @@ func Test_sFnInitializeRuntimeBootstrapper_InProgress(t *testing.T) {
 	t.Run("StatusNotStarted", func(t *testing.T) {
 		inst := NewMockRuntimeBootstrapperInstaller(t)
 		inst.EXPECT().Status(mock.Anything, "test-runtime").Return(rtbootstrapper.StatusNotStarted, nil)
-		inst.EXPECT().Install(mock.Anything, "test-runtime").Return(nil)
+		inst.EXPECT().Install(mock.Anything, minimalRuntime()).Return(nil)
 
 		f := newFSMWith(inst)
 		ss := &systemState{instance: minimalRuntime()}

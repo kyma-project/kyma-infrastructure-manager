@@ -37,7 +37,7 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 	switch status {
 	case rtbootstrapper.StatusNotStarted:
 		{
-			err := m.RuntimeBootstrapperInstaller.Install(ctx, s.instance.Name)
+			err := m.RuntimeBootstrapperInstaller.Install(ctx, s.instance)
 			if err != nil {
 				m.log.Error(err, "Failed to start runtime bootstrapper installation")
 				s.instance.UpdateStatePending(
