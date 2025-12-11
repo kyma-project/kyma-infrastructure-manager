@@ -1,6 +1,7 @@
 package rtbootstrapper
 
 import (
+	"context"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -11,7 +12,9 @@ func TestValidations(t *testing.T) {
 		config := Config{}
 
 		// when
-		_, err := NewInstaller(config, nil, nil, nil)
+		err := NewValidator(config, nil, nil).Validate(context.Background())
+
+		// then
 		require.ErrorContains(t, err, "manifests path is required")
 	})
 
@@ -22,7 +25,7 @@ func TestValidations(t *testing.T) {
 		}
 
 		// when
-		_, err := NewInstaller(config, nil, nil, nil)
+		err := NewValidator(config, nil, nil).Validate(context.Background())
 
 		// then
 		require.ErrorContains(t, err, "non-existent-file.yaml")
@@ -37,7 +40,7 @@ func TestValidations(t *testing.T) {
 			}
 
 			// when
-			_, err := NewInstaller(config, nil, nil, nil)
+			err := NewValidator(config, nil, nil).Validate(context.Background())
 
 			// then
 			require.ErrorContains(t, err, "deployment namespaced name is invalid")
@@ -51,7 +54,7 @@ func TestValidations(t *testing.T) {
 			}
 
 			// when
-			_, err := NewInstaller(config, nil, nil, nil)
+			err := NewValidator(config, nil, nil).Validate(context.Background())
 
 			// then
 			require.ErrorContains(t, err, "deployment namespaced name is invalid")
@@ -65,7 +68,7 @@ func TestValidations(t *testing.T) {
 			}
 
 			// when
-			_, err := NewInstaller(config, nil, nil, nil)
+			err := NewValidator(config, nil, nil).Validate(context.Background())
 
 			// then
 			require.ErrorContains(t, err, "deployment namespaced name is invalid")
