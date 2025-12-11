@@ -26,7 +26,7 @@ func TestValidations(t *testing.T) {
 			Namespace: "kcp-system",
 		},
 		Data: map[string][]byte{".dockerconfigjson": []byte(`{"auths":{"test-registry.io":{"username":"test-user","password":"test-password","email":"test-email"}}}`)},
-		Type: corev1.SecretTypeDockercfg,
+		Type: corev1.SecretTypeDockerConfigJson,
 	}
 
 	scheme := runtime.NewScheme()

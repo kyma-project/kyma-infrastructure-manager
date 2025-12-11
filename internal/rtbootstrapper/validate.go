@@ -2,6 +2,7 @@ package rtbootstrapper
 
 import (
 	"context"
+	"fmt"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -30,7 +31,7 @@ func (v Validator) Validate(ctx context.Context) error {
 	}
 
 	if _, err := os.Stat(v.config.ManifestsPath); err != nil {
-		return errors.Wrapf(err, "manifests path %s is invalid", v.config.ManifestsPath)
+		return errors.New(fmt.Sprintf("manifests path %s is invalid", v.config.ManifestsPath))
 	}
 
 	deploymentNameParts := strings.Split(v.config.DeploymentNamespacedName, string(types.Separator))
@@ -52,10 +53,10 @@ func (v Validator) Validate(ctx context.Context) error {
 	if v.config.PullSecretName != "" {
 		var secret corev1.Secret
 		if err := getResource(ctx, v.kcpClient, v.config.PullSecretName, &secret); err != nil {
-			return errors.New("unable to find Runtime Bootstrapper PullSecret in KCP cluster")
+			return errors.New("unable to find Runtime Bootstrapper pull secret in KCP cluster")
 		}
 
-		if secret.Type != corev1.SecretTypeDockercfg {
+		if secret.Type != corev1.SecretTypeDockerConfigJson {
 			return errors.New("pull secret has invalid type, expected kubernetes.io/dockerconfigjson")
 		}
 	}
