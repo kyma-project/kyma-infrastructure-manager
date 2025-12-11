@@ -17,6 +17,7 @@ type Installer struct {
 	config          Config
 	kcpClient       client.Client
 	manifestApplier *ManifestApplier
+	configurator    *Configurator
 }
 
 type InstallationStatus string
@@ -49,19 +50,22 @@ type RuntimeDynamicClientGetter interface {
 }
 
 func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter RuntimeClientGetter, runtimeDynamicClientGetter RuntimeDynamicClientGetter) (*Installer, error) {
-	err := validate(config)
+	configurator := NewConfigurator(kcpClient, runtimeClientGetter, config)
+
+	err := validate(config, configurator)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "installer config is invalid")
 	}
 
 	return &Installer{
 		config:          config,
 		kcpClient:       kcpClient,
 		manifestApplier: NewManifestApplier(config.ManifestsPath, toNamespacedName(config.DeploymentNamespacedName), runtimeClientGetter, runtimeDynamicClientGetter),
+		configurator:    configurator,
 	}, nil
 }
 
-func validate(config Config) error {
+func validate(config Config, configurator *Configurator) error {
 	if config.ManifestsPath == "" {
 		return errors.New("manifests path is required")
 	}
@@ -76,12 +80,29 @@ func validate(config Config) error {
 		return errors.New("deployment namespaced name is invalid")
 	}
 	// TODO: consider validating is file contains valid yaml
-	// TODO: add validations for pull secret and configuration
+
+	if config.ConfigName == "" {
+		return errors.New("config name is required")
+	}
+
+	ctx := context.Background()
+	if !configurator.ValidateConfigMap(ctx) {
+		return errors.New("unable to find Runtime Bootstrapper ConfigMap in KCP cluster")
+	}
+
+	if !configurator.ValidatePullSecretConfig(ctx, config) {
+		return errors.New("unable to find Runtime Bootstrapper PullSecret in KCP cluster")
+	}
 
 	return nil
 }
 
 func (r *Installer) Install(ctx context.Context, runtime imv1.Runtime) error {
+	err := r.configurator.Configure(context.Background(), runtime)
+	if err != nil {
+		return errors.Wrap(err, "failed to prepare for installation Runtime Bootstrapper installation")
+	}
+
 	return r.manifestApplier.ApplyManifests(ctx, runtime)
 }
 

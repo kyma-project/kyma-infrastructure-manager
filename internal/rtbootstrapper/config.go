@@ -28,14 +28,14 @@ func NewConfigurator(kcpClient client.Client, runtimeClientGetter RuntimeClientG
 }
 
 func (c *Configurator) Configure(ctx context.Context, runtime imv1.Runtime) error {
-	configMap, err := c.prepareConfigMap(ctx)
+	configMap, err := c.getConfigMap(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to prepare bootstrapper ConfigMap: %w", err)
 	}
 
 	var pullSecret *corev1.Secret
 	if c.config.PullSecretName != "" {
-		pullSecret, err = c.preparePullSecret(ctx)
+		pullSecret, err = c.getPullSecret(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to prepare bootstrapper PullSecret: %w", err)
 		}
@@ -49,6 +49,21 @@ func (c *Configurator) Configure(ctx context.Context, runtime imv1.Runtime) erro
 	return c.applyResourcesToRuntimeCluster(ctx, runtimeClient, pullSecret, configMap)
 }
 
+func (c *Configurator) ValidatePullSecretConfig(ctx context.Context, config Config) bool {
+	if config.PullSecretName != "" {
+		_, err := c.getPullSecret(ctx)
+
+		return err == nil
+	}
+	return true
+}
+
+func (c *Configurator) ValidateConfigMap(ctx context.Context) bool {
+	_, err := c.getConfigMap(ctx)
+
+	return err == nil
+}
+
 func getResource[T client.Object](ctx context.Context, kcpClient client.Client, name string, resource T) error {
 	if err := kcpClient.Get(ctx, client.ObjectKey{Name: name, Namespace: "kcp-system"}, resource); err != nil {
 		return fmt.Errorf("failed to get resource %s: %w", name, err)
@@ -56,7 +71,7 @@ func getResource[T client.Object](ctx context.Context, kcpClient client.Client, 
 	return nil
 }
 
-func (c *Configurator) prepareConfigMap(ctx context.Context) (*corev1.ConfigMap, error) {
+func (c *Configurator) getConfigMap(ctx context.Context) (*corev1.ConfigMap, error) {
 	cm := &corev1.ConfigMap{}
 	if err := getResource[*corev1.ConfigMap](ctx, c.kcpClient, c.config.ConfigName, cm); err != nil {
 		return nil, err
@@ -64,7 +79,7 @@ func (c *Configurator) prepareConfigMap(ctx context.Context) (*corev1.ConfigMap,
 	return cm, nil
 }
 
-func (c *Configurator) preparePullSecret(ctx context.Context) (*corev1.Secret, error) {
+func (c *Configurator) getPullSecret(ctx context.Context) (*corev1.Secret, error) {
 	sec := &corev1.Secret{}
 	if err := getResource[*corev1.Secret](ctx, c.kcpClient, c.config.PullSecretName, sec); err != nil {
 		return nil, err
@@ -79,7 +94,8 @@ func (c *Configurator) applyResourcesToRuntimeCluster(ctx context.Context, runti
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      configMap.Name,
+			// TODO: make the name configurable
+			Name:      "rt-bootstrapper-config",
 			Namespace: "kyma-system",
 		},
 		Data: configMap.Data,
@@ -101,7 +117,8 @@ func (c *Configurator) applyResourcesToRuntimeCluster(ctx context.Context, runti
 				APIVersion: "v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      secret.Name,
+				// TODO: make the name configurable
+				Name:      "registry-credentials",
 				Namespace: "kyma-system",
 			},
 			Data: secret.Data,
