@@ -171,7 +171,7 @@ func TestValidations(t *testing.T) {
 		err := NewValidator(config, fakeClient).Validate(context.Background())
 
 		// then
-		require.ErrorContains(t, err, "unable to find Runtime Bootstrapper PullSecret")
+		require.ErrorContains(t, err, "unable to find Runtime Bootstrapper pull secret")
 	})
 
 	t.Run("Pull secret has incorrect type", func(t *testing.T) {

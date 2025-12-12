@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
@@ -26,33 +27,74 @@ func NewValidator(config Config, kcpClient client.Client) *Validator {
 }
 
 func (v Validator) Validate(ctx context.Context) error {
-	if v.config.ManifestsPath == "" {
+	if err := verifyManifests(v.config.ManifestsPath); err != nil {
+		return err
+	}
+
+	if err := verifyDeploymentName(v.config.DeploymentNamespacedName); err != nil {
+		return err
+	}
+
+	if err := verifyConfigMap(ctx, v.config.ConfigName, v.kcpClient); err != nil {
+		return err
+	}
+
+	return verifyPullSecret(ctx, v.config.PullSecretName, v.kcpClient)
+}
+
+func verifyManifests(manifestPath string) error {
+	if manifestPath == "" {
 		return errors.New("manifests path is required")
 	}
 
-	if _, err := os.Stat(v.config.ManifestsPath); err != nil {
-		return errors.New(fmt.Sprintf("manifests path %s is invalid", v.config.ManifestsPath))
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		return errors.New(fmt.Sprintf("manifests file does not exists under path %s", manifestPath))
 	}
 
-	deploymentNameParts := strings.Split(v.config.DeploymentNamespacedName, string(types.Separator))
+	documents := strings.Split(string(data), "---")
+	for _, doc := range documents {
+		doc = strings.TrimSpace(doc)
+		if doc == "" {
+			continue
+		}
+
+		var obj interface{}
+		if err := yaml.Unmarshal([]byte(doc), &obj); err != nil {
+			return errors.Wrap(err, "invalid YAML manifests file")
+		}
+	}
+
+	return nil
+}
+
+func verifyDeploymentName(deploymentNamespacedName string) error {
+	deploymentNameParts := strings.Split(deploymentNamespacedName, string(types.Separator))
 
 	if len(deploymentNameParts) != 2 || deploymentNameParts[0] == "" || deploymentNameParts[1] == "" {
 		return errors.New("deployment namespaced name is invalid")
 	}
-	// TODO: consider validating is file contains valid yaml
 
-	if v.config.ConfigName == "" {
+	return nil
+}
+
+func verifyConfigMap(ctx context.Context, configMapName string, kcpClient client.Client) error {
+	if configMapName == "" {
 		return errors.New("config name is required")
 	}
 
 	var configMap corev1.ConfigMap
-	if err := getResource(ctx, v.kcpClient, v.config.ConfigName, &configMap); err != nil {
+	if err := getResource(ctx, kcpClient, configMapName, &configMap); err != nil {
 		return errors.New("unable to find Runtime Bootstrapper ConfigMap in KCP cluster")
 	}
 
-	if v.config.PullSecretName != "" {
+	return nil
+}
+
+func verifyPullSecret(ctx context.Context, pullSecretName string, kcpClient client.Client) error {
+	if pullSecretName != "" {
 		var secret corev1.Secret
-		if err := getResource(ctx, v.kcpClient, v.config.PullSecretName, &secret); err != nil {
+		if err := getResource(ctx, kcpClient, pullSecretName, &secret); err != nil {
 			return errors.New("unable to find Runtime Bootstrapper pull secret in KCP cluster")
 		}
 
