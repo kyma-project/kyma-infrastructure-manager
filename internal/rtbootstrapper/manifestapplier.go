@@ -17,6 +17,7 @@ import (
 	"k8s.io/client-go/restmapper"
 	"k8s.io/utils/ptr"
 	"os"
+	"strings"
 )
 
 type ManifestApplier struct {
@@ -36,12 +37,12 @@ func NewManifestApplier(manifestsPath string, deploymentName types.NamespacedNam
 }
 
 func (ma ManifestApplier) ApplyManifests(ctx context.Context, runtime imv1.Runtime) error {
-	f, err := os.Open(ma.manifestsPath)
+	data, err := os.ReadFile(ma.manifestsPath)
 	if err != nil {
-		return fmt.Errorf("opening file: %w", err)
+		return fmt.Errorf("reading file: %w", err)
 	}
-	defer f.Close()
 
+	docs := strings.Split(string(data), "---")
 	dynamicClient, discoveryClient, err := ma.runtimeDynamicClientGetter.Get(ctx, runtime)
 	if err != nil {
 		return fmt.Errorf("getting dynamic client: %w", err)
@@ -54,27 +55,24 @@ func (ma ManifestApplier) ApplyManifests(ctx context.Context, runtime imv1.Runti
 	mapper := restmapper.NewDiscoveryRESTMapper(gr)
 
 	defaultNamespace := "default"
-	decoder := yaml.NewYAMLOrJSONDecoder(f, 4096)
 
-	for {
+	for _, doc := range docs {
+		doc = strings.TrimSpace(doc)
+		if doc == "" {
+			continue
+		}
 		u := &unstructured.Unstructured{}
-		err = decoder.Decode(u)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
+		decoder := yaml.NewYAMLOrJSONDecoder(strings.NewReader(doc), 4096)
+		if err := decoder.Decode(u); err != nil && err != io.EOF {
 			return fmt.Errorf("decoding YAML: %w", err)
 		}
-
 		if u.GetKind() == "" {
 			continue
 		}
-
 		if err := applyObject(ctx, dynamicClient, mapper, u, defaultNamespace); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
