@@ -111,6 +111,7 @@ func main() {
 	var runtimeBootstrapperConfigName string
 	var runtimeBootstrapperPullSecretName string
 	var runtimeBootstrapperClusterTrustBundle string
+	var runtimeBootstrapperDeploymentName string
 
 	//Kubebuilder related parameters:
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to. Monitoring and alerting tools can use this endpoint to collect application specific metrics during runtime")
@@ -147,6 +148,7 @@ func main() {
 	flag.StringVar(&runtimeBootstrapperConfigName, "runtime-bootstrapper-config-name", "rt-bootstrapper-config", "Name of the the runtime bootstrapper Config Map.")
 	flag.StringVar(&runtimeBootstrapperPullSecretName, "runtime-bootstrapper-pull-secret-name", "", "Name of the pull secret to be copied to SKR.")
 	flag.StringVar(&runtimeBootstrapperClusterTrustBundle, "runtime-bootstrapper-cluster-trust-bundle", "", "Cluster trust bundle to be copied to SKR.")
+	flag.StringVar(&runtimeBootstrapperDeploymentName, "runtime-bootstrapper-deployment-namespaced-name", "kyma-system/rt-bootstrapper-controller-manager", "Name of the deployment to be observed to verify if installation succeeded. Expected format: <namespace>/<name>")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
@@ -243,15 +245,24 @@ func main() {
 
 	runtimeClientGetter := fsm.NewRuntimeClientGetter(mgr.GetClient())
 
-	runtimeBootstrapperInstaller, err := rtbootstrapper.NewInstaller(rtbootstrapper.Config{
-		PullSecretName:         runtimeBootstrapperPullSecretName,
-		ClusterTrustBundleName: runtimeBootstrapperClusterTrustBundle,
-		ManifestsPath:          runtimeBootstrapperManifestsPath, ConfigName: runtimeBootstrapperConfigName,
-	}, mgr.GetClient(), runtimeClientGetter)
+	var runtimeBootstrapperInstaller *rtbootstrapper.Installer
 
-	if err != nil {
-		setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
-		os.Exit(1)
+	if runtimeBootstrapperEnabled {
+		runtimeDynamicClientGetter := fsm.NewRuntimeDynamicClientGetter(mgr.GetClient())
+
+		rtbConfig := rtbootstrapper.Config{
+			PullSecretName:           runtimeBootstrapperPullSecretName,
+			ClusterTrustBundleName:   runtimeBootstrapperClusterTrustBundle,
+			ManifestsPath:            runtimeBootstrapperManifestsPath,
+			ConfigName:               runtimeBootstrapperConfigName,
+			DeploymentNamespacedName: runtimeBootstrapperDeploymentName,
+		}
+
+		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(mgr.GetClient(), rtbConfig, runtimeClientGetter, runtimeDynamicClientGetter)
+		if err != nil {
+			setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
+			os.Exit(1)
+		}
 	}
 
 	cfg := fsm.RCCfg{
@@ -414,4 +425,27 @@ func restrictWatchedNamespace() cache.Options {
 			},
 		},
 	}
+}
+
+func configureRuntimeBootstrapper(kcpClient client.Client, config rtbootstrapper.Config, runtimeClientGetter fsm.RuntimeClientGetter, runtimeDynamicClientGetter fsm.DynamicRuntimeClientGetter) (*rtbootstrapper.Installer, error) {
+	// This is a bit ugly but we need to use a use separate client for validation
+	// mgr.Client cannot be used prior to starting the manager
+	// We could either start the manager first and then validate the config
+	// or create a separate client as done below
+	cfg, err := ctrl.GetConfig()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
+	}
+
+	directClient, err := client.New(cfg, client.Options{Scheme: scheme})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
+	}
+
+	err = rtbootstrapper.NewValidator(config, directClient).Validate(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	return rtbootstrapper.NewInstaller(config, kcpClient, runtimeClientGetter, runtimeDynamicClientGetter), nil
 }

@@ -21,14 +21,15 @@ import (
 
 func Test_Configure(t *testing.T) {
 	config := Config{
-		PullSecretName:         "registry-credentials",
+		PullSecretName:         "test-registry-credentials",
 		ClusterTrustBundleName: "",
 		ManifestsPath:          "",
-		ConfigName:             "runtime-bootstrapper-kcp-config",
+		ConfigName:             "test-runtime-bootstrapper-kcp-config",
 	}
+
 	pullSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "registry-credentials",
+			Name:      "test-registry-credentials",
 			Namespace: "kcp-system",
 		},
 		Data: map[string][]byte{
@@ -36,24 +37,18 @@ func Test_Configure(t *testing.T) {
 		},
 		Type: corev1.SecretTypeDockercfg,
 	}
+
 	bootstrapperConfigMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "runtime-bootstrapper-kcp-config",
+			Name:      "test-runtime-bootstrapper-kcp-config",
 			Namespace: "kcp-system",
 		},
 		Data: map[string]string{
 			"rt-bootstrapper-config.json": "some-configuration-data",
 		},
 	}
-	runtimeCR := imv1.Runtime{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-runtime",
-			Namespace: "kcp-system",
-		},
-		Spec: imv1.RuntimeSpec{
-			Shoot: imv1.RuntimeShoot{Name: "test-shoot"},
-		},
-	}
+
+	runtimeCR := minimalRuntime()
 	scheme := runtime.NewScheme()
 	util.Must(corev1.AddToScheme(scheme))
 
@@ -73,20 +68,20 @@ func Test_Configure(t *testing.T) {
 		require.NoError(t, err)
 
 		var skrSecret corev1.Secret
-		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: pullSecret.Name, Namespace: "kyma-system"}, &skrSecret)
+		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "registry-credentials", Namespace: "kyma-system"}, &skrSecret)
 		require.NoError(t, err)
 
-		assert.Equal(t, corev1.SecretTypeDockerConfigJson, skrSecret.Type)
+		assert.Equal(t, pullSecret.Type, skrSecret.Type)
 		assert.NotNil(t, skrSecret.Data[corev1.DockerConfigJsonKey])
 		assert.Equal(t, pullSecret.Data[corev1.DockerConfigJsonKey], skrSecret.Data[corev1.DockerConfigJsonKey])
-		assert.Equal(t, pullSecret.Name, skrSecret.Name)
+		assert.Equal(t, "registry-credentials", skrSecret.Name)
 		assert.Equal(t, "kyma-system", skrSecret.Namespace)
 
 		var skrConfigMap corev1.ConfigMap
-		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: bootstrapperConfigMap.Name, Namespace: "kyma-system"}, &skrConfigMap)
+		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "rt-bootstrapper-config", Namespace: "kyma-system"}, &skrConfigMap)
 		require.NoError(t, err)
 
-		assert.Equal(t, bootstrapperConfigMap.Name, skrConfigMap.Name)
+		assert.Equal(t, "rt-bootstrapper-config", skrConfigMap.Name)
 		assert.Equal(t, "kyma-system", skrConfigMap.Namespace)
 	})
 
