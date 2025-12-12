@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
+	"k8s.io/utils/ptr"
 	"os"
 )
 
@@ -129,7 +130,17 @@ func applyObject(
 	}
 
 	obj.SetResourceVersion(current.GetResourceVersion())
-	_, err = dr.Update(ctx, obj, metav1.UpdateOptions{})
+
+	patchBytes, err := obj.MarshalJSON()
+	if err != nil {
+		return fmt.Errorf("marshaling object to JSON: %w", err)
+	}
+
+	_, err = dr.Patch(ctx, name, types.ApplyPatchType, patchBytes, metav1.PatchOptions{
+		Force:        ptr.To(true),
+		FieldManager: fieldManagerName,
+	})
+
 	return err
 }
 
