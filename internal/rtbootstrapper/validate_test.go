@@ -2,13 +2,15 @@ package rtbootstrapper
 
 import (
 	"context"
+	"github.com/stretchr/testify/assert"
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	util "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
 )
 
 func TestValidations(t *testing.T) {
@@ -47,7 +49,7 @@ func TestValidations(t *testing.T) {
 			err := NewValidator(config, fakeClient).Validate(context.Background())
 
 			// then
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		}
 
 		{
@@ -67,7 +69,7 @@ func TestValidations(t *testing.T) {
 			err := NewValidator(config, fakeClient).Validate(context.Background())
 
 			// then
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		}
 	})
 
@@ -79,7 +81,8 @@ func TestValidations(t *testing.T) {
 		err := NewValidator(config, nil).Validate(context.Background())
 
 		// then
-		require.ErrorContains(t, err, "manifests path is required")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "manifests path is required")
 	})
 
 	t.Run("Manifest file doesn't exist", func(t *testing.T) {
@@ -92,7 +95,28 @@ func TestValidations(t *testing.T) {
 		err := NewValidator(config, nil).Validate(context.Background())
 
 		// then
-		require.ErrorContains(t, err, "non-existent-file.yaml")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "non-existent-file.yaml")
+	})
+
+	t.Run("Invalid YAML in manifests", func(t *testing.T) {
+		// given
+		fakeClient := fake.NewClientBuilder().WithObjects(configMap).Build()
+
+		config := Config{
+			ManifestsPath:            "./testdata/invalid.yaml",
+			DeploymentNamespacedName: "default/my-deployment",
+			ConfigName:               "test-config",
+		}
+
+		validator := NewValidator(config, fakeClient)
+
+		// when
+		err := validator.Validate(context.Background())
+
+		// then
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid YAML")
 	})
 
 	t.Run("Deployment namespace incorrect", func(t *testing.T) {
@@ -107,7 +131,8 @@ func TestValidations(t *testing.T) {
 			err := NewValidator(config, nil).Validate(context.Background())
 
 			// then
-			require.ErrorContains(t, err, "deployment namespaced name is invalid")
+			require.Error(t, err)
+			assert.ErrorContains(t, err, "deployment namespaced name is invalid")
 		}
 
 		{
@@ -121,7 +146,8 @@ func TestValidations(t *testing.T) {
 			err := NewValidator(config, nil).Validate(context.Background())
 
 			// then
-			require.ErrorContains(t, err, "deployment namespaced name is invalid")
+			require.Error(t, err)
+			assert.ErrorContains(t, err, "deployment namespaced name is invalid")
 		}
 
 		{
@@ -135,7 +161,8 @@ func TestValidations(t *testing.T) {
 			err := NewValidator(config, nil).Validate(context.Background())
 
 			// then
-			require.ErrorContains(t, err, "deployment namespaced name is invalid")
+			require.Error(t, err)
+			assert.ErrorContains(t, err, "deployment namespaced name is invalid")
 		}
 	})
 
@@ -153,7 +180,8 @@ func TestValidations(t *testing.T) {
 		err := NewValidator(config, fakeClient).Validate(context.Background())
 
 		// then
-		require.ErrorContains(t, err, "unable to find Runtime Bootstrapper ConfigMap")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "unable to find Runtime Bootstrapper ConfigMap")
 	})
 
 	t.Run("Pull secret not exists", func(t *testing.T) {
@@ -171,7 +199,8 @@ func TestValidations(t *testing.T) {
 		err := NewValidator(config, fakeClient).Validate(context.Background())
 
 		// then
-		require.ErrorContains(t, err, "unable to find Runtime Bootstrapper pull secret")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "unable to find Runtime Bootstrapper pull secret")
 	})
 
 	t.Run("Pull secret has incorrect type", func(t *testing.T) {
@@ -198,6 +227,7 @@ func TestValidations(t *testing.T) {
 		err := NewValidator(config, fakeClient).Validate(context.Background())
 
 		// then
-		require.ErrorContains(t, err, "pull secret has invalid type")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "pull secret has invalid type")
 	})
 }
