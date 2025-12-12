@@ -246,10 +246,9 @@ func main() {
 	runtimeClientGetter := fsm.NewRuntimeClientGetter(mgr.GetClient())
 
 	var runtimeBootstrapperInstaller *rtbootstrapper.Installer
-	var runtimeDynamicClientGetter fsm.DynamicRuntimeClientGetter
 
 	if runtimeBootstrapperEnabled {
-		runtimeDynamicClientGetter = fsm.NewRuntimeDynamicClientGetter(mgr.GetClient())
+		runtimeDynamicClientGetter := fsm.NewRuntimeDynamicClientGetter(mgr.GetClient())
 
 		rtbConfig := rtbootstrapper.Config{
 			PullSecretName:           runtimeBootstrapperPullSecretName,
@@ -428,9 +427,9 @@ func restrictWatchedNamespace() cache.Options {
 	}
 }
 
-func configureRuntimeBootstrapper(mgr ctrl.Manager, config rtbootstrapper.Config, runtimeClientGetter fsm.RuntimeClientGetter, runtimeDynamicClientGetter fsm.DynamicRuntimeClientGetter) (*rtbootstrapper.Installer, error) {
+func configureRuntimeBootstrapper(kcpClient client.Client, config rtbootstrapper.Config, runtimeClientGetter fsm.RuntimeClientGetter, runtimeDynamicClientGetter fsm.DynamicRuntimeClientGetter) (*rtbootstrapper.Installer, error) {
 	// This is a bit ugly but we need to use a use separate client for validation
-	// mgr.Client cannpt be used prior to starting the manager
+	// mgr.Client cannot be used prior to starting the manager
 	// We could either start the manager first and then validate the config
 	// or create a separate client as done below
 	cfg, err := ctrl.GetConfig()
@@ -448,5 +447,5 @@ func configureRuntimeBootstrapper(mgr ctrl.Manager, config rtbootstrapper.Config
 		return nil, err
 	}
 
-	return rtbootstrapper.NewInstaller(config, mgr.GetClient(), runtimeClientGetter, runtimeDynamicClientGetter), nil
+	return rtbootstrapper.NewInstaller(config, kcpClient, runtimeClientGetter, runtimeDynamicClientGetter), nil
 }
