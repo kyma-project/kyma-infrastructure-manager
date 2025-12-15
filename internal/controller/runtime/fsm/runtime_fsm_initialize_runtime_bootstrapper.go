@@ -7,6 +7,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"time"
 )
 
 const (
@@ -14,6 +15,7 @@ const (
 	msgInstallationFailed     = "Runtime bootstrapper installation failed"
 	msgInstallationInProgress = "Runtime bootstrapper installation in progress"
 	msgInstallationCompleted  = "Runtime bootstrapper installation completed"
+	timeout                   = time.Second * 30
 )
 
 func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
@@ -31,7 +33,7 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 			metav1.ConditionFalse,
 			msgStatusCheckFailed,
 		)
-		return updateStatusAndRequeue()
+		return updateStatusAndRequeueAfter(timeout)
 	}
 
 	switch status {
@@ -55,7 +57,7 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 				)
 			}
 
-			return updateStatusAndRequeue()
+			return updateStatusAndRequeueAfter(timeout)
 		}
 	case rtbootstrapper.StatusInProgress:
 		{
@@ -67,7 +69,7 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 				msgInstallationInProgress,
 			)
 
-			return updateStatusAndRequeue()
+			return updateStatusAndRequeueAfter(timeout)
 		}
 	case rtbootstrapper.StatusFailed:
 		{
