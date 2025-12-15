@@ -447,5 +447,5 @@ func configureRuntimeBootstrapper(kcpClient client.Client, config rtbootstrapper
 		return nil, err
 	}
 
-	return rtbootstrapper.NewInstaller(config, kcpClient, runtimeClientGetter, runtimeDynamicClientGetter), nil
+	return rtbootstrapper.NewInstaller(config, directClient, runtimeClientGetter, runtimeDynamicClientGetter), nil
 }
