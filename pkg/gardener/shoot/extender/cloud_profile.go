@@ -23,7 +23,7 @@ func ExtendWithCloudProfile(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		return err
 	}
 
-	shoot.Spec.CloudProfileName = ptr.To(cloudProfileName)
+	shoot.Spec.CloudProfileName = ptr.To(cloudProfileName) //nolint:staticcheck
 
 	return nil
 }
