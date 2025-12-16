@@ -64,6 +64,7 @@ const (
 	ConditionTypeRuntimeProvisioned       RuntimeConditionType = "Provisioned"
 	ConditionTypeRuntimeKubeconfigReady   RuntimeConditionType = "KubeconfigReady"
 	ConditionTypeOidcAndCMsConfigured     RuntimeConditionType = "OidcAndConfigMapConfigured"
+	ConditionTypeKymaSystemCreated        RuntimeConditionType = "KymaSystemNSCreated"
 	ConditionTypeRuntimeConfigured        RuntimeConditionType = "Configured"
 	ConditionTypeRuntimeDeprovisioned     RuntimeConditionType = "Deprovisioned"
 	ConditionTypeRegistryCacheConfigured  RuntimeConditionType = "RegistryCacheConfigured"
@@ -98,7 +99,9 @@ const (
 	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
 	ConditionReasonOidcAndCMsConfigured     = RuntimeConditionReason("OidcAndConfigMapsConfigured")
 	ConditionReasonOidcError                = RuntimeConditionReason("OidcConfigurationErr")
+	ConditionReasonCMError                  = RuntimeConditionReason("ConfigMapErr")
 	ConditionReasonKymaSystemNSError        = RuntimeConditionReason("KymaSystemNSError")
+	ConditionReasonKymaSystemNSReady        = RuntimeConditionReason("KymaSystemNSReady")
 	ConditionReasonSeedNotFound             = RuntimeConditionReason("SeedNotFound")
 
 	ConditionReasonRegistryCacheConfigured = RuntimeConditionReason("RegistryCacheConfigured")
@@ -263,16 +266,12 @@ func (k *Runtime) UpdateStateReady(c RuntimeConditionType, r RuntimeConditionRea
 	meta.SetStatusCondition(&k.Status.Conditions, condition)
 }
 
-func (k *Runtime) UpdateStateDeletion(c RuntimeConditionType, r RuntimeConditionReason, status, msg string) {
-	if status != "False" {
-		k.Status.State = RuntimeStateTerminating
-	} else {
-		k.Status.State = RuntimeStateFailed
-	}
+func (k *Runtime) UpdateStateDeletion(c RuntimeConditionType, r RuntimeConditionReason, status metav1.ConditionStatus, msg string) {
+	k.Status.State = RuntimeStateTerminating
 
 	condition := metav1.Condition{
 		Type:               string(c),
-		Status:             metav1.ConditionStatus(status),
+		Status:             status,
 		LastTransitionTime: metav1.Now(),
 		Reason:             string(r),
 		Message:            msg,
@@ -280,16 +279,24 @@ func (k *Runtime) UpdateStateDeletion(c RuntimeConditionType, r RuntimeCondition
 	meta.SetStatusCondition(&k.Status.Conditions, condition)
 }
 
-func (k *Runtime) UpdateStatePending(c RuntimeConditionType, r RuntimeConditionReason, status, msg string) {
-	if status == "False" {
-		k.Status.State = RuntimeStateFailed
-	} else {
-		k.Status.State = RuntimeStatePending
+func (k *Runtime) UpdateStateFailed(c RuntimeConditionType, r RuntimeConditionReason, msg string) {
+	k.Status.State = RuntimeStateFailed
+	condition := metav1.Condition{
+		Type:               string(c),
+		Status:             metav1.ConditionFalse,
+		LastTransitionTime: metav1.Now(),
+		Reason:             string(r),
+		Message:            msg,
 	}
+	meta.SetStatusCondition(&k.Status.Conditions, condition)
+}
+
+func (k *Runtime) UpdateStatePending(c RuntimeConditionType, r RuntimeConditionReason, status metav1.ConditionStatus, msg string) {
+	k.Status.State = RuntimeStatePending
 
 	condition := metav1.Condition{
 		Type:               string(c),
-		Status:             metav1.ConditionStatus(status),
+		Status:             status,
 		LastTransitionTime: metav1.Now(),
 		Reason:             string(r),
 		Message:            msg,

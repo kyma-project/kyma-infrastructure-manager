@@ -2,58 +2,79 @@ package rtbootstrapper
 
 import (
 	"context"
+
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 )
 
 type Installer struct {
-	config              Config
-	kcpClient           client.Client
-	runtimeClientGetter RuntimeClientGetter
+	config          Config
+	kcpClient       client.Client
+	manifestApplier *ManifestApplier
+	configurator    *Configurator
 }
 
-type InstallationStatus int
+type InstallationStatus string
 
 const (
-	StatusNotStarted InstallationStatus = iota
-	StatusInProgress
-	StatusReady
-	StatusFailed
+	StatusNotStarted InstallationStatus = "NotStarted"
+	StatusInProgress InstallationStatus = "InProgress"
+	StatusReady      InstallationStatus = "Ready"
+	StatusFailed     InstallationStatus = "Failed"
 )
 
 type Config struct {
-	PullSecretName         string
-	ClusterTrustBundleName string
-	ManifestsPath          string
-	ConfigPath             string
+	PullSecretName           string
+	ClusterTrustBundleName   string
+	ManifestsPath            string
+	DeploymentNamespacedName string
+	ConfigName               string
 }
 
-//go:generate mockery --name=RuntimeClientGetter
+//mockery:generate: true
 type RuntimeClientGetter interface {
 	Get(ctx context.Context, runtime imv1.Runtime) (client.Client, error)
 }
 
-func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter RuntimeClientGetter) (*Installer, error) {
-	err := validate(config)
-	if err != nil {
-		return nil, err
-	}
+// TODO: consider using one interface with two methods
+//
+//mockery:generate: true
+type RuntimeDynamicClientGetter interface {
+	Get(ctx context.Context, runtime imv1.Runtime) (dynamic.Interface, discovery.DiscoveryInterface, error)
+}
+
+func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter RuntimeClientGetter, runtimeDynamicClientGetter RuntimeDynamicClientGetter) *Installer {
 
 	return &Installer{
-		config:              config,
-		kcpClient:           kcpClient,
-		runtimeClientGetter: runtimeClientGetter,
-	}, nil
+		config:          config,
+		kcpClient:       kcpClient,
+		manifestApplier: NewManifestApplier(config.ManifestsPath, toNamespacedName(config.DeploymentNamespacedName), runtimeClientGetter, runtimeDynamicClientGetter),
+		configurator:    NewConfigurator(kcpClient, runtimeClientGetter, config),
+	}
 }
 
-func validate(config Config) error {
-	return nil
+func (r *Installer) Install(ctx context.Context, runtime imv1.Runtime) error {
+	err := r.configurator.Configure(context.Background(), runtime)
+	if err != nil {
+		return errors.Wrap(err, "failed to prepare for installation Runtime Bootstrapper installation")
+	}
+
+	return r.manifestApplier.ApplyManifests(ctx, runtime)
 }
 
-func (r *Installer) Install(context context.Context, runtimeID string) error {
-	return nil
+func (r *Installer) Status(ctx context.Context, runtime imv1.Runtime) (InstallationStatus, error) {
+	return r.manifestApplier.Status(ctx, runtime)
 }
 
-func (r *Installer) Status(context context.Context, runtimeID string) (InstallationStatus, error) {
-	return StatusReady, nil
+func toNamespacedName(namespacedName string) types.NamespacedName {
+	nameAndNamespace := strings.Split(namespacedName, string(types.Separator))
+	return types.NamespacedName{
+		Name:      nameAndNamespace[1],
+		Namespace: nameAndNamespace[0],
+	}
 }
