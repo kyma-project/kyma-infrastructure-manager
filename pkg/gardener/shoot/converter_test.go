@@ -642,7 +642,7 @@ func Test_ConverterConfig_Load_OK(t *testing.T) {
 				DefaultVersion: "0.1.2.3.4",
 			},
 			Gardener: config.GardenerConfig{
-				ProjectName: "test-project",
+				ProjectName:             "test-project",
 				EnableCredentialBinding: true,
 			},
 			AuditLog: config.AuditLogConfig{

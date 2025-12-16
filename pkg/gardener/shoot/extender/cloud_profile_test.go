@@ -62,12 +62,9 @@ func TestExtendWithCloudProfile(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-<<<<<<< credential_bindings
 			assert.Equal(t, testCase.expectedProfile, shoot.Spec.CloudProfileName) //nolint:staticcheck
-=======
 			assert.Nil(t, shoot.Spec.CloudProfileName)
 			assert.Equal(t, testCase.expectedProfile, shoot.Spec.CloudProfile)
->>>>>>> main
 		})
 	}
 
