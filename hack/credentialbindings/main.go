@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	gardener_core "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -51,7 +52,12 @@ func main() {
 
 	for _, secretBinding := range list.Items {
 		fmt.Printf("SecretBinding: %s/%s\n", secretBinding.Namespace, secretBinding.Name)
-		credentialBinding := createCredentialBinding(secretBinding)
+		credentialBinding, createBindingErr := createCredentialBinding(secretBinding)
+
+		if createBindingErr != nil {
+			log.Printf("failed to create CredentialBinding for SecretBinding %s/%s: %v", secretBinding.Namespace, secretBinding.Name, createBindingErr)
+			continue // proceed with next SecretBinding
+		}
 
 		if dryRun {
 			fmt.Printf("Following CredentialBinding would be created: %v\n", credentialBinding)
@@ -65,7 +71,11 @@ func main() {
 	}
 }
 
-func createCredentialBinding(secretBinding gardener_core.SecretBinding) gardener_security.CredentialsBinding {
+func createCredentialBinding(secretBinding gardener_core.SecretBinding) (gardener_security.CredentialsBinding, error) {
+	if secretBinding.Provider != nil {
+		return gardener_security.CredentialsBinding{}, errors.New("SecretBinding is missing provider type")
+	}
+
 	credentialBinding := gardener_security.CredentialsBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "security.gardener.cloud/v1alpha1",
@@ -83,12 +93,10 @@ func createCredentialBinding(secretBinding gardener_core.SecretBinding) gardener
 			Namespace:  secretBinding.SecretRef.Namespace,
 			Name:       secretBinding.SecretRef.Name,
 		},
+		Provider: gardener_security.CredentialsBindingProvider{
+			Type: secretBinding.Provider.Type,
+		},
 	}
 
-	if secretBinding.Provider != nil {
-		credentialBinding.Provider = gardener_security.CredentialsBindingProvider{
-			Type: secretBinding.Provider.Type,
-		}
-	}
-	return credentialBinding
+	return credentialBinding, nil
 }
