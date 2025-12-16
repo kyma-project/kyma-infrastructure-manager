@@ -16,3 +16,6 @@ packages:
   github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm:
     config:
       all: true
+  github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper:
+    config:
+      all: true

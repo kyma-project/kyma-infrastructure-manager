@@ -3,9 +3,8 @@ package fsm
 import (
 	"context"
 	"fmt"
+
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
-	v1 "k8s.io/api/core/v1"
-	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -26,18 +25,12 @@ type additionalOIDCState struct {
 const (
 	msgFailedProvisioningInfoConfigMap = "Failed to apply kyma-provisioning-info config map, scheduling for retry - %s"
 	oidcErrorMessage                   = "Failed to create OpenIDConnect resource. Scheduling for retry"
-	kymaNamespaceCreationErrorMessage  = "Failed to create kyma-system namespace. Scheduling for retry"
 )
 
 func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	kymaNsCreationErr := createKymaSystemNamespace(ctx, m, s)
-	if kymaNsCreationErr != nil {
-		return handleProvisioningInfoError(m, s, kymaNsCreationErr, imv1.ConditionReasonKymaSystemNSError)
-	}
-
 	skrDetailsErr := applyKymaProvisioningInfoCM(ctx, m, s)
 	if skrDetailsErr != nil {
-		return handleProvisioningInfoError(m, s, skrDetailsErr, imv1.ConditionReasonOidcAndCMsConfigured)
+		return handleProvisioningInfoError(m, s, skrDetailsErr, imv1.ConditionReasonCMError)
 	}
 	m.log.V(log_level.DEBUG).Info("kyma-provisioning-info config map is created/updated")
 
@@ -46,7 +39,7 @@ func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctr
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeOidcAndCMsConfigured,
 			imv1.ConditionReasonOidcAndCMsConfigured,
-			"True",
+			metav1.ConditionTrue,
 			"OIDC extension disabled",
 		)
 
@@ -66,7 +59,7 @@ func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctr
 	s.instance.UpdateStatePending(
 		imv1.ConditionTypeOidcAndCMsConfigured,
 		imv1.ConditionReasonOidcAndCMsConfigured,
-		"True",
+		metav1.ConditionTrue,
 		"OIDC and kyma-provisioning-info configuration completed",
 	)
 
@@ -76,32 +69,8 @@ func sFnConfigureSKR(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctr
 func handleProvisioningInfoError(m *fsm, s *systemState, error error, conditionReason imv1.RuntimeConditionReason) (stateFn, *ctrl.Result, error) {
 	finalErrorMsg := fmt.Sprintf(msgFailedProvisioningInfoConfigMap, error.Error())
 	m.log.Error(error, finalErrorMsg)
-	updateConditionFailed(&s.instance, conditionReason, kymaNamespaceCreationErrorMessage)
+	updateConditionFailed(&s.instance, conditionReason, finalErrorMsg)
 	return updateStatusAndRequeueAfter(m.ControlPlaneRequeueDuration)
-}
-
-func createKymaSystemNamespace(ctx context.Context, m *fsm, s *systemState) error {
-	kymaSystemNs := v1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "kyma-system",
-			Namespace: "",
-		},
-	}
-
-	runtimeClient, runtimeClientError := m.RuntimeClientGetter.Get(ctx, s.instance)
-
-	if runtimeClientError != nil {
-		return runtimeClientError
-	}
-	kymaNsCreationErr := runtimeClient.Create(ctx, &kymaSystemNs)
-
-	if kymaNsCreationErr != nil {
-		if k8s_errors.IsAlreadyExists(kymaNsCreationErr) {
-			// we're expecting the namespace to already exist after first reconciliation, so we can ignore this error
-			return nil
-		}
-	}
-	return kymaNsCreationErr
 }
 
 func additionalOidcEmptyOrUndefined(runtime *imv1.Runtime, cfg RCCfg) additionalOIDCState {
@@ -224,7 +193,7 @@ func updateConditionFailed(rt *imv1.Runtime, reason imv1.RuntimeConditionReason,
 	rt.UpdateStatePending(
 		imv1.ConditionTypeOidcAndCMsConfigured,
 		reason,
-		string(metav1.ConditionUnknown),
+		metav1.ConditionUnknown,
 		message,
 	)
 }
