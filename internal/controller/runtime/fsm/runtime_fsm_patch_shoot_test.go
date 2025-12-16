@@ -511,7 +511,7 @@ func Test_SFnPatchExistingShoot_CredentialsBindingPatched(t *testing.T) {
 	// CredentialsBindingName should be set to runtime secret and SecretBindingName should be nil
 	Expect(gotShoot.Spec.CredentialsBindingName).To(Not(BeNil()))
 	Expect(*gotShoot.Spec.CredentialsBindingName).To(Equal(inputRuntime.Spec.Shoot.SecretBindingName))
-	Expect(gotShoot.Spec.SecretBindingName).To(BeNil())
+	Expect(gotShoot.Spec.SecretBindingName).To(BeNil()) //nolint:staticcheck
 
 	// Next state should be update status (or other valid step); ensure no panic and a state is returned
 	Expect(sFn).To(Not(BeNil()))

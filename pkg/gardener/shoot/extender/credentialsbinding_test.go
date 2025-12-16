@@ -16,7 +16,7 @@ func TestExtendWithCredentialsBinding_CredentialBindingEnabled(t *testing.T) {
 	err := ExtendWithCredentialsBinding(true)(runtime, shoot)
 	assert.NoError(t, err)
 	assert.Equal(t, "my-secret", *shoot.Spec.CredentialsBindingName)
-	assert.Nil(t, shoot.Spec.SecretBindingName)
+	assert.Nil(t, shoot.Spec.SecretBindingName) //nolint:staticcheck
 }
 
 func TestExtendWithCredentialsBinding_CredentialBindingDisabled(t *testing.T) {
