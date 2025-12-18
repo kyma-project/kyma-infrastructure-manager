@@ -72,7 +72,7 @@ func main() {
 }
 
 func createCredentialBinding(secretBinding gardener_core.SecretBinding) (gardener_security.CredentialsBinding, error) { //nolint:staticcheck
-	if secretBinding.Provider != nil {
+	if secretBinding.Provider == nil {
 		return gardener_security.CredentialsBinding{}, errors.New("SecretBinding is missing provider type")
 	}
 
