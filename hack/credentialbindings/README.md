@@ -1,15 +1,15 @@
 
 # CredentialsBindings Migration Tool
 
-This tool migrates Gardener `SecretBinding` resources to `CredentialsBinding` resources in a specified Gardener project namespace.
+This tool migrates Gardener SecretBinding resources to CredentialsBinding resources in a specified Gardener project namespace.
 
 ## Usage
 
 ### Prerequisites
 
-- Go installed
-- Access to the Gardener cluster (kubeconfig)
-- The Gardener API and Security API must be available
+- You have Go installed.
+- You have access to the Gardener cluster (kubeconfig).
+- The Gardener API and Security API are available.
 
 ### Build
 
@@ -48,10 +48,10 @@ To actually create the `CredentialsBinding` resources:
 
 ## What It Does
 
-- Lists all `SecretBinding` resources in the specified Gardener project namespace.
-- For each `SecretBinding`, creates a corresponding `CredentialsBinding` resource.
-- In dry-run mode, prints the resources that would be created.
-- In non-dry-run mode, creates the resources in the cluster.
+- Lists all SecretBinding resources in the specified Gardener project namespace.
+- For each SecretBinding, creates a corresponding CredentialsBinding resource.
+- In dry-run mode, it prints the resources that would be created.
+- In non-dry-run mode, it creates the resources in the cluster.
 
 ## Notes
 
