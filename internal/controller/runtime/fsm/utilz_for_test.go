@@ -135,11 +135,7 @@ var (
 		k8sClient := fake.NewClientBuilder().
 			WithScheme(scheme).
 			WithObjects(objs...).
-			WithStatusSubresource(objs...).
-			WithInterceptorFuncs(interceptor.Funcs{
-				Patch:  fsm_testing.GetFakePatchInterceptorFn(true),
-				Update: fsm_testing.GetFakeUpdateInterceptorFn(true),
-			}).Build()
+			WithStatusSubresource(objs...).Build()
 
 		runtimeClientGetter := &fsm_mocks.RuntimeClientGetter{}
 		runtimeClientGetter.On("Get", mock.Anything, mock.Anything).Return(nil, err)
@@ -168,6 +164,26 @@ var (
 		return func(fsm *fsm) error {
 			fsm.KcpClient = k8sClient
 			fsm.GardenClient = k8sClient
+			return nil
+		}
+	}
+
+	withFakedK8sClientWithFakeUpdateAndPatch = func(
+		scheme *runtime.Scheme,
+		objs ...client.Object) fakeFSMOpt {
+
+		k8sClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(objs...).
+			WithStatusSubresource(objs...).Build()
+
+		runtimeClientGetter := &fsm_mocks.RuntimeClientGetter{}
+		runtimeClientGetter.On("Get", mock.Anything, mock.Anything).Return(k8sClient, nil)
+
+		return func(fsm *fsm) error {
+			fsm.KcpClient = k8sClient
+			fsm.GardenClient = k8sClient
+			fsm.RuntimeClientGetter = runtimeClientGetter
 			return nil
 		}
 	}
