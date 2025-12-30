@@ -428,7 +428,7 @@ func restrictWatchedNamespace() cache.Options {
 }
 
 func configureRuntimeBootstrapper(kcpClient client.Client, config rtbootstrapper.Config, runtimeClientGetter fsm.RuntimeClientGetter, runtimeDynamicClientGetter fsm.DynamicRuntimeClientGetter) (*rtbootstrapper.Installer, error) {
-	// This is a bit ugly but we need to use a use separate client for validation
+	// This is a bit ugly but we need to use a separate client for validation
 	// mgr.Client cannot be used prior to starting the manager
 	// We could either start the manager first and then validate the config
 	// or create a separate client as done below
