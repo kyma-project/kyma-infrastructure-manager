@@ -231,6 +231,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	if runtimeBootstrapperEnabled && runtimeBootstrapperClusterTrustBundle != "" {
+		// ClusterTrustBundle is a beta feature and needs to be explicitly enabled in the converter config
+		// When the feature is generally available, this code can be removed
+		// As of the time of writing (December 2025) there is no GA release date announced
+		// Details: https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#cluster-trust-bundles
+		enableClusterTrustBundleFeatureForSKR(&config.ConverterConfig)
+	}
+
 	auditLogDataMap, err := loadAuditLogDataMap(config.ConverterConfig.AuditLog.TenantConfigPath)
 	if err != nil {
 		setupLog.Error(err, "invalid audit log tenant configuration")
@@ -248,7 +256,6 @@ func main() {
 	var runtimeBootstrapperInstaller *rtbootstrapper.Installer
 
 	if runtimeBootstrapperEnabled {
-		runtimeDynamicClientGetter := fsm.NewRuntimeDynamicClientGetter(mgr.GetClient())
 
 		rtbConfig := rtbootstrapper.Config{
 			PullSecretName:           runtimeBootstrapperPullSecretName,
@@ -258,7 +265,7 @@ func main() {
 			DeploymentNamespacedName: runtimeBootstrapperDeploymentName,
 		}
 
-		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(mgr.GetClient(), rtbConfig, runtimeClientGetter, runtimeDynamicClientGetter)
+		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(rtbConfig)
 		if err != nil {
 			setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
 			os.Exit(1)
@@ -427,25 +434,37 @@ func restrictWatchedNamespace() cache.Options {
 	}
 }
 
-func configureRuntimeBootstrapper(kcpClient client.Client, config rtbootstrapper.Config, runtimeClientGetter fsm.RuntimeClientGetter, runtimeDynamicClientGetter fsm.DynamicRuntimeClientGetter) (*rtbootstrapper.Installer, error) {
-	// This is a bit ugly but we need to use a separate client for validation
-	// mgr.Client cannot be used prior to starting the manager
-	// We could either start the manager first and then validate the config
-	// or create a separate client as done below
+func configureRuntimeBootstrapper(config rtbootstrapper.Config) (*rtbootstrapper.Installer, error) {
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
 	}
 
-	directClient, err := client.New(cfg, client.Options{Scheme: scheme})
+	kcpClient, err := client.New(cfg, client.Options{Scheme: scheme})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
 	}
 
-	err = rtbootstrapper.NewValidator(config, directClient).Validate(context.Background())
+	err = rtbootstrapper.NewValidator(config, kcpClient).Validate(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	return rtbootstrapper.NewInstaller(config, directClient, runtimeClientGetter, runtimeDynamicClientGetter), nil
+	return rtbootstrapper.NewInstaller(config, kcpClient, fsm.NewRuntimeClientGetter(kcpClient), fsm.NewRuntimeDynamicClientGetter(kcpClient)), nil
+}
+
+func enableClusterTrustBundleFeatureForSKR(converterConfig *config.ConverterConfig) {
+	if converterConfig.Kubernetes.FeatureGates == nil {
+		converterConfig.Kubernetes.FeatureGates = make(map[string]bool)
+	}
+
+	if converterConfig.Kubernetes.KubeApiServer.RuntimeConfig == nil {
+		converterConfig.Kubernetes.KubeApiServer.RuntimeConfig = make(map[string]bool)
+	}
+
+	// List of feature gates: https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
+	converterConfig.Kubernetes.FeatureGates["ClusterTrustBundle"] = true
+	converterConfig.Kubernetes.FeatureGates["ClusterTrustBundleProjection"] = true
+
+	converterConfig.Kubernetes.KubeApiServer.RuntimeConfig["certificates.k8s.io/v1beta1/clustertrustbundles"] = true
 }
