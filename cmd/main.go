@@ -462,8 +462,9 @@ func enableClusterTrustBundleFeatureForSKR(converterConfig *config.ConverterConf
 		converterConfig.Kubernetes.KubeApiServer.RuntimeConfig = make(map[string]bool)
 	}
 
-	// List of feature gates: https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
+	// Feature gates docs: https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 	converterConfig.Kubernetes.FeatureGates["ClusterTrustBundle"] = true
+	// Runtime Bootstrapper requires ClusterTrustBundleProjection to be enabled as well to mount the trust bundle into pods
 	converterConfig.Kubernetes.FeatureGates["ClusterTrustBundleProjection"] = true
 
 	converterConfig.Kubernetes.KubeApiServer.RuntimeConfig["certificates.k8s.io/v1beta1/clustertrustbundles"] = true
