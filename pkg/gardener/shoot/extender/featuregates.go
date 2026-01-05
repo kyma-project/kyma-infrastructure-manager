@@ -7,10 +7,10 @@ import (
 
 func NewFeatureGatesExtender(featureGates map[string]bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		if shoot.Spec.Kubernetes.Kubelet == nil {
-			shoot.Spec.Kubernetes.Kubelet = &gardener.KubeletConfig{}
+		if shoot.Spec.Kubernetes.KubeAPIServer == nil {
+			shoot.Spec.Kubernetes.KubeAPIServer = &gardener.KubeAPIServerConfig{}
 		}
-		shoot.Spec.Kubernetes.Kubelet.FeatureGates = featureGates
+		shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates = featureGates
 
 		return nil
 	}

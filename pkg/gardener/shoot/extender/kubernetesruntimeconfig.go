@@ -7,7 +7,7 @@ import (
 
 func NewKubernetesRuntimeConfigExtender(runtimeConfig map[string]bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		if shoot.Spec.Kubernetes.Kubelet == nil {
+		if shoot.Spec.Kubernetes.KubeAPIServer == nil {
 			shoot.Spec.Kubernetes.KubeAPIServer = &gardener.KubeAPIServerConfig{}
 		}
 

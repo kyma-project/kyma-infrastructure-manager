@@ -26,7 +26,7 @@ func TestFeatureGatesExtender(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		require.NotNil(t, shoot.Spec.Kubernetes.Kubelet)
-		assert.Equal(t, featureGates, shoot.Spec.Kubernetes.Kubelet.FeatureGates)
+		require.NotNil(t, shoot.Spec.Kubernetes.KubeAPIServer)
+		assert.Equal(t, featureGates, shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates)
 	})
 }
