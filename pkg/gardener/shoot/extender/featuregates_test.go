@@ -20,13 +20,18 @@ func TestFeatureGatesExtender(t *testing.T) {
 			"AnotherFeature": false,
 		}
 
+		kubeletFeatureGates := map[string]bool{
+			"SomeOtherFeature": true,
+		}
+
 		// when
-		extender := NewFeatureGatesExtender(apiServerFeatureGates)
+		extender := NewFeatureGatesExtender(apiServerFeatureGates, kubeletFeatureGates)
 		err := extender(runtime, &shoot)
 
 		// then
 		require.NoError(t, err)
 		require.NotNil(t, shoot.Spec.Kubernetes.KubeAPIServer)
 		assert.Equal(t, apiServerFeatureGates, shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates)
+		assert.Equal(t, kubeletFeatureGates, shoot.Spec.Kubernetes.Kubelet.FeatureGates)
 	})
 }
