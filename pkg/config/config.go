@@ -30,12 +30,11 @@ type DNSConfig struct {
 }
 
 type KubernetesConfig struct {
-	KubeApiServer                       KubeApiServer   `json:"kubeApiServer"`
-	DefaultVersion                      string          `json:"defaultVersion" validate:"required"`
-	EnableKubernetesVersionAutoUpdate   bool            `json:"enableKubernetesVersionAutoUpdate"`
-	EnableMachineImageVersionAutoUpdate bool            `json:"enableMachineImageVersionAutoUpdate"`
-	DefaultOperatorOidc                 OidcProvider    `json:"defaultOperatorOidc" validate:"required"`
-	FeatureGates                        map[string]bool `json:"featureGates"`
+	KubeApiServer                       KubeApiServer `json:"kubeApiServer"`
+	DefaultVersion                      string        `json:"defaultVersion" validate:"required"`
+	EnableKubernetesVersionAutoUpdate   bool          `json:"enableKubernetesVersionAutoUpdate"`
+	EnableMachineImageVersionAutoUpdate bool          `json:"enableMachineImageVersionAutoUpdate"`
+	DefaultOperatorOidc                 OidcProvider  `json:"defaultOperatorOidc" validate:"required"`
 }
 
 type OidcProvider struct {
@@ -80,6 +79,7 @@ type MachineImageConfig struct {
 type KubeApiServer struct {
 	MaxTokenExpiration string          `json:"maxTokenExpiration"`
 	RuntimeConfig      map[string]bool `json:"runtimeConfig"`
+	FeatureGates       map[string]bool `json:"featureGates"`
 }
 
 type TolerationsConfig map[string][]gardener.Toleration

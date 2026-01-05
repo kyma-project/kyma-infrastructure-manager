@@ -15,18 +15,18 @@ func TestFeatureGatesExtender(t *testing.T) {
 		shoot := testutils.FixEmptyGardenerShoot("test", "kcp-system")
 		runtime := imv1.Runtime{}
 
-		featureGates := map[string]bool{
+		apiServerFeatureGates := map[string]bool{
 			"SomeFeature":    true,
 			"AnotherFeature": false,
 		}
 
 		// when
-		extender := NewFeatureGatesExtender(featureGates)
+		extender := NewFeatureGatesExtender(apiServerFeatureGates)
 		err := extender(runtime, &shoot)
 
 		// then
 		require.NoError(t, err)
 		require.NotNil(t, shoot.Spec.Kubernetes.KubeAPIServer)
-		assert.Equal(t, featureGates, shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates)
+		assert.Equal(t, apiServerFeatureGates, shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates)
 	})
 }
