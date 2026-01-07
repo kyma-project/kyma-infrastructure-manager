@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	certificatesv1alpha1 "k8s.io/api/certificates/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -48,9 +49,61 @@ func Test_Configure(t *testing.T) {
 		},
 	}
 
+	clusterTrustBundle := &certificatesv1alpha1.ClusterTrustBundle{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-cluster-trust-bundle",
+		},
+		Spec: certificatesv1alpha1.ClusterTrustBundleSpec{
+			TrustBundle: "-----BEGIN CERTIFICATE-----\ntest-certificate-data\n-----END CERTIFICATE-----",
+		},
+	}
+
 	runtimeCR := minimalRuntime()
 	scheme := runtime.NewScheme()
 	util.Must(corev1.AddToScheme(scheme))
+	util.Must(certificatesv1alpha1.AddToScheme(scheme))
+
+	t.Run("Should successfully apply bootstrapper ConfigMap, PullSecret and ClusterTrustBundle to the runtime cluster", func(t *testing.T) {
+		// given
+		configWithCTB := config
+		configWithCTB.ClusterTrustBundleName = "test-cluster-trust-bundle"
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+		fakeKcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(pullSecret, bootstrapperConfigMap, clusterTrustBundle).Build()
+		m := mocks.NewRuntimeClientGetter(t)
+		m.On("Get", context.Background(), runtimeCR).Return(fakeClient, nil)
+
+		// when
+		configurator := NewConfigurator(fakeKcpClient, m, configWithCTB)
+		err := configurator.Configure(context.Background(), runtimeCR)
+
+		// then
+		m.AssertExpectations(t)
+		require.NoError(t, err)
+
+		var skrSecret corev1.Secret
+		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "registry-credentials", Namespace: "kyma-system"}, &skrSecret)
+		require.NoError(t, err)
+
+		assert.Equal(t, pullSecret.Type, skrSecret.Type)
+		assert.NotNil(t, skrSecret.Data[corev1.DockerConfigJsonKey])
+		assert.Equal(t, pullSecret.Data[corev1.DockerConfigJsonKey], skrSecret.Data[corev1.DockerConfigJsonKey])
+		assert.Equal(t, "registry-credentials", skrSecret.Name)
+		assert.Equal(t, "kyma-system", skrSecret.Namespace)
+
+		var skrConfigMap corev1.ConfigMap
+		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "rt-bootstrapper-config", Namespace: "kyma-system"}, &skrConfigMap)
+		require.NoError(t, err)
+
+		assert.Equal(t, "rt-bootstrapper-config", skrConfigMap.Name)
+		assert.Equal(t, "kyma-system", skrConfigMap.Namespace)
+
+		var skrCTB certificatesv1alpha1.ClusterTrustBundle
+		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "test-cluster-trust-bundle"}, &skrCTB)
+		require.NoError(t, err)
+
+		assert.Equal(t, clusterTrustBundle.Name, skrCTB.Name)
+		assert.Equal(t, clusterTrustBundle.Spec.TrustBundle, skrCTB.Spec.TrustBundle)
+	})
 
 	t.Run("Should successfully apply bootstrapper ConfigMap and PullSecret to the runtime cluster", func(t *testing.T) {
 		// given
@@ -129,6 +182,21 @@ func Test_Configure(t *testing.T) {
 		assert.ErrorContains(t, err, "failed to prepare bootstrapper PullSecret")
 	})
 
+	t.Run("Should return error when ClusterTrustBundle was not found on KCP, but it was set as required", func(t *testing.T) {
+		// given
+		configWithCTB := config
+		configWithCTB.ClusterTrustBundleName = "test-cluster-trust-bundle"
+		kcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(pullSecret, bootstrapperConfigMap).Build()
+
+		// when
+		configurator := NewConfigurator(kcpClient, nil, configWithCTB)
+		err := configurator.Configure(context.Background(), imv1.Runtime{})
+
+		// then
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "failed to prepare ClusterTrustBundle")
+	})
+
 	t.Run("Should return error when unable to get runtime client", func(t *testing.T) {
 		// given
 		kcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(pullSecret, bootstrapperConfigMap).Build()
@@ -194,5 +262,32 @@ func Test_Configure(t *testing.T) {
 		m.AssertExpectations(t)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "failed to apply bootstrapper PullSecret to runtime cluster")
+	})
+
+	t.Run("Should return error when unable to apply ClusterTrustBundle to runtime cluster", func(t *testing.T) {
+		// given
+		configWithCTB := config
+		configWithCTB.ClusterTrustBundleName = "test-cluster-trust-bundle"
+		kcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(pullSecret, bootstrapperConfigMap, clusterTrustBundle).Build()
+		m := mocks.NewRuntimeClientGetter(t)
+		fakeRuntimeClient := fake.NewClientBuilder().WithScheme(scheme).
+			WithInterceptorFuncs(interceptor.Funcs{
+				Patch: func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					if obj.GetObjectKind().GroupVersionKind().Kind == "ClusterTrustBundle" {
+						return errors.New("unable to apply ClusterTrustBundle to the runtime")
+					}
+					return nil
+				},
+			}).Build()
+		m.On("Get", context.Background(), runtimeCR).Return(fakeRuntimeClient, nil)
+
+		// when
+		configurator := NewConfigurator(kcpClient, m, configWithCTB)
+		err := configurator.Configure(context.Background(), runtimeCR)
+
+		// then
+		m.AssertExpectations(t)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "failed to apply ClusterTrustBundle to runtime cluster")
 	})
 }
