@@ -2,9 +2,8 @@ package config
 
 import (
 	"encoding/json"
-	"io"
-
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"io"
 )
 
 type Config struct {
@@ -32,6 +31,7 @@ type DNSConfig struct {
 
 type KubernetesConfig struct {
 	KubeApiServer                       KubeApiServer `json:"kubeApiServer"`
+	Kubelet                             Kubelet       `json:"kubelet"`
 	DefaultVersion                      string        `json:"defaultVersion" validate:"required"`
 	EnableKubernetesVersionAutoUpdate   bool          `json:"enableKubernetesVersionAutoUpdate"`
 	EnableMachineImageVersionAutoUpdate bool          `json:"enableMachineImageVersionAutoUpdate"`
@@ -78,7 +78,13 @@ type MachineImageConfig struct {
 }
 
 type KubeApiServer struct {
-	MaxTokenExpiration string `json:"maxTokenExpiration"`
+	MaxTokenExpiration string          `json:"maxTokenExpiration"`
+	RuntimeConfig      map[string]bool `json:"runtimeConfig"`
+	FeatureGates       map[string]bool `json:"featureGates"`
+}
+
+type Kubelet struct {
+	FeatureGates map[string]bool `json:"featureGates"`
 }
 
 type TolerationsConfig map[string][]gardener.Toleration

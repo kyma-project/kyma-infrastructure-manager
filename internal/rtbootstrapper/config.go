@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -41,12 +42,20 @@ func (c *Configurator) Configure(ctx context.Context, runtime imv1.Runtime) erro
 		}
 	}
 
+	var clusterTrustBundle *certificatesv1beta1.ClusterTrustBundle
+	if c.config.ClusterTrustBundleName != "" {
+		clusterTrustBundle, err = c.getClusterTrustBundle(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to prepare ClusterTrustBundle: %w", err)
+		}
+	}
+
 	runtimeClient, err := c.runtimeClientGetter.Get(ctx, runtime)
 	if err != nil {
 		return fmt.Errorf("failed to get runtimeClient: %w", err)
 	}
 
-	return c.applyResourcesToRuntimeCluster(ctx, runtimeClient, pullSecret, configMap)
+	return c.applyResourcesToRuntimeCluster(ctx, runtimeClient, pullSecret, configMap, clusterTrustBundle)
 }
 
 func getResource[T client.Object](ctx context.Context, kcpClient client.Client, name string, resource T) error {
@@ -72,7 +81,15 @@ func (c *Configurator) getPullSecret(ctx context.Context) (*corev1.Secret, error
 	return sec, nil
 }
 
-func (c *Configurator) applyResourcesToRuntimeCluster(ctx context.Context, runtimeClient client.Client, secret *corev1.Secret, configMap *corev1.ConfigMap) error {
+func (c *Configurator) getClusterTrustBundle(ctx context.Context) (*certificatesv1beta1.ClusterTrustBundle, error) {
+	ctb := &certificatesv1beta1.ClusterTrustBundle{}
+	if err := c.kcpClient.Get(ctx, client.ObjectKey{Name: c.config.ClusterTrustBundleName}, ctb); err != nil {
+		return nil, fmt.Errorf("failed to get ClusterTrustBundle %s: %w", c.config.ClusterTrustBundleName, err)
+	}
+	return ctb, nil
+}
+
+func (c *Configurator) applyResourcesToRuntimeCluster(ctx context.Context, runtimeClient client.Client, secret *corev1.Secret, configMap *corev1.ConfigMap, clusterTrustBundle *certificatesv1beta1.ClusterTrustBundle) error {
 	runtimeConfigMap := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ConfigMap",
@@ -118,5 +135,27 @@ func (c *Configurator) applyResourcesToRuntimeCluster(ctx context.Context, runti
 			return fmt.Errorf("failed to apply bootstrapper PullSecret to runtime cluster: %w", err)
 		}
 	}
+
+	if clusterTrustBundle != nil {
+		ctbToApply := &certificatesv1beta1.ClusterTrustBundle{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ClusterTrustBundle",
+				APIVersion: "certificates.k8s.io/v1beta1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: clusterTrustBundle.Name,
+			},
+			Spec: clusterTrustBundle.Spec,
+		}
+
+		err = runtimeClient.Patch(ctx, ctbToApply, client.Apply, &client.PatchOptions{
+			Force:        ptr.To(true),
+			FieldManager: fieldManagerName,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to apply ClusterTrustBundle to runtime cluster: %w", err)
+		}
+	}
+
 	return nil
 }
