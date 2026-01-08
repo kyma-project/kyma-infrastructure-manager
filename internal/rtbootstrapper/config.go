@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	certificatesv1alpha1 "k8s.io/api/certificates/v1alpha1"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -42,7 +42,7 @@ func (c *Configurator) Configure(ctx context.Context, runtime imv1.Runtime) erro
 		}
 	}
 
-	var clusterTrustBundle *certificatesv1alpha1.ClusterTrustBundle
+	var clusterTrustBundle *certificatesv1beta1.ClusterTrustBundle
 	if c.config.ClusterTrustBundleName != "" {
 		clusterTrustBundle, err = c.getClusterTrustBundle(ctx)
 		if err != nil {
@@ -81,15 +81,15 @@ func (c *Configurator) getPullSecret(ctx context.Context) (*corev1.Secret, error
 	return sec, nil
 }
 
-func (c *Configurator) getClusterTrustBundle(ctx context.Context) (*certificatesv1alpha1.ClusterTrustBundle, error) {
-	ctb := &certificatesv1alpha1.ClusterTrustBundle{}
+func (c *Configurator) getClusterTrustBundle(ctx context.Context) (*certificatesv1beta1.ClusterTrustBundle, error) {
+	ctb := &certificatesv1beta1.ClusterTrustBundle{}
 	if err := c.kcpClient.Get(ctx, client.ObjectKey{Name: c.config.ClusterTrustBundleName}, ctb); err != nil {
 		return nil, fmt.Errorf("failed to get ClusterTrustBundle %s: %w", c.config.ClusterTrustBundleName, err)
 	}
 	return ctb, nil
 }
 
-func (c *Configurator) applyResourcesToRuntimeCluster(ctx context.Context, runtimeClient client.Client, secret *corev1.Secret, configMap *corev1.ConfigMap, clusterTrustBundle *certificatesv1alpha1.ClusterTrustBundle) error {
+func (c *Configurator) applyResourcesToRuntimeCluster(ctx context.Context, runtimeClient client.Client, secret *corev1.Secret, configMap *corev1.ConfigMap, clusterTrustBundle *certificatesv1beta1.ClusterTrustBundle) error {
 	runtimeConfigMap := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ConfigMap",
@@ -137,10 +137,10 @@ func (c *Configurator) applyResourcesToRuntimeCluster(ctx context.Context, runti
 	}
 
 	if clusterTrustBundle != nil {
-		ctbToApply := &certificatesv1alpha1.ClusterTrustBundle{
+		ctbToApply := &certificatesv1beta1.ClusterTrustBundle{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ClusterTrustBundle",
-				APIVersion: "certificates.k8s.io/v1alpha1",
+				APIVersion: "certificates.k8s.io/v1beta1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: clusterTrustBundle.Name,

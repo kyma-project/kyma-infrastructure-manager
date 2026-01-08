@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	certificatesv1alpha1 "k8s.io/api/certificates/v1alpha1"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -49,11 +49,11 @@ func Test_Configure(t *testing.T) {
 		},
 	}
 
-	clusterTrustBundle := &certificatesv1alpha1.ClusterTrustBundle{
+	clusterTrustBundle := &certificatesv1beta1.ClusterTrustBundle{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-cluster-trust-bundle",
 		},
-		Spec: certificatesv1alpha1.ClusterTrustBundleSpec{
+		Spec: certificatesv1beta1.ClusterTrustBundleSpec{
 			TrustBundle: "-----BEGIN CERTIFICATE-----\ntest-certificate-data\n-----END CERTIFICATE-----",
 		},
 	}
@@ -61,7 +61,7 @@ func Test_Configure(t *testing.T) {
 	runtimeCR := minimalRuntime()
 	scheme := runtime.NewScheme()
 	util.Must(corev1.AddToScheme(scheme))
-	util.Must(certificatesv1alpha1.AddToScheme(scheme))
+	util.Must(certificatesv1beta1.AddToScheme(scheme))
 
 	t.Run("Should successfully apply bootstrapper ConfigMap, PullSecret and ClusterTrustBundle to the runtime cluster", func(t *testing.T) {
 		// given
@@ -80,29 +80,9 @@ func Test_Configure(t *testing.T) {
 		m.AssertExpectations(t)
 		require.NoError(t, err)
 
-		var skrSecret corev1.Secret
-		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "registry-credentials", Namespace: "kyma-system"}, &skrSecret)
-		require.NoError(t, err)
-
-		assert.Equal(t, pullSecret.Type, skrSecret.Type)
-		assert.NotNil(t, skrSecret.Data[corev1.DockerConfigJsonKey])
-		assert.Equal(t, pullSecret.Data[corev1.DockerConfigJsonKey], skrSecret.Data[corev1.DockerConfigJsonKey])
-		assert.Equal(t, "registry-credentials", skrSecret.Name)
-		assert.Equal(t, "kyma-system", skrSecret.Namespace)
-
-		var skrConfigMap corev1.ConfigMap
-		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "rt-bootstrapper-config", Namespace: "kyma-system"}, &skrConfigMap)
-		require.NoError(t, err)
-
-		assert.Equal(t, "rt-bootstrapper-config", skrConfigMap.Name)
-		assert.Equal(t, "kyma-system", skrConfigMap.Namespace)
-
-		var skrCTB certificatesv1alpha1.ClusterTrustBundle
-		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "test-cluster-trust-bundle"}, &skrCTB)
-		require.NoError(t, err)
-
-		assert.Equal(t, clusterTrustBundle.Name, skrCTB.Name)
-		assert.Equal(t, clusterTrustBundle.Spec.TrustBundle, skrCTB.Spec.TrustBundle)
+		assertPullSecret(t, fakeClient, pullSecret)
+		assertConfigMap(t, fakeClient)
+		assertClusterTrustBundle(t, fakeClient, clusterTrustBundle)
 	})
 
 	t.Run("Should successfully apply bootstrapper ConfigMap and PullSecret to the runtime cluster", func(t *testing.T) {
@@ -120,22 +100,8 @@ func Test_Configure(t *testing.T) {
 		m.AssertExpectations(t)
 		require.NoError(t, err)
 
-		var skrSecret corev1.Secret
-		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "registry-credentials", Namespace: "kyma-system"}, &skrSecret)
-		require.NoError(t, err)
-
-		assert.Equal(t, pullSecret.Type, skrSecret.Type)
-		assert.NotNil(t, skrSecret.Data[corev1.DockerConfigJsonKey])
-		assert.Equal(t, pullSecret.Data[corev1.DockerConfigJsonKey], skrSecret.Data[corev1.DockerConfigJsonKey])
-		assert.Equal(t, "registry-credentials", skrSecret.Name)
-		assert.Equal(t, "kyma-system", skrSecret.Namespace)
-
-		var skrConfigMap corev1.ConfigMap
-		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "rt-bootstrapper-config", Namespace: "kyma-system"}, &skrConfigMap)
-		require.NoError(t, err)
-
-		assert.Equal(t, "rt-bootstrapper-config", skrConfigMap.Name)
-		assert.Equal(t, "kyma-system", skrConfigMap.Namespace)
+		assertPullSecret(t, fakeClient, pullSecret)
+		assertConfigMap(t, fakeClient)
 	})
 
 	t.Run("Should successfully apply only ConfigMap when PullSecret is not configured", func(t *testing.T) {
@@ -290,4 +256,34 @@ func Test_Configure(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "failed to apply ClusterTrustBundle to runtime cluster")
 	})
+}
+
+func assertPullSecret(t *testing.T, runtimeClient client.Client, expectedSecret *corev1.Secret) {
+	var skrSecret corev1.Secret
+	err := runtimeClient.Get(context.Background(), types.NamespacedName{Name: "registry-credentials", Namespace: "kyma-system"}, &skrSecret)
+	require.NoError(t, err)
+
+	assert.Equal(t, expectedSecret.Type, skrSecret.Type)
+	assert.NotNil(t, skrSecret.Data[corev1.DockerConfigJsonKey])
+	assert.Equal(t, expectedSecret.Data[corev1.DockerConfigJsonKey], skrSecret.Data[corev1.DockerConfigJsonKey])
+	assert.Equal(t, "registry-credentials", skrSecret.Name)
+	assert.Equal(t, "kyma-system", skrSecret.Namespace)
+}
+
+func assertConfigMap(t *testing.T, runtimeClient client.Client) {
+	var skrConfigMap corev1.ConfigMap
+	err := runtimeClient.Get(context.Background(), types.NamespacedName{Name: "rt-bootstrapper-config", Namespace: "kyma-system"}, &skrConfigMap)
+	require.NoError(t, err)
+
+	assert.Equal(t, "rt-bootstrapper-config", skrConfigMap.Name)
+	assert.Equal(t, "kyma-system", skrConfigMap.Namespace)
+}
+
+func assertClusterTrustBundle(t *testing.T, runtimeClient client.Client, expectedCTB *certificatesv1beta1.ClusterTrustBundle) {
+	var skrCTB certificatesv1beta1.ClusterTrustBundle
+	err := runtimeClient.Get(context.Background(), types.NamespacedName{Name: expectedCTB.Name}, &skrCTB)
+	require.NoError(t, err)
+
+	assert.Equal(t, expectedCTB.Name, skrCTB.Name)
+	assert.Equal(t, expectedCTB.Spec.TrustBundle, skrCTB.Spec.TrustBundle)
 }
