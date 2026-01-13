@@ -16,7 +16,7 @@ require (
 	github.com/kyma-project/lifecycle-manager/api v0.0.0-20250415061517-3922bac13370
 	github.com/kyma-project/registry-cache v0.0.0-20251023124504-71bc19cf102a
 	github.com/onsi/ginkgo/v2 v2.27.4
-	github.com/onsi/gomega v1.38.3
+	github.com/onsi/gomega v1.39.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/stretchr/testify v1.11.1
@@ -86,9 +86,9 @@ require (
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/term v0.38.0 // indirect
-	golang.org/x/text v0.32.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	golang.org/x/tools v0.40.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
@@ -107,7 +107,7 @@ require (
 replace (
 	golang.org/x/crypto => golang.org/x/crypto v0.46.0
 	golang.org/x/net => golang.org/x/net v0.48.0
-	golang.org/x/sys => golang.org/x/sys v0.39.0
-	golang.org/x/text => golang.org/x/text v0.32.0
+	golang.org/x/sys => golang.org/x/sys v0.40.0
+	golang.org/x/text => golang.org/x/text v0.33.0
 	golang.org/x/tools => golang.org/x/tools v0.40.0
 )
