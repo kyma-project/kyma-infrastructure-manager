@@ -85,7 +85,7 @@ func removeFinalizerAndStop(ctx context.Context, m *fsm, s *systemState) (stateF
 	if err != nil {
 		return updateStatusAndStopWithError(err)
 	}
-	LogLastErrors(s, m)
+
 	m.log.Info("Shoot deleted")
 
 	// remove from metrics
