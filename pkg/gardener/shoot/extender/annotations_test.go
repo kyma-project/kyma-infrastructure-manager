@@ -1,8 +1,9 @@
 package extender
 
 import (
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"testing"
+
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/stretchr/testify/assert"
@@ -32,7 +33,11 @@ func TestAnnotationsExtender(t *testing.T) {
 			},
 			expectedAnnotations: map[string]string{
 				"infrastructuremanager.kyma-project.io/runtime-id":         "runtime-id",
-				"infrastructuremanager.kyma-project.io/runtime-generation": "100"},
+				"infrastructuremanager.kyma-project.io/runtime-generation": "100",
+				"shoot.gardener.cloud/cleanup-extended-apis-finalize-grace-period-seconds": "120",
+				"shoot.gardener.cloud/cleanup-kubernetes-resources-finalize-grace-period-seconds": "120",
+				"shoot.gardener.cloud/cleanup-webhooks-finalize-grace-period-seconds": "60",
+			},
 		},
 		{
 			name: "Create licence type annotation",
@@ -53,7 +58,11 @@ func TestAnnotationsExtender(t *testing.T) {
 			expectedAnnotations: map[string]string{
 				"infrastructuremanager.kyma-project.io/runtime-id":         "runtime-id",
 				"infrastructuremanager.kyma-project.io/licence-type":       "licence",
-				"infrastructuremanager.kyma-project.io/runtime-generation": "0"},
+				"infrastructuremanager.kyma-project.io/runtime-generation": "0",
+				"shoot.gardener.cloud/cleanup-extended-apis-finalize-grace-period-seconds": "120",
+				"shoot.gardener.cloud/cleanup-kubernetes-resources-finalize-grace-period-seconds": "120",
+				"shoot.gardener.cloud/cleanup-webhooks-finalize-grace-period-seconds": "60",
+			},
 		},
 	} {
 		// given
