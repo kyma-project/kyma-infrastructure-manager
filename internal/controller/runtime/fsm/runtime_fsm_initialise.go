@@ -3,6 +3,7 @@ package fsm
 import (
 	"context"
 	"fmt"
+
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -84,7 +85,7 @@ func removeFinalizerAndStop(ctx context.Context, m *fsm, s *systemState) (stateF
 	if err != nil {
 		return updateStatusAndStopWithError(err)
 	}
-
+	LogLastErrors(s, m)
 	m.log.Info("Shoot deleted")
 
 	// remove from metrics
