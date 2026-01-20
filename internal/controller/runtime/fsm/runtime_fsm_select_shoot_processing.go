@@ -57,10 +57,10 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 }
 
 func LogLastErrors(s *systemState, m *fsm) {
-func LogLastErrors(s *systemState, m *fsm) {
 	if s.shoot == nil {
 		return
 	}
+
 	status := s.shoot.Status
 	state := status.LastOperation.State
 	lastErrors := status.LastErrors
