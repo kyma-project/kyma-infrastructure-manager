@@ -18,7 +18,7 @@ const (
 	ShootLicenceTypeAnnotation       = "infrastructuremanager.kyma-project.io/licence-type"
 	RuntimeIDLabel                   = "kyma-project.io/runtime-id"
 	ShootCleanupExtendedApisGracePeriodAnnotation = "shoot.gardener.cloud/cleanup-extended-apis-finalize-grace-period-seconds"
-	DefaultShootCleanupExtendedApisGracePeriodValue= "120"
+	DefaultShootCleanupExtendedApisGracePeriodValue = "120"
 	ShootCleanupKubernetesResourcesGracePeriodAnnotation = "shoot.gardener.cloud/cleanup-kubernetes-resources-finalize-grace-period-seconds"
 	DefaultCleanupKubernetesResourcesGracePeriodValue= "120"
 	ShootCleanupWebhooksGracePeriodAnnotation = "shoot.gardener.cloud/cleanup-webhooks-finalize-grace-period-seconds"
