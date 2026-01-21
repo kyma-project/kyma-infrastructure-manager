@@ -2,6 +2,7 @@ package fsm
 
 import (
 	"context"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
@@ -16,6 +17,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	// wait section
 	if !s.shoot.GetDeletionTimestamp().IsZero() {
 		m.log.V(log_level.DEBUG).Info("Waiting for shoot to be deleted", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
+		LogLastErrors(s, m)
 		return updateStatusAndRequeueAfter(m.RequeueDurationShootDelete)
 	}
 

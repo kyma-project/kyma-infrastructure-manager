@@ -28,7 +28,7 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 		return requeueAfter(m.GardenerRequeueDuration)
 	}
 
-	logLastErrors(s, m)
+	LogLastErrors(s, m)
 
 	patchShoot, err := shouldPatchShoot(&s.instance, s.shoot, &m.log)
 	if err != nil {
@@ -56,7 +56,11 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 	return stop()
 }
 
-func logLastErrors(s *systemState, m *fsm) {
+func LogLastErrors(s *systemState, m *fsm) {
+	if s.shoot == nil {
+		return
+	}
+
 	status := s.shoot.Status
 	state := status.LastOperation.State
 	lastErrors := status.LastErrors
