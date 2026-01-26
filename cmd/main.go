@@ -25,7 +25,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/kyma-project/infrastructure-manager/internal/controller"
+	secretctrl "github.com/kyma-project/infrastructure-manager/internal/controller/secret"
 	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -305,7 +305,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := (&controller.SecretReconciler{
+	if err := (&secretctrl.SecretReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
