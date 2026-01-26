@@ -25,23 +25,13 @@ import (
 	"os"
 	"time"
 
+	"github.com/kyma-project/infrastructure-manager/internal/controller"
 	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenerapis "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	"github.com/go-logr/logr"
 	validator "github.com/go-playground/validator/v10"
-	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	kubeconfigcontroller "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
-	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
-	runtimecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
-	"github.com/kyma-project/infrastructure-manager/pkg/config"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -58,6 +48,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
+	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	kubeconfigcontroller "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig"
+	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
+	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
+	runtimecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
+	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 )
 
 var (
@@ -303,6 +305,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := (&controller.SecretReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Secret")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err = mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
