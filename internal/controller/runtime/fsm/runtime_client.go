@@ -11,6 +11,7 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 //go:generate mockery --name=RuntimeClientGetter
@@ -27,6 +28,12 @@ type runtimeClientGetter struct {
 	kcpClient client.Client
 }
 
+// runtimeClientGetterWithScheme will use a provided scheme when building runtime clients.
+type runtimeClientGetterWithScheme struct {
+	kcpClient client.Client
+	scheme    *runtime.Scheme
+}
+
 type runtimeDynamicClientGetter struct {
 	kcpClient client.Client
 }
@@ -34,6 +41,15 @@ type runtimeDynamicClientGetter struct {
 func NewRuntimeClientGetter(kcpClient client.Client) RuntimeClientGetter {
 	return &runtimeClientGetter{
 		kcpClient: kcpClient,
+	}
+}
+
+// NewRuntimeClientGetterWithScheme returns a RuntimeClientGetter that builds runtime clients
+// using the provided prebuilt scheme. This avoids registering scheme types concurrently.
+func NewRuntimeClientGetterWithScheme(kcpClient client.Client, scheme *runtime.Scheme) RuntimeClientGetter {
+	return &runtimeClientGetterWithScheme{
+		kcpClient: kcpClient,
+		scheme:    scheme,
 	}
 }
 
@@ -50,6 +66,15 @@ func (r *runtimeClientGetter) Get(ctx context.Context, runtime imv1.Runtime) (cl
 	}
 
 	return gardener.GetRuntimeClient(secret)
+}
+
+func (r *runtimeClientGetterWithScheme) Get(ctx context.Context, runtime imv1.Runtime) (client.Client, error) {
+	secret, err := getKubeconfigSecret(ctx, r.kcpClient, runtime.Labels[imv1.LabelKymaRuntimeID], runtime.Namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	return gardener.GetRuntimeClientWithScheme(secret, r.scheme)
 }
 
 func (r *runtimeDynamicClientGetter) Get(ctx context.Context, runtime imv1.Runtime) (dynamic.Interface, discovery.DiscoveryInterface, error) {

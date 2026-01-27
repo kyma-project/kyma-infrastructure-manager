@@ -58,6 +58,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
+	// packages used to prebuild runtime scheme
+	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
+	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
+	gardeneroidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 var (
@@ -251,7 +257,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	runtimeClientGetter := fsm.NewRuntimeClientGetter(mgr.GetClient())
+	// build a shared scheme used for runtime clients to avoid concurrent AddToScheme calls
+	prebuiltRuntimeScheme := runtime.NewScheme()
+	// register the types used by runtime clients
+	utilruntime.Must(clientgoscheme.AddToScheme(prebuiltRuntimeScheme))
+	utilruntime.Must(registrycacheapi.AddToScheme(prebuiltRuntimeScheme))
+	utilruntime.Must(kyma.AddToScheme(prebuiltRuntimeScheme))
+	utilruntime.Must(gardeneroidc.AddToScheme(prebuiltRuntimeScheme))
+	utilruntime.Must(apiextensions.AddToScheme(prebuiltRuntimeScheme))
+
+	// create a RuntimeClientGetter that uses the prebuilt scheme
+	runtimeClientGetter := fsm.NewRuntimeClientGetterWithScheme(mgr.GetClient(), prebuiltRuntimeScheme)
 
 	var runtimeBootstrapperInstaller *rtbootstrapper.Installer
 
@@ -317,7 +333,12 @@ func main() {
 	refreshRuntimeMetrics(restConfig, logger, metrics)
 
 	if registryCacheConfigControllerEnabled {
-		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, gardener.GetRuntimeClient)
+		// use closure that creates runtime client with prebuilt scheme
+		runtimeClientClosure := func(secret corev1.Secret) (client.Client, error) {
+			return gardener.GetRuntimeClientWithScheme(secret, prebuiltRuntimeScheme)
+		}
+
+		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, runtimeClientClosure)
 		if err = registryCacheConfigReconciler.SetupWithManager(mgr, 1); err != nil {
 			setupLog.Error(err, "unable to setup registry cache config controller with Manager", "controller", "Runtime")
 			os.Exit(1)
