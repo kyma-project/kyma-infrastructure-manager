@@ -258,13 +258,7 @@ func main() {
 	}
 
 	// build a shared scheme used for runtime clients to avoid concurrent AddToScheme calls
-	prebuiltRuntimeScheme := runtime.NewScheme()
-	// register the types used by runtime clients
-	utilruntime.Must(clientgoscheme.AddToScheme(prebuiltRuntimeScheme))
-	utilruntime.Must(registrycacheapi.AddToScheme(prebuiltRuntimeScheme))
-	utilruntime.Must(kyma.AddToScheme(prebuiltRuntimeScheme))
-	utilruntime.Must(gardeneroidc.AddToScheme(prebuiltRuntimeScheme))
-	utilruntime.Must(apiextensions.AddToScheme(prebuiltRuntimeScheme))
+	prebuiltRuntimeScheme := CreateRuntimeScheme()
 
 	// create a RuntimeClientGetter that uses the prebuilt scheme
 	runtimeClientGetter := fsm.NewRuntimeClientGetterWithScheme(mgr.GetClient(), prebuiltRuntimeScheme)
@@ -351,6 +345,17 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func CreateRuntimeScheme() *runtime.Scheme {
+	prebuiltRuntimeScheme := runtime.NewScheme()
+	// register the types used by runtime clients
+	utilruntime.Must(clientgoscheme.AddToScheme(prebuiltRuntimeScheme))
+	utilruntime.Must(registrycacheapi.AddToScheme(prebuiltRuntimeScheme))
+	utilruntime.Must(kyma.AddToScheme(prebuiltRuntimeScheme))
+	utilruntime.Must(gardeneroidc.AddToScheme(prebuiltRuntimeScheme))
+	utilruntime.Must(apiextensions.AddToScheme(prebuiltRuntimeScheme))
+	return prebuiltRuntimeScheme
 }
 
 func initGardenerClients(kubeconfigPath string, namespace string, timeout time.Duration, rlQPS, rlBurst int) (client.Client, gardenerapis.ShootInterface, client.SubResourceClient, error) {

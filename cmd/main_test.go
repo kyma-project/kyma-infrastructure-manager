@@ -8,19 +8,11 @@ import (
 	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 )
 
 func TestPrebuiltRuntimeSchemeRegistersTypes(t *testing.T) {
 	// Build the scheme the same way main.go does
-	prebuiltRuntimeScheme := runtime.NewScheme()
-	utilruntime.Must(clientgoscheme.AddToScheme(prebuiltRuntimeScheme))
-	utilruntime.Must(registrycacheapi.AddToScheme(prebuiltRuntimeScheme))
-	utilruntime.Must(kyma.AddToScheme(prebuiltRuntimeScheme))
-	utilruntime.Must(gardeneroidc.AddToScheme(prebuiltRuntimeScheme))
-	utilruntime.Must(apiextensions.AddToScheme(prebuiltRuntimeScheme))
+	prebuiltRuntimeScheme := CreateRuntimeScheme()
 
 	// Verify Kyma Kyma type is registered
 	if gvks, _, err := prebuiltRuntimeScheme.ObjectKinds(&kyma.Kyma{}); err != nil {
