@@ -307,12 +307,14 @@ func main() {
 	}
 
 	if err := (&configctrl.ConfigWatcher{
-		Skr:    mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Opts: configctrl.Opts{
-			ImagePullSecret:    types.NamespacedName{},
+		Kcp: configctrl.Cfg{
+			Client:             mgr.GetClient(),
+			Namespace:          "kcp-system",
 			ClusterTrustBundle: types.NamespacedName{},
+			ImagePullSecret:    types.NamespacedName{},
+			RtBootstrapperCfg:  types.NamespacedName{},
 		},
+		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Secret")
 		os.Exit(1)
