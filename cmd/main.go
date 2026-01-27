@@ -59,10 +59,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	gardeneroidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
+	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	// packages used to prebuild runtime scheme
 	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
-	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
-	gardeneroidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 

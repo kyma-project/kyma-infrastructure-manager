@@ -12,11 +12,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func NewRestConfigFromFile(kubeconfigFilePath string) (*restclient.Config, error) {
@@ -40,6 +40,10 @@ const (
 // GetRuntimeClientWithScheme creates a controller-runtime client for the given kubeconfig secret
 // using the provided scheme (which must already have the required types registered).
 func GetRuntimeClientWithScheme(secret corev1.Secret, scheme *runtime.Scheme) (client.Client, error) {
+	if secret.Data == nil {
+		return nil, fmt.Errorf("kubeconfig secret `%s` does not contain kubeconfig data", secret.Name)
+	}
+
 	restConfig, err := clientcmd.RESTConfigFromKubeConfig(secret.Data[kubeconfigSecretKey])
 	if err != nil {
 		return nil, err
@@ -57,6 +61,10 @@ func GetRuntimeClientWithScheme(secret corev1.Secret, scheme *runtime.Scheme) (c
 // This is a convenience wrapper that builds and registers a scheme locally for the client.
 // Prefer using GetRuntimeClientWithScheme with a pre-built scheme to avoid repeated registrations.
 func GetRuntimeClient(secret corev1.Secret) (client.Client, error) {
+	if secret.Data == nil {
+		return nil, fmt.Errorf("kubeconfig secret `%s` does not contain kubeconfig data", secret.Name)
+	}
+
 	restConfig, err := clientcmd.RESTConfigFromKubeConfig(secret.Data[kubeconfigSecretKey])
 	if err != nil {
 		return nil, err
