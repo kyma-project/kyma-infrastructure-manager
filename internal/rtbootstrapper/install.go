@@ -3,13 +3,14 @@ package rtbootstrapper
 import (
 	"context"
 
+	"strings"
+
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 )
 
 type Installer struct {
@@ -59,7 +60,7 @@ func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter Ru
 }
 
 func (r *Installer) Install(ctx context.Context, runtime imv1.Runtime) error {
-	err := r.configurator.Configure(context.Background(), runtime)
+	err := r.configurator.Configure(ctx, runtime)
 	if err != nil {
 		return errors.Wrap(err, "failed to prepare for installation Runtime Bootstrapper installation")
 	}

@@ -19,7 +19,10 @@ package config
 import (
 	"context"
 	"fmt"
+	"time"
 
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,16 +36,12 @@ import (
 
 type UpdateRsc func(context.Context) error
 
-type Cfg struct {
-	ClusterTrustBundle types.NamespacedName
-	ImagePullSecret    types.NamespacedName
-	client.Client
-}
-
 // ConfigWatcher reconciles a Secret object
 type ConfigWatcher struct {
 	Scheme *runtime.Scheme
-	Kcp    Cfg
+	client.Client
+	rtbootstrapper.Config
+	*rtbootstrapper.Configurator
 }
 
 var ErrConfigUpdateFailed = fmt.Errorf("configuration update failed")
@@ -51,46 +50,43 @@ var ErrConfigUpdateFailed = fmt.Errorf("configuration update failed")
 // +kubebuilder:rbac:groups=kyma-project.io,resources=secrets/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=kyma-project.io,resources=secrets/finalizers,verbs=update
 
-func (r *ConfigWatcher) UpdateImagePullSecret(ctx context.Context) error {
-	var kcpSecret corev1.Secret
-
-	if err := r.Kcp.Get(ctx, r.Kcp.ImagePullSecret, &kcpSecret); err != nil {
-		return err
-	}
-
-	panic("not implemented yet")
-}
-
-func (r *ConfigWatcher) UpdateClusterTrustBundle(ctx context.Context) error {
-
-	// err := r.Kcp.Get(ctx, r.Kcp.ClusterTrustBundle, &kcpClusterTrustBundle)
-
-	panic("not implemented yet")
-}
-
 func (r *ConfigWatcher) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := logf.FromContext(ctx)
+	timeReconciliationStarted := time.Now()
 
-	updateSuccess := true
-	for _, step := range []struct {
-		name    string
-		execute UpdateRsc
-	}{
-		{
-			name:    "update image-pull-secret data",
-			execute: r.UpdateImagePullSecret,
-		},
-	} {
-		if err := step.execute(ctx); err != nil {
-			logger.Error(err, "configuration update failed",
-				"stepName", step.name,
-			)
-			updateSuccess = false
-		}
+	logger := logf.FromContext(ctx)
+	defer func() {
+		reconciliationDuration := time.Since(timeReconciliationStarted)
+		logger.Info("reconciliation finished",
+			"milliseconds", reconciliationDuration.Milliseconds())
+	}()
+
+	logger.Info("reconciliation started")
+
+	var runtimes imv1.RuntimeList
+	err := r.List(ctx, &runtimes, &client.ListOptions{
+		Namespace: r.DeploymentNamespacedName,
+	})
+
+	if err != nil {
+		logger.Error(err, "failed to list runtimes")
+		return ctrl.Result{}, ErrConfigUpdateFailed
 	}
 
-	if !updateSuccess {
-		logger.Error(ErrConfigUpdateFailed, "failed to update rt-bootstrapper configuration")
+	success := true
+	for _, item := range runtimes.Items {
+		if err := r.Configure(ctx, item); err != nil {
+			logger.Error(err, "runtime configuration failed",
+				"name", item.Name,
+				"namespace", item.Namespace)
+			success = false
+		}
+
+		logger.Info("runtime configured",
+			"name", item.Name,
+			"namespace", item.Namespace)
+	}
+
+	if !success {
 		return ctrl.Result{}, ErrConfigUpdateFailed
 	}
 
@@ -100,15 +96,30 @@ func (r *ConfigWatcher) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 // SetupWithManager sets up the controller with the Manager.
 func (r *ConfigWatcher) SetupWithManager(mgr ctrl.Manager) error {
 
+	clusterTrustBundleID := types.NamespacedName{
+		Name: r.ClusterTrustBundleName,
+	}
+
+	rtBootstrapperConfigurationID := types.NamespacedName{
+		Name:      r.ConfigName,
+		Namespace: r.DeploymentNamespacedName,
+	}
+
+	imagePullSecretID := types.NamespacedName{
+		Name:      r.PullSecretName,
+		Namespace: r.DeploymentNamespacedName,
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("config").
 		Watches(&certificatesv1beta1.ClusterTrustBundle{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(createResourcePredicate{
-				r.Kcp.ClusterTrustBundle})).
+			builder.WithPredicates(createResourcePredicate{clusterTrustBundleID})).
 		Watches(&corev1.Secret{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(createResourcePredicate{
-				r.Kcp.ImagePullSecret})).
+			builder.WithPredicates(createResourcePredicate{imagePullSecretID})).
+		Watches(&corev1.ConfigMap{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(createResourcePredicate{rtBootstrapperConfigurationID})).
 		Complete(r)
 }

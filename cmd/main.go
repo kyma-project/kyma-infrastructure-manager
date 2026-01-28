@@ -37,7 +37,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8slabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -268,11 +267,23 @@ func main() {
 			DeploymentNamespacedName: runtimeBootstrapperDeploymentName,
 		}
 
-		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(rtbConfig)
+		var runtimeBootstrapperConfigurator *rtbootstrapper.Configurator
+		runtimeBootstrapperConfigurator, runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(rtbConfig)
 		if err != nil {
 			setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
 			os.Exit(1)
 		}
+
+		if err := (&configctrl.ConfigWatcher{
+			Scheme:       mgr.GetScheme(),
+			Configurator: runtimeBootstrapperConfigurator,
+			Client:       mgr.GetClient(),
+			Config:       rtbConfig,
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Secret")
+			os.Exit(1)
+		}
+
 	}
 
 	cfg := fsm.RCCfg{
@@ -306,17 +317,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := (&configctrl.ConfigWatcher{
-		Skr:    mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Opts: configctrl.Opts{
-			ImagePullSecret:    types.NamespacedName{},
-			ClusterTrustBundle: types.NamespacedName{},
-		},
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Secret")
-		os.Exit(1)
-	}
 	//+kubebuilder:scaffold:builder
 
 	if err = mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -448,23 +448,28 @@ func restrictWatchedNamespace() cache.Options {
 	}
 }
 
-func configureRuntimeBootstrapper(config rtbootstrapper.Config) (*rtbootstrapper.Installer, error) {
+func configureRuntimeBootstrapper(config rtbootstrapper.Config) (*rtbootstrapper.Configurator, *rtbootstrapper.Installer, error) {
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
+		return nil, nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
 	}
 
 	kcpClient, err := client.New(cfg, client.Options{Scheme: scheme})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
+		return nil, nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
 	}
 
 	err = rtbootstrapper.NewValidator(config, kcpClient).Validate(context.Background())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return rtbootstrapper.NewInstaller(config, kcpClient, fsm.NewRuntimeClientGetter(kcpClient), fsm.NewRuntimeDynamicClientGetter(kcpClient)), nil
+	rtClientGetter := fsm.NewRuntimeClientGetter(kcpClient)
+
+	configurator := rtbootstrapper.NewConfigurator(kcpClient, rtClientGetter, config)
+	installer := rtbootstrapper.NewInstaller(config, kcpClient, rtClientGetter, fsm.NewRuntimeDynamicClientGetter(kcpClient))
+
+	return configurator, installer, nil
 }
 
 func enableClusterTrustBundleFeatureForSKR(converterConfig *config.ConverterConfig) {
