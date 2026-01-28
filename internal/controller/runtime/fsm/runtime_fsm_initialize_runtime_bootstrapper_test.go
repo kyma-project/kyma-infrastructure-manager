@@ -72,7 +72,6 @@ func Test_sFnInitializeRuntimeBootstrapper_Ready(t *testing.T) {
 	assertEqualConditions(t, expectedRuntimeConditions, ss.instance.Status.Conditions)
 }
 
-// Merge three error-related tests into one table-driven test.
 func Test_sFnInitializeRuntimeBootstrapper_Errors(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -161,12 +160,21 @@ func Test_sFnInitializeRuntimeBootstrapper_InProgress(t *testing.T) {
 		}
 	}
 
-	expectedRuntimeConditions := []metav1.Condition{
+	expectedRuntimeConditionsInstallation := []metav1.Condition{
 		{
 			Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
 			Reason:  string(imv1.ConditionReasonRuntimeBootstrapperInstallationInProgress),
 			Status:  "False",
 			Message: msgInstallationInProgress,
+		},
+	}
+
+	expectedRuntimeConditionsUpgrade := []metav1.Condition{
+		{
+			Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
+			Reason:  string(imv1.ConditionReasonRuntimeBootstrapperUpgradeInProgress),
+			Status:  "False",
+			Message: msgUpgradeInProgress,
 		},
 	}
 
@@ -187,7 +195,27 @@ func Test_sFnInitializeRuntimeBootstrapper_InProgress(t *testing.T) {
 		require.NotNil(t, next)
 		require.Contains(t, next.name(), "sFnUpdateStatus")
 
-		assertEqualConditions(t, expectedRuntimeConditions, ss.instance.Status.Conditions)
+		assertEqualConditions(t, expectedRuntimeConditionsInstallation, ss.instance.Status.Conditions)
+	})
+
+	t.Run("StatusUpgradeNeeded", func(t *testing.T) {
+		inst := NewMockRuntimeBootstrapperInstaller(t)
+		runtime := minimalRuntime()
+
+		inst.EXPECT().Status(mock.Anything, runtime).Return(rtbootstrapper.StatusUpgradeNeeded, nil)
+		inst.EXPECT().Install(mock.Anything, runtime).Return(nil)
+
+		f := newFSMWith(inst)
+		ss := &systemState{instance: runtime}
+
+		next, res, err := sFnInitializeRuntimeBootstrapper(ctx, f, ss)
+
+		require.NoError(t, err)
+		require.Nil(t, res)
+		require.NotNil(t, next)
+		require.Contains(t, next.name(), "sFnUpdateStatus")
+
+		assertEqualConditions(t, expectedRuntimeConditionsUpgrade, ss.instance.Status.Conditions)
 	})
 
 	t.Run("StatusInProgress", func(t *testing.T) {
@@ -206,7 +234,7 @@ func Test_sFnInitializeRuntimeBootstrapper_InProgress(t *testing.T) {
 		require.NotNil(t, next)
 		require.Contains(t, next.name(), "sFnUpdateStatus")
 
-		assertEqualConditions(t, expectedRuntimeConditions, ss.instance.Status.Conditions)
+		assertEqualConditions(t, expectedRuntimeConditionsInstallation, ss.instance.Status.Conditions)
 	})
 }
 

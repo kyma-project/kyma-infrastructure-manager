@@ -13,7 +13,9 @@ import (
 const (
 	msgStatusCheckFailed      = "Runtime bootstrapper status check failed"
 	msgInstallationFailed     = "Runtime bootstrapper installation failed"
+	msgUpgradeFailed          = "Runtime bootstrapper upgrade failed"
 	msgInstallationInProgress = "Runtime bootstrapper installation in progress"
+	msgUpgradeInProgress      = "Runtime bootstrapper upgrade in progress"
 	msgInstallationCompleted  = "Runtime bootstrapper installation completed"
 	timeout                   = time.Second * 30
 )
@@ -54,6 +56,28 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 					imv1.ConditionReasonRuntimeBootstrapperInstallationInProgress,
 					metav1.ConditionFalse,
 					msgInstallationInProgress,
+				)
+			}
+
+			return updateStatusAndRequeueAfter(timeout)
+		}
+	case rtbootstrapper.StatusUpgradeNeeded:
+		{
+			err := m.RuntimeBootstrapperInstaller.Install(ctx, s.instance)
+			if err != nil {
+				m.log.Error(err, "Failed to start runtime bootstrapper upgrade")
+				s.instance.UpdateStatePending(
+					imv1.ConditionTypeRuntimeBootstrapperReady,
+					imv1.ConditionReasonRuntimeBootstrapperUpgradeFailed,
+					metav1.ConditionFalse,
+					msgUpgradeFailed,
+				)
+			} else {
+				s.instance.UpdateStatePending(
+					imv1.ConditionTypeRuntimeBootstrapperReady,
+					imv1.ConditionReasonRuntimeBootstrapperUpgradeInProgress,
+					metav1.ConditionFalse,
+					msgUpgradeInProgress,
 				)
 			}
 
