@@ -23,7 +23,7 @@ func (p createResourcePredicate) slogArgs() []any {
 }
 
 func (p createResourcePredicate) match(e event.TypedUpdateEvent[client.Object]) bool {
-	return p.Name == e.ObjectNew.GetName() && p.Namespace == e.ObjectOld.GetNamespace()
+	return p.Name == e.ObjectNew.GetName() && p.Namespace == e.ObjectNew.GetNamespace()
 }
 
 // Create - handles the case of namespace creation (omits events comming from

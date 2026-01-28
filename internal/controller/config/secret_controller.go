@@ -19,11 +19,12 @@ package config
 import (
 	"context"
 	"fmt"
-	"time"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -35,14 +36,11 @@ import (
 )
 
 var (
-	AnnotationConfigurationChanged = "operator.kyma-project.io/configuration-updated"
-	ErrRuntimeNotificationFailed   = fmt.Errorf("runtime notification failed")
-	fieldManager                   = "config-watcher"
+	ErrRuntimeNotificationFailed = fmt.Errorf("runtime notification failed")
+	fieldManager                 = "config-watcher"
 )
 
 type UpdateRsc func(context.Context) error
-
-// TODO talk about potential alerting if the configuration is invalid
 
 type Cfg struct {
 	Namespace          string
@@ -58,10 +56,10 @@ type ConfigWatcher struct {
 	Kcp    Cfg
 }
 
-// +kubebuilder:rbac:groups=kyma-project.io,resources=secrets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=kyma-project.io,resources=secrets/status,verbs=get;update;patch
-
-// +kubebuilder:rbac:groups=kyma-project.io,resources=secrets/finalizers,verbs=update
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=watch
+// +kubebuilder:rbac:groups=certificates.k8s.io,resources=clustertrustbundles,verbs=watch
+// +kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=runtimes,verbs=list;patch
 
 func (r *ConfigWatcher) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := logf.FromContext(ctx)
@@ -76,7 +74,6 @@ func (r *ConfigWatcher) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	now := time.Now()
 	success := true
 	for _, item := range runtimes.Items {
 		var rt imv1.Runtime
@@ -84,9 +81,16 @@ func (r *ConfigWatcher) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		rt.Name = item.Name
 		rt.Namespace = item.Namespace
 		rt.Annotations = item.Annotations
-		rt.Annotations[AnnotationConfigurationChanged] = fmt.Sprintf("%d", now.UnixMicro())
+		rt.TypeMeta = metav1.TypeMeta{
+			APIVersion: imv1.GroupVersion.String(),
+			Kind:       "Runtime",
+		}
+		if rt.Annotations == nil {
+			rt.Annotations = map[string]string{}
+		}
+		rt.Annotations[reconciler.ForceReconcileAnnotation] = "true"
 
-		if err := r.Kcp.Patch(ctx, &item, client.Apply, &client.PatchOptions{
+		if err := r.Kcp.Patch(ctx, &rt, client.Apply, &client.PatchOptions{
 			FieldManager: fieldManager,
 			Force:        ptr.To(true),
 		}); err != nil {
