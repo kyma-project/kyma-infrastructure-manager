@@ -196,16 +196,9 @@ func isDeploymentReady(dep *v1.Deployment) bool {
 }
 
 func isDeploymentToBeUpdated(dep *v1.Deployment, deploymentTag string) bool {
-	for _, container := range dep.Spec.Template.Spec.Containers {
-		if strings.Contains(container.Image, "rt-bootstrapper") {
-			parts := strings.Split(container.Image, ":")
-			if len(parts) == 2 && parts[1] != deploymentTag {
-				return true
-			}
-		}
-	}
+	currentVersion := dep.Labels["app.kubernetes.io/version"]
 
-	return false
+	return currentVersion != deploymentTag
 }
 
 func isDeploymentProgressing(dep *v1.Deployment) bool {

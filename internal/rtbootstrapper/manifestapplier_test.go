@@ -138,7 +138,9 @@ func TestManifestApplier_Status(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "ready-depl",
 			Namespace: "default",
-			Labels:    map[string]string{"app": "ready"},
+			Labels: map[string]string{
+				"app":                       "ready",
+				"app.kubernetes.io/version": "1.0.0"},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: ptr.To(int32(3)),
