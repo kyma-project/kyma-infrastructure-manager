@@ -42,6 +42,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Ready(t *testing.T) {
 
 	inst := NewMockRuntimeBootstrapperInstaller(t)
 	inst.EXPECT().Status(mock.Anything, runtime).Return(rtbootstrapper.StatusReady, nil)
+	inst.EXPECT().Cleanup(mock.Anything, runtime).Return(errors.New("cleanup error"))
 
 	f := &fsm{
 		RCCfg: RCCfg{

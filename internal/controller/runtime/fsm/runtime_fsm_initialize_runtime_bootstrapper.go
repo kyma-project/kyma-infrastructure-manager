@@ -105,6 +105,11 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 				msgInstallationFailed)
 		}
 	case rtbootstrapper.StatusReady:
+		err := m.RuntimeBootstrapperInstaller.Cleanup(ctx, s.instance)
+		if err != nil {
+			m.log.Error(err, "Failed to cleanup after runtime bootstrapper installation")
+		}
+
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRuntimeBootstrapperReady,
 			imv1.ConditionReasonRuntimeBootstrapperConfigured,
