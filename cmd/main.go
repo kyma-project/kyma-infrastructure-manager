@@ -150,7 +150,7 @@ func main() {
 	flag.StringVar(&runtimeBootstrapperPullSecretName, "runtime-bootstrapper-pull-secret-name", "", "Name of the pull secret to be copied to SKR.")
 	flag.StringVar(&runtimeBootstrapperClusterTrustBundle, "runtime-bootstrapper-cluster-trust-bundle", "", "Cluster trust bundle to be copied to SKR.")
 	flag.StringVar(&runtimeBootstrapperDeploymentName, "runtime-bootstrapper-deployment-namespaced-name", "kyma-system/rt-bootstrapper-controller-manager", "Name of the deployment to be observed to verify if installation succeeded. Expected format: <namespace>/<name>")
-	flag.StringVar(&runtimeBootstrapperTag, "runtime-bootstrapper-tag", "kyma-system/rt-bootstrapper-controller-manager", "Tag of the runtime bootstrapper controller manager image.")
+	flag.StringVar(&runtimeBootstrapperTag, "runtime-bootstrapper-tag", "1.0.0", "Tag of the runtime bootstrapper controller manager image.")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
