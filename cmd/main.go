@@ -25,23 +25,13 @@ import (
 	"os"
 	"time"
 
+	configctrl "github.com/kyma-project/infrastructure-manager/internal/controller/config"
 	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenerapis "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	"github.com/go-logr/logr"
 	validator "github.com/go-playground/validator/v10"
-	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	kubeconfigcontroller "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
-	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
-	runtimecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
-	"github.com/kyma-project/infrastructure-manager/pkg/config"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -58,6 +48,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
+	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	kubeconfigcontroller "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig"
+	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
+	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
+	runtimecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
+	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 )
 
 var (
@@ -265,11 +267,23 @@ func main() {
 			DeploymentNamespacedName: runtimeBootstrapperDeploymentName,
 		}
 
-		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(rtbConfig)
+		var runtimeBootstrapperConfigurator *rtbootstrapper.Configurator
+		runtimeBootstrapperConfigurator, runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(rtbConfig)
 		if err != nil {
 			setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
 			os.Exit(1)
 		}
+
+		if err := (&configctrl.ConfigWatcher{
+			Scheme:       mgr.GetScheme(),
+			Configurator: runtimeBootstrapperConfigurator,
+			Client:       mgr.GetClient(),
+			Config:       rtbConfig,
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Secret")
+			os.Exit(1)
+		}
+
 	}
 
 	cfg := fsm.RCCfg{
@@ -434,23 +448,28 @@ func restrictWatchedNamespace() cache.Options {
 	}
 }
 
-func configureRuntimeBootstrapper(config rtbootstrapper.Config) (*rtbootstrapper.Installer, error) {
+func configureRuntimeBootstrapper(config rtbootstrapper.Config) (*rtbootstrapper.Configurator, *rtbootstrapper.Installer, error) {
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
+		return nil, nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
 	}
 
 	kcpClient, err := client.New(cfg, client.Options{Scheme: scheme})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
+		return nil, nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
 	}
 
 	err = rtbootstrapper.NewValidator(config, kcpClient).Validate(context.Background())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return rtbootstrapper.NewInstaller(config, kcpClient, fsm.NewRuntimeClientGetter(kcpClient), fsm.NewRuntimeDynamicClientGetter(kcpClient)), nil
+	rtClientGetter := fsm.NewRuntimeClientGetter(kcpClient)
+
+	configurator := rtbootstrapper.NewConfigurator(kcpClient, rtClientGetter, config)
+	installer := rtbootstrapper.NewInstaller(config, kcpClient, rtClientGetter, fsm.NewRuntimeDynamicClientGetter(kcpClient))
+
+	return configurator, installer, nil
 }
 
 func enableClusterTrustBundleFeatureForSKR(converterConfig *config.ConverterConfig) {
