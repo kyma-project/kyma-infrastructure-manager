@@ -23,16 +23,18 @@ import (
 type ManifestApplier struct {
 	manifestsPath              string
 	deploymentName             types.NamespacedName
+	deploymentTag              string
 	runtimeDynamicClientGetter RuntimeDynamicClientGetter
 	runtimeClientGetter        RuntimeClientGetter
 }
 
-func NewManifestApplier(manifestsPath string, deploymentName types.NamespacedName, runtimeClientGetter RuntimeClientGetter, runtimeDynamicClientGetter RuntimeDynamicClientGetter) *ManifestApplier {
+func NewManifestApplier(manifestsPath string, deploymentName types.NamespacedName, deploymentTag string, runtimeClientGetter RuntimeClientGetter, runtimeDynamicClientGetter RuntimeDynamicClientGetter) *ManifestApplier {
 	return &ManifestApplier{
 		manifestsPath:              manifestsPath,
 		runtimeDynamicClientGetter: runtimeDynamicClientGetter,
 		runtimeClientGetter:        runtimeClientGetter,
 		deploymentName:             deploymentName,
+		deploymentTag:              deploymentTag,
 	}
 }
 
@@ -160,6 +162,9 @@ func (ma ManifestApplier) Status(ctx context.Context, runtime imv1.Runtime) (Ins
 	}
 
 	if isDeploymentReady(&deployment) {
+		if isDeploymentToBeUpdated(&deployment, ma.deploymentTag) {
+			return StatusUpgradeNeeded, nil
+		}
 		return StatusReady, nil
 	}
 
@@ -188,6 +193,12 @@ func isDeploymentReady(dep *v1.Deployment) bool {
 	}
 
 	return available
+}
+
+func isDeploymentToBeUpdated(dep *v1.Deployment, deploymentTag string) bool {
+	currentVersion := dep.Labels["app.kubernetes.io/version"]
+
+	return currentVersion != deploymentTag
 }
 
 func isDeploymentProgressing(dep *v1.Deployment) bool {

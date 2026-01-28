@@ -115,6 +115,7 @@ func main() {
 	var runtimeBootstrapperPullSecretName string
 	var runtimeBootstrapperClusterTrustBundle string
 	var runtimeBootstrapperDeploymentName string
+	var runtimeBootstrapperTag string
 
 	//Kubebuilder related parameters:
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to. Monitoring and alerting tools can use this endpoint to collect application specific metrics during runtime")
@@ -152,6 +153,7 @@ func main() {
 	flag.StringVar(&runtimeBootstrapperPullSecretName, "runtime-bootstrapper-pull-secret-name", "", "Name of the pull secret to be copied to SKR.")
 	flag.StringVar(&runtimeBootstrapperClusterTrustBundle, "runtime-bootstrapper-cluster-trust-bundle", "", "Cluster trust bundle to be copied to SKR.")
 	flag.StringVar(&runtimeBootstrapperDeploymentName, "runtime-bootstrapper-deployment-namespaced-name", "kyma-system/rt-bootstrapper-controller-manager", "Name of the deployment to be observed to verify if installation succeeded. Expected format: <namespace>/<name>")
+	flag.StringVar(&runtimeBootstrapperTag, "runtime-bootstrapper-tag", "1.0.0", "Tag of the runtime bootstrapper controller manager image.")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
@@ -266,6 +268,7 @@ func main() {
 			ManifestsPath:            runtimeBootstrapperManifestsPath,
 			ConfigName:               runtimeBootstrapperConfigName,
 			DeploymentNamespacedName: runtimeBootstrapperDeploymentName,
+			DeploymentTag:            runtimeBootstrapperTag,
 		}
 
 		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(rtbConfig)
