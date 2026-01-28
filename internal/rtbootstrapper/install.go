@@ -22,10 +22,11 @@ type Installer struct {
 type InstallationStatus string
 
 const (
-	StatusNotStarted InstallationStatus = "NotStarted"
-	StatusInProgress InstallationStatus = "InProgress"
-	StatusReady      InstallationStatus = "Ready"
-	StatusFailed     InstallationStatus = "Failed"
+	StatusNotStarted    InstallationStatus = "NotStarted"
+	StatusInProgress    InstallationStatus = "InProgress"
+	StatusReady         InstallationStatus = "Ready"
+	StatusFailed        InstallationStatus = "Failed"
+	StatusUpgradeNeeded InstallationStatus = "UpgradeNeeded"
 )
 
 type Config struct {
@@ -34,6 +35,7 @@ type Config struct {
 	ManifestsPath            string
 	DeploymentNamespacedName string
 	ConfigName               string
+	DeploymentTag            string
 }
 
 //mockery:generate: true
@@ -51,10 +53,14 @@ type RuntimeDynamicClientGetter interface {
 func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter RuntimeClientGetter, runtimeDynamicClientGetter RuntimeDynamicClientGetter) *Installer {
 
 	return &Installer{
-		config:          config,
-		kcpClient:       kcpClient,
-		manifestApplier: NewManifestApplier(config.ManifestsPath, toNamespacedName(config.DeploymentNamespacedName), runtimeClientGetter, runtimeDynamicClientGetter),
-		configurator:    NewConfigurator(kcpClient, runtimeClientGetter, config),
+		config:    config,
+		kcpClient: kcpClient,
+		manifestApplier: NewManifestApplier(config.ManifestsPath,
+			toNamespacedName(config.DeploymentNamespacedName),
+			config.DeploymentTag,
+			runtimeClientGetter,
+			runtimeDynamicClientGetter),
+		configurator: NewConfigurator(kcpClient, runtimeClientGetter, config),
 	}
 }
 

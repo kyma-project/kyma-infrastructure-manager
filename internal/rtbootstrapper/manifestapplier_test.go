@@ -67,7 +67,7 @@ func TestManifestApplier_Apply_FromFile(t *testing.T) {
 
 	rt := minimalRuntime()
 	runtimeDynamicClientGetter.EXPECT().Get(mock.Anything, rt).Return(fakeClient, fakeDiscovery, nil)
-	applier := NewManifestApplier("./testdata/manifests.yaml", types.NamespacedName{}, nil, runtimeDynamicClientGetter)
+	applier := NewManifestApplier("./testdata/manifests.yaml", types.NamespacedName{}, "", nil, runtimeDynamicClientGetter)
 
 	// when
 	err := applier.ApplyManifests(context.Background(), rt)
@@ -107,7 +107,7 @@ func TestManifestApplier_ManifestErrors(t *testing.T) {
 
 	t.Run("Failed to decode file", func(t *testing.T) {
 		//when
-		applier := NewManifestApplier("./testdata/invalid.yaml", types.NamespacedName{}, nil, runtimeDynamicClientGetter)
+		applier := NewManifestApplier("./testdata/invalid.yaml", types.NamespacedName{}, "", nil, runtimeDynamicClientGetter)
 		err := applier.ApplyManifests(context.Background(), minimalRuntime())
 
 		// then
@@ -117,7 +117,7 @@ func TestManifestApplier_ManifestErrors(t *testing.T) {
 
 	t.Run("Failed to open file", func(t *testing.T) {
 		// when
-		applier := NewManifestApplier("nonexistent", types.NamespacedName{}, nil, runtimeDynamicClientGetter)
+		applier := NewManifestApplier("nonexistent", types.NamespacedName{}, "", nil, runtimeDynamicClientGetter)
 		err := applier.ApplyManifests(context.Background(), minimalRuntime())
 
 		// then
@@ -142,6 +142,16 @@ func TestManifestApplier_Status(t *testing.T) {
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: ptr.To(int32(3)),
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "nginx",
+							Image: "europe-docker.pkg.dev/kyma-project/prod/rt-bootstrapper:1.0.0",
+						},
+					},
+				},
+			},
 		},
 		Status: appsv1.DeploymentStatus{
 			Replicas:      3,
@@ -160,6 +170,16 @@ func TestManifestApplier_Status(t *testing.T) {
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: ptr.To(int32(3)),
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "nginx",
+							Image: "europe-docker.pkg.dev/kyma-project/prod/rt-bootstrapper:1.0.0",
+						},
+					},
+				},
+			},
 		},
 		Status: appsv1.DeploymentStatus{
 			Replicas:      3,
@@ -201,7 +221,7 @@ func TestManifestApplier_Status(t *testing.T) {
 
 	t.Run("StatusReady", func(t *testing.T) {
 		// when
-		applier := NewManifestApplier("", types.NamespacedName{Name: "ready-depl", Namespace: "default"}, runtimeClientGetter, nil)
+		applier := NewManifestApplier("", types.NamespacedName{Name: "ready-depl", Namespace: "default"}, "1.0.0", runtimeClientGetter, nil)
 		status, err := applier.Status(ctx, rt)
 
 		//then
@@ -211,7 +231,7 @@ func TestManifestApplier_Status(t *testing.T) {
 
 	t.Run("StatusProgressing", func(t *testing.T) {
 		// when
-		applier := NewManifestApplier("", types.NamespacedName{Name: "progress-depl", Namespace: "default"}, runtimeClientGetter, nil)
+		applier := NewManifestApplier("", types.NamespacedName{Name: "progress-depl", Namespace: "default"}, "1.0.0", runtimeClientGetter, nil)
 		status, err := applier.Status(ctx, rt)
 
 		// then
@@ -221,7 +241,7 @@ func TestManifestApplier_Status(t *testing.T) {
 
 	t.Run("StatusFailed", func(t *testing.T) {
 		// when
-		applier := NewManifestApplier("", types.NamespacedName{Name: "failed-depl", Namespace: "default"}, runtimeClientGetter, nil)
+		applier := NewManifestApplier("", types.NamespacedName{Name: "failed-depl", Namespace: "default"}, "1.0.0", runtimeClientGetter, nil)
 		status, err := applier.Status(ctx, rt)
 
 		// then
@@ -231,12 +251,22 @@ func TestManifestApplier_Status(t *testing.T) {
 
 	t.Run("StatusNotStarted", func(t *testing.T) {
 		// when
-		applier := NewManifestApplier("", types.NamespacedName{Name: "missing-depl", Namespace: "default"}, runtimeClientGetter, nil)
+		applier := NewManifestApplier("", types.NamespacedName{Name: "missing-depl", Namespace: "default"}, "1.0.0", runtimeClientGetter, nil)
 		status, err := applier.Status(ctx, rt)
 
 		// then
 		require.NoError(t, err)
 		require.Equal(t, StatusNotStarted, status)
+	})
+
+	t.Run("StatusUpgradeNeeded", func(t *testing.T) {
+		// when
+		applier := NewManifestApplier("", types.NamespacedName{Name: "ready-depl", Namespace: "default"}, "1.0.1", runtimeClientGetter, nil)
+		status, err := applier.Status(ctx, rt)
+
+		//then
+		require.NoError(t, err)
+		require.Equal(t, StatusUpgradeNeeded, status)
 	})
 }
 
@@ -248,7 +278,7 @@ func TestManifestApplier_StatusErrors(t *testing.T) {
 		runtimeClientGetter := NewMockRuntimeClientGetter(t)
 		runtimeClientGetter.EXPECT().Get(mock.Anything, rt).Return(nil, errors.New("failed"))
 
-		applier := NewManifestApplier("", types.NamespacedName{Name: "depl", Namespace: "default"}, runtimeClientGetter, nil)
+		applier := NewManifestApplier("", types.NamespacedName{Name: "depl", Namespace: "default"}, "", runtimeClientGetter, nil)
 		_, err := applier.Status(ctx, rt)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed")
@@ -263,7 +293,7 @@ func TestManifestApplier_StatusErrors(t *testing.T) {
 
 		runtimeClientGetter := NewMockRuntimeClientGetter(t)
 		runtimeClientGetter.EXPECT().Get(mock.Anything, rt).Return(fakeClient, nil)
-		applier := NewManifestApplier("", types.NamespacedName{Name: "depl", Namespace: "default"}, runtimeClientGetter, nil)
+		applier := NewManifestApplier("", types.NamespacedName{Name: "depl", Namespace: "default"}, "", runtimeClientGetter, nil)
 		_, err := applier.Status(ctx, rt)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "get error")
