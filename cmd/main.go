@@ -277,9 +277,19 @@ func main() {
 			os.Exit(1)
 		}
 
+		cfg, err := ctrl.GetConfig()
+		if err != nil {
+			setupLog.Error(err, "unable to get rest config")
+			os.Exit(1)
+		}
+		kcpClient, err := client.New(cfg, client.Options{Scheme: scheme})
+		if err != nil {
+			setupLog.Error(err, "unable to create client")
+			os.Exit(1)
+		}
 		if err := (&configctrl.ConfigWatcher{
 			Kcp: configctrl.Cfg{
-				Client:    mgr.GetClient(),
+				Client:    kcpClient,
 				Namespace: runtimeBootstrapperDeploymentName,
 				ClusterTrustBundle: types.NamespacedName{
 					Name: runtimeBootstrapperClusterTrustBundle,
