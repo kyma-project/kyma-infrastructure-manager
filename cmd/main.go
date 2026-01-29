@@ -452,6 +452,12 @@ func refreshRuntimeMetrics(restConfig *rest.Config, logger logr.Logger, metrics 
 func restrictWatchedNamespace() cache.Options {
 	return cache.Options{
 		ByObject: map[client.Object]cache.ByObject{
+			&corev1.ConfigMap{}: {
+				Label: k8slabels.Everything(),
+				Namespaces: map[string]cache.Config{
+					"kcp-system": {},
+				},
+			},
 			&corev1.Secret{}: {
 				Label: k8slabels.Everything(),
 				Namespaces: map[string]cache.Config{
