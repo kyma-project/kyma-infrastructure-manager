@@ -56,10 +56,10 @@ type ConfigWatcher struct {
 	Kcp    Cfg
 }
 
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
-// +kubebuilder:rbac:groups="",resources=configmaps,verbs=watch
-// +kubebuilder:rbac:groups=certificates.k8s.io,resources=clustertrustbundles,verbs=watch
-// +kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=runtimes,verbs=list;patch
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=watch,namespace=kcp-system
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=watch,namespace=kcp-system
+// +kubebuilder:rbac:groups=certificates.k8s.io,resources=clustertrustbundles,verbs=watch,namespace=kcp-system
+// +kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=runtimes,verbs=list;patch,namespace=kcp-system
 
 func (r *ConfigWatcher) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := logf.FromContext(ctx)
