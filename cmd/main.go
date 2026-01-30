@@ -275,7 +275,7 @@ func main() {
 			DeploymentNamespacedName: runtimeBootstrapperDeploymentName,
 		}
 
-		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(rtbConfig)
+		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(rtbConfig, runtimeClientGetter)
 		if err != nil {
 			setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
 			os.Exit(1)
@@ -460,7 +460,7 @@ func restrictWatchedNamespace() cache.Options {
 	}
 }
 
-func configureRuntimeBootstrapper(config rtbootstrapper.Config) (*rtbootstrapper.Installer, error) {
+func configureRuntimeBootstrapper(config rtbootstrapper.Config, runtimeClientGetter fsm.RuntimeClientGetter) (*rtbootstrapper.Installer, error) {
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
@@ -476,7 +476,7 @@ func configureRuntimeBootstrapper(config rtbootstrapper.Config) (*rtbootstrapper
 		return nil, err
 	}
 
-	return rtbootstrapper.NewInstaller(config, kcpClient, fsm.NewRuntimeClientGetter(kcpClient), fsm.NewRuntimeDynamicClientGetter(kcpClient)), nil
+	return rtbootstrapper.NewInstaller(config, kcpClient, runtimeClientGetter, fsm.NewRuntimeDynamicClientGetter(kcpClient)), nil
 }
 
 func enableClusterTrustBundleFeatureForSKR(converterConfig *config.ConverterConfig) {

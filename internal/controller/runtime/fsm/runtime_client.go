@@ -7,11 +7,11 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 //go:generate mockery --name=RuntimeClientGetter
@@ -36,12 +36,6 @@ type runtimeClientGetterWithScheme struct {
 
 type runtimeDynamicClientGetter struct {
 	kcpClient client.Client
-}
-
-func NewRuntimeClientGetter(kcpClient client.Client) RuntimeClientGetter {
-	return &runtimeClientGetter{
-		kcpClient: kcpClient,
-	}
 }
 
 // NewRuntimeClientGetterWithScheme returns a RuntimeClientGetter that builds runtime clients
