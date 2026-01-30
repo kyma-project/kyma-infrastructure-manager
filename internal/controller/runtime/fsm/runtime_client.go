@@ -24,10 +24,6 @@ type DynamicRuntimeClientGetter interface {
 	Get(ctx context.Context, runtime imv1.Runtime) (dynamic.Interface, discovery.DiscoveryInterface, error)
 }
 
-type runtimeClientGetter struct {
-	kcpClient client.Client
-}
-
 // runtimeClientGetterWithScheme will use a provided scheme when building runtime clients.
 type runtimeClientGetterWithScheme struct {
 	kcpClient client.Client
@@ -51,15 +47,6 @@ func NewRuntimeDynamicClientGetter(kcpClient client.Client) DynamicRuntimeClient
 	return &runtimeDynamicClientGetter{
 		kcpClient: kcpClient,
 	}
-}
-
-func (r *runtimeClientGetter) Get(ctx context.Context, runtime imv1.Runtime) (client.Client, error) {
-	secret, err := getKubeconfigSecret(ctx, r.kcpClient, runtime.Labels[imv1.LabelKymaRuntimeID], runtime.Namespace)
-	if err != nil {
-		return nil, err
-	}
-
-	return gardener.GetRuntimeClient(secret)
 }
 
 func (r *runtimeClientGetterWithScheme) Get(ctx context.Context, runtime imv1.Runtime) (client.Client, error) {
