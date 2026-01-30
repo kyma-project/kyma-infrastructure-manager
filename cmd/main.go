@@ -290,17 +290,17 @@ func main() {
 		if err := (&configctrl.ConfigWatcher{
 			Kcp: configctrl.Cfg{
 				Client:    kcpClient,
-				Namespace: runtimeBootstrapperDeploymentName,
+				Namespace: "kcp-system",
 				ClusterTrustBundle: types.NamespacedName{
 					Name: runtimeBootstrapperClusterTrustBundle,
 				},
 				ImagePullSecret: types.NamespacedName{
 					Name:      runtimeBootstrapperPullSecretName,
-					Namespace: runtimeBootstrapperDeploymentName,
+					Namespace: "kcp-system",
 				},
 				RtBootstrapperCfg: types.NamespacedName{
 					Name:      runtimeBootstrapperConfigName,
-					Namespace: runtimeBootstrapperDeploymentName,
+					Namespace: "kcp-system",
 				},
 			},
 			Scheme: mgr.GetScheme(),
