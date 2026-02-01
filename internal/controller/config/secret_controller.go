@@ -24,7 +24,6 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -76,21 +75,12 @@ func (r *ConfigWatcher) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 	success := true
 	for _, item := range runtimes.Items {
-		var rt imv1.Runtime
-
-		rt.Name = item.Name
-		rt.Namespace = item.Namespace
-		rt.Annotations = item.Annotations
-		rt.TypeMeta = metav1.TypeMeta{
-			APIVersion: imv1.GroupVersion.String(),
-			Kind:       "Runtime",
+		if item.Annotations == nil {
+			item.Annotations = map[string]string{}
 		}
-		if rt.Annotations == nil {
-			rt.Annotations = map[string]string{}
-		}
-		rt.Annotations[reconciler.ForceReconcileAnnotation] = "true"
+		item.Annotations[reconciler.ForceReconcileAnnotation] = "true"
 
-		if err := r.Kcp.Patch(ctx, &rt, client.Apply, &client.PatchOptions{
+		if err := r.Kcp.Patch(ctx, &item, client.Apply, &client.PatchOptions{
 			FieldManager: fieldManager,
 			Force:        ptr.To(true),
 		}); err != nil {
