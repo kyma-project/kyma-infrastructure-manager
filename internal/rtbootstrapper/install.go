@@ -22,10 +22,11 @@ type Installer struct {
 type InstallationStatus string
 
 const (
-	StatusNotStarted InstallationStatus = "NotStarted"
-	StatusInProgress InstallationStatus = "InProgress"
-	StatusReady      InstallationStatus = "Ready"
-	StatusFailed     InstallationStatus = "Failed"
+	StatusNotStarted    InstallationStatus = "NotStarted"
+	StatusInProgress    InstallationStatus = "InProgress"
+	StatusReady         InstallationStatus = "Ready"
+	StatusFailed        InstallationStatus = "Failed"
+	StatusUpgradeNeeded InstallationStatus = "UpgradeNeeded"
 )
 
 type Config struct {
@@ -34,6 +35,7 @@ type Config struct {
 	ManifestsPath            string
 	DeploymentNamespacedName string
 	ConfigName               string
+	DeploymentTag            string
 }
 
 //mockery:generate: true
@@ -51,17 +53,21 @@ type RuntimeDynamicClientGetter interface {
 func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter RuntimeClientGetter, runtimeDynamicClientGetter RuntimeDynamicClientGetter) *Installer {
 
 	return &Installer{
-		config:          config,
-		kcpClient:       kcpClient,
-		manifestApplier: NewManifestApplier(config.ManifestsPath, toNamespacedName(config.DeploymentNamespacedName), runtimeClientGetter, runtimeDynamicClientGetter),
-		configurator:    NewConfigurator(kcpClient, runtimeClientGetter, config),
+		config:    config,
+		kcpClient: kcpClient,
+		manifestApplier: NewManifestApplier(config.ManifestsPath,
+			toNamespacedName(config.DeploymentNamespacedName),
+			config.DeploymentTag,
+			runtimeClientGetter,
+			runtimeDynamicClientGetter),
+		configurator: NewConfigurator(kcpClient, runtimeClientGetter, config),
 	}
 }
 
 func (r *Installer) Install(ctx context.Context, runtime imv1.Runtime) error {
 	err := r.configurator.Configure(context.Background(), runtime)
 	if err != nil {
-		return errors.Wrap(err, "failed to prepare for installation Runtime Bootstrapper installation")
+		return errors.Wrap(err, "failed to prepare for Runtime Bootstrapper installation")
 	}
 
 	return r.manifestApplier.ApplyManifests(ctx, runtime)
@@ -69,6 +75,12 @@ func (r *Installer) Install(ctx context.Context, runtime imv1.Runtime) error {
 
 func (r *Installer) Status(ctx context.Context, runtime imv1.Runtime) (InstallationStatus, error) {
 	return r.manifestApplier.Status(ctx, runtime)
+}
+
+// This method is supposed to be called after upgrade is finished. It can be used to clean up old resources that are no longer available in the new runtime manifests.
+func (r *Installer) Cleanup(ctx context.Context, runtime imv1.Runtime) error {
+	// No cleanup needed for now. Implement when needed.
+	return nil
 }
 
 func toNamespacedName(namespacedName string) types.NamespacedName {
