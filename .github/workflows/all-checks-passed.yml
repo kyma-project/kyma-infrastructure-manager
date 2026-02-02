@@ -20,7 +20,7 @@ jobs:
       checks: read
       contents: read
     steps:
-      - uses: wechuli/allcheckspassed@8cbfe9565cb1c23034d4a6460cccc712db7e68f3
+      - uses: wechuli/allcheckspassed@1d00cf0c34c4b0805db8866d8913f22e7125301e
         with:
           checks_exclude: 'golangci-lint'
           delay: '3'
