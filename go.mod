@@ -10,7 +10,7 @@ require (
 	github.com/gardener/gardener-extension-provider-gcp v1.47.0
 	github.com/gardener/gardener-extension-provider-openstack v1.51.0
 	github.com/gardener/gardener-extension-registry-cache v0.18.0
-	github.com/gardener/oidc-webhook-authenticator v0.38.0
+	github.com/gardener/oidc-webhook-authenticator v0.40.0
 	github.com/go-logr/logr v1.4.3
 	github.com/go-playground/validator/v10 v10.30.1
 	github.com/kyma-project/lifecycle-manager/api v0.0.0-20250415061517-3922bac13370
@@ -94,7 +94,6 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
-	gopkg.in/evanphx/json-patch.v5 v5.9.11 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/component-base v0.35.0 // indirect
