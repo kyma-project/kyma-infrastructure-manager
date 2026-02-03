@@ -19,7 +19,6 @@ package config
 import (
 	"context"
 	"fmt"
-
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
@@ -74,6 +73,9 @@ func (r *ConfigWatcher) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	}
 
 	success := true
+
+	logger.Info("Forcing configuration reloading on runtimes")
+
 	for _, item := range runtimes.Items {
 
 		newItem := item.DeepCopy()

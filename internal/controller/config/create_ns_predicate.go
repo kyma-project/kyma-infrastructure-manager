@@ -45,6 +45,7 @@ func (p createResourcePredicate) Update(e event.TypedUpdateEvent[client.Object])
 
 	args := p.slogArgs()
 	slog.Debug("resource updated", args...)
+	slog.Info("configuration resource modified ", args...)
 
 	return true
 }
