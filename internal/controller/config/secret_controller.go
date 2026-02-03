@@ -75,18 +75,21 @@ func (r *ConfigWatcher) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 	success := true
 	for _, item := range runtimes.Items {
-		if item.Annotations == nil {
-			item.Annotations = map[string]string{}
-		}
-		item.Annotations[reconciler.ForceReconcileAnnotation] = "true"
 
-		if err := r.Kcp.Patch(ctx, &item, client.Apply, &client.PatchOptions{
+		newItem := item.DeepCopy()
+		if newItem.Annotations == nil {
+			newItem.Annotations = map[string]string{}
+		}
+		newItem.Annotations[reconciler.ForceReconcileAnnotation] = "true"
+		newItem.ManagedFields = nil
+
+		if err := r.Kcp.Patch(ctx, newItem, client.Apply, &client.PatchOptions{
 			FieldManager: fieldManager,
 			Force:        ptr.To(true),
 		}); err != nil {
 			logger.Error(err, "unable to annotate runtime",
-				"namespace", item.Namespace,
-				"name", item.Name)
+				"namespace", newItem.Namespace,
+				"name", newItem.Name)
 
 			success = false
 		}
