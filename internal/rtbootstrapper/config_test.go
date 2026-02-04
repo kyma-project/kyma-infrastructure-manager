@@ -28,40 +28,35 @@ func Test_Configure(t *testing.T) {
 		ConfigName:             "test-runtime-bootstrapper-kcp-config",
 	}
 
-	pullSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-registry-credentials",
-			Namespace: "kcp-system",
-		},
-		Data: map[string][]byte{
-			".dockerconfigjson": []byte(`{"auths":{"test-registry.io":{"username":"test-user","password":"test-password","email":"test-email"}}}`),
-		},
-		Type: corev1.SecretTypeDockercfg,
-	}
-
-	bootstrapperConfigMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-runtime-bootstrapper-kcp-config",
-			Namespace: "kcp-system",
-		},
-		Data: map[string]string{
-			"rt-bootstrapper-config.json": "some-configuration-data",
-		},
-	}
-
-	clusterTrustBundle := &certificatesv1beta1.ClusterTrustBundle{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-cluster-trust-bundle",
-		},
-		Spec: certificatesv1beta1.ClusterTrustBundleSpec{
-			TrustBundle: "-----BEGIN CERTIFICATE-----\ntest-certificate-data\n-----END CERTIFICATE-----",
-		},
-	}
+	// use helpers to create resources (labels can be nil or provided per test)
+	pullSecret := newPullSecret(map[string]string{"app": "bootstrapper"})
+	bootstrapperConfigMap := newBootstrapperConfigMap(map[string]string{"app": "bootstrapper"})
+	clusterTrustBundle := newClusterTrustBundle(map[string]string{"app": "bootstrapper"})
 
 	runtimeCR := minimalRuntime()
 	scheme := runtime.NewScheme()
 	util.Must(corev1.AddToScheme(scheme))
 	util.Must(certificatesv1beta1.AddToScheme(scheme))
+
+	t.Run("Should skip configuration if resources are up-to-date", func(t *testing.T) {
+		// given
+		//fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+		//fakeKcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(pullSecret, bootstrapperConfigMap, clusterTrustBundle).Build()
+		//m := mocks.NewRuntimeClientGetter(t)
+		//m.On("Get", context.Background(), runtimeCR).Return(fakeClient, nil)
+
+	})
+
+	t.Run("Should update configuration if resources require update", func(t *testing.T) {
+		// given
+		//fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+		//fakeKcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(pullSecret, bootstrapperConfigMap, clusterTrustBundle).Build()
+		//m := mocks.NewRuntimeClientGetter(t)
+		//m.On("Get", context.Background(), runtimeCR).Return(fakeClient, nil)
+
+		// when
+
+	})
 
 	t.Run("Should successfully apply bootstrapper ConfigMap, PullSecret and ClusterTrustBundle to the runtime cluster", func(t *testing.T) {
 		// given
@@ -256,6 +251,46 @@ func Test_Configure(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "failed to apply ClusterTrustBundle to runtime cluster")
 	})
+}
+
+// Helper creators for test resources with customizable labels.
+func newPullSecret(labels map[string]string) *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-registry-credentials",
+			Namespace: "kcp-system",
+			Labels:    labels,
+		},
+		Data: map[string][]byte{
+			corev1.DockerConfigJsonKey: []byte(`{"auths":{"test-registry.io":{"username":"test-user","password":"test-password","email":"test-email"}}}`),
+		},
+		Type: corev1.SecretTypeDockercfg,
+	}
+}
+
+func newBootstrapperConfigMap(labels map[string]string) *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-runtime-bootstrapper-kcp-config",
+			Namespace: "kcp-system",
+			Labels:    labels,
+		},
+		Data: map[string]string{
+			"rt-bootstrapper-config.json": "some-configuration-data",
+		},
+	}
+}
+
+func newClusterTrustBundle(labels map[string]string) *certificatesv1beta1.ClusterTrustBundle {
+	return &certificatesv1beta1.ClusterTrustBundle{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "test-cluster-trust-bundle",
+			Labels: labels,
+		},
+		Spec: certificatesv1beta1.ClusterTrustBundleSpec{
+			TrustBundle: "-----BEGIN CERTIFICATE-----\ntest-certificate-data\n-----END CERTIFICATE-----",
+		},
+	}
 }
 
 func assertPullSecret(t *testing.T, runtimeClient client.Client, expectedSecret *corev1.Secret) {
