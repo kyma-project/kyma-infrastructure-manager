@@ -31,9 +31,21 @@ func newConfig(pullSecretName, clusterTrustBundleName, manifestsPath, configName
 }
 
 func Test_Configure(t *testing.T) {
-	pullSecret := newPullSecret(map[string]string{"app": "bootstrapper"})
-	bootstrapperConfigMap := newBootstrapperConfigMap(map[string]string{"app": "bootstrapper"})
-	clusterTrustBundle := newClusterTrustBundle(map[string]string{"app": "bootstrapper"})
+	pullSecret := newPullSecret(
+		map[string]string{"app": "bootstrapper"},
+		map[string]string{"managed-by": "tests"},
+		[]byte(`{"auths":{"test-registry.io":{"username":"test-user","password":"test-password","email":"test-email"}}}`),
+	)
+	bootstrapperConfigMap := newBootstrapperConfigMap(
+		map[string]string{"app": "bootstrapper"},
+		map[string]string{"managed-by": "tests"},
+		map[string]string{"rt-bootstrapper-config.json": "some-configuration-data"},
+	)
+	clusterTrustBundle := newClusterTrustBundle(
+		map[string]string{"app": "bootstrapper"},
+		map[string]string{"managed-by": "tests"},
+		"-----BEGIN CERTIFICATE-----\ntest-certificate-data\n-----END CERTIFICATE-----",
+	)
 
 	runtimeCR := minimalRuntime()
 	scheme := runtime.NewScheme()
@@ -50,17 +62,8 @@ func Test_Configure(t *testing.T) {
 		m.On("Get", context.Background(), runtimeCR).Return(fakeClient, nil)
 
 		// when
-		err := fakeClient.Create(context.Background(), pullSecret)
-		require.NoError(t, err)
-
-		err = fakeClient.Create(context.Background(), bootstrapperConfigMap)
-		require.NoError(t, err)
-
-		err = fakeClient.Create(context.Background(), clusterTrustBundle)
-		require.NoError(t, err)
-
 		configurator := NewConfigurator(fakeKcpClient, m, config)
-		err = configurator.Configure(context.Background(), runtimeCR)
+		err := configurator.Configure(context.Background(), runtimeCR)
 
 		// then
 		m.AssertExpectations(t)
@@ -73,33 +76,39 @@ func Test_Configure(t *testing.T) {
 
 	t.Run("Should update configuration if resources require update", func(t *testing.T) {
 		// given
+		newPullSecret := newPullSecret(
+			map[string]string{"app": "bootstrapper"},
+			map[string]string{"managed-by": "tests"},
+			[]byte(`{"auths":{"test-registry.io":{"username":"new-test-user","password":"new-test-password","email":"test-email"}}}`),
+		)
+		newBootstrapperConfigMap := newBootstrapperConfigMap(
+			map[string]string{"app": "bootstrapper"},
+			map[string]string{"managed-by": "tests"},
+			map[string]string{"rt-bootstrapper-config.json": "some-new-configuration-data"},
+		)
+		newClusterTrustBundle := newClusterTrustBundle(
+			map[string]string{"app": "bootstrapper"},
+			map[string]string{"managed-by": "tests"},
+			"-----BEGIN CERTIFICATE-----\nnew-test-certificate-data\n-----END CERTIFICATE-----",
+		)
 		config := newConfig("test-registry-credentials", "test-cluster-trust-bundle", "", "test-runtime-bootstrapper-kcp-config")
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-		fakeKcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(pullSecret, bootstrapperConfigMap, clusterTrustBundle).Build()
+		fakeKcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(newPullSecret, newBootstrapperConfigMap, newClusterTrustBundle).Build()
 		m := mocks.NewRuntimeClientGetter(t)
 		m.On("Get", context.Background(), runtimeCR).Return(fakeClient, nil)
 
 		// when
-		err := fakeClient.Create(context.Background(), pullSecret)
-		require.NoError(t, err)
-
-		err = fakeClient.Create(context.Background(), bootstrapperConfigMap)
-		require.NoError(t, err)
-
-		err = fakeClient.Create(context.Background(), clusterTrustBundle)
-		require.NoError(t, err)
-
 		configurator := NewConfigurator(fakeKcpClient, m, config)
-		err = configurator.Configure(context.Background(), runtimeCR)
+		err := configurator.Configure(context.Background(), runtimeCR)
 
 		// then
 		m.AssertExpectations(t)
 		require.NoError(t, err)
 
-		assertPullSecret(t, fakeClient, pullSecret)
+		assertPullSecret(t, fakeClient, newPullSecret)
 		assertConfigMap(t, fakeClient)
-		assertClusterTrustBundle(t, fakeClient, clusterTrustBundle)
+		assertClusterTrustBundle(t, fakeClient, newClusterTrustBundle)
 
 	})
 
@@ -300,41 +309,42 @@ func Test_Configure(t *testing.T) {
 	})
 }
 
-func newPullSecret(annotations map[string]string) *corev1.Secret {
+func newPullSecret(labels map[string]string, annotations map[string]string, dockerConfigJSON []byte) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "test-registry-credentials",
 			Namespace:   "kcp-system",
+			Labels:      labels,
 			Annotations: annotations,
 		},
 		Data: map[string][]byte{
-			corev1.DockerConfigJsonKey: []byte(`{"auths":{"test-registry.io":{"username":"test-user","password":"test-password","email":"test-email"}}}`),
+			corev1.DockerConfigJsonKey: dockerConfigJSON,
 		},
 		Type: corev1.SecretTypeDockercfg,
 	}
 }
 
-func newBootstrapperConfigMap(labels map[string]string) *corev1.ConfigMap {
+func newBootstrapperConfigMap(labels map[string]string, annotations map[string]string, data map[string]string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-runtime-bootstrapper-kcp-config",
-			Namespace: "kcp-system",
-			Labels:    labels,
+			Name:        "test-runtime-bootstrapper-kcp-config",
+			Namespace:   "kcp-system",
+			Labels:      labels,
+			Annotations: annotations,
 		},
-		Data: map[string]string{
-			"rt-bootstrapper-config.json": "some-configuration-data",
-		},
+		Data: data,
 	}
 }
 
-func newClusterTrustBundle(labels map[string]string) *certificatesv1beta1.ClusterTrustBundle {
+func newClusterTrustBundle(labels map[string]string, annotations map[string]string, trustBundle string) *certificatesv1beta1.ClusterTrustBundle {
 	return &certificatesv1beta1.ClusterTrustBundle{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "test-cluster-trust-bundle",
-			Labels: labels,
+			Name:        "test-cluster-trust-bundle",
+			Labels:      labels,
+			Annotations: annotations,
 		},
 		Spec: certificatesv1beta1.ClusterTrustBundleSpec{
-			TrustBundle: "-----BEGIN CERTIFICATE-----\ntest-certificate-data\n-----END CERTIFICATE-----",
+			TrustBundle: trustBundle,
 		},
 	}
 }
