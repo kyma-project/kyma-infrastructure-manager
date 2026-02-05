@@ -4,7 +4,6 @@ import (
 	"context"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
@@ -65,16 +64,15 @@ func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter Ru
 }
 
 func (r *Installer) Install(ctx context.Context, runtime imv1.Runtime) error {
-	err := r.configurator.Configure(context.Background(), runtime)
-	if err != nil {
-		return errors.Wrap(err, "failed to prepare for Runtime Bootstrapper installation")
-	}
-
 	return r.manifestApplier.ApplyManifests(ctx, runtime)
 }
 
 func (r *Installer) Status(ctx context.Context, runtime imv1.Runtime) (InstallationStatus, error) {
 	return r.manifestApplier.Status(ctx, runtime)
+}
+
+func (r *Installer) Configure(ctx context.Context, runtime imv1.Runtime) error {
+	return r.configurator.Configure(ctx, runtime)
 }
 
 // This method is supposed to be called after upgrade is finished. It can be used to clean up old resources that are no longer available in the new runtime manifests.

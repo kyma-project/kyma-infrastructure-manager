@@ -41,6 +41,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Ready(t *testing.T) {
 	defer cancel()
 
 	inst := NewMockRuntimeBootstrapperInstaller(t)
+	inst.EXPECT().Configure(mock.Anything, runtime).Return(nil)
 	inst.EXPECT().Status(mock.Anything, runtime).Return(rtbootstrapper.StatusReady, nil)
 	inst.EXPECT().Cleanup(mock.Anything, runtime).Return(errors.New("cleanup error"))
 
@@ -84,8 +85,21 @@ func Test_sFnInitializeRuntimeBootstrapper_Errors(t *testing.T) {
 		expectedCondition    metav1.Condition
 	}{
 		{
+			name: "ConfigError",
+			mockSetup: func(inst *MockRuntimeBootstrapperInstaller, runtime imv1.Runtime) {
+				inst.EXPECT().Configure(mock.Anything, runtime).Return(errors.New("config error"))
+			},
+			expectedCondition: metav1.Condition{
+				Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
+				Reason:  string(imv1.ConditionReasonRuntimeBootstrapperConfigurationFailed),
+				Status:  "False",
+				Message: msgConfigurationFailed,
+			},
+		},
+		{
 			name: "StatusError",
 			mockSetup: func(inst *MockRuntimeBootstrapperInstaller, runtime imv1.Runtime) {
+				inst.EXPECT().Configure(mock.Anything, runtime).Return(nil)
 				inst.EXPECT().Status(mock.Anything, runtime).Return(rtbootstrapper.StatusFailed, errors.New("status failed"))
 			},
 			expectedCondition: metav1.Condition{
@@ -98,6 +112,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Errors(t *testing.T) {
 		{
 			name: "InstallError",
 			mockSetup: func(inst *MockRuntimeBootstrapperInstaller, runtime imv1.Runtime) {
+				inst.EXPECT().Configure(mock.Anything, runtime).Return(nil)
 				inst.EXPECT().Status(mock.Anything, runtime).Return(rtbootstrapper.StatusNotStarted, nil)
 				inst.EXPECT().Install(mock.Anything, runtime).Return(errors.New("install failed"))
 			},
@@ -111,6 +126,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Errors(t *testing.T) {
 		{
 			name: "FailedStatus",
 			mockSetup: func(inst *MockRuntimeBootstrapperInstaller, runtime imv1.Runtime) {
+				inst.EXPECT().Configure(mock.Anything, runtime).Return(nil)
 				inst.EXPECT().Status(mock.Anything, runtime).Return(rtbootstrapper.StatusFailed, nil)
 			},
 			expectedCondition: metav1.Condition{
@@ -183,6 +199,7 @@ func Test_sFnInitializeRuntimeBootstrapper_InProgress(t *testing.T) {
 		inst := NewMockRuntimeBootstrapperInstaller(t)
 		runtime := minimalRuntime()
 
+		inst.EXPECT().Configure(mock.Anything, runtime).Return(nil)
 		inst.EXPECT().Status(mock.Anything, runtime).Return(rtbootstrapper.StatusNotStarted, nil)
 		inst.EXPECT().Install(mock.Anything, runtime).Return(nil)
 
@@ -203,6 +220,7 @@ func Test_sFnInitializeRuntimeBootstrapper_InProgress(t *testing.T) {
 		inst := NewMockRuntimeBootstrapperInstaller(t)
 		runtime := minimalRuntime()
 
+		inst.EXPECT().Configure(mock.Anything, runtime).Return(nil)
 		inst.EXPECT().Status(mock.Anything, runtime).Return(rtbootstrapper.StatusUpgradeNeeded, nil)
 		inst.EXPECT().Install(mock.Anything, runtime).Return(nil)
 
@@ -223,6 +241,7 @@ func Test_sFnInitializeRuntimeBootstrapper_InProgress(t *testing.T) {
 		inst := NewMockRuntimeBootstrapperInstaller(t)
 		runtime := minimalRuntime()
 
+		inst.EXPECT().Configure(mock.Anything, runtime).Return(nil)
 		inst.EXPECT().Status(mock.Anything, runtime).Return(rtbootstrapper.StatusInProgress, nil)
 
 		f := newFSMWith(inst)

@@ -116,6 +116,7 @@ const (
 	ConditionReasonRuntimeBootstrapperConfigured             = RuntimeConditionReason("RuntimeBootstrapperConfigured")
 	ConditionReasonRuntimeBootstrapperUpgradeFailed          = RuntimeConditionReason("RuntimeBootstrapperUpgradeFailed")
 	ConditionReasonRuntimeBootstrapperUpgradeInProgress      = RuntimeConditionReason("RuntimeBootstrapperUpgradeInProgress")
+	ConditionReasonRuntimeBootstrapperConfigurationFailed    = RuntimeConditionReason("RuntimeBootstrapperConfigurationFailed")
 )
 
 //+kubebuilder:object:root=true
