@@ -34,12 +34,12 @@ func Test_Configure(t *testing.T) {
 	config := newConfig("test-registry-credentials", "test-cluster-trust-bundle", "", "test-runtime-bootstrapper-kcp-config")
 
 	kcpPullSecret := newPullSecret(config.PullSecretName, "kcp-system", []byte(`{"auths":{"test-registry.io":{"username":"test-user","password":"test-password","email":"test-email"}}}`))
-	kcpBootstrapperConfigMap := newBootstrapperConfigMap(map[string]string{"rt-bootstrapper-config.json": "some-configuration-data"})
-	kcpClusterTrustBundle := newClusterTrustBundle("-----BEGIN CERTIFICATE-----\ntest-certificate-data\n-----END CERTIFICATE-----")
+	kcpBootstrapperConfigMap := newBootstrapperConfigMap(config.ConfigName, "kcp-system", map[string]string{"rt-bootstrapper-config.json": "some-configuration-data"})
+	kcpClusterTrustBundle := newClusterTrustBundle(config.ClusterTrustBundleName, "-----BEGIN CERTIFICATE-----\ntest-certificate-data\n-----END CERTIFICATE-----")
 
 	skrPullSecret := newPullSecret("registry-credentials", "kyma-system", []byte(`{"auths":{"test-registry.io":{"username":"test-user","password":"test-password","email":"test-email"}}}`))
-	skrBootstrapperConfigMap := newBootstrapperConfigMap(map[string]string{"rt-bootstrapper-config.json": "some-configuration-data"})
-	skrClusterTrustBundle := newClusterTrustBundle("-----BEGIN CERTIFICATE-----\ntest-certificate-data\n-----END CERTIFICATE-----")
+	skrBootstrapperConfigMap := newBootstrapperConfigMap("rt-bootstrapper-config", "kyma-system", map[string]string{"rt-bootstrapper-config.json": "some-configuration-data"})
+	skrClusterTrustBundle := newClusterTrustBundle(config.ClusterTrustBundleName, "-----BEGIN CERTIFICATE-----\ntest-certificate-data\n-----END CERTIFICATE-----")
 
 	runtimeCR := minimalRuntime()
 	scheme := runtime.NewScheme()
@@ -48,7 +48,15 @@ func Test_Configure(t *testing.T) {
 
 	t.Run("Should skip configuration if resources are up-to-date", func(t *testing.T) {
 		// given
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(skrPullSecret, skrBootstrapperConfigMap, skrClusterTrustBundle).Build()
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(skrPullSecret, skrBootstrapperConfigMap, skrClusterTrustBundle).WithInterceptorFuncs(interceptor.Funcs{
+			Patch: func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+				if obj.GetObjectKind().GroupVersionKind().Kind == "ConfigMap" {
+					return errors.New("should not patch ConfigMap when resources are up-to-date")
+				}
+
+				return nil
+			},
+		}).Build()
 		fakeKcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(kcpPullSecret, kcpBootstrapperConfigMap, kcpClusterTrustBundle).Build()
 		m := mocks.NewRuntimeClientGetter(t)
 		m.On("Get", context.Background(), runtimeCR).Return(fakeClient, nil)
@@ -69,13 +77,15 @@ func Test_Configure(t *testing.T) {
 	t.Run("Should update configuration if resources require update", func(t *testing.T) {
 		// given
 		newKCPPullSecret := newPullSecret(config.PullSecretName, "kcp-system", []byte(`{"auths":{"test-registry.io":{"username":"new-test-user","password":"new-test-password","email":"test-email"}}}`))
-		newBootstrapperConfigMap := newBootstrapperConfigMap(map[string]string{"rt-bootstrapper-config.json": "some-new-configuration-data"})
-		newClusterTrustBundle := newClusterTrustBundle("-----BEGIN CERTIFICATE-----\nnew-test-certificate-data\n-----END CERTIFICATE-----")
+		newKCPBootstrapperConfigMap := newBootstrapperConfigMap("test-runtime-bootstrapper-kcp-config", "kcp-system", map[string]string{"rt-bootstrapper-config.json": "some-new-configuration-data"})
+		newKCPClusterTrustBundle := newClusterTrustBundle("test-cluster-trust-bundle", "-----BEGIN CERTIFICATE-----\nnew-test-certificate-data\n-----END CERTIFICATE-----")
 
-		newSKRullSecret := newPullSecret("registry-credentials", "kyma-system", []byte(`{"auths":{"test-registry.io":{"username":"new-test-user","password":"new-test-password","email":"test-email"}}}`))
+		newSKRPullSecret := newPullSecret("registry-credentials", "kyma-system", []byte(`{"auths":{"test-registry.io":{"username":"new-test-user","password":"new-test-password","email":"test-email"}}}`))
+		newSKRBootstrapperConfigMap := newBootstrapperConfigMap("rt-bootstrapper-config", "kyma-system", map[string]string{"rt-bootstrapper-config.json": "some-new-configuration-data"})
+		newSKRClusterTrustBundle := newClusterTrustBundle("test-cluster-trust-bundle", "-----BEGIN CERTIFICATE-----\nnew-test-certificate-data\n-----END CERTIFICATE-----")
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(kcpPullSecret, kcpBootstrapperConfigMap, kcpClusterTrustBundle).Build()
-		fakeKcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(newKCPPullSecret, newBootstrapperConfigMap, newClusterTrustBundle).Build()
+		fakeKcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(newKCPPullSecret, newKCPBootstrapperConfigMap, newKCPClusterTrustBundle).Build()
 		m := mocks.NewRuntimeClientGetter(t)
 		m.On("Get", context.Background(), runtimeCR).Return(fakeClient, nil)
 
@@ -87,22 +97,21 @@ func Test_Configure(t *testing.T) {
 		m.AssertExpectations(t)
 		require.NoError(t, err)
 
-		assertPullSecret(t, fakeClient, newSKRullSecret)
-		assertConfigMap(t, newBootstrapperConfigMap, fakeClient)
-		assertClusterTrustBundle(t, fakeClient, newClusterTrustBundle)
+		assertPullSecret(t, fakeClient, newSKRPullSecret)
+		assertConfigMap(t, newSKRBootstrapperConfigMap, fakeClient)
+		assertClusterTrustBundle(t, fakeClient, newSKRClusterTrustBundle)
 
 	})
 
 	t.Run("Should successfully apply bootstrapper ConfigMap, PullSecret and ClusterTrustBundle to the runtime cluster", func(t *testing.T) {
 		// given
-		configWithCTB := newConfig("test-registry-credentials", "test-cluster-trust-bundle", "", "test-runtime-bootstrapper-kcp-config")
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 		fakeKcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(kcpPullSecret, kcpBootstrapperConfigMap, kcpClusterTrustBundle).Build()
 		m := mocks.NewRuntimeClientGetter(t)
 		m.On("Get", context.Background(), runtimeCR).Return(fakeClient, nil)
 
 		// when
-		configurator := NewConfigurator(fakeKcpClient, m, configWithCTB)
+		configurator := NewConfigurator(fakeKcpClient, m, config)
 		err := configurator.Configure(context.Background(), runtimeCR)
 
 		// then
@@ -116,13 +125,14 @@ func Test_Configure(t *testing.T) {
 
 	t.Run("Should successfully apply bootstrapper ConfigMap and PullSecret to the runtime cluster", func(t *testing.T) {
 		// given
+		configWithoutCTB := newConfig("test-registry-credentials", "", "", "test-runtime-bootstrapper-kcp-config")
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 		fakeKcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(kcpPullSecret, kcpBootstrapperConfigMap).Build()
 		m := mocks.NewRuntimeClientGetter(t)
 		m.On("Get", context.Background(), runtimeCR).Return(fakeClient, nil)
 
 		// when
-		configurator := NewConfigurator(fakeKcpClient, m, config)
+		configurator := NewConfigurator(fakeKcpClient, m, configWithoutCTB)
 		err := configurator.Configure(context.Background(), runtimeCR)
 
 		// then
@@ -180,11 +190,10 @@ func Test_Configure(t *testing.T) {
 
 	t.Run("Should return error when ClusterTrustBundle was not found on KCP, but it was set as required", func(t *testing.T) {
 		// given
-		configWithCTB := newConfig("test-registry-credentials", "test-cluster-trust-bundle", "", "test-runtime-bootstrapper-kcp-config")
 		kcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(kcpPullSecret, kcpBootstrapperConfigMap).Build()
 
 		// when
-		configurator := NewConfigurator(kcpClient, nil, configWithCTB)
+		configurator := NewConfigurator(kcpClient, nil, config)
 		err := configurator.Configure(context.Background(), v1.Runtime{})
 
 		// then
@@ -194,12 +203,13 @@ func Test_Configure(t *testing.T) {
 
 	t.Run("Should return error when unable to get runtime client", func(t *testing.T) {
 		// given
+		configWithoutCTB := newConfig("test-registry-credentials", "", "", "test-runtime-bootstrapper-kcp-config")
 		kcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(kcpPullSecret, kcpBootstrapperConfigMap).Build()
 		m := mocks.NewRuntimeClientGetter(t)
 		m.On("Get", context.Background(), runtimeCR).Return(nil, errors.New("unable to get runtime client"))
 
 		// when
-		configurator := NewConfigurator(kcpClient, m, config)
+		configurator := NewConfigurator(kcpClient, m, configWithoutCTB)
 		err := configurator.Configure(context.Background(), runtimeCR)
 
 		// then
@@ -210,6 +220,7 @@ func Test_Configure(t *testing.T) {
 
 	t.Run("Should return error when unable to apply ConfigMap to runtime cluster", func(t *testing.T) {
 		// given
+		configWithoutCTB := newConfig("test-registry-credentials", "", "", "test-runtime-bootstrapper-kcp-config")
 		kcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(kcpPullSecret, kcpBootstrapperConfigMap).Build()
 		m := mocks.NewRuntimeClientGetter(t)
 		fakeRuntimeClient := fake.NewClientBuilder().WithScheme(scheme).
@@ -225,7 +236,7 @@ func Test_Configure(t *testing.T) {
 		m.On("Get", context.Background(), runtimeCR).Return(fakeRuntimeClient, nil)
 
 		// when
-		configurator := NewConfigurator(kcpClient, m, config)
+		configurator := NewConfigurator(kcpClient, m, configWithoutCTB)
 		err := configurator.Configure(context.Background(), runtimeCR)
 
 		// then
@@ -236,6 +247,7 @@ func Test_Configure(t *testing.T) {
 
 	t.Run("Should return error when unable to apply PullSecret to runtime cluster", func(t *testing.T) {
 		// given
+		configWithoutCTB := newConfig("test-registry-credentials", "", "", "test-runtime-bootstrapper-kcp-config")
 		kcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(kcpPullSecret, kcpBootstrapperConfigMap).Build()
 		m := mocks.NewRuntimeClientGetter(t)
 		fakeRuntimeClient := fake.NewClientBuilder().WithScheme(scheme).
@@ -250,7 +262,7 @@ func Test_Configure(t *testing.T) {
 		m.On("Get", context.Background(), runtimeCR).Return(fakeRuntimeClient, nil)
 
 		// when
-		configurator := NewConfigurator(kcpClient, m, config)
+		configurator := NewConfigurator(kcpClient, m, configWithoutCTB)
 		err := configurator.Configure(context.Background(), runtimeCR)
 
 		// then
@@ -261,7 +273,6 @@ func Test_Configure(t *testing.T) {
 
 	t.Run("Should return error when unable to apply ClusterTrustBundle to runtime cluster", func(t *testing.T) {
 		// given
-		configWithCTB := newConfig("test-registry-credentials", "test-cluster-trust-bundle", "", "test-runtime-bootstrapper-kcp-config")
 		kcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(kcpPullSecret, kcpBootstrapperConfigMap, kcpClusterTrustBundle).Build()
 		m := mocks.NewRuntimeClientGetter(t)
 		fakeRuntimeClient := fake.NewClientBuilder().WithScheme(scheme).
@@ -276,7 +287,7 @@ func Test_Configure(t *testing.T) {
 		m.On("Get", context.Background(), runtimeCR).Return(fakeRuntimeClient, nil)
 
 		// when
-		configurator := NewConfigurator(kcpClient, m, configWithCTB)
+		configurator := NewConfigurator(kcpClient, m, config)
 		err := configurator.Configure(context.Background(), runtimeCR)
 
 		// then
@@ -299,20 +310,20 @@ func newPullSecret(name, namespace string, dockerConfigJSON []byte) *corev1.Secr
 	}
 }
 
-func newBootstrapperConfigMap(data map[string]string) *corev1.ConfigMap {
+func newBootstrapperConfigMap(name, namespace string, data map[string]string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-runtime-bootstrapper-kcp-config",
-			Namespace: "kcp-system",
+			Name:      name,
+			Namespace: namespace,
 		},
 		Data: data,
 	}
 }
 
-func newClusterTrustBundle(trustBundle string) *certificatesv1beta1.ClusterTrustBundle {
+func newClusterTrustBundle(name string, trustBundle string) *certificatesv1beta1.ClusterTrustBundle {
 	return &certificatesv1beta1.ClusterTrustBundle{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-cluster-trust-bundle",
+			Name: name,
 		},
 		Spec: certificatesv1beta1.ClusterTrustBundleSpec{
 			TrustBundle: trustBundle,
