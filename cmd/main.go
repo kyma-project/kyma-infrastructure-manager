@@ -50,21 +50,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	gardeneroidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-  gardeneroidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	kubeconfigcontroller "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig"
-  kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
-  registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
 	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
 	runtimecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
-  apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
+	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
+	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 var (
@@ -117,6 +117,7 @@ func main() {
 	var runtimeBootstrapperManifestsPath string
 	var runtimeBootstrapperConfigName string
 	var runtimeBootstrapperPullSecretName string
+	var runtimeBootstrapperManifestsConfigMapName string
 	var runtimeBootstrapperClusterTrustBundle string
 	var runtimeBootstrapperDeploymentName string
 	var runtimeBootstrapperTag string
@@ -153,6 +154,8 @@ func main() {
 
 	// Runtime bootstrapper configuration
 	flag.StringVar(&runtimeBootstrapperManifestsPath, "runtime-bootstrapper-manifests-path", "/webhook/manifests.yaml", "File path to the manifests containing runtime bootstrapper.")
+	flag.StringVar(&runtimeBootstrapperManifestsConfigMapName, "runtime-bootstrapper-manifests-config-map-name", "runtime-bootstrapper-manifests", "File path to the manifests containing runtime bootstrapper.")
+
 	flag.StringVar(&runtimeBootstrapperConfigName, "runtime-bootstrapper-config-name", "rt-bootstrapper-config", "Name of the the runtime bootstrapper Config Map.")
 	flag.StringVar(&runtimeBootstrapperPullSecretName, "runtime-bootstrapper-pull-secret-name", "", "Name of the pull secret to be copied to SKR.")
 	flag.StringVar(&runtimeBootstrapperClusterTrustBundle, "runtime-bootstrapper-cluster-trust-bundle", "", "Cluster trust bundle to be copied to SKR.")
@@ -295,22 +298,35 @@ func main() {
 			setupLog.Error(err, "unable to create client")
 			os.Exit(1)
 		}
-		if err := (&configctrl.ConfigWatcher{
-			Kcp: configctrl.Cfg{
-				Client:    kcpClient,
+
+		watcherConfig := configctrl.Cfg{
+			Client:    kcpClient,
+			Namespace: "kcp-system",
+			RtBootstrapperCfg: types.NamespacedName{
+				Name:      runtimeBootstrapperConfigName,
 				Namespace: "kcp-system",
-				ClusterTrustBundle: types.NamespacedName{
-					Name: runtimeBootstrapperClusterTrustBundle,
-				},
-				ImagePullSecret: types.NamespacedName{
-					Name:      runtimeBootstrapperPullSecretName,
-					Namespace: "kcp-system",
-				},
-				RtBootstrapperCfg: types.NamespacedName{
-					Name:      runtimeBootstrapperConfigName,
-					Namespace: "kcp-system",
-				},
 			},
+			RtBootstrapperManifests: types.NamespacedName{
+				Name:      runtimeBootstrapperManifestsConfigMapName,
+				Namespace: "kcp-system",
+			},
+		}
+
+		if runtimeBootstrapperPullSecretName != "" {
+			watcherConfig.ImagePullSecret = types.NamespacedName{
+				Name:      runtimeBootstrapperPullSecretName,
+				Namespace: "kcp-system",
+			}
+		}
+
+		if runtimeBootstrapperClusterTrustBundle != "" {
+			watcherConfig.ClusterTrustBundle = types.NamespacedName{
+				Name: runtimeBootstrapperClusterTrustBundle,
+			}
+		}
+
+		if err := (&configctrl.ConfigWatcher{
+			Kcp:    watcherConfig,
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Secret")

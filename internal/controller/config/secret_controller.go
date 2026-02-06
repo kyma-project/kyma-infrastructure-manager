@@ -41,10 +41,11 @@ var (
 type UpdateRsc func(context.Context) error
 
 type Cfg struct {
-	Namespace          string
-	ClusterTrustBundle types.NamespacedName
-	ImagePullSecret    types.NamespacedName
-	RtBootstrapperCfg  types.NamespacedName
+	Namespace               string
+	ClusterTrustBundle      types.NamespacedName
+	ImagePullSecret         types.NamespacedName
+	RtBootstrapperCfg       types.NamespacedName
+	RtBootstrapperManifests types.NamespacedName
 	client.Client
 }
 
@@ -107,19 +108,30 @@ func (r *ConfigWatcher) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 // SetupWithManager sets up the controller with the Manager.
 func (r *ConfigWatcher) SetupWithManager(mgr ctrl.Manager) error {
 
-	return ctrl.NewControllerManagedBy(mgr).
+	controller := ctrl.NewControllerManagedBy(mgr).
 		Named("config").
-		Watches(&certificatesv1beta1.ClusterTrustBundle{},
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(createResourcePredicate{
-				r.Kcp.ClusterTrustBundle})).
-		Watches(&corev1.Secret{},
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(createResourcePredicate{
-				r.Kcp.ImagePullSecret})).
 		Watches(&corev1.ConfigMap{},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(createResourcePredicate{
 				r.Kcp.RtBootstrapperCfg})).
-		Complete(r)
+		Watches(&corev1.ConfigMap{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(createResourcePredicate{
+				r.Kcp.RtBootstrapperManifests}))
+
+	if r.Kcp.ImagePullSecret.String() != "" {
+		controller = controller.Watches(&corev1.Secret{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(createResourcePredicate{
+				r.Kcp.ImagePullSecret}))
+	}
+
+	if r.Kcp.ClusterTrustBundle.String() != "" {
+		controller = controller.Watches(&certificatesv1beta1.ClusterTrustBundle{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(createResourcePredicate{
+				r.Kcp.ClusterTrustBundle}))
+	}
+
+	return controller.Complete(r)
 }
