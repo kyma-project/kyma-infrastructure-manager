@@ -11,9 +11,12 @@ import (
 )
 
 const (
+	msgConfigurationFailed    = "Failed to copy configuration to the runtime cluster"
 	msgStatusCheckFailed      = "Runtime bootstrapper status check failed"
 	msgInstallationFailed     = "Runtime bootstrapper installation failed"
+	msgUpgradeFailed          = "Runtime bootstrapper upgrade failed"
 	msgInstallationInProgress = "Runtime bootstrapper installation in progress"
+	msgUpgradeInProgress      = "Runtime bootstrapper upgrade in progress"
 	msgInstallationCompleted  = "Runtime bootstrapper installation completed"
 	timeout                   = time.Second * 30
 )
@@ -22,6 +25,18 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 	if !m.RuntimeBootstrapperEnabled || m.RuntimeBootstrapperInstaller == nil {
 		m.log.V(log_level.DEBUG).Info("Runtime bootstrapper installation is disabled")
 		return switchState(sFnFinalizeRegistryCache)
+	}
+
+	err := m.RuntimeBootstrapperInstaller.Configure(ctx, s.instance)
+	if err != nil {
+		m.log.Error(err, "Failed to configure runtime bootstrapper")
+		s.instance.UpdateStatePending(
+			imv1.ConditionTypeRuntimeBootstrapperReady,
+			imv1.ConditionReasonRuntimeBootstrapperConfigurationFailed,
+			metav1.ConditionFalse,
+			msgConfigurationFailed,
+		)
+		return updateStatusAndRequeueAfter(timeout)
 	}
 
 	status, err := m.RuntimeBootstrapperInstaller.Status(ctx, s.instance)
@@ -59,6 +74,28 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 
 			return updateStatusAndRequeueAfter(timeout)
 		}
+	case rtbootstrapper.StatusUpgradeNeeded:
+		{
+			err := m.RuntimeBootstrapperInstaller.Install(ctx, s.instance)
+			if err != nil {
+				m.log.Error(err, "Failed to start runtime bootstrapper upgrade")
+				s.instance.UpdateStatePending(
+					imv1.ConditionTypeRuntimeBootstrapperReady,
+					imv1.ConditionReasonRuntimeBootstrapperUpgradeFailed,
+					metav1.ConditionFalse,
+					msgUpgradeFailed,
+				)
+			} else {
+				s.instance.UpdateStatePending(
+					imv1.ConditionTypeRuntimeBootstrapperReady,
+					imv1.ConditionReasonRuntimeBootstrapperUpgradeInProgress,
+					metav1.ConditionFalse,
+					msgUpgradeInProgress,
+				)
+			}
+
+			return updateStatusAndRequeueAfter(timeout)
+		}
 	case rtbootstrapper.StatusInProgress:
 		{
 			m.log.V(log_level.DEBUG).Info("Runtime bootstrapper installation in progress")
@@ -81,6 +118,11 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 				msgInstallationFailed)
 		}
 	case rtbootstrapper.StatusReady:
+		err := m.RuntimeBootstrapperInstaller.Cleanup(ctx, s.instance)
+		if err != nil {
+			m.log.Error(err, "Failed to cleanup after runtime bootstrapper installation")
+		}
+
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRuntimeBootstrapperReady,
 			imv1.ConditionReasonRuntimeBootstrapperConfigured,

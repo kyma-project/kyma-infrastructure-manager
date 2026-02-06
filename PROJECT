@@ -26,4 +26,8 @@ resources:
   kind: Runtime
   path: github.com/kyma-project/infrastructure-manager/api/v1
   version: v1
+- controller: true
+  domain: kyma-project.io
+  kind: Secret
+  version: v1
 version: "3"
