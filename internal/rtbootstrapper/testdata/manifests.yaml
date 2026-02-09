@@ -11,6 +11,7 @@ kind: Deployment
 metadata:
   labels:
     app: testdepl
+    app.kubernetes.io/version: "1.0.1"
   name: testdepl
   namespace: default
 spec:

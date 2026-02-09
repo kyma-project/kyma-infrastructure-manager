@@ -78,6 +78,46 @@ func (ma ManifestApplier) ApplyManifests(ctx context.Context, runtime imv1.Runti
 	return nil
 }
 
+func (ma ManifestApplier) getManifestsDecoder(ctx context.Context, runtime imv1.Runtime) error {
+	data, err := os.ReadFile(ma.manifestsPath)
+	if err != nil {
+		return fmt.Errorf("reading file: %w", err)
+	}
+
+	docs := strings.Split(string(data), "---")
+	dynamicClient, discoveryClient, err := ma.runtimeDynamicClientGetter.Get(ctx, runtime)
+	if err != nil {
+		return fmt.Errorf("getting dynamic client: %w", err)
+	}
+
+	gr, err := restmapper.GetAPIGroupResources(discoveryClient)
+	if err != nil {
+		return fmt.Errorf("getting API group resources: %w", err)
+	}
+	mapper := restmapper.NewDiscoveryRESTMapper(gr)
+
+	defaultNamespace := "default"
+
+	for _, doc := range docs {
+		doc = strings.TrimSpace(doc)
+		if doc == "" {
+			continue
+		}
+		u := &unstructured.Unstructured{}
+		decoder := yaml.NewYAMLOrJSONDecoder(strings.NewReader(doc), 4096)
+		if err := decoder.Decode(u); err != nil && err != io.EOF {
+			return fmt.Errorf("decoding YAML: %w", err)
+		}
+		if u.GetKind() == "" {
+			continue
+		}
+		if err := applyObject(ctx, dynamicClient, mapper, u, defaultNamespace); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func applyObject(
 	ctx context.Context,
 	dynClient dynamic.Interface,
@@ -162,9 +202,15 @@ func (ma ManifestApplier) Status(ctx context.Context, runtime imv1.Runtime) (Ins
 	}
 
 	if isDeploymentReady(&deployment) {
-		if isDeploymentToBeUpdated(&deployment, ma.deploymentTag) {
+		upgradeNeeded, err := isDeploymentToBeUpdated(&deployment, ma.manifestsPath)
+		if err != nil {
+			return StatusFailed, fmt.Errorf("checking if deployment needs update: %w", err)
+		}
+
+		if upgradeNeeded {
 			return StatusUpgradeNeeded, nil
 		}
+
 		return StatusReady, nil
 	}
 
@@ -195,10 +241,47 @@ func isDeploymentReady(dep *v1.Deployment) bool {
 	return available
 }
 
-func isDeploymentToBeUpdated(dep *v1.Deployment, deploymentTag string) bool {
-	currentVersion := dep.Labels["app.kubernetes.io/version"]
+func isDeploymentToBeUpdated(dep *v1.Deployment, manifestsPath string) (bool, error) {
+	deploymentToBeApplied, err := getDeploymentToBeApplied(manifestsPath)
 
-	return currentVersion != deploymentTag
+	if err != nil {
+		return false, fmt.Errorf("getting deployment to be applied: %w", err)
+	}
+
+	versionToBeApplied := deploymentToBeApplied.GetLabels()["app.kubernetes.io/version"]
+	currentVersion := dep.GetLabels()["app.kubernetes.io/version"]
+
+	return versionToBeApplied != currentVersion, nil
+}
+
+func getDeploymentToBeApplied(manifestsPath string) (*unstructured.Unstructured, error) {
+	data, err := os.ReadFile(manifestsPath)
+	if err != nil {
+		return nil, fmt.Errorf("reading file: %w", err)
+	}
+
+	docs := strings.Split(string(data), "---")
+
+	for _, doc := range docs {
+		doc = strings.TrimSpace(doc)
+		if doc == "" {
+			continue
+		}
+		u := &unstructured.Unstructured{}
+		decoder := yaml.NewYAMLOrJSONDecoder(strings.NewReader(doc), 4096)
+		if err := decoder.Decode(u); err != nil && err != io.EOF {
+			return nil, fmt.Errorf("decoding YAML: %w", err)
+		}
+		if u.GetKind() == "" {
+			continue
+		}
+
+		if u.GetKind() == "Deployment" {
+			return u, nil
+		}
+	}
+
+	return nil, nil
 }
 
 func isDeploymentProgressing(dep *v1.Deployment) bool {

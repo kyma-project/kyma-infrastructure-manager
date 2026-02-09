@@ -140,7 +140,7 @@ func TestManifestApplier_Status(t *testing.T) {
 			Namespace: "default",
 			Labels: map[string]string{
 				"app":                       "ready",
-				"app.kubernetes.io/version": "1.0.0"},
+				"app.kubernetes.io/version": "1.0.1"},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: ptr.To(int32(3)),
@@ -149,7 +149,7 @@ func TestManifestApplier_Status(t *testing.T) {
 					Containers: []corev1.Container{
 						{
 							Name:  "nginx",
-							Image: "europe-docker.pkg.dev/kyma-project/prod/rt-bootstrapper:1.0.0",
+							Image: "europe-docker.pkg.dev/kyma-project/prod/rt-bootstrapper:1.0.1",
 						},
 					},
 				},
@@ -164,6 +164,10 @@ func TestManifestApplier_Status(t *testing.T) {
 		},
 	}
 
+	upgradeDepl := readyDepl.DeepCopy()
+	upgradeDepl.Name = "upgrade-depl"
+	upgradeDepl.ObjectMeta.Labels["app.kubernetes.io/version"] = "1.0.0"
+
 	inProgressDepl := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "progress-depl",
@@ -177,7 +181,7 @@ func TestManifestApplier_Status(t *testing.T) {
 					Containers: []corev1.Container{
 						{
 							Name:  "nginx",
-							Image: "europe-docker.pkg.dev/kyma-project/prod/rt-bootstrapper:1.0.0",
+							Image: "europe-docker.pkg.dev/kyma-project/prod/rt-bootstrapper:1.0.1",
 						},
 					},
 				},
@@ -213,7 +217,7 @@ func TestManifestApplier_Status(t *testing.T) {
 
 	fakeClient := ctrlclientfake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(readyDepl, inProgressDepl, failedDepl).
+		WithObjects(readyDepl, upgradeDepl, inProgressDepl, failedDepl).
 		Build()
 
 	rt := minimalRuntime()
@@ -223,7 +227,8 @@ func TestManifestApplier_Status(t *testing.T) {
 
 	t.Run("StatusReady", func(t *testing.T) {
 		// when
-		applier := NewManifestApplier("", types.NamespacedName{Name: "ready-depl", Namespace: "default"}, "1.0.0", runtimeClientGetter, nil)
+
+		applier := NewManifestApplier("./testdata/manifests.yaml", types.NamespacedName{Name: "ready-depl", Namespace: "default"}, "1.0.0", runtimeClientGetter, nil)
 		status, err := applier.Status(ctx, rt)
 
 		//then
@@ -263,7 +268,7 @@ func TestManifestApplier_Status(t *testing.T) {
 
 	t.Run("StatusUpgradeNeeded", func(t *testing.T) {
 		// when
-		applier := NewManifestApplier("", types.NamespacedName{Name: "ready-depl", Namespace: "default"}, "1.0.1", runtimeClientGetter, nil)
+		applier := NewManifestApplier("./testdata/manifests.yaml", types.NamespacedName{Name: "upgrade-depl", Namespace: "default"}, "1.0.1", runtimeClientGetter, nil)
 		status, err := applier.Status(ctx, rt)
 
 		//then
