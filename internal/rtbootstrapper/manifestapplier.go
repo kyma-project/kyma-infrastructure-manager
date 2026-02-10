@@ -6,6 +6,7 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"io"
 	v1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,35 +17,30 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/utils/ptr"
-	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 )
 
 type ManifestApplier struct {
-	manifestsPath              string
+	manifestsConfigMapName     string
 	deploymentName             types.NamespacedName
-	deploymentTag              string
 	runtimeDynamicClientGetter RuntimeDynamicClientGetter
 	runtimeClientGetter        RuntimeClientGetter
+	kcpClient                  client.Client
 }
 
-func NewManifestApplier(manifestsPath string, deploymentName types.NamespacedName, deploymentTag string, runtimeClientGetter RuntimeClientGetter, runtimeDynamicClientGetter RuntimeDynamicClientGetter) *ManifestApplier {
+func NewManifestApplier(manifestsConfigMapName string, deploymentName types.NamespacedName, runtimeClientGetter RuntimeClientGetter, runtimeDynamicClientGetter RuntimeDynamicClientGetter, kcpClient client.Client) *ManifestApplier {
 	return &ManifestApplier{
-		manifestsPath:              manifestsPath,
+		manifestsConfigMapName:     manifestsConfigMapName,
 		runtimeDynamicClientGetter: runtimeDynamicClientGetter,
 		runtimeClientGetter:        runtimeClientGetter,
 		deploymentName:             deploymentName,
-		deploymentTag:              deploymentTag,
+		kcpClient:                  kcpClient,
 	}
 }
 
-func (ma ManifestApplier) ApplyManifests(ctx context.Context, runtime imv1.Runtime) error {
-	data, err := os.ReadFile(ma.manifestsPath)
-	if err != nil {
-		return fmt.Errorf("reading file: %w", err)
-	}
-
-	docs := strings.Split(string(data), "---")
+func (ma ManifestApplier) ApplyManifests(ctx context.Context, runtime imv1.Runtime, manifests string) error {
+	docs := strings.Split(manifests, "---")
 	dynamicClient, discoveryClient, err := ma.runtimeDynamicClientGetter.Get(ctx, runtime)
 	if err != nil {
 		return fmt.Errorf("getting dynamic client: %w", err)
@@ -78,44 +74,16 @@ func (ma ManifestApplier) ApplyManifests(ctx context.Context, runtime imv1.Runti
 	return nil
 }
 
-func (ma ManifestApplier) getManifestsDecoder(ctx context.Context, runtime imv1.Runtime) error {
-	data, err := os.ReadFile(ma.manifestsPath)
+func (ma ManifestApplier) getManifests(ctx context.Context, kcpClient client.Client) (string, error) {
+	var manifestsConfigMap corev1.ConfigMap
+
+	err := kcpClient.Get(ctx, client.ObjectKey{Name: ma.manifestsConfigMapName, Namespace: "kcp-system"}, &manifestsConfigMap)
+
 	if err != nil {
-		return fmt.Errorf("reading file: %w", err)
+		return "", fmt.Errorf("getting ConfigMap with manifests: %w", err)
 	}
 
-	docs := strings.Split(string(data), "---")
-	dynamicClient, discoveryClient, err := ma.runtimeDynamicClientGetter.Get(ctx, runtime)
-	if err != nil {
-		return fmt.Errorf("getting dynamic client: %w", err)
-	}
-
-	gr, err := restmapper.GetAPIGroupResources(discoveryClient)
-	if err != nil {
-		return fmt.Errorf("getting API group resources: %w", err)
-	}
-	mapper := restmapper.NewDiscoveryRESTMapper(gr)
-
-	defaultNamespace := "default"
-
-	for _, doc := range docs {
-		doc = strings.TrimSpace(doc)
-		if doc == "" {
-			continue
-		}
-		u := &unstructured.Unstructured{}
-		decoder := yaml.NewYAMLOrJSONDecoder(strings.NewReader(doc), 4096)
-		if err := decoder.Decode(u); err != nil && err != io.EOF {
-			return fmt.Errorf("decoding YAML: %w", err)
-		}
-		if u.GetKind() == "" {
-			continue
-		}
-		if err := applyObject(ctx, dynamicClient, mapper, u, defaultNamespace); err != nil {
-			return err
-		}
-	}
-	return nil
+	return manifestsConfigMap.Data["manifests.yaml"], nil
 }
 
 func applyObject(
@@ -184,42 +152,46 @@ func applyObject(
 	return err
 }
 
-func (ma ManifestApplier) Status(ctx context.Context, runtime imv1.Runtime) (InstallationStatus, error) {
+func (ma ManifestApplier) Status(ctx context.Context, runtime imv1.Runtime) (InstallationStatus, string, error) {
 	var deployment v1.Deployment
+	manifestsToInstall, err := ma.getManifests(ctx, ma.kcpClient)
+	if err != nil {
+		return StatusFailed, "", fmt.Errorf("getting manifests: %w", err)
+	}
 
 	runtimeClient, err := ma.runtimeClientGetter.Get(ctx, runtime)
 	if err != nil {
-		return StatusFailed, fmt.Errorf("getting runtime client: %w", err)
+		return StatusFailed, "", fmt.Errorf("getting runtime client: %w", err)
 	}
 
 	err = runtimeClient.Get(ctx, ma.deploymentName, &deployment)
 	if err != nil && errors.IsNotFound(err) {
-		return StatusNotStarted, nil
+		return StatusNotStarted, manifestsToInstall, nil
 	}
 
 	if err != nil {
-		return StatusFailed, fmt.Errorf("getting deployment: %w", err)
+		return StatusFailed, "", fmt.Errorf("getting deployment: %w", err)
 	}
 
 	if isDeploymentReady(&deployment) {
-		upgradeNeeded, err := isDeploymentToBeUpdated(&deployment, ma.manifestsPath)
+		upgradeNeeded, err := isDeploymentToBeUpdated(&deployment, manifestsToInstall)
 		if err != nil {
-			return StatusFailed, fmt.Errorf("checking if deployment needs update: %w", err)
+			return StatusFailed, "", fmt.Errorf("checking if deployment needs update: %w", err)
 		}
 
 		if upgradeNeeded {
-			return StatusUpgradeNeeded, nil
+			return StatusUpgradeNeeded, manifestsToInstall, nil
 		}
 
-		return StatusReady, nil
+		return StatusReady, manifestsToInstall, nil
 	}
 
 	if isDeploymentProgressing(&deployment) {
-		return StatusInProgress, nil
+		return StatusInProgress, manifestsToInstall, nil
 	}
 
 	// When we got here the timeout occurred
-	return StatusFailed, nil
+	return StatusFailed, "", nil
 }
 
 func isDeploymentReady(dep *v1.Deployment) bool {
@@ -254,13 +226,8 @@ func isDeploymentToBeUpdated(dep *v1.Deployment, manifestsPath string) (bool, er
 	return versionToBeApplied != currentVersion, nil
 }
 
-func getDeploymentToBeApplied(manifestsPath string) (*unstructured.Unstructured, error) {
-	data, err := os.ReadFile(manifestsPath)
-	if err != nil {
-		return nil, fmt.Errorf("reading file: %w", err)
-	}
-
-	docs := strings.Split(string(data), "---")
+func getDeploymentToBeApplied(manifests string) (*unstructured.Unstructured, error) {
+	docs := strings.Split(manifests, "---")
 
 	for _, doc := range docs {
 		doc = strings.TrimSpace(doc)

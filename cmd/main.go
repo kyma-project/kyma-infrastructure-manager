@@ -279,7 +279,7 @@ func main() {
 			ManifestsPath:            runtimeBootstrapperManifestsPath,
 			ConfigName:               runtimeBootstrapperConfigName,
 			DeploymentNamespacedName: runtimeBootstrapperDeploymentName,
-			DeploymentTag:            runtimeBootstrapperTag,
+			ManifestsConfigMapName:   runtimeBootstrapperManifestsConfigMapName,
 		}
 
 		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(rtbConfig, runtimeClientGetter)

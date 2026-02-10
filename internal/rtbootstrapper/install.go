@@ -35,6 +35,7 @@ type Config struct {
 	DeploymentNamespacedName string
 	ConfigName               string
 	DeploymentTag            string
+	ManifestsConfigMapName   string
 }
 
 //mockery:generate: true
@@ -54,20 +55,20 @@ func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter Ru
 	return &Installer{
 		config:    config,
 		kcpClient: kcpClient,
-		manifestApplier: NewManifestApplier(config.ManifestsPath,
+		manifestApplier: NewManifestApplier(config.ManifestsConfigMapName,
 			toNamespacedName(config.DeploymentNamespacedName),
-			config.DeploymentTag,
 			runtimeClientGetter,
-			runtimeDynamicClientGetter),
+			runtimeDynamicClientGetter,
+			kcpClient),
 		configurator: NewConfigurator(kcpClient, runtimeClientGetter, config),
 	}
 }
 
-func (r *Installer) Install(ctx context.Context, runtime imv1.Runtime) error {
-	return r.manifestApplier.ApplyManifests(ctx, runtime)
+func (r *Installer) Install(ctx context.Context, runtime imv1.Runtime, manifests string) error {
+	return r.manifestApplier.ApplyManifests(ctx, runtime, manifests)
 }
 
-func (r *Installer) Status(ctx context.Context, runtime imv1.Runtime) (InstallationStatus, error) {
+func (r *Installer) Status(ctx context.Context, runtime imv1.Runtime) (InstallationStatus, string, error) {
 	return r.manifestApplier.Status(ctx, runtime)
 }
 
