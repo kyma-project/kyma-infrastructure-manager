@@ -92,19 +92,38 @@ func (c *Configurator) getClusterTrustBundle(ctx context.Context) (*certificates
 }
 
 func (c *Configurator) applyResourcesToRuntimeCluster(ctx context.Context, runtimeClient client.Client, secret *corev1.Secret, configMap *corev1.ConfigMap, clusterTrustBundle *certificatesv1beta1.ClusterTrustBundle) error {
-	// ConfigMap: skip apply if runtime object exists and equals KCP source
-	applyCM := true
-	{
-		var existing corev1.ConfigMap
-		err := runtimeClient.Get(ctx, client.ObjectKey{Name: "rt-bootstrapper-config", Namespace: "kyma-system"}, &existing)
-		if err == nil {
-			if equalConfigMap(existing, *configMap) {
-				applyCM = false
-			}
-		} else if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("failed to check runtime ConfigMap: %w", err)
+	if err := c.applyConfigMap(ctx, runtimeClient, configMap); err != nil {
+		return err
+	}
+
+	if secret != nil {
+		if err := c.applySecret(ctx, runtimeClient, secret); err != nil {
+			return err
 		}
 	}
+
+	if clusterTrustBundle != nil {
+		if err := c.applyClusterTrustBundle(ctx, runtimeClient, clusterTrustBundle); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Configurator) applyConfigMap(ctx context.Context, runtimeClient client.Client, configMap *corev1.ConfigMap) error {
+	applyCM := true
+
+	var existing corev1.ConfigMap
+	err := runtimeClient.Get(ctx, client.ObjectKey{Name: "rt-bootstrapper-config", Namespace: "kyma-system"}, &existing)
+	if err == nil {
+		if equalConfigMap(existing, *configMap) {
+			applyCM = false
+		}
+	} else if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to check runtime ConfigMap: %w", err)
+	}
+
 	if applyCM {
 		runtimeConfigMap := &corev1.ConfigMap{
 			TypeMeta: metav1.TypeMeta{
@@ -124,77 +143,76 @@ func (c *Configurator) applyResourcesToRuntimeCluster(ctx context.Context, runti
 			return fmt.Errorf("failed to apply bootstrapper ConfigMap to runtime cluster: %w", err)
 		}
 	}
+	return nil
+}
 
-	// Secret: skip apply if runtime object exists and equals KCP source
-	if secret != nil {
-		applySecret := true
-		{
-			var existing corev1.Secret
-			err := runtimeClient.Get(ctx, client.ObjectKey{Name: "registry-credentials", Namespace: "kyma-system"}, &existing)
-			if err == nil {
-				if equalSecret(existing, *secret) {
-					applySecret = false
-				}
-			} else if !apierrors.IsNotFound(err) {
-				return fmt.Errorf("failed to check runtime Secret: %w", err)
-			}
+func (c *Configurator) applySecret(ctx context.Context, runtimeClient client.Client, secret *corev1.Secret) error {
+	applySecret := true
+
+	var existing corev1.Secret
+	err := runtimeClient.Get(ctx, client.ObjectKey{Name: "registry-credentials", Namespace: "kyma-system"}, &existing)
+	if err == nil {
+		if equalSecret(existing, *secret) {
+			applySecret = false
 		}
-		if applySecret {
-			secretToApply := &corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Secret",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "registry-credentials",
-					Namespace: "kyma-system",
-				},
-				Data: secret.Data,
-				Type: secret.Type,
-			}
-			if err := runtimeClient.Patch(ctx, secretToApply, client.Apply, &client.PatchOptions{
-				Force:        ptr.To(true),
-				FieldManager: fieldManagerName,
-			}); err != nil {
-				return fmt.Errorf("failed to apply bootstrapper PullSecret to runtime cluster: %w", err)
-			}
-		}
+	} else if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to check runtime Secret: %w", err)
 	}
 
-	// ClusterTrustBundle: skip apply if runtime object exists and equals KCP source
-	if clusterTrustBundle != nil {
-		applyCTB := true
-		{
-			var existing certificatesv1beta1.ClusterTrustBundle
-			err := runtimeClient.Get(ctx, client.ObjectKey{Name: clusterTrustBundle.Name}, &existing)
-			if err == nil {
-				if equalClusterTrustBundle(existing, *clusterTrustBundle) {
-					applyCTB = false
-				}
-			} else if !apierrors.IsNotFound(err) {
-				return fmt.Errorf("failed to check runtime ClusterTrustBundle: %w", err)
-			}
+	if applySecret {
+		secretToApply := &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Secret",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "registry-credentials",
+				Namespace: "kyma-system",
+			},
+			Data: secret.Data,
+			Type: secret.Type,
 		}
-		if applyCTB {
-			ctbToApply := &certificatesv1beta1.ClusterTrustBundle{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ClusterTrustBundle",
-					APIVersion: "certificates.k8s.io/v1beta1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: clusterTrustBundle.Name,
-				},
-				Spec: clusterTrustBundle.Spec,
-			}
-			if err := runtimeClient.Patch(ctx, ctbToApply, client.Apply, &client.PatchOptions{
-				Force:        ptr.To(true),
-				FieldManager: fieldManagerName,
-			}); err != nil {
-				return fmt.Errorf("failed to apply ClusterTrustBundle to runtime cluster: %w", err)
-			}
+		if err := runtimeClient.Patch(ctx, secretToApply, client.Apply, &client.PatchOptions{
+			Force:        ptr.To(true),
+			FieldManager: fieldManagerName,
+		}); err != nil {
+			return fmt.Errorf("failed to apply bootstrapper PullSecret to runtime cluster: %w", err)
 		}
 	}
+	return nil
+}
 
+func (c *Configurator) applyClusterTrustBundle(ctx context.Context, runtimeClient client.Client, clusterTrustBundle *certificatesv1beta1.ClusterTrustBundle) error {
+	applyCTB := true
+
+	var existing certificatesv1beta1.ClusterTrustBundle
+	err := runtimeClient.Get(ctx, client.ObjectKey{Name: clusterTrustBundle.Name}, &existing)
+	if err == nil {
+		if equalClusterTrustBundle(existing, *clusterTrustBundle) {
+			applyCTB = false
+		}
+	} else if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to check runtime ClusterTrustBundle: %w", err)
+	}
+
+	if applyCTB {
+		ctbToApply := &certificatesv1beta1.ClusterTrustBundle{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ClusterTrustBundle",
+				APIVersion: "certificates.k8s.io/v1beta1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: clusterTrustBundle.Name,
+			},
+			Spec: clusterTrustBundle.Spec,
+		}
+		if err := runtimeClient.Patch(ctx, ctbToApply, client.Apply, &client.PatchOptions{
+			Force:        ptr.To(true),
+			FieldManager: fieldManagerName,
+		}); err != nil {
+			return fmt.Errorf("failed to apply ClusterTrustBundle to runtime cluster: %w", err)
+		}
+	}
 	return nil
 }
 

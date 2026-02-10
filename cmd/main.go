@@ -25,7 +25,7 @@ import (
 	"os"
 	"time"
 
-	configctrl "github.com/kyma-project/infrastructure-manager/internal/controller/config"
+	configctrl "github.com/kyma-project/infrastructure-manager/internal/controller/rtbootstrapperconfig"
 	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -325,7 +325,7 @@ func main() {
 			}
 		}
 
-		if err := (&configctrl.ConfigWatcher{
+		if err := (&configctrl.RuntimeBootstrapperConfigWatcher{
 			Kcp:    watcherConfig,
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {

@@ -74,18 +74,6 @@ func (ma ManifestApplier) ApplyManifests(ctx context.Context, runtime imv1.Runti
 	return nil
 }
 
-func (ma ManifestApplier) getManifests(ctx context.Context, kcpClient client.Client) (string, error) {
-	var manifestsConfigMap corev1.ConfigMap
-
-	err := kcpClient.Get(ctx, client.ObjectKey{Name: ma.manifestsConfigMapName, Namespace: "kcp-system"}, &manifestsConfigMap)
-
-	if err != nil {
-		return "", fmt.Errorf("getting ConfigMap with manifests: %w", err)
-	}
-
-	return manifestsConfigMap.Data["manifests.yaml"], nil
-}
-
 func applyObject(
 	ctx context.Context,
 	dynClient dynamic.Interface,
@@ -192,6 +180,18 @@ func (ma ManifestApplier) InstallationInfo(ctx context.Context, runtime imv1.Run
 
 	// When we got here the timeout occurred
 	return StatusFailed, "", nil
+}
+
+func (ma ManifestApplier) getManifests(ctx context.Context, kcpClient client.Client) (string, error) {
+	var manifestsConfigMap corev1.ConfigMap
+
+	err := kcpClient.Get(ctx, client.ObjectKey{Name: ma.manifestsConfigMapName, Namespace: "kcp-system"}, &manifestsConfigMap)
+
+	if err != nil {
+		return "", fmt.Errorf("getting ConfigMap with manifests: %w", err)
+	}
+
+	return manifestsConfigMap.Data["manifests.yaml"], nil
 }
 
 func isDeploymentReady(dep *v1.Deployment) bool {

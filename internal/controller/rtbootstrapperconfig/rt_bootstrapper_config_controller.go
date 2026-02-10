@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+package rtbootstrapperconfig
 
 import (
 	"context"
@@ -49,8 +49,8 @@ type Cfg struct {
 	client.Client
 }
 
-// ConfigWatcher reconciles a Secret object
-type ConfigWatcher struct {
+// RuntimeBootstrapperConfigWatcher reconciles a Secret object
+type RuntimeBootstrapperConfigWatcher struct {
 	Scheme *runtime.Scheme
 	Kcp    Cfg
 }
@@ -60,7 +60,7 @@ type ConfigWatcher struct {
 // +kubebuilder:rbac:groups=certificates.k8s.io,resources=clustertrustbundles,verbs=watch;list,namespace=kcp-system
 // +kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=runtimes,verbs=list;patch,namespace=kcp-system
 
-func (r *ConfigWatcher) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *RuntimeBootstrapperConfigWatcher) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
 	logger := logf.FromContext(ctx)
 
 	var runtimes imv1.RuntimeList
@@ -106,30 +106,30 @@ func (r *ConfigWatcher) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ConfigWatcher) SetupWithManager(mgr ctrl.Manager) error {
+func (r *RuntimeBootstrapperConfigWatcher) SetupWithManager(mgr ctrl.Manager) error {
 
 	controller := ctrl.NewControllerManagedBy(mgr).
 		Named("config").
 		Watches(&corev1.ConfigMap{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(createResourcePredicate{
+			builder.WithPredicates(objectUpdatedPredicate{
 				r.Kcp.RtBootstrapperCfg})).
 		Watches(&corev1.ConfigMap{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(createResourcePredicate{
+			builder.WithPredicates(objectUpdatedPredicate{
 				r.Kcp.RtBootstrapperManifests}))
 
-	if r.Kcp.ImagePullSecret.String() != "" {
+	if r.Kcp.ImagePullSecret.Name != "" && r.Kcp.ImagePullSecret.Namespace != "" {
 		controller = controller.Watches(&corev1.Secret{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(createResourcePredicate{
+			builder.WithPredicates(objectUpdatedPredicate{
 				r.Kcp.ImagePullSecret}))
 	}
 
-	if r.Kcp.ClusterTrustBundle.String() != "" {
+	if r.Kcp.ClusterTrustBundle.Name != "" {
 		controller = controller.Watches(&certificatesv1beta1.ClusterTrustBundle{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(createResourcePredicate{
+			builder.WithPredicates(objectUpdatedPredicate{
 				r.Kcp.ClusterTrustBundle}))
 	}
 
