@@ -3,6 +3,7 @@ package rtbootstrapper
 import (
 	"context"
 	"github.com/pkg/errors"
+	"k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -37,7 +38,11 @@ func (v Validator) Validate(ctx context.Context) error {
 		return err
 	}
 
-	return verifyPullSecret(ctx, v.config.PullSecretName, v.kcpClient)
+	if err := verifyPullSecret(ctx, v.config.PullSecretName, v.kcpClient); err != nil {
+		return err
+	}
+
+	return verifyClusterTrustBundle(ctx, v.config.ClusterTrustBundleName, v.kcpClient)
 }
 
 func verifyDeploymentName(deploymentNamespacedName string) error {
@@ -58,6 +63,18 @@ func verifyConfigMap(ctx context.Context, configMapName string, kcpClient client
 	var configMap corev1.ConfigMap
 	if err := getResource(ctx, kcpClient, configMapName, &configMap); err != nil {
 		return errors.New("unable to find Runtime Bootstrapper ConfigMap in KCP cluster")
+	}
+
+	return nil
+}
+
+func verifyClusterTrustBundle(ctx context.Context, clusterTrustBundleName string, kcpClient client.Client) error {
+	if clusterTrustBundleName != "" {
+		var clusterTrustBundle v1beta1.ClusterTrustBundle
+
+		if err := kcpClient.Get(ctx, client.ObjectKey{Name: clusterTrustBundleName}, &clusterTrustBundle); err != nil {
+			return errors.New("unable to find Cluster Trust Bundle")
+		}
 	}
 
 	return nil
