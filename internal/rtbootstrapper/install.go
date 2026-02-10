@@ -31,10 +31,8 @@ const (
 type Config struct {
 	PullSecretName           string
 	ClusterTrustBundleName   string
-	ManifestsPath            string
 	DeploymentNamespacedName string
 	ConfigName               string
-	DeploymentTag            string
 	ManifestsConfigMapName   string
 }
 

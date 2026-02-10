@@ -21,17 +21,17 @@ import (
 )
 
 // newConfig creates a Config for tests with provided parameters.
-func newConfig(pullSecretName, clusterTrustBundleName, manifestsPath, configName string) Config {
+func newConfig(pullSecretName, clusterTrustBundleName, configName string) Config {
 	return Config{
 		PullSecretName:         pullSecretName,
 		ClusterTrustBundleName: clusterTrustBundleName,
-		ManifestsPath:          manifestsPath,
-		ConfigName:             configName,
+		//ManifestsConfigMapName: manifestsConfigMapName,
+		ConfigName: configName,
 	}
 }
 
 func Test_Configure(t *testing.T) {
-	config := newConfig("test-registry-credentials", "test-cluster-trust-bundle", "", "test-runtime-bootstrapper-kcp-config")
+	config := newConfig("test-registry-credentials", "test-cluster-trust-bundle", "test-runtime-bootstrapper-kcp-config")
 
 	kcpPullSecret := newPullSecret(config.PullSecretName, "kcp-system", []byte(`{"auths":{"test-registry.io":{"username":"test-user","password":"test-password","email":"test-email"}}}`))
 	kcpBootstrapperConfigMap := newBootstrapperConfigMap(config.ConfigName, "kcp-system", map[string]string{"rt-bootstrapper-config.json": "some-configuration-data"})
@@ -125,7 +125,7 @@ func Test_Configure(t *testing.T) {
 
 	t.Run("Should successfully apply bootstrapper ConfigMap and PullSecret to the runtime cluster", func(t *testing.T) {
 		// given
-		configWithoutCTB := newConfig("test-registry-credentials", "", "", "test-runtime-bootstrapper-kcp-config")
+		configWithoutCTB := newConfig("test-registry-credentials", "", "test-runtime-bootstrapper-kcp-config")
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 		fakeKcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(kcpPullSecret, kcpBootstrapperConfigMap).Build()
 		m := mocks.NewRuntimeClientGetter(t)
@@ -145,7 +145,7 @@ func Test_Configure(t *testing.T) {
 
 	t.Run("Should successfully apply only ConfigMap when PullSecret is not configured", func(t *testing.T) {
 		// given
-		configWithoutSecret := newConfig("", "", "", "test-runtime-bootstrapper-kcp-config")
+		configWithoutSecret := newConfig("", "", "test-runtime-bootstrapper-kcp-config")
 		kcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(kcpBootstrapperConfigMap).Build()
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 		m := mocks.NewRuntimeClientGetter(t)
@@ -203,7 +203,7 @@ func Test_Configure(t *testing.T) {
 
 	t.Run("Should return error when unable to get runtime client", func(t *testing.T) {
 		// given
-		configWithoutCTB := newConfig("test-registry-credentials", "", "", "test-runtime-bootstrapper-kcp-config")
+		configWithoutCTB := newConfig("test-registry-credentials", "", "test-runtime-bootstrapper-kcp-config")
 		kcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(kcpPullSecret, kcpBootstrapperConfigMap).Build()
 		m := mocks.NewRuntimeClientGetter(t)
 		m.On("Get", context.Background(), runtimeCR).Return(nil, errors.New("unable to get runtime client"))
@@ -220,7 +220,7 @@ func Test_Configure(t *testing.T) {
 
 	t.Run("Should return error when unable to apply ConfigMap to runtime cluster", func(t *testing.T) {
 		// given
-		configWithoutCTB := newConfig("test-registry-credentials", "", "", "test-runtime-bootstrapper-kcp-config")
+		configWithoutCTB := newConfig("test-registry-credentials", "", "test-runtime-bootstrapper-kcp-config")
 		kcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(kcpPullSecret, kcpBootstrapperConfigMap).Build()
 		m := mocks.NewRuntimeClientGetter(t)
 		fakeRuntimeClient := fake.NewClientBuilder().WithScheme(scheme).
@@ -247,7 +247,7 @@ func Test_Configure(t *testing.T) {
 
 	t.Run("Should return error when unable to apply PullSecret to runtime cluster", func(t *testing.T) {
 		// given
-		configWithoutCTB := newConfig("test-registry-credentials", "", "", "test-runtime-bootstrapper-kcp-config")
+		configWithoutCTB := newConfig("test-registry-credentials", "", "test-runtime-bootstrapper-kcp-config")
 		kcpClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(kcpPullSecret, kcpBootstrapperConfigMap).Build()
 		m := mocks.NewRuntimeClientGetter(t)
 		fakeRuntimeClient := fake.NewClientBuilder().WithScheme(scheme).

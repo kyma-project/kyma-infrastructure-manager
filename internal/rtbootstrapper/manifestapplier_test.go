@@ -199,7 +199,7 @@ func TestManifestApplier_Status(t *testing.T) {
 	configMap, err := createManifestsConfigMap("./testdata/manifests.yaml", rtManifestConfigMapName, "kcp-system")
 	require.NoError(t, err)
 
-	fakeClient := ctrlclientfake.NewClientBuilder().WithScheme(scheme).WithObjects(&configMap).Build()
+	fakeClient := ctrlclientfake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap).Build()
 
 	expectedManifestsBytes, err := os.ReadFile("./testdata/manifests.yaml")
 	require.NoError(t, err)
@@ -280,14 +280,14 @@ func TestManifestApplier_StatusErrors(t *testing.T) {
 	_ = corev1.AddToScheme(scheme)
 	_ = appsv1.AddToScheme(scheme)
 
-	fakeClient := ctrlclientfake.NewClientBuilder().WithScheme(scheme).WithObjects(&configMap).Build()
+	fakeClient := ctrlclientfake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap).Build()
 
 	t.Run("Failed to get manifests config map", func(t *testing.T) {
 		fakeClientWithInterceptor := ctrlclientfake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
 			Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				return errors.New("get manifests error")
 			},
-		}).WithObjects(&configMap).Build()
+		}).WithObjects(configMap).Build()
 
 		applier := NewManifestApplier(rtManifestConfigMapName, types.NamespacedName{Name: "depl", Namespace: "default"}, nil, nil, fakeClientWithInterceptor)
 		_, _, err := applier.InstallationInfo(ctx, rt)
@@ -310,7 +310,7 @@ func TestManifestApplier_StatusErrors(t *testing.T) {
 			Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				return errors.New("get error")
 			},
-		}).WithObjects(&configMap).Build()
+		}).WithObjects(configMap).Build()
 
 		runtimeClientGetter := NewMockRuntimeClientGetter(t)
 		runtimeClientGetter.EXPECT().Get(mock.Anything, rt).Return(fakeClientWithInterceptor, nil)
@@ -330,13 +330,13 @@ func minimalRuntime() imv1.Runtime {
 	}
 }
 
-func createManifestsConfigMap(manifestsPath string, name, namespace string) (corev1.ConfigMap, error) {
+func createManifestsConfigMap(manifestsPath string, name, namespace string) (*corev1.ConfigMap, error) {
 	data, err := os.ReadFile(manifestsPath)
 	if err != nil {
-		return corev1.ConfigMap{}, fmt.Errorf("reading manifests file: %w", err)
+		return nil, fmt.Errorf("reading manifests file: %w", err)
 	}
 
-	cm := corev1.ConfigMap{
+	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
