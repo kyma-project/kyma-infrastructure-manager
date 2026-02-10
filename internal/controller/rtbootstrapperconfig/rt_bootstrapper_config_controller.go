@@ -78,6 +78,9 @@ func (r *RuntimeBootstrapperConfigWatcher) Reconcile(ctx context.Context, _ ctrl
 	logger.Info("Forcing configuration reloading on runtimes")
 
 	for _, item := range runtimes.Items {
+		if item.Annotations != nil && item.Annotations[reconciler.ForceReconcileAnnotation] == "true" {
+			continue
+		}
 
 		newItem := item.DeepCopy()
 		if newItem.Annotations == nil {
