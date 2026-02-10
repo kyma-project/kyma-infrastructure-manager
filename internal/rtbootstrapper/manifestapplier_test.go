@@ -137,7 +137,7 @@ func TestManifestApplier_Status(t *testing.T) {
 
 	upgradeDepl := readyDepl.DeepCopy()
 	upgradeDepl.Name = "upgrade-depl"
-	upgradeDepl.ObjectMeta.Labels["app.kubernetes.io/version"] = "1.0.0"
+	upgradeDepl.Labels["app.kubernetes.io/version"] = "1.0.0"
 
 	inProgressDepl := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
