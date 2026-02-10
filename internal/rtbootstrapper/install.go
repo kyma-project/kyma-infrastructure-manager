@@ -68,8 +68,8 @@ func (r *Installer) Install(ctx context.Context, runtime imv1.Runtime, manifests
 	return r.manifestApplier.ApplyManifests(ctx, runtime, manifests)
 }
 
-func (r *Installer) Status(ctx context.Context, runtime imv1.Runtime) (InstallationStatus, string, error) {
-	return r.manifestApplier.Status(ctx, runtime)
+func (r *Installer) InstallationInfo(ctx context.Context, runtime imv1.Runtime) (InstallationStatus, string, error) {
+	return r.manifestApplier.InstallationInfo(ctx, runtime)
 }
 
 func (r *Installer) Configure(ctx context.Context, runtime imv1.Runtime) error {

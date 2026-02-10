@@ -214,7 +214,7 @@ func TestManifestApplier_Status(t *testing.T) {
 	t.Run("StatusReady", func(t *testing.T) {
 		// when
 		applier := NewManifestApplier(rtManifestConfigMapName, types.NamespacedName{Name: "ready-depl", Namespace: "default"}, runtimeClientGetter, nil, fakeClient)
-		status, manifests, err := applier.Status(ctx, rt)
+		status, manifests, err := applier.InstallationInfo(ctx, rt)
 
 		//then
 		require.NoError(t, err)
@@ -225,7 +225,7 @@ func TestManifestApplier_Status(t *testing.T) {
 	t.Run("StatusProgressing", func(t *testing.T) {
 		// when
 		applier := NewManifestApplier(rtManifestConfigMapName, types.NamespacedName{Name: "progress-depl", Namespace: "default"}, runtimeClientGetter, nil, fakeClient)
-		status, manifests, err := applier.Status(ctx, rt)
+		status, manifests, err := applier.InstallationInfo(ctx, rt)
 
 		// then
 		require.NoError(t, err)
@@ -236,7 +236,7 @@ func TestManifestApplier_Status(t *testing.T) {
 	t.Run("StatusFailed", func(t *testing.T) {
 		// when
 		applier := NewManifestApplier(rtManifestConfigMapName, types.NamespacedName{Name: "failed-depl", Namespace: "default"}, runtimeClientGetter, nil, fakeClient)
-		status, manifests, err := applier.Status(ctx, rt)
+		status, manifests, err := applier.InstallationInfo(ctx, rt)
 
 		// then
 		require.NoError(t, err)
@@ -247,7 +247,7 @@ func TestManifestApplier_Status(t *testing.T) {
 	t.Run("StatusNotStarted", func(t *testing.T) {
 		// when
 		applier := NewManifestApplier(rtManifestConfigMapName, types.NamespacedName{Name: "missing-depl", Namespace: "default"}, runtimeClientGetter, nil, fakeClient)
-		status, manifests, err := applier.Status(ctx, rt)
+		status, manifests, err := applier.InstallationInfo(ctx, rt)
 
 		// then
 		require.NoError(t, err)
@@ -258,7 +258,7 @@ func TestManifestApplier_Status(t *testing.T) {
 	t.Run("StatusUpgradeNeeded", func(t *testing.T) {
 		// when
 		applier := NewManifestApplier(rtManifestConfigMapName, types.NamespacedName{Name: "upgrade-depl", Namespace: "default"}, runtimeClientGetter, nil, fakeClient)
-		status, manifests, err := applier.Status(ctx, rt)
+		status, manifests, err := applier.InstallationInfo(ctx, rt)
 
 		//then
 		require.NoError(t, err)
@@ -290,7 +290,7 @@ func TestManifestApplier_StatusErrors(t *testing.T) {
 		}).WithObjects(&configMap).Build()
 
 		applier := NewManifestApplier(rtManifestConfigMapName, types.NamespacedName{Name: "depl", Namespace: "default"}, nil, nil, fakeClientWithInterceptor)
-		_, _, err := applier.Status(ctx, rt)
+		_, _, err := applier.InstallationInfo(ctx, rt)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "manifests error")
 	})
@@ -300,7 +300,7 @@ func TestManifestApplier_StatusErrors(t *testing.T) {
 		runtimeClientGetter.EXPECT().Get(mock.Anything, rt).Return(nil, errors.New("failed"))
 
 		applier := NewManifestApplier(rtManifestConfigMapName, types.NamespacedName{Name: "depl", Namespace: "default"}, runtimeClientGetter, nil, fakeClient)
-		_, _, err := applier.Status(ctx, rt)
+		_, _, err := applier.InstallationInfo(ctx, rt)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed")
 	})
@@ -315,7 +315,7 @@ func TestManifestApplier_StatusErrors(t *testing.T) {
 		runtimeClientGetter := NewMockRuntimeClientGetter(t)
 		runtimeClientGetter.EXPECT().Get(mock.Anything, rt).Return(fakeClientWithInterceptor, nil)
 		applier := NewManifestApplier(rtManifestConfigMapName, types.NamespacedName{Name: "depl", Namespace: "default"}, runtimeClientGetter, nil, fakeClient)
-		_, _, err := applier.Status(ctx, rt)
+		_, _, err := applier.InstallationInfo(ctx, rt)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "get error")
 	})

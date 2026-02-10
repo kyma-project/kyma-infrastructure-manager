@@ -30,4 +30,3 @@ func TestGetRuntimeClientWithScheme_InvalidKubeconfig(t *testing.T) {
 		t.Fatalf("expected error when kubeconfig is invalid, got nil")
 	}
 }
-

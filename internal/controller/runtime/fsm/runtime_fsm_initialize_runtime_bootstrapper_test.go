@@ -42,7 +42,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Ready(t *testing.T) {
 
 	inst := NewMockRuntimeBootstrapperInstaller(t)
 	inst.EXPECT().Configure(mock.Anything, runtime).Return(nil)
-	inst.EXPECT().Status(mock.Anything, runtime).Return(rtbootstrapper.StatusReady, nil)
+	inst.EXPECT().InstallationInfo(mock.Anything, runtime).Return(rtbootstrapper.StatusReady, "manifests", nil)
 	inst.EXPECT().Cleanup(mock.Anything, runtime).Return(errors.New("cleanup error"))
 
 	f := &fsm{
@@ -100,7 +100,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Errors(t *testing.T) {
 			name: "StatusError",
 			mockSetup: func(inst *MockRuntimeBootstrapperInstaller, runtime imv1.Runtime) {
 				inst.EXPECT().Configure(mock.Anything, runtime).Return(nil)
-				inst.EXPECT().Status(mock.Anything, runtime).Return(rtbootstrapper.StatusFailed, errors.New("status failed"))
+				inst.EXPECT().InstallationInfo(mock.Anything, runtime).Return(rtbootstrapper.StatusFailed, "", errors.New("status failed"))
 			},
 			expectedCondition: metav1.Condition{
 				Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
@@ -113,8 +113,8 @@ func Test_sFnInitializeRuntimeBootstrapper_Errors(t *testing.T) {
 			name: "InstallError",
 			mockSetup: func(inst *MockRuntimeBootstrapperInstaller, runtime imv1.Runtime) {
 				inst.EXPECT().Configure(mock.Anything, runtime).Return(nil)
-				inst.EXPECT().Status(mock.Anything, runtime).Return(rtbootstrapper.StatusNotStarted, nil)
-				inst.EXPECT().Install(mock.Anything, runtime).Return(errors.New("install failed"))
+				inst.EXPECT().InstallationInfo(mock.Anything, runtime).Return(rtbootstrapper.StatusNotStarted, "manifests", nil)
+				inst.EXPECT().Install(mock.Anything, runtime, "manifests").Return(errors.New("install failed"))
 			},
 			expectedCondition: metav1.Condition{
 				Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
@@ -127,7 +127,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Errors(t *testing.T) {
 			name: "FailedStatus",
 			mockSetup: func(inst *MockRuntimeBootstrapperInstaller, runtime imv1.Runtime) {
 				inst.EXPECT().Configure(mock.Anything, runtime).Return(nil)
-				inst.EXPECT().Status(mock.Anything, runtime).Return(rtbootstrapper.StatusFailed, nil)
+				inst.EXPECT().InstallationInfo(mock.Anything, runtime).Return(rtbootstrapper.StatusFailed, "", nil)
 			},
 			expectedCondition: metav1.Condition{
 				Type:    string(imv1.ConditionTypeRuntimeBootstrapperReady),
@@ -200,8 +200,8 @@ func Test_sFnInitializeRuntimeBootstrapper_InProgress(t *testing.T) {
 		runtime := minimalRuntime()
 
 		inst.EXPECT().Configure(mock.Anything, runtime).Return(nil)
-		inst.EXPECT().Status(mock.Anything, runtime).Return(rtbootstrapper.StatusNotStarted, nil)
-		inst.EXPECT().Install(mock.Anything, runtime).Return(nil)
+		inst.EXPECT().InstallationInfo(mock.Anything, runtime).Return(rtbootstrapper.StatusNotStarted, "manifests", nil)
+		inst.EXPECT().Install(mock.Anything, runtime, "manifests").Return(nil)
 
 		f := newFSMWith(inst)
 		ss := &systemState{instance: runtime}
@@ -221,8 +221,8 @@ func Test_sFnInitializeRuntimeBootstrapper_InProgress(t *testing.T) {
 		runtime := minimalRuntime()
 
 		inst.EXPECT().Configure(mock.Anything, runtime).Return(nil)
-		inst.EXPECT().Status(mock.Anything, runtime).Return(rtbootstrapper.StatusUpgradeNeeded, nil)
-		inst.EXPECT().Install(mock.Anything, runtime).Return(nil)
+		inst.EXPECT().InstallationInfo(mock.Anything, runtime).Return(rtbootstrapper.StatusUpgradeNeeded, "manifests", nil)
+		inst.EXPECT().Install(mock.Anything, runtime, "manifests").Return(nil)
 
 		f := newFSMWith(inst)
 		ss := &systemState{instance: runtime}
@@ -242,7 +242,7 @@ func Test_sFnInitializeRuntimeBootstrapper_InProgress(t *testing.T) {
 		runtime := minimalRuntime()
 
 		inst.EXPECT().Configure(mock.Anything, runtime).Return(nil)
-		inst.EXPECT().Status(mock.Anything, runtime).Return(rtbootstrapper.StatusInProgress, nil)
+		inst.EXPECT().InstallationInfo(mock.Anything, runtime).Return(rtbootstrapper.StatusInProgress, "manifests", nil)
 
 		f := newFSMWith(inst)
 		ss := &systemState{instance: minimalRuntime()}

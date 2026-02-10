@@ -39,7 +39,7 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 		return updateStatusAndRequeueAfter(timeout)
 	}
 
-	status, err := m.RuntimeBootstrapperInstaller.Status(ctx, s.instance)
+	status, manifests, err := m.RuntimeBootstrapperInstaller.InstallationInfo(ctx, s.instance)
 	if err != nil {
 		m.log.Error(err, "Failed to get runtime bootstrapper installation status")
 		s.instance.UpdateStatePending(
@@ -54,7 +54,7 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 	switch status {
 	case rtbootstrapper.StatusNotStarted:
 		{
-			err := m.RuntimeBootstrapperInstaller.Install(ctx, s.instance)
+			err := m.RuntimeBootstrapperInstaller.Install(ctx, s.instance, manifests)
 			if err != nil {
 				m.log.Error(err, "Failed to start runtime bootstrapper installation")
 				s.instance.UpdateStatePending(
@@ -76,7 +76,7 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 		}
 	case rtbootstrapper.StatusUpgradeNeeded:
 		{
-			err := m.RuntimeBootstrapperInstaller.Install(ctx, s.instance)
+			err := m.RuntimeBootstrapperInstaller.Install(ctx, s.instance, manifests)
 			if err != nil {
 				m.log.Error(err, "Failed to start runtime bootstrapper upgrade")
 				s.instance.UpdateStatePending(

@@ -49,4 +49,3 @@ func TestRuntimeClientGetterWithScheme_Get_SecretMissingData(t *testing.T) {
 		t.Fatalf("expected error when secret has no kubeconfig data, got nil")
 	}
 }
-

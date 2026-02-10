@@ -152,7 +152,7 @@ func applyObject(
 	return err
 }
 
-func (ma ManifestApplier) Status(ctx context.Context, runtime imv1.Runtime) (InstallationStatus, string, error) {
+func (ma ManifestApplier) InstallationInfo(ctx context.Context, runtime imv1.Runtime) (InstallationStatus, string, error) {
 	var deployment v1.Deployment
 	manifestsToInstall, err := ma.getManifests(ctx, ma.kcpClient)
 	if err != nil {
