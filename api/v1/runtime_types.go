@@ -217,11 +217,12 @@ type Provider struct {
 }
 
 type Networking struct {
-	Type      *string `json:"type,omitempty"`
-	Pods      string  `json:"pods"`
-	Nodes     string  `json:"nodes"`
-	Services  string  `json:"services"`
-	DualStack *bool   `json:"dualStack,omitempty"`
+	Type       *string `json:"type,omitempty"`
+	Pods       string  `json:"pods"`
+	Nodes      string  `json:"nodes"`
+	Services   string  `json:"services"`
+	DualStack  *bool   `json:"dualStack,omitempty"`
+	VPCNetwork *string `json:"vpcNetwork,omitempty"`
 }
 
 type Security struct {

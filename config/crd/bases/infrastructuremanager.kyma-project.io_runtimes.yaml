@@ -413,6 +413,8 @@ spec:
                         type: string
                       type:
                         type: string
+                      vpcNetwork:
+                        type: string
                     required:
                     - nodes
                     - pods
