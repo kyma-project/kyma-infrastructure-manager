@@ -239,14 +239,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if runtimeBootstrapperEnabled && runtimeBootstrapperClusterTrustBundle != "" {
-		// ClusterTrustBundle is a beta feature and needs to be explicitly enabled in the converter config
-		// When the feature is generally available, this code can be removed
-		// As of the time of writing (December 2025) there is no GA release date announced
-		// Details: https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#cluster-trust-bundles
-		enableClusterTrustBundleFeatureForSKR(&config.ConverterConfig)
-	}
-
 	auditLogDataMap, err := loadAuditLogDataMap(config.ConverterConfig.AuditLog.TenantConfigPath)
 	if err != nil {
 		setupLog.Error(err, "invalid audit log tenant configuration")
@@ -268,6 +260,13 @@ func main() {
 	var runtimeBootstrapperInstaller *rtbootstrapper.Installer
 
 	if runtimeBootstrapperEnabled {
+		if runtimeBootstrapperClusterTrustBundle != "" {
+			// ClusterTrustBundle is a beta feature and needs to be explicitly enabled in the converter config
+			// When the feature is generally available, this code can be removed
+			// As of the time of writing (December 2025) there is no GA release date announced
+			// Details: https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#cluster-trust-bundles
+			enableClusterTrustBundleFeatureForSKR(&config.ConverterConfig)
+		}
 
 		rtbConfig := rtbootstrapper.Config{
 			PullSecretName:           runtimeBootstrapperPullSecretName,
