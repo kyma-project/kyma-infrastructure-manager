@@ -23,7 +23,6 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -38,8 +37,6 @@ var (
 	fieldManager                 = "config-watcher"
 )
 
-type UpdateRsc func(context.Context) error
-
 type Cfg struct {
 	Namespace               string
 	ClusterTrustBundle      types.NamespacedName
@@ -51,8 +48,7 @@ type Cfg struct {
 
 // RuntimeBootstrapperConfigWatcher reconciles a Secret object
 type RuntimeBootstrapperConfigWatcher struct {
-	Scheme *runtime.Scheme
-	Kcp    Cfg
+	Kcp Cfg
 }
 
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=watch;list,namespace=kcp-system

@@ -320,8 +320,7 @@ func main() {
 		}
 
 		if err := (&configctrl.RuntimeBootstrapperConfigWatcher{
-			Kcp:    watcherConfig,
-			Scheme: mgr.GetScheme(),
+			Kcp: watcherConfig,
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Secret")
 			os.Exit(1)
