@@ -276,12 +276,6 @@ func main() {
 			ManifestsConfigMapName:   runtimeBootstrapperManifestsConfigMapName,
 		}
 
-		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(rtbConfig, runtimeClientGetter)
-		if err != nil {
-			setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
-			os.Exit(1)
-		}
-
 		cfg, err := ctrl.GetConfig()
 		if err != nil {
 			setupLog.Error(err, "unable to get rest config")
@@ -290,6 +284,12 @@ func main() {
 		kcpClient, err := client.New(cfg, client.Options{Scheme: scheme})
 		if err != nil {
 			setupLog.Error(err, "unable to create client")
+			os.Exit(1)
+		}
+
+		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(rtbConfig, runtimeClientGetter, kcpClient)
+		if err != nil {
+			setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
 			os.Exit(1)
 		}
 
@@ -512,18 +512,8 @@ func restrictWatchedNamespace() cache.Options {
 	}
 }
 
-func configureRuntimeBootstrapper(config rtbootstrapper.Config, runtimeClientGetter fsm.RuntimeClientGetter) (*rtbootstrapper.Installer, error) {
-	cfg, err := ctrl.GetConfig()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
-	}
-
-	kcpClient, err := client.New(cfg, client.Options{Scheme: scheme})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
-	}
-
-	err = rtbootstrapper.NewValidator(config, kcpClient).Validate(context.Background())
+func configureRuntimeBootstrapper(config rtbootstrapper.Config, runtimeClientGetter fsm.RuntimeClientGetter, kcpClient client.Client) (*rtbootstrapper.Installer, error) {
+	err := rtbootstrapper.NewValidator(config, kcpClient).Validate(context.Background())
 	if err != nil {
 		return nil, err
 	}
