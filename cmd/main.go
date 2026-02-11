@@ -114,7 +114,6 @@ func main() {
 	var auditLogMandatory bool
 	var registryCacheConfigControllerEnabled bool
 	var runtimeBootstrapperEnabled bool
-	var runtimeBootstrapperManifestsPath string
 	var runtimeBootstrapperConfigName string
 	var runtimeBootstrapperPullSecretName string
 	var runtimeBootstrapperManifestsConfigMapName string
@@ -152,7 +151,6 @@ func main() {
 	flag.BoolVar(&runtimeBootstrapperEnabled, "runtime-bootstrapper-enabled", false, "Feature flag to enable runtime bootstrapper")
 
 	// Runtime bootstrapper configuration
-	flag.StringVar(&runtimeBootstrapperManifestsPath, "runtime-bootstrapper-manifests-path", "/webhook/manifests.yaml", "File path to the manifests containing runtime bootstrapper.")
 	flag.StringVar(&runtimeBootstrapperManifestsConfigMapName, "runtime-bootstrapper-manifests-config-map-name", "runtime-bootstrapper-manifests", "File path to the manifests containing runtime bootstrapper.")
 
 	flag.StringVar(&runtimeBootstrapperConfigName, "runtime-bootstrapper-config-name", "rt-bootstrapper-config", "Name of the the runtime bootstrapper Config Map.")
