@@ -25,28 +25,19 @@ import (
 	"os"
 	"time"
 
+	configctrl "github.com/kyma-project/infrastructure-manager/internal/controller/rtbootstrapperconfig"
 	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenerapis "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	"github.com/go-logr/logr"
 	validator "github.com/go-playground/validator/v10"
-	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	kubeconfigcontroller "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
-	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
-	runtimecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
-	"github.com/kyma-project/infrastructure-manager/pkg/config"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8slabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -60,8 +51,18 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	gardeneroidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
+	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	kubeconfigcontroller "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig"
+	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
+	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
+	runtimecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
+	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
-	// packages used to prebuild runtime scheme
 	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
@@ -113,9 +114,9 @@ func main() {
 	var auditLogMandatory bool
 	var registryCacheConfigControllerEnabled bool
 	var runtimeBootstrapperEnabled bool
-	var runtimeBootstrapperManifestsPath string
 	var runtimeBootstrapperConfigName string
 	var runtimeBootstrapperPullSecretName string
+	var runtimeBootstrapperManifestsConfigMapName string
 	var runtimeBootstrapperClusterTrustBundle string
 	var runtimeBootstrapperDeploymentName string
 
@@ -150,7 +151,8 @@ func main() {
 	flag.BoolVar(&runtimeBootstrapperEnabled, "runtime-bootstrapper-enabled", false, "Feature flag to enable runtime bootstrapper")
 
 	// Runtime bootstrapper configuration
-	flag.StringVar(&runtimeBootstrapperManifestsPath, "runtime-bootstrapper-manifests-path", "/webhook/manifests.yaml", "File path to the manifests containing runtime bootstrapper.")
+	flag.StringVar(&runtimeBootstrapperManifestsConfigMapName, "runtime-bootstrapper-manifests-config-map-name", "runtime-bootstrapper-manifests", "File path to the manifests containing runtime bootstrapper.")
+
 	flag.StringVar(&runtimeBootstrapperConfigName, "runtime-bootstrapper-config-name", "rt-bootstrapper-config", "Name of the the runtime bootstrapper Config Map.")
 	flag.StringVar(&runtimeBootstrapperPullSecretName, "runtime-bootstrapper-pull-secret-name", "", "Name of the pull secret to be copied to SKR.")
 	flag.StringVar(&runtimeBootstrapperClusterTrustBundle, "runtime-bootstrapper-cluster-trust-bundle", "", "Cluster trust bundle to be copied to SKR.")
@@ -237,14 +239,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if runtimeBootstrapperEnabled && runtimeBootstrapperClusterTrustBundle != "" {
-		// ClusterTrustBundle is a beta feature and needs to be explicitly enabled in the converter config
-		// When the feature is generally available, this code can be removed
-		// As of the time of writing (December 2025) there is no GA release date announced
-		// Details: https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#cluster-trust-bundles
-		enableClusterTrustBundleFeatureForSKR(&config.ConverterConfig)
-	}
-
 	auditLogDataMap, err := loadAuditLogDataMap(config.ConverterConfig.AuditLog.TenantConfigPath)
 	if err != nil {
 		setupLog.Error(err, "invalid audit log tenant configuration")
@@ -266,18 +260,69 @@ func main() {
 	var runtimeBootstrapperInstaller *rtbootstrapper.Installer
 
 	if runtimeBootstrapperEnabled {
+		if runtimeBootstrapperClusterTrustBundle != "" {
+			// ClusterTrustBundle is a beta feature and needs to be explicitly enabled in the converter config
+			// When the feature is generally available, this code can be removed
+			// As of the time of writing (December 2025) there is no GA release date announced
+			// Details: https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#cluster-trust-bundles
+			enableClusterTrustBundleFeatureForSKR(&config.ConverterConfig)
+		}
 
 		rtbConfig := rtbootstrapper.Config{
 			PullSecretName:           runtimeBootstrapperPullSecretName,
 			ClusterTrustBundleName:   runtimeBootstrapperClusterTrustBundle,
-			ManifestsPath:            runtimeBootstrapperManifestsPath,
 			ConfigName:               runtimeBootstrapperConfigName,
 			DeploymentNamespacedName: runtimeBootstrapperDeploymentName,
+			ManifestsConfigMapName:   runtimeBootstrapperManifestsConfigMapName,
 		}
 
-		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(rtbConfig, runtimeClientGetter)
+		cfg, err := ctrl.GetConfig()
+		if err != nil {
+			setupLog.Error(err, "unable to get rest config")
+			os.Exit(1)
+		}
+		kcpClient, err := client.New(cfg, client.Options{Scheme: scheme})
+		if err != nil {
+			setupLog.Error(err, "unable to create client")
+			os.Exit(1)
+		}
+
+		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(rtbConfig, runtimeClientGetter, kcpClient)
 		if err != nil {
 			setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
+			os.Exit(1)
+		}
+
+		watcherConfig := configctrl.Cfg{
+			Client:    kcpClient,
+			Namespace: "kcp-system",
+			RtBootstrapperCfg: types.NamespacedName{
+				Name:      runtimeBootstrapperConfigName,
+				Namespace: "kcp-system",
+			},
+			RtBootstrapperManifests: types.NamespacedName{
+				Name:      runtimeBootstrapperManifestsConfigMapName,
+				Namespace: "kcp-system",
+			},
+		}
+
+		if runtimeBootstrapperPullSecretName != "" {
+			watcherConfig.ImagePullSecret = types.NamespacedName{
+				Name:      runtimeBootstrapperPullSecretName,
+				Namespace: "kcp-system",
+			}
+		}
+
+		if runtimeBootstrapperClusterTrustBundle != "" {
+			watcherConfig.ClusterTrustBundle = types.NamespacedName{
+				Name: runtimeBootstrapperClusterTrustBundle,
+			}
+		}
+
+		if err := (&configctrl.RuntimeBootstrapperConfigWatcher{
+			Kcp: watcherConfig,
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Secret")
 			os.Exit(1)
 		}
 	}
@@ -440,6 +485,12 @@ func refreshRuntimeMetrics(restConfig *rest.Config, logger logr.Logger, metrics 
 func restrictWatchedNamespace() cache.Options {
 	return cache.Options{
 		ByObject: map[client.Object]cache.ByObject{
+			&corev1.ConfigMap{}: {
+				Label: k8slabels.Everything(),
+				Namespaces: map[string]cache.Config{
+					"kcp-system": {},
+				},
+			},
 			&corev1.Secret{}: {
 				Label: k8slabels.Everything(),
 				Namespaces: map[string]cache.Config{
@@ -460,18 +511,8 @@ func restrictWatchedNamespace() cache.Options {
 	}
 }
 
-func configureRuntimeBootstrapper(config rtbootstrapper.Config, runtimeClientGetter fsm.RuntimeClientGetter) (*rtbootstrapper.Installer, error) {
-	cfg, err := ctrl.GetConfig()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
-	}
-
-	kcpClient, err := client.New(cfg, client.Options{Scheme: scheme})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to verify Runtime Bootstrapper configuration")
-	}
-
-	err = rtbootstrapper.NewValidator(config, kcpClient).Validate(context.Background())
+func configureRuntimeBootstrapper(config rtbootstrapper.Config, runtimeClientGetter fsm.RuntimeClientGetter, kcpClient client.Client) (*rtbootstrapper.Installer, error) {
+	err := rtbootstrapper.NewValidator(config, kcpClient).Validate(context.Background())
 	if err != nil {
 		return nil, err
 	}

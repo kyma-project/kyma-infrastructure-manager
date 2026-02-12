@@ -2,9 +2,13 @@ package rtbootstrapper
 
 import (
 	"context"
+	"fmt"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	util "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
+	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"testing"
@@ -19,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	fakediscovery "k8s.io/client-go/discovery/fake"
-	"k8s.io/client-go/dynamic/fake"
+	fakeDynamic "k8s.io/client-go/dynamic/fake"
 	clientgotesting "k8s.io/client-go/testing"
 	ctrlclientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -31,7 +35,10 @@ func TestManifestApplier_Apply_FromFile(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = corev1.AddToScheme(scheme)
 
-	fakeClient := fake.NewSimpleDynamicClient(scheme)
+	fakeDynamicClient := fakeDynamic.NewSimpleDynamicClient(scheme)
+
+	manifests, err := os.ReadFile("./testdata/manifests.yaml")
+	require.NoError(t, err)
 
 	fakeDiscovery := &fakediscovery.FakeDiscovery{
 		Fake:               &clientgotesting.Fake{},
@@ -66,64 +73,28 @@ func TestManifestApplier_Apply_FromFile(t *testing.T) {
 	}
 
 	rt := minimalRuntime()
-	runtimeDynamicClientGetter.EXPECT().Get(mock.Anything, rt).Return(fakeClient, fakeDiscovery, nil)
-	applier := NewManifestApplier("./testdata/manifests.yaml", types.NamespacedName{}, nil, runtimeDynamicClientGetter)
+	runtimeDynamicClientGetter.EXPECT().Get(mock.Anything, rt).Return(fakeDynamicClient, fakeDiscovery, nil)
+	applier := NewManifestApplier("", types.NamespacedName{}, nil, runtimeDynamicClientGetter, nil)
 
 	// when
-	err := applier.ApplyManifests(context.Background(), rt)
+	err = applier.ApplyManifests(context.Background(), rt, string(manifests))
 
 	// then
 	require.NoError(t, err)
 
 	cmGVR := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"}
-	cm, err := fakeClient.Resource(cmGVR).Namespace("default").Get(context.Background(), "testcm", metav1.GetOptions{})
+	cm, err := fakeDynamicClient.Resource(cmGVR).Namespace("default").Get(context.Background(), "testcm", metav1.GetOptions{})
 	require.NoError(t, err)
 	require.Equal(t, "ConfigMap", cm.GetKind())
 	require.Equal(t, "testcm", cm.GetName())
 	require.Equal(t, "default", cm.GetNamespace())
 
 	deployGVR := schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
-	depl, err := fakeClient.Resource(deployGVR).Namespace("default").Get(context.Background(), "testdepl", metav1.GetOptions{})
+	depl, err := fakeDynamicClient.Resource(deployGVR).Namespace("default").Get(context.Background(), "testdepl", metav1.GetOptions{})
 	require.NoError(t, err)
 	require.Equal(t, "Deployment", depl.GetKind())
 	require.Equal(t, "testdepl", depl.GetName())
 	require.Equal(t, "default", depl.GetNamespace())
-}
-
-func TestManifestApplier_ManifestErrors(t *testing.T) {
-	// given
-	scheme := runtime.NewScheme()
-	_ = corev1.AddToScheme(scheme)
-
-	fakeClient := fake.NewSimpleDynamicClient(scheme)
-
-	fakeDiscovery := &fakediscovery.FakeDiscovery{
-		Fake:               &clientgotesting.Fake{},
-		FakedServerVersion: nil,
-	}
-
-	runtimeDynamicClientGetter := NewMockRuntimeDynamicClientGetter(t)
-	runtimeDynamicClientGetter.EXPECT().Get(mock.Anything, mock.Anything).Return(fakeClient, fakeDiscovery, nil)
-
-	t.Run("Failed to decode file", func(t *testing.T) {
-		//when
-		applier := NewManifestApplier("./testdata/invalid.yaml", types.NamespacedName{}, nil, runtimeDynamicClientGetter)
-		err := applier.ApplyManifests(context.Background(), minimalRuntime())
-
-		// then
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "decoding YAML")
-	})
-
-	t.Run("Failed to open file", func(t *testing.T) {
-		// when
-		applier := NewManifestApplier("nonexistent", types.NamespacedName{}, nil, runtimeDynamicClientGetter)
-		err := applier.ApplyManifests(context.Background(), minimalRuntime())
-
-		// then
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "no such file or directory")
-	})
 }
 
 func TestManifestApplier_Status(t *testing.T) {
@@ -138,10 +109,22 @@ func TestManifestApplier_Status(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "ready-depl",
 			Namespace: "default",
-			Labels:    map[string]string{"app": "ready"},
+			Labels: map[string]string{
+				"app":                       "ready",
+				"app.kubernetes.io/version": "1.0.1"},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: ptr.To(int32(3)),
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "nginx",
+							Image: "europe-docker.pkg.dev/kyma-project/prod/rt-bootstrapper:1.0.1",
+						},
+					},
+				},
+			},
 		},
 		Status: appsv1.DeploymentStatus{
 			Replicas:      3,
@@ -152,6 +135,10 @@ func TestManifestApplier_Status(t *testing.T) {
 		},
 	}
 
+	upgradeDepl := readyDepl.DeepCopy()
+	upgradeDepl.Name = "upgrade-depl"
+	upgradeDepl.Labels["app.kubernetes.io/version"] = "1.0.0"
+
 	inProgressDepl := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "progress-depl",
@@ -160,6 +147,16 @@ func TestManifestApplier_Status(t *testing.T) {
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: ptr.To(int32(3)),
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "nginx",
+							Image: "europe-docker.pkg.dev/kyma-project/prod/rt-bootstrapper:1.0.1",
+						},
+					},
+				},
+			},
 		},
 		Status: appsv1.DeploymentStatus{
 			Replicas:      3,
@@ -189,54 +186,84 @@ func TestManifestApplier_Status(t *testing.T) {
 		},
 	}
 
-	fakeClient := ctrlclientfake.NewClientBuilder().
+	fakeDynamicClient := ctrlclientfake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(readyDepl, inProgressDepl, failedDepl).
+		WithObjects(readyDepl, upgradeDepl, inProgressDepl, failedDepl).
 		Build()
 
+	util.Must(corev1.AddToScheme(scheme))
+	util.Must(certificatesv1beta1.AddToScheme(scheme))
+
+	rtManifestConfigMapName := "rt-manifests"
+
+	configMap, err := createManifestsConfigMap("./testdata/manifests.yaml", rtManifestConfigMapName, "kcp-system")
+	require.NoError(t, err)
+
+	fakeClient := ctrlclientfake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap).Build()
+
+	expectedManifestsBytes, err := os.ReadFile("./testdata/manifests.yaml")
+	require.NoError(t, err)
+
+	expectedManifests := string(expectedManifestsBytes)
+
 	rt := minimalRuntime()
-	runtimeClientGetter.EXPECT().Get(mock.Anything, rt).Return(fakeClient, nil)
+	runtimeClientGetter.EXPECT().Get(mock.Anything, rt).Return(fakeDynamicClient, nil)
 
 	ctx := context.Background()
 
 	t.Run("StatusReady", func(t *testing.T) {
 		// when
-		applier := NewManifestApplier("", types.NamespacedName{Name: "ready-depl", Namespace: "default"}, runtimeClientGetter, nil)
-		status, err := applier.Status(ctx, rt)
+		applier := NewManifestApplier(rtManifestConfigMapName, types.NamespacedName{Name: "ready-depl", Namespace: "default"}, runtimeClientGetter, nil, fakeClient)
+		status, manifests, err := applier.InstallationInfo(ctx, rt)
 
 		//then
 		require.NoError(t, err)
 		require.Equal(t, StatusReady, status)
+		require.Equal(t, expectedManifests, manifests)
 	})
 
 	t.Run("StatusProgressing", func(t *testing.T) {
 		// when
-		applier := NewManifestApplier("", types.NamespacedName{Name: "progress-depl", Namespace: "default"}, runtimeClientGetter, nil)
-		status, err := applier.Status(ctx, rt)
+		applier := NewManifestApplier(rtManifestConfigMapName, types.NamespacedName{Name: "progress-depl", Namespace: "default"}, runtimeClientGetter, nil, fakeClient)
+		status, manifests, err := applier.InstallationInfo(ctx, rt)
 
 		// then
 		require.NoError(t, err)
 		require.Equal(t, StatusInProgress, status)
+		require.Equal(t, expectedManifests, manifests)
 	})
 
 	t.Run("StatusFailed", func(t *testing.T) {
 		// when
-		applier := NewManifestApplier("", types.NamespacedName{Name: "failed-depl", Namespace: "default"}, runtimeClientGetter, nil)
-		status, err := applier.Status(ctx, rt)
+		applier := NewManifestApplier(rtManifestConfigMapName, types.NamespacedName{Name: "failed-depl", Namespace: "default"}, runtimeClientGetter, nil, fakeClient)
+		status, manifests, err := applier.InstallationInfo(ctx, rt)
 
 		// then
 		require.NoError(t, err)
 		require.Equal(t, StatusFailed, status)
+		require.Equal(t, "", manifests)
 	})
 
 	t.Run("StatusNotStarted", func(t *testing.T) {
 		// when
-		applier := NewManifestApplier("", types.NamespacedName{Name: "missing-depl", Namespace: "default"}, runtimeClientGetter, nil)
-		status, err := applier.Status(ctx, rt)
+		applier := NewManifestApplier(rtManifestConfigMapName, types.NamespacedName{Name: "missing-depl", Namespace: "default"}, runtimeClientGetter, nil, fakeClient)
+		status, manifests, err := applier.InstallationInfo(ctx, rt)
 
 		// then
 		require.NoError(t, err)
 		require.Equal(t, StatusNotStarted, status)
+		require.Equal(t, expectedManifests, manifests)
+	})
+
+	t.Run("StatusUpgradeNeeded", func(t *testing.T) {
+		// when
+		applier := NewManifestApplier(rtManifestConfigMapName, types.NamespacedName{Name: "upgrade-depl", Namespace: "default"}, runtimeClientGetter, nil, fakeClient)
+		status, manifests, err := applier.InstallationInfo(ctx, rt)
+
+		//then
+		require.NoError(t, err)
+		require.Equal(t, StatusUpgradeNeeded, status)
+		require.Equal(t, expectedManifests, manifests)
 	})
 }
 
@@ -244,27 +271,51 @@ func TestManifestApplier_StatusErrors(t *testing.T) {
 	ctx := context.Background()
 	rt := minimalRuntime()
 
+	rtManifestConfigMapName := "rt-manifests"
+
+	configMap, err := createManifestsConfigMap("./testdata/manifests.yaml", rtManifestConfigMapName, "kcp-system")
+	require.NoError(t, err)
+
+	scheme := runtime.NewScheme()
+	_ = corev1.AddToScheme(scheme)
+	_ = appsv1.AddToScheme(scheme)
+
+	fakeClient := ctrlclientfake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap).Build()
+
+	t.Run("Failed to get manifests config map", func(t *testing.T) {
+		fakeClientWithInterceptor := ctrlclientfake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
+			Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				return errors.New("get manifests error")
+			},
+		}).WithObjects(configMap).Build()
+
+		applier := NewManifestApplier(rtManifestConfigMapName, types.NamespacedName{Name: "depl", Namespace: "default"}, nil, nil, fakeClientWithInterceptor)
+		_, _, err := applier.InstallationInfo(ctx, rt)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "manifests error")
+	})
+
 	t.Run("Failed to get client", func(t *testing.T) {
 		runtimeClientGetter := NewMockRuntimeClientGetter(t)
 		runtimeClientGetter.EXPECT().Get(mock.Anything, rt).Return(nil, errors.New("failed"))
 
-		applier := NewManifestApplier("", types.NamespacedName{Name: "depl", Namespace: "default"}, runtimeClientGetter, nil)
-		_, err := applier.Status(ctx, rt)
+		applier := NewManifestApplier(rtManifestConfigMapName, types.NamespacedName{Name: "depl", Namespace: "default"}, runtimeClientGetter, nil, fakeClient)
+		_, _, err := applier.InstallationInfo(ctx, rt)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed")
 	})
 
 	t.Run("Failed to get deployment", func(t *testing.T) {
-		fakeClient := ctrlclientfake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
+		fakeClientWithInterceptor := ctrlclientfake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
 			Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				return errors.New("get error")
 			},
-		}).Build()
+		}).WithObjects(configMap).Build()
 
 		runtimeClientGetter := NewMockRuntimeClientGetter(t)
-		runtimeClientGetter.EXPECT().Get(mock.Anything, rt).Return(fakeClient, nil)
-		applier := NewManifestApplier("", types.NamespacedName{Name: "depl", Namespace: "default"}, runtimeClientGetter, nil)
-		_, err := applier.Status(ctx, rt)
+		runtimeClientGetter.EXPECT().Get(mock.Anything, rt).Return(fakeClientWithInterceptor, nil)
+		applier := NewManifestApplier(rtManifestConfigMapName, types.NamespacedName{Name: "depl", Namespace: "default"}, runtimeClientGetter, nil, fakeClient)
+		_, _, err := applier.InstallationInfo(ctx, rt)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "get error")
 	})
@@ -277,4 +328,23 @@ func minimalRuntime() imv1.Runtime {
 			Namespace: "kcp-system",
 		},
 	}
+}
+
+func createManifestsConfigMap(manifestsPath string, name, namespace string) (*corev1.ConfigMap, error) {
+	data, err := os.ReadFile(manifestsPath)
+	if err != nil {
+		return nil, fmt.Errorf("reading manifests file: %w", err)
+	}
+
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Data: map[string]string{
+			"manifests.yaml": string(data),
+		},
+	}
+
+	return cm, nil
 }

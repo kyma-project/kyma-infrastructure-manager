@@ -32,11 +32,11 @@ func TestAnnotationsExtender(t *testing.T) {
 				},
 			},
 			expectedAnnotations: map[string]string{
-				"infrastructuremanager.kyma-project.io/runtime-id":         "runtime-id",
-				"infrastructuremanager.kyma-project.io/runtime-generation": "100",
-				"shoot.gardener.cloud/cleanup-extended-apis-finalize-grace-period-seconds": "120",
+				"infrastructuremanager.kyma-project.io/runtime-id":                                "runtime-id",
+				"infrastructuremanager.kyma-project.io/runtime-generation":                        "100",
+				"shoot.gardener.cloud/cleanup-extended-apis-finalize-grace-period-seconds":        "120",
 				"shoot.gardener.cloud/cleanup-kubernetes-resources-finalize-grace-period-seconds": "120",
-				"shoot.gardener.cloud/cleanup-webhooks-finalize-grace-period-seconds": "60",
+				"shoot.gardener.cloud/cleanup-webhooks-finalize-grace-period-seconds":             "60",
 			},
 		},
 		{
@@ -56,12 +56,12 @@ func TestAnnotationsExtender(t *testing.T) {
 				},
 			},
 			expectedAnnotations: map[string]string{
-				"infrastructuremanager.kyma-project.io/runtime-id":         "runtime-id",
-				"infrastructuremanager.kyma-project.io/licence-type":       "licence",
-				"infrastructuremanager.kyma-project.io/runtime-generation": "0",
-				"shoot.gardener.cloud/cleanup-extended-apis-finalize-grace-period-seconds": "120",
+				"infrastructuremanager.kyma-project.io/runtime-id":                                "runtime-id",
+				"infrastructuremanager.kyma-project.io/licence-type":                              "licence",
+				"infrastructuremanager.kyma-project.io/runtime-generation":                        "0",
+				"shoot.gardener.cloud/cleanup-extended-apis-finalize-grace-period-seconds":        "120",
 				"shoot.gardener.cloud/cleanup-kubernetes-resources-finalize-grace-period-seconds": "120",
-				"shoot.gardener.cloud/cleanup-webhooks-finalize-grace-period-seconds": "60",
+				"shoot.gardener.cloud/cleanup-webhooks-finalize-grace-period-seconds":             "60",
 			},
 		},
 	} {

@@ -33,3 +33,4 @@ config/manager/converter_config.yaml
 *~
 
 vendor
+coverage.txt

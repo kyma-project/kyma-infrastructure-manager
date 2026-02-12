@@ -8,8 +8,10 @@ import (
 
 //mockery:generate: true
 type RuntimeBootstrapperInstaller interface {
-	Install(context context.Context, runtime imv1.Runtime) error
-	Status(context context.Context, runtime imv1.Runtime) (rtbootstrapper.InstallationStatus, error)
+	Configure(ctx context.Context, runtime imv1.Runtime) error
+	Install(context context.Context, runtime imv1.Runtime, manifests string) error
+	InstallationInfo(context context.Context, runtime imv1.Runtime) (rtbootstrapper.InstallationStatus, string, error)
+	Cleanup(ctx context.Context, runtime imv1.Runtime) error
 }
 
 //mockery:generate: true

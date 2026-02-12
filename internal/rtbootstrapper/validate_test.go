@@ -3,6 +3,7 @@ package rtbootstrapper
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -31,19 +32,35 @@ func TestValidations(t *testing.T) {
 		Type: corev1.SecretTypeDockerConfigJson,
 	}
 
+	clusterTrustBundle := newClusterTrustBundle("test-trust-bundle", "data")
+
+	validManifestsPath := "./testdata/manifests.yaml"
+	invalidManifestsPath := "./testdata/invalid.yaml"
+
+	manifestsConfigMapName := "test-manifests-config"
+	invalidManifestsConfigMapName := "test-manifests-config"
+
+	manifestsConfigMap, err := createManifestsConfigMap(validManifestsPath, manifestsConfigMapName, "kcp-system")
+	require.NoError(t, err)
+
+	manifestsConfigMapWithInvalidManifests, err := createManifestsConfigMap(invalidManifestsPath, invalidManifestsConfigMapName, "kcp-system")
+	require.NoError(t, err)
+
 	scheme := runtime.NewScheme()
+
+	util.Must(corev1.AddToScheme(scheme))
+	util.Must(certificatesv1beta1.AddToScheme(scheme))
 
 	t.Run("No errors on valid config", func(t *testing.T) {
 		{
 			// given
 			config := Config{
-				ManifestsPath:            "./testdata/manifests.yaml",
+				ManifestsConfigMapName:   manifestsConfigMapName,
 				DeploymentNamespacedName: "default/my-deployment",
 				ConfigName:               "test-config",
 			}
 
-			util.Must(corev1.AddToScheme(scheme))
-			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap).Build()
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap, manifestsConfigMap).Build()
 
 			// when
 			err := NewValidator(config, fakeClient).Validate(context.Background())
@@ -55,15 +72,14 @@ func TestValidations(t *testing.T) {
 		{
 			// given
 			config := Config{
-				ManifestsPath:            "./testdata/manifests.yaml",
+				ManifestsConfigMapName:   manifestsConfigMapName,
 				DeploymentNamespacedName: "default/my-deployment",
 				ConfigName:               "test-config",
 				PullSecretName:           "test-pull-secret",
+				ClusterTrustBundleName:   "test-trust-bundle",
 			}
 
-			scheme := runtime.NewScheme()
-			util.Must(corev1.AddToScheme(scheme))
-			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap, secret).Build()
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap, secret, manifestsConfigMap, clusterTrustBundle).Build()
 
 			// when
 			err := NewValidator(config, fakeClient).Validate(context.Background())
@@ -73,7 +89,7 @@ func TestValidations(t *testing.T) {
 		}
 	})
 
-	t.Run("Empty manifest path", func(t *testing.T) {
+	t.Run("Empty manifests config map name", func(t *testing.T) {
 		// given
 		config := Config{}
 
@@ -82,29 +98,15 @@ func TestValidations(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		assert.ErrorContains(t, err, "manifests path is required")
-	})
-
-	t.Run("Manifest file doesn't exist", func(t *testing.T) {
-		// given
-		config := Config{
-			ManifestsPath: "non-existent-file.yaml",
-		}
-
-		// when
-		err := NewValidator(config, nil).Validate(context.Background())
-
-		// then
-		require.Error(t, err)
-		assert.ErrorContains(t, err, "non-existent-file.yaml")
+		assert.ErrorContains(t, err, "manifests config map name is required")
 	})
 
 	t.Run("Invalid YAML in manifests", func(t *testing.T) {
 		// given
-		fakeClient := fake.NewClientBuilder().WithObjects(configMap).Build()
+		fakeClient := fake.NewClientBuilder().WithObjects(configMap, manifestsConfigMapWithInvalidManifests).Build()
 
 		config := Config{
-			ManifestsPath:            "./testdata/invalid.yaml",
+			ManifestsConfigMapName:   invalidManifestsConfigMapName,
 			DeploymentNamespacedName: "default/my-deployment",
 			ConfigName:               "test-config",
 		}
@@ -122,13 +124,15 @@ func TestValidations(t *testing.T) {
 	t.Run("Deployment namespace incorrect", func(t *testing.T) {
 		{
 			// given
+			fakeClient := fake.NewClientBuilder().WithObjects(configMap, manifestsConfigMap).Build()
+
 			config := Config{
 				DeploymentNamespacedName: "/invalid-deployment-name",
-				ManifestsPath:            "./testdata/manifests.yaml",
+				ManifestsConfigMapName:   manifestsConfigMapName,
 			}
 
 			// when
-			err := NewValidator(config, nil).Validate(context.Background())
+			err := NewValidator(config, fakeClient).Validate(context.Background())
 
 			// then
 			require.Error(t, err)
@@ -137,13 +141,15 @@ func TestValidations(t *testing.T) {
 
 		{
 			// given
+			fakeClient := fake.NewClientBuilder().WithObjects(configMap, manifestsConfigMap).Build()
+
 			config := Config{
 				DeploymentNamespacedName: "invalid-deployment-name/",
-				ManifestsPath:            "./testdata/manifests.yaml",
+				ManifestsConfigMapName:   manifestsConfigMapName,
 			}
 
 			// when
-			err := NewValidator(config, nil).Validate(context.Background())
+			err := NewValidator(config, fakeClient).Validate(context.Background())
 
 			// then
 			require.Error(t, err)
@@ -152,13 +158,15 @@ func TestValidations(t *testing.T) {
 
 		{
 			// given
+			fakeClient := fake.NewClientBuilder().WithObjects(configMap, manifestsConfigMap).Build()
+
 			config := Config{
 				DeploymentNamespacedName: "",
-				ManifestsPath:            "./testdata/manifests.yaml",
+				ManifestsConfigMapName:   manifestsConfigMapName,
 			}
 
 			// when
-			err := NewValidator(config, nil).Validate(context.Background())
+			err := NewValidator(config, fakeClient).Validate(context.Background())
 
 			// then
 			require.Error(t, err)
@@ -170,11 +178,11 @@ func TestValidations(t *testing.T) {
 		// given
 		config := Config{
 			DeploymentNamespacedName: "default/my-deployment",
-			ManifestsPath:            "./testdata/manifests.yaml",
+			ManifestsConfigMapName:   manifestsConfigMapName,
 			ConfigName:               "test-config",
 		}
 
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects().Build()
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(manifestsConfigMap).Build()
 
 		// when
 		err := NewValidator(config, fakeClient).Validate(context.Background())
@@ -184,13 +192,31 @@ func TestValidations(t *testing.T) {
 		assert.ErrorContains(t, err, "unable to find Runtime Bootstrapper ConfigMap")
 	})
 
-	t.Run("Pull secret not exists", func(t *testing.T) {
+	t.Run("ClusterTrustBundle not exists", func(t *testing.T) {
 		// given
 		config := Config{
 			DeploymentNamespacedName: "default/my-deployment",
-			ManifestsPath:            "./testdata/manifests.yaml",
+			ManifestsConfigMapName:   manifestsConfigMapName,
 			ConfigName:               "test-config",
-			PullSecretName:           "test-pull-secret",
+			ClusterTrustBundleName:   "test-trust-bundle",
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(manifestsConfigMap).Build()
+
+		// when
+		err := NewValidator(config, fakeClient).Validate(context.Background())
+
+		// then
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "unable to find Runtime Bootstrapper ConfigMap")
+	})
+
+	t.Run("Manifests ConfigMap not exists", func(t *testing.T) {
+		// given
+		config := Config{
+			DeploymentNamespacedName: "default/my-deployment",
+			ManifestsConfigMapName:   manifestsConfigMapName,
+			ConfigName:               "test-config",
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap).Build()
@@ -200,7 +226,45 @@ func TestValidations(t *testing.T) {
 
 		// then
 		require.Error(t, err)
+		assert.ErrorContains(t, err, "unable to find Manifests ConfigMap in KCP cluster")
+	})
+
+	t.Run("Pull secret not exists", func(t *testing.T) {
+		// given
+		config := Config{
+			DeploymentNamespacedName: "default/my-deployment",
+			ManifestsConfigMapName:   manifestsConfigMapName,
+			ConfigName:               "test-config",
+			PullSecretName:           "test-pull-secret",
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap, manifestsConfigMap).Build()
+
+		// when
+		err := NewValidator(config, fakeClient).Validate(context.Background())
+
+		// then
+		require.Error(t, err)
 		assert.ErrorContains(t, err, "unable to find Runtime Bootstrapper pull secret")
+	})
+
+	t.Run("Cluster Trust Bundle not exists", func(t *testing.T) {
+		// given
+		config := Config{
+			DeploymentNamespacedName: "default/my-deployment",
+			ManifestsConfigMapName:   manifestsConfigMapName,
+			ConfigName:               "test-config",
+			ClusterTrustBundleName:   "some-test-trust-bundle",
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap, manifestsConfigMap).Build()
+
+		// when
+		err := NewValidator(config, fakeClient).Validate(context.Background())
+
+		// then
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "unable to find Cluster Trust Bundle")
 	})
 
 	t.Run("Pull secret has incorrect type", func(t *testing.T) {
@@ -216,12 +280,12 @@ func TestValidations(t *testing.T) {
 
 		config := Config{
 			DeploymentNamespacedName: "default/my-deployment",
-			ManifestsPath:            "./testdata/manifests.yaml",
+			ManifestsConfigMapName:   manifestsConfigMapName,
 			ConfigName:               "test-config",
 			PullSecretName:           "test-pull-secret",
 		}
 
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap, invalidSecret).Build()
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap, invalidSecret, manifestsConfigMap).Build()
 
 		// when
 		err := NewValidator(config, fakeClient).Validate(context.Background())

@@ -41,17 +41,131 @@ func (_m *MockRuntimeBootstrapperInstaller) EXPECT() *MockRuntimeBootstrapperIns
 	return &MockRuntimeBootstrapperInstaller_Expecter{mock: &_m.Mock}
 }
 
+// Cleanup provides a mock function for the type MockRuntimeBootstrapperInstaller
+func (_mock *MockRuntimeBootstrapperInstaller) Cleanup(ctx context.Context, runtime v1.Runtime) error {
+	ret := _mock.Called(ctx, runtime)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Cleanup")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, v1.Runtime) error); ok {
+		r0 = returnFunc(ctx, runtime)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRuntimeBootstrapperInstaller_Cleanup_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Cleanup'
+type MockRuntimeBootstrapperInstaller_Cleanup_Call struct {
+	*mock.Call
+}
+
+// Cleanup is a helper method to define mock.On call
+//   - ctx context.Context
+//   - runtime v1.Runtime
+func (_e *MockRuntimeBootstrapperInstaller_Expecter) Cleanup(ctx interface{}, runtime interface{}) *MockRuntimeBootstrapperInstaller_Cleanup_Call {
+	return &MockRuntimeBootstrapperInstaller_Cleanup_Call{Call: _e.mock.On("Cleanup", ctx, runtime)}
+}
+
+func (_c *MockRuntimeBootstrapperInstaller_Cleanup_Call) Run(run func(ctx context.Context, runtime v1.Runtime)) *MockRuntimeBootstrapperInstaller_Cleanup_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 v1.Runtime
+		if args[1] != nil {
+			arg1 = args[1].(v1.Runtime)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRuntimeBootstrapperInstaller_Cleanup_Call) Return(err error) *MockRuntimeBootstrapperInstaller_Cleanup_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRuntimeBootstrapperInstaller_Cleanup_Call) RunAndReturn(run func(ctx context.Context, runtime v1.Runtime) error) *MockRuntimeBootstrapperInstaller_Cleanup_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Configure provides a mock function for the type MockRuntimeBootstrapperInstaller
+func (_mock *MockRuntimeBootstrapperInstaller) Configure(ctx context.Context, runtime v1.Runtime) error {
+	ret := _mock.Called(ctx, runtime)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Configure")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, v1.Runtime) error); ok {
+		r0 = returnFunc(ctx, runtime)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRuntimeBootstrapperInstaller_Configure_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Configure'
+type MockRuntimeBootstrapperInstaller_Configure_Call struct {
+	*mock.Call
+}
+
+// Configure is a helper method to define mock.On call
+//   - ctx context.Context
+//   - runtime v1.Runtime
+func (_e *MockRuntimeBootstrapperInstaller_Expecter) Configure(ctx interface{}, runtime interface{}) *MockRuntimeBootstrapperInstaller_Configure_Call {
+	return &MockRuntimeBootstrapperInstaller_Configure_Call{Call: _e.mock.On("Configure", ctx, runtime)}
+}
+
+func (_c *MockRuntimeBootstrapperInstaller_Configure_Call) Run(run func(ctx context.Context, runtime v1.Runtime)) *MockRuntimeBootstrapperInstaller_Configure_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 v1.Runtime
+		if args[1] != nil {
+			arg1 = args[1].(v1.Runtime)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRuntimeBootstrapperInstaller_Configure_Call) Return(err error) *MockRuntimeBootstrapperInstaller_Configure_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRuntimeBootstrapperInstaller_Configure_Call) RunAndReturn(run func(ctx context.Context, runtime v1.Runtime) error) *MockRuntimeBootstrapperInstaller_Configure_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Install provides a mock function for the type MockRuntimeBootstrapperInstaller
-func (_mock *MockRuntimeBootstrapperInstaller) Install(context1 context.Context, runtime v1.Runtime) error {
-	ret := _mock.Called(context1, runtime)
+func (_mock *MockRuntimeBootstrapperInstaller) Install(context1 context.Context, runtime v1.Runtime, manifests string) error {
+	ret := _mock.Called(context1, runtime, manifests)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Install")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, v1.Runtime) error); ok {
-		r0 = returnFunc(context1, runtime)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, v1.Runtime, string) error); ok {
+		r0 = returnFunc(context1, runtime, manifests)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -66,11 +180,12 @@ type MockRuntimeBootstrapperInstaller_Install_Call struct {
 // Install is a helper method to define mock.On call
 //   - context1 context.Context
 //   - runtime v1.Runtime
-func (_e *MockRuntimeBootstrapperInstaller_Expecter) Install(context1 interface{}, runtime interface{}) *MockRuntimeBootstrapperInstaller_Install_Call {
-	return &MockRuntimeBootstrapperInstaller_Install_Call{Call: _e.mock.On("Install", context1, runtime)}
+//   - manifests string
+func (_e *MockRuntimeBootstrapperInstaller_Expecter) Install(context1 interface{}, runtime interface{}, manifests interface{}) *MockRuntimeBootstrapperInstaller_Install_Call {
+	return &MockRuntimeBootstrapperInstaller_Install_Call{Call: _e.mock.On("Install", context1, runtime, manifests)}
 }
 
-func (_c *MockRuntimeBootstrapperInstaller_Install_Call) Run(run func(context1 context.Context, runtime v1.Runtime)) *MockRuntimeBootstrapperInstaller_Install_Call {
+func (_c *MockRuntimeBootstrapperInstaller_Install_Call) Run(run func(context1 context.Context, runtime v1.Runtime, manifests string)) *MockRuntimeBootstrapperInstaller_Install_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -80,9 +195,14 @@ func (_c *MockRuntimeBootstrapperInstaller_Install_Call) Run(run func(context1 c
 		if args[1] != nil {
 			arg1 = args[1].(v1.Runtime)
 		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -93,22 +213,23 @@ func (_c *MockRuntimeBootstrapperInstaller_Install_Call) Return(err error) *Mock
 	return _c
 }
 
-func (_c *MockRuntimeBootstrapperInstaller_Install_Call) RunAndReturn(run func(context1 context.Context, runtime v1.Runtime) error) *MockRuntimeBootstrapperInstaller_Install_Call {
+func (_c *MockRuntimeBootstrapperInstaller_Install_Call) RunAndReturn(run func(context1 context.Context, runtime v1.Runtime, manifests string) error) *MockRuntimeBootstrapperInstaller_Install_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Status provides a mock function for the type MockRuntimeBootstrapperInstaller
-func (_mock *MockRuntimeBootstrapperInstaller) Status(context1 context.Context, runtime v1.Runtime) (rtbootstrapper.InstallationStatus, error) {
+// InstallationInfo provides a mock function for the type MockRuntimeBootstrapperInstaller
+func (_mock *MockRuntimeBootstrapperInstaller) InstallationInfo(context1 context.Context, runtime v1.Runtime) (rtbootstrapper.InstallationStatus, string, error) {
 	ret := _mock.Called(context1, runtime)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Status")
+		panic("no return value specified for InstallationInfo")
 	}
 
 	var r0 rtbootstrapper.InstallationStatus
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, v1.Runtime) (rtbootstrapper.InstallationStatus, error)); ok {
+	var r1 string
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, v1.Runtime) (rtbootstrapper.InstallationStatus, string, error)); ok {
 		return returnFunc(context1, runtime)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, v1.Runtime) rtbootstrapper.InstallationStatus); ok {
@@ -116,130 +237,32 @@ func (_mock *MockRuntimeBootstrapperInstaller) Status(context1 context.Context, 
 	} else {
 		r0 = ret.Get(0).(rtbootstrapper.InstallationStatus)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, v1.Runtime) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, v1.Runtime) string); ok {
 		r1 = returnFunc(context1, runtime)
 	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockRuntimeBootstrapperInstaller_Status_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Status'
-type MockRuntimeBootstrapperInstaller_Status_Call struct {
-	*mock.Call
-}
-
-// Status is a helper method to define mock.On call
-//   - context1 context.Context
-//   - runtime v1.Runtime
-func (_e *MockRuntimeBootstrapperInstaller_Expecter) Status(context1 interface{}, runtime interface{}) *MockRuntimeBootstrapperInstaller_Status_Call {
-	return &MockRuntimeBootstrapperInstaller_Status_Call{Call: _e.mock.On("Status", context1, runtime)}
-}
-
-func (_c *MockRuntimeBootstrapperInstaller_Status_Call) Run(run func(context1 context.Context, runtime v1.Runtime)) *MockRuntimeBootstrapperInstaller_Status_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 v1.Runtime
-		if args[1] != nil {
-			arg1 = args[1].(v1.Runtime)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockRuntimeBootstrapperInstaller_Status_Call) Return(installationStatus rtbootstrapper.InstallationStatus, err error) *MockRuntimeBootstrapperInstaller_Status_Call {
-	_c.Call.Return(installationStatus, err)
-	return _c
-}
-
-func (_c *MockRuntimeBootstrapperInstaller_Status_Call) RunAndReturn(run func(context1 context.Context, runtime v1.Runtime) (rtbootstrapper.InstallationStatus, error)) *MockRuntimeBootstrapperInstaller_Status_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// NewMockDynamicRuntimeClientGetter creates a new instance of MockDynamicRuntimeClientGetter. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
-// The first argument is typically a *testing.T value.
-func NewMockDynamicRuntimeClientGetter(t interface {
-	mock.TestingT
-	Cleanup(func())
-}) *MockDynamicRuntimeClientGetter {
-	mock := &MockDynamicRuntimeClientGetter{}
-	mock.Mock.Test(t)
-
-	t.Cleanup(func() { mock.AssertExpectations(t) })
-
-	return mock
-}
-
-// MockDynamicRuntimeClientGetter is an autogenerated mock type for the DynamicRuntimeClientGetter type
-type MockDynamicRuntimeClientGetter struct {
-	mock.Mock
-}
-
-type MockDynamicRuntimeClientGetter_Expecter struct {
-	mock *mock.Mock
-}
-
-func (_m *MockDynamicRuntimeClientGetter) EXPECT() *MockDynamicRuntimeClientGetter_Expecter {
-	return &MockDynamicRuntimeClientGetter_Expecter{mock: &_m.Mock}
-}
-
-// Get provides a mock function for the type MockDynamicRuntimeClientGetter
-func (_mock *MockDynamicRuntimeClientGetter) Get(ctx context.Context, runtime v1.Runtime) (*dynamic.DynamicClient, *discovery.DiscoveryClient, error) {
-	ret := _mock.Called(ctx, runtime)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Get")
-	}
-
-	var r0 *dynamic.DynamicClient
-	var r1 *discovery.DiscoveryClient
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, v1.Runtime) (*dynamic.DynamicClient, *discovery.DiscoveryClient, error)); ok {
-		return returnFunc(ctx, runtime)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, v1.Runtime) *dynamic.DynamicClient); ok {
-		r0 = returnFunc(ctx, runtime)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*dynamic.DynamicClient)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, v1.Runtime) *discovery.DiscoveryClient); ok {
-		r1 = returnFunc(ctx, runtime)
-	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*discovery.DiscoveryClient)
-		}
+		r1 = ret.Get(1).(string)
 	}
 	if returnFunc, ok := ret.Get(2).(func(context.Context, v1.Runtime) error); ok {
-		r2 = returnFunc(ctx, runtime)
+		r2 = returnFunc(context1, runtime)
 	} else {
 		r2 = ret.Error(2)
 	}
 	return r0, r1, r2
 }
 
-// MockDynamicRuntimeClientGetter_Get_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Get'
-type MockDynamicRuntimeClientGetter_Get_Call struct {
+// MockRuntimeBootstrapperInstaller_InstallationInfo_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InstallationInfo'
+type MockRuntimeBootstrapperInstaller_InstallationInfo_Call struct {
 	*mock.Call
 }
 
-// Get is a helper method to define mock.On call
-//   - ctx context.Context
+// InstallationInfo is a helper method to define mock.On call
+//   - context1 context.Context
 //   - runtime v1.Runtime
-func (_e *MockDynamicRuntimeClientGetter_Expecter) Get(ctx interface{}, runtime interface{}) *MockDynamicRuntimeClientGetter_Get_Call {
-	return &MockDynamicRuntimeClientGetter_Get_Call{Call: _e.mock.On("Get", ctx, runtime)}
+func (_e *MockRuntimeBootstrapperInstaller_Expecter) InstallationInfo(context1 interface{}, runtime interface{}) *MockRuntimeBootstrapperInstaller_InstallationInfo_Call {
+	return &MockRuntimeBootstrapperInstaller_InstallationInfo_Call{Call: _e.mock.On("InstallationInfo", context1, runtime)}
 }
 
-func (_c *MockDynamicRuntimeClientGetter_Get_Call) Run(run func(ctx context.Context, runtime v1.Runtime)) *MockDynamicRuntimeClientGetter_Get_Call {
+func (_c *MockRuntimeBootstrapperInstaller_InstallationInfo_Call) Run(run func(context1 context.Context, runtime v1.Runtime)) *MockRuntimeBootstrapperInstaller_InstallationInfo_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -257,12 +280,12 @@ func (_c *MockDynamicRuntimeClientGetter_Get_Call) Run(run func(ctx context.Cont
 	return _c
 }
 
-func (_c *MockDynamicRuntimeClientGetter_Get_Call) Return(dynamicClient *dynamic.DynamicClient, discoveryClient *discovery.DiscoveryClient, err error) *MockDynamicRuntimeClientGetter_Get_Call {
-	_c.Call.Return(dynamicClient, discoveryClient, err)
+func (_c *MockRuntimeBootstrapperInstaller_InstallationInfo_Call) Return(installationStatus rtbootstrapper.InstallationStatus, s string, err error) *MockRuntimeBootstrapperInstaller_InstallationInfo_Call {
+	_c.Call.Return(installationStatus, s, err)
 	return _c
 }
 
-func (_c *MockDynamicRuntimeClientGetter_Get_Call) RunAndReturn(run func(ctx context.Context, runtime v1.Runtime) (*dynamic.DynamicClient, *discovery.DiscoveryClient, error)) *MockDynamicRuntimeClientGetter_Get_Call {
+func (_c *MockRuntimeBootstrapperInstaller_InstallationInfo_Call) RunAndReturn(run func(context1 context.Context, runtime v1.Runtime) (rtbootstrapper.InstallationStatus, string, error)) *MockRuntimeBootstrapperInstaller_InstallationInfo_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -347,6 +370,109 @@ func (_c *MockRuntimeBootstrapperConfigurator_Configure_Call) Return(err error) 
 }
 
 func (_c *MockRuntimeBootstrapperConfigurator_Configure_Call) RunAndReturn(run func(context1 context.Context, runtime v1.Runtime) error) *MockRuntimeBootstrapperConfigurator_Configure_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// NewMockDynamicRuntimeClientGetter creates a new instance of MockDynamicRuntimeClientGetter. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
+// The first argument is typically a *testing.T value.
+func NewMockDynamicRuntimeClientGetter(t interface {
+	mock.TestingT
+	Cleanup(func())
+}) *MockDynamicRuntimeClientGetter {
+	mock := &MockDynamicRuntimeClientGetter{}
+	mock.Mock.Test(t)
+
+	t.Cleanup(func() { mock.AssertExpectations(t) })
+
+	return mock
+}
+
+// MockDynamicRuntimeClientGetter is an autogenerated mock type for the DynamicRuntimeClientGetter type
+type MockDynamicRuntimeClientGetter struct {
+	mock.Mock
+}
+
+type MockDynamicRuntimeClientGetter_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *MockDynamicRuntimeClientGetter) EXPECT() *MockDynamicRuntimeClientGetter_Expecter {
+	return &MockDynamicRuntimeClientGetter_Expecter{mock: &_m.Mock}
+}
+
+// Get provides a mock function for the type MockDynamicRuntimeClientGetter
+func (_mock *MockDynamicRuntimeClientGetter) Get(ctx context.Context, runtime v1.Runtime) (dynamic.Interface, discovery.DiscoveryInterface, error) {
+	ret := _mock.Called(ctx, runtime)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Get")
+	}
+
+	var r0 dynamic.Interface
+	var r1 discovery.DiscoveryInterface
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, v1.Runtime) (dynamic.Interface, discovery.DiscoveryInterface, error)); ok {
+		return returnFunc(ctx, runtime)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, v1.Runtime) dynamic.Interface); ok {
+		r0 = returnFunc(ctx, runtime)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(dynamic.Interface)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, v1.Runtime) discovery.DiscoveryInterface); ok {
+		r1 = returnFunc(ctx, runtime)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(discovery.DiscoveryInterface)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, v1.Runtime) error); ok {
+		r2 = returnFunc(ctx, runtime)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockDynamicRuntimeClientGetter_Get_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Get'
+type MockDynamicRuntimeClientGetter_Get_Call struct {
+	*mock.Call
+}
+
+// Get is a helper method to define mock.On call
+//   - ctx context.Context
+//   - runtime v1.Runtime
+func (_e *MockDynamicRuntimeClientGetter_Expecter) Get(ctx interface{}, runtime interface{}) *MockDynamicRuntimeClientGetter_Get_Call {
+	return &MockDynamicRuntimeClientGetter_Get_Call{Call: _e.mock.On("Get", ctx, runtime)}
+}
+
+func (_c *MockDynamicRuntimeClientGetter_Get_Call) Run(run func(ctx context.Context, runtime v1.Runtime)) *MockDynamicRuntimeClientGetter_Get_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 v1.Runtime
+		if args[1] != nil {
+			arg1 = args[1].(v1.Runtime)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockDynamicRuntimeClientGetter_Get_Call) Return(interfaceParam dynamic.Interface, discoveryInterface discovery.DiscoveryInterface, err error) *MockDynamicRuntimeClientGetter_Get_Call {
+	_c.Call.Return(interfaceParam, discoveryInterface, err)
+	return _c
+}
+
+func (_c *MockDynamicRuntimeClientGetter_Get_Call) RunAndReturn(run func(ctx context.Context, runtime v1.Runtime) (dynamic.Interface, discovery.DiscoveryInterface, error)) *MockDynamicRuntimeClientGetter_Get_Call {
 	_c.Call.Return(run)
 	return _c
 }

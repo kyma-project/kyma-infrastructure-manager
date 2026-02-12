@@ -4,7 +4,6 @@ import (
 	"context"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
@@ -22,18 +21,19 @@ type Installer struct {
 type InstallationStatus string
 
 const (
-	StatusNotStarted InstallationStatus = "NotStarted"
-	StatusInProgress InstallationStatus = "InProgress"
-	StatusReady      InstallationStatus = "Ready"
-	StatusFailed     InstallationStatus = "Failed"
+	StatusNotStarted    InstallationStatus = "NotStarted"
+	StatusInProgress    InstallationStatus = "InProgress"
+	StatusReady         InstallationStatus = "Ready"
+	StatusFailed        InstallationStatus = "Failed"
+	StatusUpgradeNeeded InstallationStatus = "UpgradeNeeded"
 )
 
 type Config struct {
 	PullSecretName           string
 	ClusterTrustBundleName   string
-	ManifestsPath            string
 	DeploymentNamespacedName string
 	ConfigName               string
+	ManifestsConfigMapName   string
 }
 
 //mockery:generate: true
@@ -51,24 +51,33 @@ type RuntimeDynamicClientGetter interface {
 func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter RuntimeClientGetter, runtimeDynamicClientGetter RuntimeDynamicClientGetter) *Installer {
 
 	return &Installer{
-		config:          config,
-		kcpClient:       kcpClient,
-		manifestApplier: NewManifestApplier(config.ManifestsPath, toNamespacedName(config.DeploymentNamespacedName), runtimeClientGetter, runtimeDynamicClientGetter),
-		configurator:    NewConfigurator(kcpClient, runtimeClientGetter, config),
+		config:    config,
+		kcpClient: kcpClient,
+		manifestApplier: NewManifestApplier(config.ManifestsConfigMapName,
+			toNamespacedName(config.DeploymentNamespacedName),
+			runtimeClientGetter,
+			runtimeDynamicClientGetter,
+			kcpClient),
+		configurator: NewConfigurator(kcpClient, runtimeClientGetter, config),
 	}
 }
 
-func (r *Installer) Install(ctx context.Context, runtime imv1.Runtime) error {
-	err := r.configurator.Configure(context.Background(), runtime)
-	if err != nil {
-		return errors.Wrap(err, "failed to prepare for installation Runtime Bootstrapper installation")
-	}
-
-	return r.manifestApplier.ApplyManifests(ctx, runtime)
+func (r *Installer) Install(ctx context.Context, runtime imv1.Runtime, manifests string) error {
+	return r.manifestApplier.ApplyManifests(ctx, runtime, manifests)
 }
 
-func (r *Installer) Status(ctx context.Context, runtime imv1.Runtime) (InstallationStatus, error) {
-	return r.manifestApplier.Status(ctx, runtime)
+func (r *Installer) InstallationInfo(ctx context.Context, runtime imv1.Runtime) (InstallationStatus, string, error) {
+	return r.manifestApplier.InstallationInfo(ctx, runtime)
+}
+
+func (r *Installer) Configure(ctx context.Context, runtime imv1.Runtime) error {
+	return r.configurator.Configure(ctx, runtime)
+}
+
+// This method is supposed to be called after upgrade is finished. It can be used to clean up old resources that are no longer available in the new runtime manifests.
+func (r *Installer) Cleanup(ctx context.Context, runtime imv1.Runtime) error {
+	// No cleanup needed for now. Implement when needed.
+	return nil
 }
 
 func toNamespacedName(namespacedName string) types.NamespacedName {

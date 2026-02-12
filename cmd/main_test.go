@@ -49,4 +49,3 @@ func TestPrebuiltRuntimeSchemeRegistersTypes(t *testing.T) {
 		t.Fatalf("corev1.Pod returned no GVKs from scheme")
 	}
 }
-
