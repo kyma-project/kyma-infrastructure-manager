@@ -56,7 +56,7 @@ For more information on the structure and purpose of various fields, see the CRD
 
 Example:
 
-https://github.com/kyma-project/kyma-infrastructure-manager/tree/1.24.0/config/crd/bases
+`https://github.com/kyma-project/kyma-infrastructure-manager/tree/1.24.0/config/crd/bases`
 
 #### State Machine
 
@@ -66,7 +66,7 @@ The reconciliation process is implemented using a [state machine pattern](https:
 
 To address the requirements for implementing KIM features, the following sub-components are introduced:
 
-* KIM Snatch: Automatically installed on all Kyma runtimes. To prevent assigning Kyma workloads to worker pools created by customers, KIM Snatch assigns Kyma workloads to the Kyma worker pool. For more information, see the [KIM Snatch documentation](https://github.com/kyma-project/kim-snatch/tree/main/docs/user).
+* KIM Snatch: Automatically installed on all Kyma runtimes. To prevent assigning Kyma workloads to worker pools created by customers, KIM Snatch assigns Kyma workloads to the Kyma worker pool. For more information, see the [KIM Snatch documentation](https://github.com/kyma-project/kim-snatch/blob/main/README.md).
 * Gardener Syncer: A Kubernetes CronJob synchronizing Seed cluster data from the Gardener cluster to KCP. KEB uses this data for customer input validation (primarily for the "Colocate Control Plane" feature to detect if a Seed cluster exists in a particular Shoot region). The Seed data is stored in a ConfigMap in KCP. For more information, see the [Gardener Syncer documentation](https://github.com/kyma-project/gardener-syncer/blob/main/README.md).
 
 ## Operations
