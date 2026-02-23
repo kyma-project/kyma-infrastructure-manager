@@ -39,8 +39,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   upload-release-report:
     permissions:
-      actions: read # This is required for uploading release raports
-      contents: read # This is required for read the nested workflow
+      actions: read # This is required for uploading release reports
+      contents: read # This is required for reading the nested workflow
     needs: generate-release
     uses: kyma-project/compliancy/.github/workflows/upload-release-report.yml@main
     with:
