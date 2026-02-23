@@ -40,10 +40,10 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Invoke uploading of release report
-        uses: kyma-project/compliancy/.github/workflows/upload-release-report.yml@main
-        with:
-          release_version: ${{ github.ref_name }}
-        secrets:
-          RELEASE_LOG_UPLOADER_SA: ${{ secrets.RELEASE_LOG_UPLOADER_SA }}
+  upload-release-report:
+    needs: generate-release
+    uses: kyma-project/compliancy/.github/workflows/upload-release-report.yml@main
+    with:
+      release_version: ${{ github.ref_name }}
+    secrets:
+      RELEASE_LOG_UPLOADER_SA: ${{ secrets.RELEASE_LOG_UPLOADER_SA }}
