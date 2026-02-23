@@ -6,7 +6,7 @@ on:
       - '*'  # Trigger on tag pushes
 
 permissions:
-  actions: read # This is required for uploading release raports
+  actions: read # This is required for uploading release reports
 
 jobs:
   generate-release:
