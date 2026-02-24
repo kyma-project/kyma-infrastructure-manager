@@ -1,4 +1,4 @@
-name: Generate and Release CRD Docs
+name: KIM Release
 
 on:
   push:
