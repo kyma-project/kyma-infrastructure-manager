@@ -37,13 +37,3 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  upload-release-report:
-    permissions:
-      actions: read # This is required for uploading release reports
-      contents: read # This is required for reading the nested workflow
-    needs: generate-release
-    uses: kyma-project/compliancy/.github/workflows/upload-release-report.yml@main
-    with:
-      release_version: ${{ github.ref_name }}
-    secrets:
-      RELEASE_LOG_UPLOADER_SA: ${{ secrets.RELEASE_LOG_UPLOADER_SA }}
