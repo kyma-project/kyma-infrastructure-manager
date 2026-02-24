@@ -47,6 +47,8 @@ jobs:
 
   upload-release-report:
     needs: generate-release
+    if: success()
+    permissions:
     permissions:
       actions: read
       contents: read
