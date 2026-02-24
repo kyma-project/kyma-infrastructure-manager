@@ -14,6 +14,7 @@ jobs:
 
   generate-release:
     needs: run-release-tests
+    if: needs.run-release-tests.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write  # Needed for creating releases and uploading assets
@@ -47,8 +48,7 @@ jobs:
 
   upload-release-report:
     needs: generate-release
-    if: success()
-    permissions:
+    if: needs.generate-release.result == 'success'
     permissions:
       actions: read
       contents: read
