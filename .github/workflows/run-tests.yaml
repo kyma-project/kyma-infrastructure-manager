@@ -1,12 +1,10 @@
 name: tests
 
 on:
+  workflow_call:
   push:
     branches:
       - main
-    tags:
-      - "[0-9]+.[0-9]+.[0-9]+"
-      - "[0-9]+.[0-9]+.[0-9]+-*"
     paths-ignore:
       - .reuse
       - LICENSES/
