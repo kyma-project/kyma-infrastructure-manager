@@ -22,7 +22,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           REF="${{ github.event.workflow_run.head_branch }}"
-          echo "Checking ref: $REF"
 
           if [[ "$REF" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
             echo "is_tag=true" >> $GITHUB_OUTPUT
