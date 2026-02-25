@@ -31,11 +31,6 @@ const (
 type Config struct {
 	KCPConfig KCPConfig
 	SKRConfig SKRConfig
-	//PullSecretName           string
-	//ClusterTrustBundleName   string
-	//DeploymentNamespacedName string
-	//ConfigName               string
-	//ManifestsConfigMapName   string
 }
 
 type KCPConfig struct {

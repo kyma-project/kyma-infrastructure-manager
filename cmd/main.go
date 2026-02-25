@@ -114,11 +114,14 @@ func main() {
 	var auditLogMandatory bool
 	var registryCacheConfigControllerEnabled bool
 	var runtimeBootstrapperEnabled bool
-	var runtimeBootstrapperConfigName string
-	var runtimeBootstrapperPullSecretName string
+	var runtimeBootstrapperKCPConfigName string
+	var runtimeBootstrapperKCPPullSecretName string
 	var runtimeBootstrapperManifestsConfigMapName string
-	var runtimeBootstrapperClusterTrustBundle string
+	var runtimeBootstrapperKCPClusterTrustBundle string
 	var runtimeBootstrapperDeploymentName string
+	var runtimeBootstrapperSKRConfigName string
+	var runtimeBootstrapperSKRPullSecretName string
+	var runtimeBootstrapperSKRClusterTrustBundle string
 
 	//Kubebuilder related parameters:
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to. Monitoring and alerting tools can use this endpoint to collect application specific metrics during runtime")
@@ -153,9 +156,14 @@ func main() {
 	// Runtime bootstrapper configuration
 	flag.StringVar(&runtimeBootstrapperManifestsConfigMapName, "runtime-bootstrapper-manifests-config-map-name", "runtime-bootstrapper-manifests", "File path to the manifests containing runtime bootstrapper.")
 
-	flag.StringVar(&runtimeBootstrapperConfigName, "runtime-bootstrapper-config-name", "rt-bootstrapper-config", "Name of the the runtime bootstrapper Config Map.")
-	flag.StringVar(&runtimeBootstrapperPullSecretName, "runtime-bootstrapper-pull-secret-name", "", "Name of the pull secret to be copied to SKR.")
-	flag.StringVar(&runtimeBootstrapperClusterTrustBundle, "runtime-bootstrapper-cluster-trust-bundle", "", "Cluster trust bundle to be copied to SKR.")
+	flag.StringVar(&runtimeBootstrapperKCPConfigName, "runtime-bootstrapper-kcp-config-name", "rt-bootstrapper-config", "Name of the the runtime bootstrapper Config Map to be copied to SKR.")
+	flag.StringVar(&runtimeBootstrapperKCPPullSecretName, "runtime-bootstrapper-kcp-pull-secret-name", "", "Name of the pull secret to be copied to SKR.")
+	flag.StringVar(&runtimeBootstrapperKCPClusterTrustBundle, "runtime-bootstrapper-kcp-cluster-trust-bundle", "", "Cluster trust bundle to be copied to SKR.")
+
+	flag.StringVar(&runtimeBootstrapperSKRConfigName, "runtime-bootstrapper-kcp-config-name", "rt-bootstrapper-config", "Name of the the runtime bootstrapper Config Map on SKR.")
+	flag.StringVar(&runtimeBootstrapperSKRPullSecretName, "runtime-bootstrapper-skr-pull-secret-name", "", "Name of the pull secret to be copied on SKR.")
+	flag.StringVar(&runtimeBootstrapperSKRClusterTrustBundle, "runtime-bootstrapper-skr-cluster-trust-bundle", "", "Name of rhe cluster trust bundle on SKR.")
+
 	flag.StringVar(&runtimeBootstrapperDeploymentName, "runtime-bootstrapper-deployment-namespaced-name", "kyma-system/rt-bootstrapper-controller-manager", "Name of the deployment to be observed to verify if installation succeeded. Expected format: <namespace>/<name>")
 
 	opts := zap.Options{}
@@ -260,7 +268,7 @@ func main() {
 	var runtimeBootstrapperInstaller *rtbootstrapper.Installer
 
 	if runtimeBootstrapperEnabled {
-		if runtimeBootstrapperClusterTrustBundle != "" {
+		if runtimeBootstrapperKCPClusterTrustBundle != "" {
 			// ClusterTrustBundle is a beta feature and needs to be explicitly enabled in the converter config
 			// When the feature is generally available, this code can be removed
 			// As of the time of writing (December 2025) there is no GA release date announced
@@ -270,12 +278,15 @@ func main() {
 
 		rtbConfig := rtbootstrapper.Config{
 			KCPConfig: rtbootstrapper.KCPConfig{
-				PullSecretName:         runtimeBootstrapperPullSecretName,
-				ClusterTrustBundleName: runtimeBootstrapperClusterTrustBundle,
-				ConfigName:             runtimeBootstrapperConfigName,
+				PullSecretName:         runtimeBootstrapperKCPPullSecretName,
+				ClusterTrustBundleName: runtimeBootstrapperKCPClusterTrustBundle,
+				ConfigName:             runtimeBootstrapperKCPConfigName,
 				ManifestsConfigMapName: runtimeBootstrapperManifestsConfigMapName,
 			},
 			SKRConfig: rtbootstrapper.SKRConfig{
+				PullSecretName:           runtimeBootstrapperSKRPullSecretName,
+				ClusterTrustBundleName:   runtimeBootstrapperSKRClusterTrustBundle,
+				ConfigName:               runtimeBootstrapperSKRConfigName,
 				DeploymentNamespacedName: runtimeBootstrapperDeploymentName,
 			},
 		}
@@ -301,7 +312,7 @@ func main() {
 			Client:    kcpClient,
 			Namespace: "kcp-system",
 			RtBootstrapperCfg: types.NamespacedName{
-				Name:      runtimeBootstrapperConfigName,
+				Name:      runtimeBootstrapperKCPConfigName,
 				Namespace: "kcp-system",
 			},
 			RtBootstrapperManifests: types.NamespacedName{
@@ -310,16 +321,16 @@ func main() {
 			},
 		}
 
-		if runtimeBootstrapperPullSecretName != "" {
+		if runtimeBootstrapperKCPPullSecretName != "" {
 			watcherConfig.ImagePullSecret = types.NamespacedName{
-				Name:      runtimeBootstrapperPullSecretName,
+				Name:      runtimeBootstrapperKCPPullSecretName,
 				Namespace: "kcp-system",
 			}
 		}
 
-		if runtimeBootstrapperClusterTrustBundle != "" {
+		if runtimeBootstrapperKCPClusterTrustBundle != "" {
 			watcherConfig.ClusterTrustBundle = types.NamespacedName{
-				Name: runtimeBootstrapperClusterTrustBundle,
+				Name: runtimeBootstrapperKCPClusterTrustBundle,
 			}
 		}
 

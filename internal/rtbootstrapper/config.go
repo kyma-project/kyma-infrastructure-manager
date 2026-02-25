@@ -115,7 +115,7 @@ func (c *Configurator) applyConfigMap(ctx context.Context, runtimeClient client.
 	applyCM := true
 
 	var existing corev1.ConfigMap
-	err := runtimeClient.Get(ctx, client.ObjectKey{Name: "rt-bootstrapper-config", Namespace: "kyma-system"}, &existing)
+	err := runtimeClient.Get(ctx, client.ObjectKey{Name: c.config.SKRConfig.ConfigName, Namespace: "kyma-system"}, &existing)
 	if err == nil {
 		if equalConfigMap(existing, *configMap) {
 			applyCM = false
@@ -131,7 +131,7 @@ func (c *Configurator) applyConfigMap(ctx context.Context, runtimeClient client.
 				APIVersion: "v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "rt-bootstrapper-config",
+				Name:      c.config.SKRConfig.ConfigName,
 				Namespace: "kyma-system",
 			},
 			Data: configMap.Data,
@@ -150,7 +150,7 @@ func (c *Configurator) applySecret(ctx context.Context, runtimeClient client.Cli
 	applySecret := true
 
 	var existing corev1.Secret
-	err := runtimeClient.Get(ctx, client.ObjectKey{Name: "registry-credentials", Namespace: "kyma-system"}, &existing)
+	err := runtimeClient.Get(ctx, client.ObjectKey{Name: c.config.SKRConfig.PullSecretName, Namespace: "kyma-system"}, &existing)
 	if err == nil {
 		if equalSecret(existing, *secret) {
 			applySecret = false
@@ -166,7 +166,7 @@ func (c *Configurator) applySecret(ctx context.Context, runtimeClient client.Cli
 				APIVersion: "v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "registry-credentials",
+				Name:      c.config.SKRConfig.PullSecretName,
 				Namespace: "kyma-system",
 			},
 			Data: secret.Data,
@@ -186,7 +186,7 @@ func (c *Configurator) applyClusterTrustBundle(ctx context.Context, runtimeClien
 	applyCTB := true
 
 	var existing certificatesv1beta1.ClusterTrustBundle
-	err := runtimeClient.Get(ctx, client.ObjectKey{Name: clusterTrustBundle.Name}, &existing)
+	err := runtimeClient.Get(ctx, client.ObjectKey{Name: c.config.SKRConfig.ClusterTrustBundleName}, &existing)
 	if err == nil {
 		if equalClusterTrustBundle(existing, *clusterTrustBundle) {
 			applyCTB = false
@@ -202,7 +202,7 @@ func (c *Configurator) applyClusterTrustBundle(ctx context.Context, runtimeClien
 				APIVersion: "certificates.k8s.io/v1beta1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: clusterTrustBundle.Name,
+				Name: c.config.SKRConfig.ClusterTrustBundleName,
 			},
 			Spec: clusterTrustBundle.Spec,
 		}
