@@ -13,11 +13,6 @@ on:
         required: false
         type: string
 
-      test_artifact_run_id:
-        description: "Workflow run ID to download test output artifact from"
-        required: false
-        type: string
-
     secrets:
       RELEASE_LOG_UPLOADER_SA:
         description: "Service account used to upload release reports to GCP"
@@ -45,7 +40,7 @@ jobs:
         with:
           name: test-output
           path: ./artifacts
-          run-id: ${{ inputs.test_artifact_run_id || github.run_id }}
+          run-id: ${{ github.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create job summary
@@ -59,14 +54,11 @@ jobs:
           
           echo "Fetching jobs details..."
           gh api repos/$OWNER/$REPO/actions/runs/$RUN_ID/jobs > jobs_summary.json
-          
-          #echo "Fetching logs from the run"
-          #gh run view "$RUN_ID" --repo "$OWNER/$REPO" --log > run.log   
+         
           
           zip "${REPO}_${RELEASE_VERSION}.zip" \
             run_summary.json \
             jobs_summary.json \
-            run.log \
             ./artifacts/test-output.txt
 
       - name: Authenticate to GCP
