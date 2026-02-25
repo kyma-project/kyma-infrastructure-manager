@@ -29,11 +29,27 @@ const (
 )
 
 type Config struct {
+	KCPConfig KCPConfig
+	SKRConfig SKRConfig
+	//PullSecretName           string
+	//ClusterTrustBundleName   string
+	//DeploymentNamespacedName string
+	//ConfigName               string
+	//ManifestsConfigMapName   string
+}
+
+type KCPConfig struct {
+	PullSecretName         string
+	ClusterTrustBundleName string
+	ConfigName             string
+	ManifestsConfigMapName string
+}
+
+type SKRConfig struct {
 	PullSecretName           string
 	ClusterTrustBundleName   string
-	DeploymentNamespacedName string
 	ConfigName               string
-	ManifestsConfigMapName   string
+	DeploymentNamespacedName string
 }
 
 //mockery:generate: true
@@ -53,8 +69,8 @@ func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter Ru
 	return &Installer{
 		config:    config,
 		kcpClient: kcpClient,
-		manifestApplier: NewManifestApplier(config.ManifestsConfigMapName,
-			toNamespacedName(config.DeploymentNamespacedName),
+		manifestApplier: NewManifestApplier(config.KCPConfig.ManifestsConfigMapName,
+			toNamespacedName(config.SKRConfig.DeploymentNamespacedName),
 			runtimeClientGetter,
 			runtimeDynamicClientGetter,
 			kcpClient),

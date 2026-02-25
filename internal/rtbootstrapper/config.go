@@ -37,7 +37,7 @@ func (c *Configurator) Configure(ctx context.Context, runtime imv1.Runtime) erro
 	}
 
 	var pullSecret *corev1.Secret
-	if c.config.PullSecretName != "" {
+	if c.config.KCPConfig.PullSecretName != "" {
 		pullSecret, err = c.getPullSecret(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to prepare bootstrapper PullSecret: %w", err)
@@ -45,7 +45,7 @@ func (c *Configurator) Configure(ctx context.Context, runtime imv1.Runtime) erro
 	}
 
 	var clusterTrustBundle *certificatesv1beta1.ClusterTrustBundle
-	if c.config.ClusterTrustBundleName != "" {
+	if c.config.KCPConfig.ClusterTrustBundleName != "" {
 		clusterTrustBundle, err = c.getClusterTrustBundle(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to prepare ClusterTrustBundle: %w", err)
@@ -69,7 +69,7 @@ func getResource[T client.Object](ctx context.Context, kcpClient client.Client, 
 
 func (c *Configurator) getConfigMap(ctx context.Context) (*corev1.ConfigMap, error) {
 	cm := &corev1.ConfigMap{}
-	if err := getResource[*corev1.ConfigMap](ctx, c.kcpClient, c.config.ConfigName, cm); err != nil {
+	if err := getResource[*corev1.ConfigMap](ctx, c.kcpClient, c.config.KCPConfig.ConfigName, cm); err != nil {
 		return nil, err
 	}
 	return cm, nil
@@ -77,7 +77,7 @@ func (c *Configurator) getConfigMap(ctx context.Context) (*corev1.ConfigMap, err
 
 func (c *Configurator) getPullSecret(ctx context.Context) (*corev1.Secret, error) {
 	sec := &corev1.Secret{}
-	if err := getResource[*corev1.Secret](ctx, c.kcpClient, c.config.PullSecretName, sec); err != nil {
+	if err := getResource[*corev1.Secret](ctx, c.kcpClient, c.config.KCPConfig.PullSecretName, sec); err != nil {
 		return nil, err
 	}
 	return sec, nil
@@ -85,8 +85,8 @@ func (c *Configurator) getPullSecret(ctx context.Context) (*corev1.Secret, error
 
 func (c *Configurator) getClusterTrustBundle(ctx context.Context) (*certificatesv1beta1.ClusterTrustBundle, error) {
 	ctb := &certificatesv1beta1.ClusterTrustBundle{}
-	if err := c.kcpClient.Get(ctx, client.ObjectKey{Name: c.config.ClusterTrustBundleName}, ctb); err != nil {
-		return nil, fmt.Errorf("failed to get ClusterTrustBundle %s: %w", c.config.ClusterTrustBundleName, err)
+	if err := c.kcpClient.Get(ctx, client.ObjectKey{Name: c.config.KCPConfig.ClusterTrustBundleName}, ctb); err != nil {
+		return nil, fmt.Errorf("failed to get ClusterTrustBundle %s: %w", c.config.KCPConfig.ClusterTrustBundleName, err)
 	}
 	return ctb, nil
 }

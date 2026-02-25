@@ -55,9 +55,13 @@ func TestValidations(t *testing.T) {
 		{
 			// given
 			config := Config{
-				ManifestsConfigMapName:   manifestsConfigMapName,
-				DeploymentNamespacedName: "default/my-deployment",
-				ConfigName:               "test-config",
+				KCPConfig: KCPConfig{
+					ManifestsConfigMapName: manifestsConfigMapName,
+					ConfigName:             "test-config",
+				},
+				SKRConfig: SKRConfig{
+					DeploymentNamespacedName: "default/my-deployment",
+				},
 			}
 
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap, manifestsConfigMap).Build()
@@ -72,11 +76,15 @@ func TestValidations(t *testing.T) {
 		{
 			// given
 			config := Config{
-				ManifestsConfigMapName:   manifestsConfigMapName,
-				DeploymentNamespacedName: "default/my-deployment",
-				ConfigName:               "test-config",
-				PullSecretName:           "test-pull-secret",
-				ClusterTrustBundleName:   "test-trust-bundle",
+				KCPConfig: KCPConfig{
+					ManifestsConfigMapName: manifestsConfigMapName,
+					ConfigName:             "test-config",
+					PullSecretName:         "test-pull-secret",
+					ClusterTrustBundleName: "test-trust-bundle",
+				},
+				SKRConfig: SKRConfig{
+					DeploymentNamespacedName: "default/my-deployment",
+				},
 			}
 
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap, secret, manifestsConfigMap, clusterTrustBundle).Build()
@@ -106,9 +114,13 @@ func TestValidations(t *testing.T) {
 		fakeClient := fake.NewClientBuilder().WithObjects(configMap, manifestsConfigMapWithInvalidManifests).Build()
 
 		config := Config{
-			ManifestsConfigMapName:   invalidManifestsConfigMapName,
-			DeploymentNamespacedName: "default/my-deployment",
-			ConfigName:               "test-config",
+			KCPConfig: KCPConfig{
+				ManifestsConfigMapName: invalidManifestsConfigMapName,
+				ConfigName:             "test-config",
+			},
+			SKRConfig: SKRConfig{
+				DeploymentNamespacedName: "default/my-deployment",
+			},
 		}
 
 		validator := NewValidator(config, fakeClient)
@@ -127,8 +139,12 @@ func TestValidations(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().WithObjects(configMap, manifestsConfigMap).Build()
 
 			config := Config{
-				DeploymentNamespacedName: "/invalid-deployment-name",
-				ManifestsConfigMapName:   manifestsConfigMapName,
+				KCPConfig: KCPConfig{
+					ManifestsConfigMapName: manifestsConfigMapName,
+				},
+				SKRConfig: SKRConfig{
+					DeploymentNamespacedName: "/invalid-deployment-name",
+				},
 			}
 
 			// when
@@ -144,8 +160,12 @@ func TestValidations(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().WithObjects(configMap, manifestsConfigMap).Build()
 
 			config := Config{
-				DeploymentNamespacedName: "invalid-deployment-name/",
-				ManifestsConfigMapName:   manifestsConfigMapName,
+				KCPConfig: KCPConfig{
+					ManifestsConfigMapName: manifestsConfigMapName,
+				},
+				SKRConfig: SKRConfig{
+					DeploymentNamespacedName: "invalid-deployment-name/",
+				},
 			}
 
 			// when
@@ -161,8 +181,12 @@ func TestValidations(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().WithObjects(configMap, manifestsConfigMap).Build()
 
 			config := Config{
-				DeploymentNamespacedName: "",
-				ManifestsConfigMapName:   manifestsConfigMapName,
+				KCPConfig: KCPConfig{
+					ManifestsConfigMapName: manifestsConfigMapName,
+				},
+				SKRConfig: SKRConfig{
+					DeploymentNamespacedName: "",
+				},
 			}
 
 			// when
@@ -177,9 +201,13 @@ func TestValidations(t *testing.T) {
 	t.Run("Configuration ConfigMap not exists", func(t *testing.T) {
 		// given
 		config := Config{
-			DeploymentNamespacedName: "default/my-deployment",
-			ManifestsConfigMapName:   manifestsConfigMapName,
-			ConfigName:               "test-config",
+			KCPConfig: KCPConfig{
+				ManifestsConfigMapName: manifestsConfigMapName,
+				ConfigName:             "test-config",
+			},
+			SKRConfig: SKRConfig{
+				DeploymentNamespacedName: "default/my-deployment",
+			},
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(manifestsConfigMap).Build()
@@ -195,10 +223,14 @@ func TestValidations(t *testing.T) {
 	t.Run("ClusterTrustBundle not exists", func(t *testing.T) {
 		// given
 		config := Config{
-			DeploymentNamespacedName: "default/my-deployment",
-			ManifestsConfigMapName:   manifestsConfigMapName,
-			ConfigName:               "test-config",
-			ClusterTrustBundleName:   "test-trust-bundle",
+			KCPConfig: KCPConfig{
+				ManifestsConfigMapName: manifestsConfigMapName,
+				ConfigName:             "test-config",
+				ClusterTrustBundleName: "test-trust-bundle",
+			},
+			SKRConfig: SKRConfig{
+				DeploymentNamespacedName: "default/my-deployment",
+			},
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(manifestsConfigMap).Build()
@@ -214,9 +246,13 @@ func TestValidations(t *testing.T) {
 	t.Run("Manifests ConfigMap not exists", func(t *testing.T) {
 		// given
 		config := Config{
-			DeploymentNamespacedName: "default/my-deployment",
-			ManifestsConfigMapName:   manifestsConfigMapName,
-			ConfigName:               "test-config",
+			KCPConfig: KCPConfig{
+				ManifestsConfigMapName: manifestsConfigMapName,
+				ConfigName:             "test-config",
+			},
+			SKRConfig: SKRConfig{
+				DeploymentNamespacedName: "default/my-deployment",
+			},
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap).Build()
@@ -232,10 +268,14 @@ func TestValidations(t *testing.T) {
 	t.Run("Pull secret not exists", func(t *testing.T) {
 		// given
 		config := Config{
-			DeploymentNamespacedName: "default/my-deployment",
-			ManifestsConfigMapName:   manifestsConfigMapName,
-			ConfigName:               "test-config",
-			PullSecretName:           "test-pull-secret",
+			KCPConfig: KCPConfig{
+				ManifestsConfigMapName: manifestsConfigMapName,
+				ConfigName:             "test-config",
+				PullSecretName:         "test-pull-secret",
+			},
+			SKRConfig: SKRConfig{
+				DeploymentNamespacedName: "default/my-deployment",
+			},
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap, manifestsConfigMap).Build()
@@ -251,10 +291,14 @@ func TestValidations(t *testing.T) {
 	t.Run("Cluster Trust Bundle not exists", func(t *testing.T) {
 		// given
 		config := Config{
-			DeploymentNamespacedName: "default/my-deployment",
-			ManifestsConfigMapName:   manifestsConfigMapName,
-			ConfigName:               "test-config",
-			ClusterTrustBundleName:   "some-test-trust-bundle",
+			KCPConfig: KCPConfig{
+				ManifestsConfigMapName: manifestsConfigMapName,
+				ConfigName:             "test-config",
+				ClusterTrustBundleName: "some-test-trust-bundle",
+			},
+			SKRConfig: SKRConfig{
+				DeploymentNamespacedName: "default/my-deployment",
+			},
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap, manifestsConfigMap).Build()
@@ -279,10 +323,14 @@ func TestValidations(t *testing.T) {
 		}
 
 		config := Config{
-			DeploymentNamespacedName: "default/my-deployment",
-			ManifestsConfigMapName:   manifestsConfigMapName,
-			ConfigName:               "test-config",
-			PullSecretName:           "test-pull-secret",
+			KCPConfig: KCPConfig{
+				ManifestsConfigMapName: manifestsConfigMapName,
+				ConfigName:             "test-config",
+				PullSecretName:         "test-pull-secret",
+			},
+			SKRConfig: SKRConfig{
+				DeploymentNamespacedName: "default/my-deployment",
+			},
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap, invalidSecret, manifestsConfigMap).Build()

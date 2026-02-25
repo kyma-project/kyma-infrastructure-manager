@@ -269,11 +269,15 @@ func main() {
 		}
 
 		rtbConfig := rtbootstrapper.Config{
-			PullSecretName:           runtimeBootstrapperPullSecretName,
-			ClusterTrustBundleName:   runtimeBootstrapperClusterTrustBundle,
-			ConfigName:               runtimeBootstrapperConfigName,
-			DeploymentNamespacedName: runtimeBootstrapperDeploymentName,
-			ManifestsConfigMapName:   runtimeBootstrapperManifestsConfigMapName,
+			KCPConfig: rtbootstrapper.KCPConfig{
+				PullSecretName:         runtimeBootstrapperPullSecretName,
+				ClusterTrustBundleName: runtimeBootstrapperClusterTrustBundle,
+				ConfigName:             runtimeBootstrapperConfigName,
+				ManifestsConfigMapName: runtimeBootstrapperManifestsConfigMapName,
+			},
+			SKRConfig: rtbootstrapper.SKRConfig{
+				DeploymentNamespacedName: runtimeBootstrapperDeploymentName,
+			},
 		}
 
 		cfg, err := ctrl.GetConfig()

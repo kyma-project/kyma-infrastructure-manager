@@ -26,23 +26,23 @@ func NewValidator(config Config, kcpClient client.Client) *Validator {
 }
 
 func (v Validator) Validate(ctx context.Context) error {
-	if err := verifyManifestsConfigMap(ctx, v.config.ManifestsConfigMapName, v.kcpClient); err != nil {
+	if err := verifyManifestsConfigMap(ctx, v.config.KCPConfig.ManifestsConfigMapName, v.kcpClient); err != nil {
 		return err
 	}
 
-	if err := verifyDeploymentName(v.config.DeploymentNamespacedName); err != nil {
+	if err := verifyDeploymentName(v.config.SKRConfig.DeploymentNamespacedName); err != nil {
 		return err
 	}
 
-	if err := verifyConfigMap(ctx, v.config.ConfigName, v.kcpClient); err != nil {
+	if err := verifyConfigMap(ctx, v.config.KCPConfig.ConfigName, v.kcpClient); err != nil {
 		return err
 	}
 
-	if err := verifyPullSecret(ctx, v.config.PullSecretName, v.kcpClient); err != nil {
+	if err := verifyPullSecret(ctx, v.config.KCPConfig.PullSecretName, v.kcpClient); err != nil {
 		return err
 	}
 
-	return verifyClusterTrustBundle(ctx, v.config.ClusterTrustBundleName, v.kcpClient)
+	return verifyClusterTrustBundle(ctx, v.config.KCPConfig.ClusterTrustBundleName, v.kcpClient)
 }
 
 func verifyDeploymentName(deploymentNamespacedName string) error {

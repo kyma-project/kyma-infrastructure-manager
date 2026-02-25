@@ -23,23 +23,25 @@ import (
 // newConfig creates a Config for tests with provided parameters.
 func newConfig(pullSecretName, clusterTrustBundleName, configName string) Config {
 	return Config{
-		PullSecretName:         pullSecretName,
-		ClusterTrustBundleName: clusterTrustBundleName,
-		//ManifestsConfigMapName: manifestsConfigMapName,
-		ConfigName: configName,
+		KCPConfig: KCPConfig{
+			PullSecretName:         pullSecretName,
+			ClusterTrustBundleName: clusterTrustBundleName,
+			//ManifestsConfigMapName: manifestsConfigMapName,
+			ConfigName: configName,
+		},
 	}
 }
 
 func Test_Configure(t *testing.T) {
 	config := newConfig("test-registry-credentials", "test-cluster-trust-bundle", "test-runtime-bootstrapper-kcp-config")
 
-	kcpPullSecret := newPullSecret(config.PullSecretName, "kcp-system", []byte(`{"auths":{"test-registry.io":{"username":"test-user","password":"test-password","email":"test-email"}}}`))
-	kcpBootstrapperConfigMap := newBootstrapperConfigMap(config.ConfigName, "kcp-system", map[string]string{"rt-bootstrapper-config.json": "some-configuration-data"})
-	kcpClusterTrustBundle := newClusterTrustBundle(config.ClusterTrustBundleName, "-----BEGIN CERTIFICATE-----\ntest-certificate-data\n-----END CERTIFICATE-----")
+	kcpPullSecret := newPullSecret(config.KCPConfig.PullSecretName, "kcp-system", []byte(`{"auths":{"test-registry.io":{"username":"test-user","password":"test-password","email":"test-email"}}}`))
+	kcpBootstrapperConfigMap := newBootstrapperConfigMap(config.KCPConfig.ConfigName, "kcp-system", map[string]string{"rt-bootstrapper-config.json": "some-configuration-data"})
+	kcpClusterTrustBundle := newClusterTrustBundle(config.KCPConfig.ClusterTrustBundleName, "-----BEGIN CERTIFICATE-----\ntest-certificate-data\n-----END CERTIFICATE-----")
 
 	skrPullSecret := newPullSecret("registry-credentials", "kyma-system", []byte(`{"auths":{"test-registry.io":{"username":"test-user","password":"test-password","email":"test-email"}}}`))
 	skrBootstrapperConfigMap := newBootstrapperConfigMap("rt-bootstrapper-config", "kyma-system", map[string]string{"rt-bootstrapper-config.json": "some-configuration-data"})
-	skrClusterTrustBundle := newClusterTrustBundle(config.ClusterTrustBundleName, "-----BEGIN CERTIFICATE-----\ntest-certificate-data\n-----END CERTIFICATE-----")
+	skrClusterTrustBundle := newClusterTrustBundle(config.KCPConfig.ClusterTrustBundleName, "-----BEGIN CERTIFICATE-----\ntest-certificate-data\n-----END CERTIFICATE-----")
 
 	runtimeCR := minimalRuntime()
 	scheme := runtime.NewScheme()
@@ -76,7 +78,7 @@ func Test_Configure(t *testing.T) {
 
 	t.Run("Should update configuration if resources require update", func(t *testing.T) {
 		// given
-		newKCPPullSecret := newPullSecret(config.PullSecretName, "kcp-system", []byte(`{"auths":{"test-registry.io":{"username":"new-test-user","password":"new-test-password","email":"test-email"}}}`))
+		newKCPPullSecret := newPullSecret(config.KCPConfig.PullSecretName, "kcp-system", []byte(`{"auths":{"test-registry.io":{"username":"new-test-user","password":"new-test-password","email":"test-email"}}}`))
 		newKCPBootstrapperConfigMap := newBootstrapperConfigMap("test-runtime-bootstrapper-kcp-config", "kcp-system", map[string]string{"rt-bootstrapper-config.json": "some-new-configuration-data"})
 		newKCPClusterTrustBundle := newClusterTrustBundle("test-cluster-trust-bundle", "-----BEGIN CERTIFICATE-----\nnew-test-certificate-data\n-----END CERTIFICATE-----")
 
