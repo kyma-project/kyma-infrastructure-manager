@@ -8,7 +8,6 @@ on:
 jobs:
   run-release-tests:
     permissions:
-      actions: read
       contents: read
     uses: ./.github/workflows/run-tests.yaml
 
@@ -52,7 +51,7 @@ jobs:
     permissions:
       actions: read
       contents: read
-    uses: kyma-project/compliancy/.github/workflows/upload-release-report.yml@main
+    uses: ./.github/workflows/upload-release-report.yaml
     with:
       release_version: ${{ github.ref_name }}
     secrets:
