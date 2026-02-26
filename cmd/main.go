@@ -118,10 +118,11 @@ func main() {
 	var runtimeBootstrapperKCPPullSecretName string
 	var runtimeBootstrapperManifestsConfigMapName string
 	var runtimeBootstrapperKCPClusterTrustBundle string
-	var runtimeBootstrapperDeploymentName string
+	var runtimeBootstrapperSKRDeploymentName string
 	var runtimeBootstrapperSKRConfigName string
 	var runtimeBootstrapperSKRPullSecretName string
 	var runtimeBootstrapperSKRClusterTrustBundle string
+	var runtimeBootstrapperSKRNamespace string
 
 	//Kubebuilder related parameters:
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to. Monitoring and alerting tools can use this endpoint to collect application specific metrics during runtime")
@@ -163,8 +164,9 @@ func main() {
 	flag.StringVar(&runtimeBootstrapperSKRConfigName, "runtime-bootstrapper-kcp-config-name", "rt-bootstrapper-config", "Name of the the runtime bootstrapper Config Map on SKR.")
 	flag.StringVar(&runtimeBootstrapperSKRPullSecretName, "runtime-bootstrapper-skr-pull-secret-name", "", "Name of the pull secret to be copied on SKR.")
 	flag.StringVar(&runtimeBootstrapperSKRClusterTrustBundle, "runtime-bootstrapper-skr-cluster-trust-bundle", "", "Name of rhe cluster trust bundle on SKR.")
+	flag.StringVar(&runtimeBootstrapperSKRNamespace, "runtime-bootstrapper-skr-namespace", "kyma-system", "Name of the the runtime bootstrapper namespace on SKR.")
 
-	flag.StringVar(&runtimeBootstrapperDeploymentName, "runtime-bootstrapper-deployment-namespaced-name", "kyma-system/rt-bootstrapper-controller-manager", "Name of the deployment to be observed to verify if installation succeeded. Expected format: <namespace>/<name>")
+	flag.StringVar(&runtimeBootstrapperSKRDeploymentName, "runtime-bootstrapper-deployment-namespaced-name", "kyma-system/rt-bootstrapper-controller-manager", "Name of the deployment to be observed to verify if installation succeeded. Expected format: <namespace>/<name>")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
@@ -284,10 +286,10 @@ func main() {
 				ManifestsConfigMapName: runtimeBootstrapperManifestsConfigMapName,
 			},
 			SKRConfig: rtbootstrapper.SKRConfig{
-				PullSecretName:           runtimeBootstrapperSKRPullSecretName,
-				ClusterTrustBundleName:   runtimeBootstrapperSKRClusterTrustBundle,
-				ConfigName:               runtimeBootstrapperSKRConfigName,
-				DeploymentNamespacedName: runtimeBootstrapperDeploymentName,
+				PullSecretName:         runtimeBootstrapperSKRPullSecretName,
+				ClusterTrustBundleName: runtimeBootstrapperSKRClusterTrustBundle,
+				ConfigName:             runtimeBootstrapperSKRConfigName,
+				DeploymentName:         runtimeBootstrapperSKRDeploymentName,
 			},
 		}
 

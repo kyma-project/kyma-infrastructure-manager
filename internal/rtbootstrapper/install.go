@@ -41,10 +41,11 @@ type KCPConfig struct {
 }
 
 type SKRConfig struct {
-	PullSecretName           string
-	ClusterTrustBundleName   string
-	ConfigName               string
-	DeploymentNamespacedName string
+	Namespace              string
+	PullSecretName         string
+	ClusterTrustBundleName string
+	ConfigName             string
+	DeploymentName         string
 }
 
 //mockery:generate: true
@@ -65,7 +66,10 @@ func NewInstaller(config Config, kcpClient client.Client, runtimeClientGetter Ru
 		config:    config,
 		kcpClient: kcpClient,
 		manifestApplier: NewManifestApplier(config.KCPConfig.ManifestsConfigMapName,
-			toNamespacedName(config.SKRConfig.DeploymentNamespacedName),
+			types.NamespacedName{
+				Name:      config.SKRConfig.DeploymentName,
+				Namespace: config.SKRConfig.Namespace,
+			},
 			runtimeClientGetter,
 			runtimeDynamicClientGetter,
 			kcpClient),

@@ -60,7 +60,7 @@ func TestValidations(t *testing.T) {
 					ConfigName:             "test-config",
 				},
 				SKRConfig: SKRConfig{
-					DeploymentNamespacedName: "default/my-deployment",
+					DeploymentName: "my-deployment",
 				},
 			}
 
@@ -83,7 +83,7 @@ func TestValidations(t *testing.T) {
 					ClusterTrustBundleName: "test-trust-bundle",
 				},
 				SKRConfig: SKRConfig{
-					DeploymentNamespacedName: "default/my-deployment",
+					DeploymentName: "my-deployment",
 				},
 			}
 
@@ -119,7 +119,7 @@ func TestValidations(t *testing.T) {
 				ConfigName:             "test-config",
 			},
 			SKRConfig: SKRConfig{
-				DeploymentNamespacedName: "default/my-deployment",
+				DeploymentName: "default/my-deployment",
 			},
 		}
 
@@ -133,69 +133,25 @@ func TestValidations(t *testing.T) {
 		assert.Contains(t, err.Error(), "invalid YAML")
 	})
 
-	t.Run("Deployment namespace incorrect", func(t *testing.T) {
-		{
-			// given
-			fakeClient := fake.NewClientBuilder().WithObjects(configMap, manifestsConfigMap).Build()
+	t.Run("Deployment name empty", func(t *testing.T) {
+		// given
+		fakeClient := fake.NewClientBuilder().WithObjects(configMap, manifestsConfigMap).Build()
 
-			config := Config{
-				KCPConfig: KCPConfig{
-					ManifestsConfigMapName: manifestsConfigMapName,
-				},
-				SKRConfig: SKRConfig{
-					DeploymentNamespacedName: "/invalid-deployment-name",
-				},
-			}
-
-			// when
-			err := NewValidator(config, fakeClient).Validate(context.Background())
-
-			// then
-			require.Error(t, err)
-			assert.ErrorContains(t, err, "deployment namespaced name is invalid")
+		config := Config{
+			KCPConfig: KCPConfig{
+				ManifestsConfigMapName: manifestsConfigMapName,
+			},
+			SKRConfig: SKRConfig{
+				DeploymentName: "",
+			},
 		}
 
-		{
-			// given
-			fakeClient := fake.NewClientBuilder().WithObjects(configMap, manifestsConfigMap).Build()
+		// when
+		err := NewValidator(config, fakeClient).Validate(context.Background())
 
-			config := Config{
-				KCPConfig: KCPConfig{
-					ManifestsConfigMapName: manifestsConfigMapName,
-				},
-				SKRConfig: SKRConfig{
-					DeploymentNamespacedName: "invalid-deployment-name/",
-				},
-			}
-
-			// when
-			err := NewValidator(config, fakeClient).Validate(context.Background())
-
-			// then
-			require.Error(t, err)
-			assert.ErrorContains(t, err, "deployment namespaced name is invalid")
-		}
-
-		{
-			// given
-			fakeClient := fake.NewClientBuilder().WithObjects(configMap, manifestsConfigMap).Build()
-
-			config := Config{
-				KCPConfig: KCPConfig{
-					ManifestsConfigMapName: manifestsConfigMapName,
-				},
-				SKRConfig: SKRConfig{
-					DeploymentNamespacedName: "",
-				},
-			}
-
-			// when
-			err := NewValidator(config, fakeClient).Validate(context.Background())
-
-			// then
-			require.Error(t, err)
-			assert.ErrorContains(t, err, "deployment namespaced name is invalid")
-		}
+		// then
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "deployment name cannot be empty")
 	})
 
 	t.Run("Configuration ConfigMap not exists", func(t *testing.T) {
@@ -206,7 +162,7 @@ func TestValidations(t *testing.T) {
 				ConfigName:             "test-config",
 			},
 			SKRConfig: SKRConfig{
-				DeploymentNamespacedName: "default/my-deployment",
+				DeploymentName: "default/my-deployment",
 			},
 		}
 
@@ -229,7 +185,7 @@ func TestValidations(t *testing.T) {
 				ClusterTrustBundleName: "test-trust-bundle",
 			},
 			SKRConfig: SKRConfig{
-				DeploymentNamespacedName: "default/my-deployment",
+				DeploymentName: "default/my-deployment",
 			},
 		}
 
@@ -251,7 +207,7 @@ func TestValidations(t *testing.T) {
 				ConfigName:             "test-config",
 			},
 			SKRConfig: SKRConfig{
-				DeploymentNamespacedName: "default/my-deployment",
+				DeploymentName: "default/my-deployment",
 			},
 		}
 
@@ -274,7 +230,7 @@ func TestValidations(t *testing.T) {
 				PullSecretName:         "test-pull-secret",
 			},
 			SKRConfig: SKRConfig{
-				DeploymentNamespacedName: "default/my-deployment",
+				DeploymentName: "default/my-deployment",
 			},
 		}
 
@@ -297,7 +253,7 @@ func TestValidations(t *testing.T) {
 				ClusterTrustBundleName: "some-test-trust-bundle",
 			},
 			SKRConfig: SKRConfig{
-				DeploymentNamespacedName: "default/my-deployment",
+				DeploymentName: "default/my-deployment",
 			},
 		}
 
@@ -329,7 +285,7 @@ func TestValidations(t *testing.T) {
 				PullSecretName:         "test-pull-secret",
 			},
 			SKRConfig: SKRConfig{
-				DeploymentNamespacedName: "default/my-deployment",
+				DeploymentName: "default/my-deployment",
 			},
 		}
 
