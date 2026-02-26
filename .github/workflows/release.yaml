@@ -1,4 +1,4 @@
-name: Generate and Release CRD Docs
+name: KIM Release
 
 on:
   push:
@@ -6,7 +6,14 @@ on:
       - '*'  # Trigger on tag pushes
 
 jobs:
+  run-release-tests:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/run-tests.yaml
+
   generate-release:
+    needs: run-release-tests
+    if: needs.run-release-tests.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write  # Needed for creating releases and uploading assets
@@ -37,13 +44,16 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   upload-release-report:
-    permissions:
-      actions: read # This is required for uploading release reports
-      contents: read # This is required for reading the nested workflow
     needs: generate-release
-    uses: kyma-project/compliancy/.github/workflows/upload-release-report.yml@main
+    if: needs.generate-release.result == 'success'
+    permissions:
+      actions: read
+      contents: read
+    uses: ./.github/workflows/upload-release-report.yaml
     with:
       release_version: ${{ github.ref_name }}
     secrets:
       RELEASE_LOG_UPLOADER_SA: ${{ secrets.RELEASE_LOG_UPLOADER_SA }}
+
