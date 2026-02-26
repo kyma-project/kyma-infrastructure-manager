@@ -8,7 +8,6 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 )
 
 type Installer struct {
@@ -93,12 +92,4 @@ func (r *Installer) Configure(ctx context.Context, runtime imv1.Runtime) error {
 func (r *Installer) Cleanup(ctx context.Context, runtime imv1.Runtime) error {
 	// No cleanup needed for now. Implement when needed.
 	return nil
-}
-
-func toNamespacedName(namespacedName string) types.NamespacedName {
-	nameAndNamespace := strings.Split(namespacedName, string(types.Separator))
-	return types.NamespacedName{
-		Name:      nameAndNamespace[1],
-		Namespace: nameAndNamespace[0],
-	}
 }
