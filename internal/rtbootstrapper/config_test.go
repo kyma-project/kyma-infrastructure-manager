@@ -24,15 +24,15 @@ import (
 func newConfig(pullSecretName, clusterTrustBundleName, configName string) Config {
 	return Config{
 		KCPConfig: KCPConfig{
-			PullSecretName:         pullSecretName,
-			ClusterTrustBundleName: clusterTrustBundleName,
-			ConfigName:             configName,
+			PullSecretName:         "kcp_" + pullSecretName,
+			ClusterTrustBundleName: "kcp_" + clusterTrustBundleName,
+			ConfigName:             "kcp_" + configName,
 		},
 		SKRConfig: SKRConfig{
 			Namespace:              "kyma-system",
-			PullSecretName:         pullSecretName,
-			ClusterTrustBundleName: clusterTrustBundleName,
-			ConfigName:             configName,
+			PullSecretName:         "skr_" + pullSecretName,
+			ClusterTrustBundleName: "skr_" + clusterTrustBundleName,
+			ConfigName:             "skr_" + configName,
 		},
 	}
 }
