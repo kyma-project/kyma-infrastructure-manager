@@ -286,6 +286,7 @@ func main() {
 				ManifestsConfigMapName: runtimeBootstrapperManifestsConfigMapName,
 			},
 			SKRConfig: rtbootstrapper.SKRConfig{
+				Namespace:              runtimeBootstrapperSKRNamespace,
 				PullSecretName:         runtimeBootstrapperSKRPullSecretName,
 				ClusterTrustBundleName: runtimeBootstrapperSKRClusterTrustBundle,
 				ConfigName:             runtimeBootstrapperSKRConfigName,
