@@ -29,10 +29,10 @@ func newConfig(pullSecretName, clusterTrustBundleName, configName string) Config
 			ConfigName:             configName,
 		},
 		SKRConfig: SKRConfig{
+			Namespace:              "kyma-system",
 			PullSecretName:         pullSecretName,
 			ClusterTrustBundleName: clusterTrustBundleName,
-			//ManifestsConfigMapName: manifestsConfigMapName,
-			ConfigName: configName,
+			ConfigName:             configName,
 		},
 	}
 }

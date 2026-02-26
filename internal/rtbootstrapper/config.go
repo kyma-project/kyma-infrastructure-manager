@@ -115,7 +115,7 @@ func (c *Configurator) applyConfigMap(ctx context.Context, runtimeClient client.
 	applyCM := true
 
 	var existing corev1.ConfigMap
-	err := runtimeClient.Get(ctx, client.ObjectKey{Name: c.config.SKRConfig.ConfigName, Namespace: "kyma-system"}, &existing)
+	err := runtimeClient.Get(ctx, client.ObjectKey{Name: c.config.SKRConfig.ConfigName, Namespace: c.config.SKRConfig.Namespace}, &existing)
 	if err == nil {
 		if equalConfigMap(existing, *configMap) {
 			applyCM = false
@@ -132,7 +132,7 @@ func (c *Configurator) applyConfigMap(ctx context.Context, runtimeClient client.
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      c.config.SKRConfig.ConfigName,
-				Namespace: "kyma-system",
+				Namespace: c.config.SKRConfig.Namespace,
 			},
 			Data: configMap.Data,
 		}
@@ -150,7 +150,7 @@ func (c *Configurator) applySecret(ctx context.Context, runtimeClient client.Cli
 	applySecret := true
 
 	var existing corev1.Secret
-	err := runtimeClient.Get(ctx, client.ObjectKey{Name: c.config.SKRConfig.PullSecretName, Namespace: "kyma-system"}, &existing)
+	err := runtimeClient.Get(ctx, client.ObjectKey{Name: c.config.SKRConfig.PullSecretName, Namespace: c.config.SKRConfig.Namespace}, &existing)
 	if err == nil {
 		if equalSecret(existing, *secret) {
 			applySecret = false
@@ -167,7 +167,7 @@ func (c *Configurator) applySecret(ctx context.Context, runtimeClient client.Cli
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      c.config.SKRConfig.PullSecretName,
-				Namespace: "kyma-system",
+				Namespace: c.config.SKRConfig.Namespace,
 			},
 			Data: secret.Data,
 			Type: secret.Type,
