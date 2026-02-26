@@ -155,18 +155,18 @@ func main() {
 	flag.BoolVar(&runtimeBootstrapperEnabled, "runtime-bootstrapper-enabled", false, "Feature flag to enable runtime bootstrapper")
 
 	// Runtime bootstrapper configuration
-	flag.StringVar(&runtimeBootstrapperManifestsConfigMapName, "runtime-bootstrapper-manifests-config-map-name", "runtime-bootstrapper-manifests", "File path to the manifests containing runtime bootstrapper.")
+	flag.StringVar(&runtimeBootstrapperManifestsConfigMapName, "runtime-bootstrapper-manifests-config-map-name", "runtime-bootstrapper-manifests", "Config map with Runtime Bootstrapper manifests.")
 
-	flag.StringVar(&runtimeBootstrapperKCPConfigName, "runtime-bootstrapper-kcp-config-name", "rt-bootstrapper-config", "Name of the the runtime bootstrapper Config Map to be copied to SKR.")
+	flag.StringVar(&runtimeBootstrapperKCPConfigName, "runtime-bootstrapper-kcp-config-name", "rt-bootstrapper-config", "Name of the the runtime bootstrapper config map to be copied to SKR.")
 	flag.StringVar(&runtimeBootstrapperKCPPullSecretName, "runtime-bootstrapper-kcp-pull-secret-name", "", "Name of the pull secret to be copied to SKR.")
-	flag.StringVar(&runtimeBootstrapperKCPClusterTrustBundle, "runtime-bootstrapper-kcp-cluster-trust-bundle", "", "Cluster trust bundle to be copied to SKR.")
+	flag.StringVar(&runtimeBootstrapperKCPClusterTrustBundle, "runtime-bootstrapper-kcp-cluster-trust-bundle", "", "Name of the cluster trust bundle to be copied to SKR.")
 
-	flag.StringVar(&runtimeBootstrapperSKRConfigName, "runtime-bootstrapper-kcp-config-name", "rt-bootstrapper-config", "Name of the the runtime bootstrapper Config Map on SKR.")
-	flag.StringVar(&runtimeBootstrapperSKRPullSecretName, "runtime-bootstrapper-skr-pull-secret-name", "", "Name of the pull secret to be copied on SKR.")
-	flag.StringVar(&runtimeBootstrapperSKRClusterTrustBundle, "runtime-bootstrapper-skr-cluster-trust-bundle", "", "Name of rhe cluster trust bundle on SKR.")
+	flag.StringVar(&runtimeBootstrapperSKRConfigName, "runtime-bootstrapper-skr-config-name", "rt-bootstrapper-config", "Name of the runtime bootstrapper config map on SKR.")
+	flag.StringVar(&runtimeBootstrapperSKRPullSecretName, "runtime-bootstrapper-skr-pull-secret-name", "", "Name of the pull secret on SKR.")
+	flag.StringVar(&runtimeBootstrapperSKRClusterTrustBundle, "runtime-bootstrapper-skr-cluster-trust-bundle", "", "Name of the cluster trust bundle on SKR.")
 	flag.StringVar(&runtimeBootstrapperSKRNamespace, "runtime-bootstrapper-skr-namespace", "kyma-system", "Name of the the runtime bootstrapper namespace on SKR.")
 
-	flag.StringVar(&runtimeBootstrapperSKRDeploymentName, "runtime-bootstrapper-deployment-namespaced-name", "kyma-system/rt-bootstrapper-controller-manager", "Name of the deployment to be observed to verify if installation succeeded. Expected format: <namespace>/<name>")
+	flag.StringVar(&runtimeBootstrapperSKRDeploymentName, "runtime-bootstrapper-skr-deployment-name", "rt-bootstrapper-controller-manager", "Name of the deployment to be observed to verify if installation succeeded.")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
