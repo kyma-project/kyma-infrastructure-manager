@@ -162,7 +162,7 @@ func main() {
 	flag.StringVar(&runtimeBootstrapperKCPClusterTrustBundle, "runtime-bootstrapper-kcp-cluster-trust-bundle", "", "Name of the cluster trust bundle to be copied to SKR.")
 
 	flag.StringVar(&runtimeBootstrapperSKRConfigName, "runtime-bootstrapper-skr-config-name", "rt-bootstrapper-config", "Name of the runtime bootstrapper config map on SKR.")
-	flag.StringVar(&runtimeBootstrapperSKRPullSecretName, "runtime-bootstrapper-skr-pull-secret-name", "", "Name of the pull secret on SKR.")
+	flag.StringVar(&runtimeBootstrapperSKRPullSecretName, "runtime-bootstrapper-skr-pull-secret-name", "registry-credentials", "Name of the pull secret on SKR.")
 	flag.StringVar(&runtimeBootstrapperSKRClusterTrustBundle, "runtime-bootstrapper-skr-cluster-trust-bundle", "", "Name of the cluster trust bundle on SKR.")
 	flag.StringVar(&runtimeBootstrapperSKRNamespace, "runtime-bootstrapper-skr-namespace", "kyma-system", "Name of the the runtime bootstrapper namespace on SKR.")
 
