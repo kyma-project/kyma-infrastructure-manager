@@ -92,9 +92,12 @@ jobs:
         done
         rm "$output~"
 
-    - name: coveralls github action
-      uses: coverallsapp/github-action@v2.3.6
-      with:
-        format: golang
-        file: ./coverage-filtered.txt
-        fail-on-error: false
+# coverallsapp has an outage that causes the upload to fail, so we disable the coveralls upload for now
+# to avoid failing the whole workflow and the entire realse. We can re-enable it once the outage is resolved.
+
+#    - name: coveralls github action
+#      uses: coverallsapp/github-action@v2.3.6
+#      with:
+#        format: golang
+#        file: ./coverage-filtered.txt
+#        fail-on-error: false
