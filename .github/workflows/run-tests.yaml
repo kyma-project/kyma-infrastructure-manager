@@ -93,7 +93,6 @@ jobs:
         rm "$output~"
 
 # coverallsapp has an outage that causes the upload to fail, so we disable the coveralls upload for now
-# coverallsapp has an outage that causes the upload to fail, so we disable the coveralls upload for now
 # to avoid failing the whole workflow and the entire release. We can re-enable it once the outage is resolved.
 
 #    - name: coveralls github action
