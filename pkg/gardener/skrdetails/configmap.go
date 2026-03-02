@@ -10,11 +10,13 @@ import (
 )
 
 type KymaProvisioningInfo struct {
-	WorkerPools          WorkerPools          `json:"workerPools"`
-	GlobalAccountID      string               `json:"globalAccountID,omitzero"`
-	SubaccountID         string               `json:"subaccountID,omitzero"`
-	InfrastructureConfig runtime.RawExtension `json:"infrastructureConfig,omitzero"`
-	NetworkDetails       NetworkDetails       `json:"networkDetails"`
+	WorkerPools           WorkerPools          `json:"workerPools"`
+	GlobalAccountID       string               `json:"globalAccountID,omitzero"`
+	SubaccountID          string               `json:"subaccountID,omitzero"`
+	EnvironmentInstanceID string               `json:"environmentInstanceID,omitzero"`
+	InstanceName          string               `json:"instanceName,omitzero"`
+	InfrastructureConfig  runtime.RawExtension `json:"infrastructureConfig,omitzero"`
+	NetworkDetails        NetworkDetails       `json:"networkDetails"`
 }
 
 type WorkerPools struct {
@@ -69,9 +71,11 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 			Kyma:   kymaWorkerPool,
 			Custom: customWorkerPools,
 		},
-		GlobalAccountID:      runtime.Labels["kyma-project.io/global-account-id"],
-		SubaccountID:         runtime.Labels["kyma-project.io/subaccount-id"],
-		InfrastructureConfig: *shoot.Spec.Provider.InfrastructureConfig,
+		GlobalAccountID:       runtime.Labels[imv1.LabelKymaGlobalAccountID],
+		SubaccountID:          runtime.Labels[imv1.LabelKymaSubaccountID],
+		EnvironmentInstanceID: runtime.Labels[imv1.LabelKymaInstanceID],
+		InstanceName:          runtime.Labels[imv1.LabelKymaName],
+		InfrastructureConfig:  *shoot.Spec.Provider.InfrastructureConfig,
 		NetworkDetails: NetworkDetails{
 			DualStackIPEnabled: IsDualStackEnabled(shoot),
 		},
