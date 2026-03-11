@@ -56,7 +56,9 @@ jobs:
         go-version-file: 'go.mod'
 ############################################################################################
     - name: Run unit tests
-      run: make test 2>&1 | tee test-output.txt
+      run: |
+        set -o pipefail 
+        make test 2>&1 | tee test-output.txt
     - name: Upload test output artifact
       uses: actions/upload-artifact@v5
       if: success() || failure()
