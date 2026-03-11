@@ -57,8 +57,8 @@ jobs:
 ############################################################################################
     - name: Run unit tests
       run: |
-        go mod tidy
         set -o pipefail 
+        go mod tidy
         make test 2>&1 | tee test-output.txt
     - name: Upload test output artifact
       uses: actions/upload-artifact@v5
