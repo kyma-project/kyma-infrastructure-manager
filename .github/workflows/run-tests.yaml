@@ -59,6 +59,7 @@ jobs:
       run: |
         set -o pipefail 
         go mod tidy
+        git diff --exit-code go.mod go.sum
         make test 2>&1 | tee test-output.txt
     - name: Upload test output artifact
       uses: actions/upload-artifact@v5
