@@ -226,6 +226,11 @@ type Networking struct {
 	Services   string  `json:"services"`
 	DualStack  *bool   `json:"dualStack,omitempty"`
 	VPCNetwork *string `json:"vpcNetwork,omitempty"`
+	ACL        ACL     `json:"acl,omitempty"`
+}
+
+type ACL struct {
+	AllowedCIDRs []string `json:"allowedCIDRs,omitempty"`
 }
 
 type Security struct {

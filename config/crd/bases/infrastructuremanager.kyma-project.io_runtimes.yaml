@@ -403,6 +403,13 @@ spec:
                     type: string
                   networking:
                     properties:
+                      acl:
+                        properties:
+                          allowedCIDRs:
+                            items:
+                              type: string
+                            type: array
+                        type: object
                       dualStack:
                         type: boolean
                       nodes:
