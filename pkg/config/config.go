@@ -78,7 +78,7 @@ type MachineImageConfig struct {
 	DefaultVersion string `json:"defaultVersion" validate:"required"`
 }
 type ACL struct {
-	EnableACL       bool   `json:"enableACL" validate:"required"`
+	EnableACL       bool   `json:"enableACL"`
 	VolumeMountPath string `json:"volumeMountPath"`
 	IpAddressesKey  string `json:"ipAddressesKey"`
 	KcpAddressKey   string `json:"kcpAddressKey"`

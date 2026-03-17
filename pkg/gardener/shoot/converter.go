@@ -103,7 +103,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 	extendersForCreate = append(extendersForCreate, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration))
 	extendersForCreate = append(extendersForCreate, networking.ExtendWithNetworking(opts.Networking.EnableDualStackIP))
 	extendersForCreate = append(extendersForCreate, extender2.ExtendWithCredentialsBinding(opts.Gardener.EnableCredentialBinding))
-	extendersForCreate = append(extendersForCreate, extender2.NewKubeServerACLExtenderCreate(opts.ConverterConfig.Kubernetes.KubeApiServer.ACL))
+	extendersForCreate = append(extendersForCreate, extender2.NewKubeServerACLExtenderCreate(opts.Kubernetes.KubeApiServer.ACL))
 	return newConverter(opts.ConverterConfig, extendersForCreate...)
 }
 

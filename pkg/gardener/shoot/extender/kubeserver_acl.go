@@ -121,6 +121,9 @@ func (ac *ACLList) loadOperatorData(f readerGetter) error {
 	if err != nil {
 		return err
 	}
+	if closer, ok := r.(io.Closer); ok {
+		defer closer.Close()
+	}
 	return json.NewDecoder(r).Decode(&ac.OperatorIPs)
 }
 
@@ -128,6 +131,9 @@ func (ac *ACLList) loadKcpData(f readerGetter) error {
 	r, err := f()
 	if err != nil {
 		return err
+	}
+	if closer, ok := r.(io.Closer); ok {
+		defer closer.Close()
 	}
 	return json.NewDecoder(r).Decode(&ac.KCPIp)
 }
