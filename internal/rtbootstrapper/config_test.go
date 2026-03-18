@@ -2,8 +2,9 @@ package rtbootstrapper
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/types"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
@@ -22,17 +23,23 @@ import (
 
 // newConfig creates a Config for tests with provided parameters.
 func newConfig(pullSecretName, clusterTrustBundleName, configName string) Config {
+	nameIsSet := func(prefix, name string) string {
+		if name != "" {
+			return prefix + name
+		}
+		return ""
+	}
 	return Config{
 		KCPConfig: KCPConfig{
-			PullSecretName:         "kcp_" + pullSecretName,
-			ClusterTrustBundleName: "kcp_" + clusterTrustBundleName,
-			ConfigName:             "kcp_" + configName,
+			PullSecretName:         nameIsSet("kcp_", pullSecretName),
+			ClusterTrustBundleName: nameIsSet("kcp_", clusterTrustBundleName),
+			ConfigName:             nameIsSet("kcp_", configName),
 		},
 		SKRConfig: SKRConfig{
 			Namespace:              "kyma-system",
-			PullSecretName:         "skr_" + pullSecretName,
-			ClusterTrustBundleName: "skr_" + clusterTrustBundleName,
-			ConfigName:             "skr_" + configName,
+			PullSecretName:         nameIsSet("skr_", pullSecretName),
+			ClusterTrustBundleName: nameIsSet("skr_", clusterTrustBundleName),
+			ConfigName:             nameIsSet("skr_", configName),
 		},
 	}
 }
