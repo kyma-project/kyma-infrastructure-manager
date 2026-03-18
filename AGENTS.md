@@ -94,7 +94,7 @@ make manifests generate
 make fmt vet
 ```
 
-The `make build` target automatically runs `manifests`, `generate`, `fmt`, and `vet` before compiling.
+The `make build` and `make run` targets automatically run `manifests`, `generate`, `fmt`, and `vet` before compiling. `make test` also runs those steps in addition to setting up `envtest`.
 
 ---
 
@@ -170,7 +170,12 @@ Operator arguments (set in `config/default/manager_gardener_secret_patch.yaml`):
 | `gardener-cluster-ctrl-workers-cnt` | Parallel workers for GardenerCluster controller | `25` |
 | `structured-auth-enabled` | Enable structured authentication | `false` |
 | `registry-cache-config-controller-enabled` | Enable RegistryCacheConfig controller | `false` |
-
+| `registry-cache-config-controller-enabled` | Enable RegistryCacheConfig controller | `false` |
+| `runtime-bootstrapper-enabled` | Enable runtime bootstrapper | `false` |
+| `runtime-bootstrapper-manifests-config-map-name` | ConfigMap with Runtime Bootstrapper manifests | `runtime-bootstrapper-manifests` |
+| `runtime-bootstrapper-kcp-config-name` | Runtime bootstrapper ConfigMap to copy to SKR | `rt-bootstrapper-config` |
+| `runtime-bootstrapper-kcp-pull-secret-name` | Pull secret to copy to SKR | — |
+| `runtime-bootstrapper-skr-namespace` | Runtime bootstrapper namespace on SKR | `kyma-system` |
 ---
 
 ## Runtime Annotations (Troubleshooting)
