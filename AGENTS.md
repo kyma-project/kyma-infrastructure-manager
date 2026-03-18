@@ -170,7 +170,6 @@ Operator arguments (set in `config/default/manager_gardener_secret_patch.yaml`):
 | `gardener-cluster-ctrl-workers-cnt` | Parallel workers for GardenerCluster controller | `25` |
 | `structured-auth-enabled` | Enable structured authentication | `false` |
 | `registry-cache-config-controller-enabled` | Enable RegistryCacheConfig controller | `false` |
-| `registry-cache-config-controller-enabled` | Enable RegistryCacheConfig controller | `false` |
 | `runtime-bootstrapper-enabled` | Enable runtime bootstrapper | `false` |
 | `runtime-bootstrapper-manifests-config-map-name` | ConfigMap with Runtime Bootstrapper manifests | `runtime-bootstrapper-manifests` |
 | `runtime-bootstrapper-kcp-config-name` | Runtime bootstrapper ConfigMap to copy to SKR | `rt-bootstrapper-config` |
