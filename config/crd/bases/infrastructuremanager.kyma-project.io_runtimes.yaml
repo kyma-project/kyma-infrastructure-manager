@@ -224,6 +224,13 @@ spec:
                     properties:
                       kubeAPIServer:
                         properties:
+                          acl:
+                            properties:
+                              allowedCIDRs:
+                                items:
+                                  type: string
+                                type: array
+                            type: object
                           additionalOidcConfig:
                             items:
                               description: |-
