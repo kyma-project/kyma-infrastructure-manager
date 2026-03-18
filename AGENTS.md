@@ -115,6 +115,13 @@ KUBECONFIG_K3D=<path> go test ./test/e2e -v -timeout 30m
 
 ---
 
+## Contributing Workflow
+
+- All contributions must be submitted as pull requests from a **personal fork** of the repository — do not push feature branches directly to `kyma-project/kyma-infrastructure-manager`.
+- Fork the repo, commit changes to a branch on your fork, then open a PR against `main` on the upstream repository.
+
+---
+
 ## Code Conventions
 
 - All new Go files must begin with the Apache-2.0 copyright header from `hack/boilerplate.go.txt`.
