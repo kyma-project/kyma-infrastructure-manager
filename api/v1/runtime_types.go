@@ -208,8 +208,11 @@ type OIDCConfig struct {
 type APIServer struct {
 	OidcConfig           gardener.OIDCConfig `json:"oidcConfig,omitempty"`
 	AdditionalOidcConfig *[]OIDCConfig       `json:"additionalOidcConfig,omitempty"`
+	ACL                  *ACL                `json:"acl,omitempty"`
 }
-
+type ACL struct {
+	AllowedCIDRs []string `json:"allowedCIDRs,omitempty"`
+}
 type Provider struct {
 	//+kubebuilder:validation:Enum=aws;azure;gcp;openstack;alicloud
 	Type                 string                `json:"type"`
@@ -227,7 +230,6 @@ type Networking struct {
 	DualStack  *bool   `json:"dualStack,omitempty"`
 	VPCNetwork *string `json:"vpcNetwork,omitempty"`
 }
-
 type Security struct {
 	Administrators []string           `json:"administrators"`
 	Networking     NetworkingSecurity `json:"networking"`
