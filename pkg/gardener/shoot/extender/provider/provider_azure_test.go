@@ -33,7 +33,9 @@ func TestProviderExtenderForCreateAzure(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAzure, "ubuntu", "18.04", []string{"1"}),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/24",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -49,7 +51,9 @@ func TestProviderExtenderForCreateAzure(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAzure, "ubuntu", "18.04", []string{"1", "2"}),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/24",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -65,7 +69,9 @@ func TestProviderExtenderForCreateAzure(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAzure, "ubuntu", "18.04", []string{"1", "2", "3"}),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/24",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -115,7 +121,9 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 							{"next-worker", "azure.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "3"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/24",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -139,7 +147,9 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 							{"next-worker", "azure.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "4"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/24",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -163,7 +173,9 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 							{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "3"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/24",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -189,7 +201,9 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 							{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "4"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/24",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -215,7 +229,9 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 							{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "3"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/24",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -241,7 +257,9 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 							{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"1", "2", "3", "4"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/24",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -265,7 +283,9 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAzure, fixMultipleWorkers([]workerConfig{
 							{"main-worker", "azure.small", "gardenlinux", "1312.4.0", 1, 3, []string{"1", "2", "3"}}})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/24",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -290,7 +310,9 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 							{"next-worker", "azure.big", "gardenlinux", "1313.2.0", 1, 3, []string{"1", "2", "3"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/24",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -315,7 +337,9 @@ func TestProviderExtenderForPatchWorkersUpdateAzure(t *testing.T) {
 							{"main-worker", "m6i.large", "gardenlinux", "1313.4.0", 1, 3, []string{"1"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/24",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -393,7 +417,9 @@ func TestProviderExtenderForCreateMultipleWorkersAzure(t *testing.T) {
 							{"another", "m8i.large", "gardenlinux", "1312.2.0", 3, 5, []string{"3"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/24",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},

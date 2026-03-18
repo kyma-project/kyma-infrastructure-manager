@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maxpods"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -52,7 +53,18 @@ func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIM
 		}
 		setWorkerSettings(provider)
 
-		return err
+		if rt.Spec.Shoot.Networking.Pods != "" {
+			totalIPs, err := maxpods.MaxPodsFromPodsCIDR(rt.Spec.Shoot.Networking.Pods)
+			if err != nil {
+				return errors.Wrap(err, "invalid pods CIDR for maxPods calculation")
+			}
+			// Clamping uses provider.Workers order (Runtime CR order: main worker, then additional workers).
+			if err := maxpods.ApplyMaxPodsWithTotalCap(provider.Workers, totalIPs); err != nil {
+				return errors.Wrap(err, "maxPods clamping")
+			}
+		}
+
+		return nil
 	}
 }
 
@@ -112,6 +124,21 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 		}
 
 		setWorkerSettings(provider)
+
+		if rt.Spec.Shoot.Networking.Pods != "" {
+			totalIPs, err := maxpods.MaxPodsFromPodsCIDR(rt.Spec.Shoot.Networking.Pods)
+			if err != nil {
+				return errors.Wrap(err, "invalid pods CIDR for maxPods calculation")
+			}
+			// Clamping uses provider.Workers order (Shoot order from sortWorkersToShootOrder), not Runtime CR order.
+			// The last worker in this list gets clamped first when sum exceeds totalIPs.
+			if err := maxpods.ApplyMaxPodsWithTotalCap(provider.Workers, totalIPs); err != nil {
+				return errors.Wrap(err, "maxPods clamping")
+			}
+		}
+
+		// alignWorkersWithGardener runs after maxPods clamping. It only aligns zones, machine image, and
+		// update strategy from existing Shoot workers; it does not touch maxPods, so clamped values are preserved.
 		alignWorkersWithGardener(provider, shootWorkers)
 
 		return nil
