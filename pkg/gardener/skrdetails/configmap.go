@@ -71,6 +71,11 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 		}
 	}
 
+	var kubeAPIServer KubeAPIServer
+	if acl := AppliedACL(runtime); acl != nil {
+		kubeAPIServer = KubeAPIServer{ACL: acl}
+	}
+
 	return KymaProvisioningInfo{
 		WorkerPools: WorkerPools{
 			Kyma:   kymaWorkerPool,
@@ -83,7 +88,7 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 		InfrastructureConfig:  *shoot.Spec.Provider.InfrastructureConfig,
 		NetworkDetails: NetworkDetails{
 			DualStackIPEnabled: IsDualStackEnabled(shoot),
-			KubeAPIServer:      KubeAPIServer{ACL: AppliedACL(runtime)},
+			KubeAPIServer:      kubeAPIServer,
 		},
 	}
 }

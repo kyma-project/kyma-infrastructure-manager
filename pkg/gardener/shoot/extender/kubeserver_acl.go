@@ -58,11 +58,7 @@ func NewKubeServerACLExtenderCreate(aclConfig config.ACL) func(runtime imv1.Runt
 			return err
 		}
 
-		err = applyAccessControlList(shoot, acl)
-		if err != nil {
-			return err
-		}
-		return nil
+		return applyAccessControlList(shoot, acl)
 	}
 }
 
@@ -87,7 +83,18 @@ func NewKubeServerACLExtenderPatch(aclConfig config.ACL) func(runtime imv1.Runti
 			return nil
 		}
 
-		return applyAccessControlList(shoot, runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs)
+		acl, err := createAccessControlList(
+			runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs,
+			aclConfig.VolumeMountPath,
+			aclConfig.IpAddressesKey,
+			aclConfig.KcpAddressKey)
+		if err != nil {
+			// there was an error during os opening, file not existing
+			return err
+		}
+
+		removeAccessControlList(shoot)
+		return applyAccessControlList(shoot, acl)
 	}
 }
 

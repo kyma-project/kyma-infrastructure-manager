@@ -11,6 +11,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	k8s "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 )
 
@@ -342,32 +343,11 @@ func TestNewKubeServerACLExtenderPatch(t *testing.T) {
 		assert.Equal(t, "shoot-cert-service", shoot.Spec.Extensions[0].Type)
 	})
 
-	t.Run("Should skip removal when ACL object is nil and no ACL extension exists", func(t *testing.T) {
-		// given
-		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
-		shoot.Spec.Extensions = []gardener.Extension{
-			{Type: "shoot-cert-service"},
-		}
-		runtime := imv1.Runtime{}
-		runtime.Spec.Shoot.Provider.Type = "aws"
-		aclConfig := config.ACL{EnableACL: true}
-
-		extender := NewKubeServerACLExtenderPatch(aclConfig)
-
-		// when
-		err := extender(runtime, &shoot)
-
-		// then
-		require.NoError(t, err)
-		require.Len(t, shoot.Spec.Extensions, 1)
-		assert.Equal(t, "shoot-cert-service", shoot.Spec.Extensions[0].Type)
-	})
-
 	t.Run("Should apply ACL extension on shoot for AWS", func(t *testing.T) {
 		// given
 		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
 		runtime := fixRuntimeWithACL("aws", []string{"1.2.3.4/32", "5.6.0.0/16"})
-		aclConfig := config.ACL{EnableACL: true}
+		aclConfig := fixACLConfig(t, `["10.0.0.1/32","10.0.0.2/32"]`, `"172.16.0.1/32"`)
 
 		extender := NewKubeServerACLExtenderPatch(aclConfig)
 
@@ -387,14 +367,14 @@ func TestNewKubeServerACLExtenderPatch(t *testing.T) {
 
 		assert.Equal(t, "ALLOW", providerConfig.Rule.Action)
 		assert.Equal(t, "remote_ip", providerConfig.Rule.Type)
-		assert.Equal(t, []string{"1.2.3.4/32", "5.6.0.0/16"}, providerConfig.Rule.Cidrs)
+		assert.Equal(t, []string{"1.2.3.4/32", "5.6.0.0/16", "10.0.0.1/32", "10.0.0.2/32", "172.16.0.1/32"}, providerConfig.Rule.Cidrs)
 	})
 
 	t.Run("Should apply ACL extension on shoot for Azure", func(t *testing.T) {
 		// given
 		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
-		runtime := fixRuntimeWithACL("azure", []string{"192.168.1.0/24", "10.0.0.1/32"})
-		aclConfig := config.ACL{EnableACL: true}
+		runtime := fixRuntimeWithACL("azure", []string{"192.168.1.0/24"})
+		aclConfig := fixACLConfig(t, `["10.0.0.1/32"]`, `"172.16.0.1/32"`)
 
 		extender := NewKubeServerACLExtenderPatch(aclConfig)
 
@@ -408,28 +388,40 @@ func TestNewKubeServerACLExtenderPatch(t *testing.T) {
 		var providerConfig aclProviderConfig
 		require.NoError(t, json.Unmarshal(shoot.Spec.Extensions[0].ProviderConfig.Raw, &providerConfig))
 
-		assert.Equal(t, []string{"192.168.1.0/24", "10.0.0.1/32"}, providerConfig.Rule.Cidrs)
+		assert.Equal(t, []string{"192.168.1.0/24", "10.0.0.1/32", "172.16.0.1/32"}, providerConfig.Rule.Cidrs)
 	})
 
-	t.Run("Should append ACL extension to existing extensions", func(t *testing.T) {
+	t.Run("Should replace existing ACL extension with new one", func(t *testing.T) {
 		// given
 		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
+		oldACLExtension := aclProviderConfig{Rule: aclRule{Action: "ALLOW", Cidrs: []string{"8.8.8.8/32"}, Type: "remote_ip"}}
+		oldRawExtension, _ := json.Marshal(oldACLExtension)
 		shoot.Spec.Extensions = []gardener.Extension{
 			{Type: "shoot-cert-service"},
+			{
+				Type:           "acl",
+				ProviderConfig: &k8s.RawExtension{Raw: oldRawExtension},
+				Disabled:       ptr.To(false),
+			},
 		}
-		runtime := fixRuntimeWithACL("aws", []string{"1.2.3.4/32"})
-		aclConfig := config.ACL{EnableACL: true}
+		runtimeCR := fixRuntimeWithACL("aws", []string{"1.2.3.4/32"})
+		aclConfig := fixACLConfig(t, `["10.0.0.1/32"]`, `"172.16.0.1/32"`)
 
 		extender := NewKubeServerACLExtenderPatch(aclConfig)
 
 		// when
-		err := extender(runtime, &shoot)
+		err := extender(runtimeCR, &shoot)
 
 		// then
 		require.NoError(t, err)
 		require.Len(t, shoot.Spec.Extensions, 2)
 		assert.Equal(t, "shoot-cert-service", shoot.Spec.Extensions[0].Type)
 		assert.Equal(t, "acl", shoot.Spec.Extensions[1].Type)
+
+		var providerConfig aclProviderConfig
+		require.NoError(t, json.Unmarshal(shoot.Spec.Extensions[1].ProviderConfig.Raw, &providerConfig))
+		assert.Equal(t, []string{"1.2.3.4/32", "10.0.0.1/32", "172.16.0.1/32"}, providerConfig.Rule.Cidrs)
+		assert.NotContains(t, providerConfig.Rule.Cidrs, "8.8.8.8/32")
 	})
 }
 
