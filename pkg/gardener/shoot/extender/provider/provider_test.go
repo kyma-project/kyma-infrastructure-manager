@@ -123,33 +123,6 @@ func TestMaxPodsClamping(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid pods CIDR for maxPods calculation")
 	})
-	t.Run("Return error when pods CIDR yields less than 512 IPs", func(t *testing.T) {
-		// given: pods /24 = 254 usable (< 512 minimum)
-		shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
-		workers := fixWorkers("worker", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a"})
-		workers[0].Kubernetes = &gardener.WorkerKubernetes{
-			Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(100))},
-		}
-		rt := imv1.Runtime{
-			Spec: imv1.RuntimeSpec{
-				Shoot: imv1.RuntimeShoot{
-					Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAWS, workers),
-					Networking: imv1.Networking{
-						Pods:     "100.64.0.0/24",
-						Nodes:    "10.250.0.0/22",
-						Services: "100.104.0.0/13",
-					},
-				},
-			},
-		}
-
-		extender := NewProviderExtenderForCreateOperation(false, false, "gardenlinux", "1312.3.0")
-		err := extender(rt, &shoot)
-
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "maxPods clamping")
-		assert.Contains(t, err.Error(), "totalIPs must be at least 512")
-	})
 	t.Run("Skip maxPods clamping when pods CIDR is empty", func(t *testing.T) {
 		// given: empty pods CIDR - extender should succeed without applying maxPods logic
 		shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")

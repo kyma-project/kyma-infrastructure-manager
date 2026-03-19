@@ -66,11 +66,11 @@ func MaxPodsFromPodsCIDR(podsCIDR string) (int64, error) {
 // When sum > totalIPs, clamps from the last worker backward until sum <= totalIPs.
 // Workers without maxPods set are skipped (they use Kubernetes default at runtime).
 // The guarantee sum(maxPods) <= totalIPs only holds when all workers have maxPods explicitly set.
-// totalIPs must be at least 512.
-// Returns error if totalIPs < 512 or if the constraint cannot be satisfied (e.g. more workers with maxPods=1 than totalIPs).
+// totalIPs must be at least 1.
+// Returns error if totalIPs < 1 or if the constraint cannot be satisfied (e.g. more workers with maxPods=1 than totalIPs).
 func ApplyMaxPodsWithTotalCap(workers []gardener.Worker, totalIPs int64) error {
-	if totalIPs < 512 {
-		return fmt.Errorf("totalIPs must be at least 512, got %d", totalIPs)
+	if totalIPs < 1 {
+		return fmt.Errorf("totalIPs must be at least 1, got %d", totalIPs)
 	}
 	currentSum, indicesWithMaxPods := collectMaxPodsIndices(workers)
 	if currentSum <= totalIPs {

@@ -116,7 +116,7 @@ func TestApplyMaxPodsWithTotalCap(t *testing.T) {
 				{Kubernetes: &gardener.WorkerKubernetes{Kubelet: nil}},
 				{Kubernetes: &gardener.WorkerKubernetes{Kubelet: &gardener.KubeletConfig{MaxPods: nil}}},
 			},
-			totalIPs:    1024,
+			totalIPs:    256,
 			expectedMax: []*int32{nil, nil, nil},
 		},
 		{
@@ -133,7 +133,7 @@ func TestApplyMaxPodsWithTotalCap(t *testing.T) {
 					},
 				},
 			},
-			totalIPs:    1024,
+			totalIPs:    256,
 			expectedMax: []*int32{ptr.To(int32(100)), ptr.To(int32(125))},
 		},
 		{
@@ -146,24 +146,24 @@ func TestApplyMaxPodsWithTotalCap(t *testing.T) {
 				},
 				{
 					Kubernetes: &gardener.WorkerKubernetes{
-						Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(500))},
+						Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(200))},
 					},
 				},
 			},
-			totalIPs:    512,
-			expectedMax: []*int32{ptr.To(int32(100)), ptr.To(int32(412))},
+			totalIPs:    256,
+			expectedMax: []*int32{ptr.To(int32(100)), ptr.To(int32(156))},
 		},
 		{
 			name: "single worker exceeds totalIPs clamped to totalIPs",
 			workers: []gardener.Worker{
 				{
 					Kubernetes: &gardener.WorkerKubernetes{
-						Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(2000))},
+						Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(500))},
 					},
 				},
 			},
-			totalIPs:    1024, // matches MaxPodsFromPodsCIDR("x.x.x.x/22")
-			expectedMax: []*int32{ptr.To(int32(1024))},
+			totalIPs:    254, // matches MaxPodsFromPodsCIDR("x.x.x.x/24")
+			expectedMax: []*int32{ptr.To(int32(254))},
 		},
 		{
 			name: "multiple workers clamp from last backward",
@@ -180,12 +180,12 @@ func TestApplyMaxPodsWithTotalCap(t *testing.T) {
 				},
 				{
 					Kubernetes: &gardener.WorkerKubernetes{
-						Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(400))},
+						Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(100))},
 					},
 				},
 			},
-			totalIPs:    512,
-			expectedMax: []*int32{ptr.To(int32(100)), ptr.To(int32(50)), ptr.To(int32(362))},
+			totalIPs:    200,
+			expectedMax: []*int32{ptr.To(int32(100)), ptr.To(int32(50)), ptr.To(int32(50))},
 		},
 		{
 			name: "workers with nil maxPods skipped",
@@ -193,15 +193,15 @@ func TestApplyMaxPodsWithTotalCap(t *testing.T) {
 				{Kubernetes: nil},
 				{
 					Kubernetes: &gardener.WorkerKubernetes{
-						Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(1024))},
+						Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(256))},
 					},
 				},
 			},
-			totalIPs:    1024,
-			expectedMax: []*int32{nil, ptr.To(int32(1024))},
+			totalIPs:    256,
+			expectedMax: []*int32{nil, ptr.To(int32(256))},
 		},
 		{
-			name: "totalIPs less than 512 returns error",
+			name: "totalIPs less than 1 returns error",
 			workers: []gardener.Worker{
 				{
 					Kubernetes: &gardener.WorkerKubernetes{
@@ -209,25 +209,26 @@ func TestApplyMaxPodsWithTotalCap(t *testing.T) {
 					},
 				},
 			},
-			totalIPs:    511,
+			totalIPs:    0,
 			expectedMax: []*int32{ptr.To(int32(10))},
 			expectError: true,
 		},
 		{
 			name: "constraint cannot be satisfied returns error",
-			workers: func() []gardener.Worker {
-				ws := make([]gardener.Worker, 513)
-				for i := range ws {
-					ws[i] = gardener.Worker{
-						Kubernetes: &gardener.WorkerKubernetes{
-							Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(1))},
-						},
-					}
-				}
-				return ws
-			}(),
-			totalIPs:    512,
-			expectedMax: nil, // not checked when expectError
+			workers: []gardener.Worker{
+				{
+					Kubernetes: &gardener.WorkerKubernetes{
+						Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(1))},
+					},
+				},
+				{
+					Kubernetes: &gardener.WorkerKubernetes{
+						Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(1))},
+					},
+				},
+			},
+			totalIPs:    1,
+			expectedMax: []*int32{ptr.To(int32(1)), ptr.To(int32(1))},
 			expectError: true,
 		},
 		{
@@ -244,15 +245,15 @@ func TestApplyMaxPodsWithTotalCap(t *testing.T) {
 					},
 				},
 			},
-			totalIPs:    1024,
-			expectedMax: []*int32{ptr.To(int32(1023)), ptr.To(int32(1))},
+			totalIPs:    100,
+			expectedMax: []*int32{ptr.To(int32(99)), ptr.To(int32(1))},
 		},
 		{
 			name: "worker with maxPods 1 unchanged during clamp",
 			workers: []gardener.Worker{
 				{
 					Kubernetes: &gardener.WorkerKubernetes{
-						Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(1000))},
+						Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(100))},
 					},
 				},
 				{
@@ -261,8 +262,8 @@ func TestApplyMaxPodsWithTotalCap(t *testing.T) {
 					},
 				},
 			},
-			totalIPs:    512,
-			expectedMax: []*int32{ptr.To(int32(511)), ptr.To(int32(1))},
+			totalIPs:    50,
+			expectedMax: []*int32{ptr.To(int32(49)), ptr.To(int32(1))},
 		},
 	}
 	for _, tt := range tests {
