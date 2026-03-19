@@ -222,6 +222,217 @@ func TestNewKubeServerACLExtenderCreate(t *testing.T) {
 	})
 }
 
+func TestNewKubeServerACLExtenderPatch(t *testing.T) {
+	t.Run("Should skip when ACL is disabled in config and no existing ACL", func(t *testing.T) {
+		// given
+		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
+		runtime := fixRuntimeWithACL("aws", []string{"1.2.3.4/32"})
+		aclConfig := config.ACL{EnableACL: false}
+
+		extender := NewKubeServerACLExtenderPatch(aclConfig)
+
+		// when
+		err := extender(runtime, &shoot)
+
+		// then
+		require.NoError(t, err)
+		assert.Empty(t, shoot.Spec.Extensions)
+	})
+
+	t.Run("Should leave existing ACL when ACL is disabled in config", func(t *testing.T) {
+		// given
+		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
+		shoot.Spec.Extensions = []gardener.Extension{
+			{Type: "acl"},
+			{Type: "shoot-cert-service"},
+		}
+		runtime := fixRuntimeWithACL("aws", []string{"1.2.3.4/32"})
+		aclConfig := config.ACL{EnableACL: false}
+
+		extender := NewKubeServerACLExtenderPatch(aclConfig)
+
+		// when
+		err := extender(runtime, &shoot)
+
+		// then
+		require.NoError(t, err)
+		require.Len(t, shoot.Spec.Extensions, 2)
+		assert.Equal(t, "acl", shoot.Spec.Extensions[0].Type)
+		assert.Equal(t, "shoot-cert-service", shoot.Spec.Extensions[1].Type)
+	})
+
+	t.Run("Should skip when hyperscaler is GCP and no existing ACL", func(t *testing.T) {
+		// given
+		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
+		runtime := fixRuntimeWithACL("gcp", []string{"1.2.3.4/32"})
+		aclConfig := config.ACL{EnableACL: true}
+
+		extender := NewKubeServerACLExtenderPatch(aclConfig)
+
+		// when
+		err := extender(runtime, &shoot)
+
+		// then
+		require.NoError(t, err)
+		assert.Empty(t, shoot.Spec.Extensions)
+	})
+
+	t.Run("Should leave existing ACL when hyperscaler is GCP", func(t *testing.T) {
+		// given
+		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
+		shoot.Spec.Extensions = []gardener.Extension{
+			{Type: "shoot-cert-service"},
+			{Type: "acl"},
+		}
+		runtime := fixRuntimeWithACL("gcp", []string{"1.2.3.4/32"})
+		aclConfig := config.ACL{EnableACL: true}
+
+		extender := NewKubeServerACLExtenderPatch(aclConfig)
+
+		// when
+		err := extender(runtime, &shoot)
+
+		// then
+		require.NoError(t, err)
+		require.Len(t, shoot.Spec.Extensions, 2)
+		assert.Equal(t, "shoot-cert-service", shoot.Spec.Extensions[0].Type)
+		assert.Equal(t, "acl", shoot.Spec.Extensions[1].Type)
+	})
+
+	t.Run("Should remove ACL extension when ACL object is nil in RuntimeCR", func(t *testing.T) {
+		// given
+		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
+		shoot.Spec.Extensions = []gardener.Extension{
+			{Type: "acl"},
+			{Type: "shoot-cert-service"},
+		}
+		runtime := imv1.Runtime{}
+		runtime.Spec.Shoot.Provider.Type = "aws"
+		aclConfig := config.ACL{EnableACL: true}
+
+		extender := NewKubeServerACLExtenderPatch(aclConfig)
+
+		// when
+		err := extender(runtime, &shoot)
+
+		// then
+		require.NoError(t, err)
+		require.Len(t, shoot.Spec.Extensions, 1)
+		assert.Equal(t, "shoot-cert-service", shoot.Spec.Extensions[0].Type)
+	})
+
+	t.Run("Should remove ACL extension when AllowedCIDRs is empty", func(t *testing.T) {
+		// given
+		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
+		shoot.Spec.Extensions = []gardener.Extension{
+			{Type: "shoot-cert-service"},
+			{Type: "acl"},
+		}
+		runtime := fixRuntimeWithACL("aws", []string{})
+		aclConfig := config.ACL{EnableACL: true}
+
+		extender := NewKubeServerACLExtenderPatch(aclConfig)
+
+		// when
+		err := extender(runtime, &shoot)
+
+		// then
+		require.NoError(t, err)
+		require.Len(t, shoot.Spec.Extensions, 1)
+		assert.Equal(t, "shoot-cert-service", shoot.Spec.Extensions[0].Type)
+	})
+
+	t.Run("Should skip removal when ACL object is nil and no ACL extension exists", func(t *testing.T) {
+		// given
+		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
+		shoot.Spec.Extensions = []gardener.Extension{
+			{Type: "shoot-cert-service"},
+		}
+		runtime := imv1.Runtime{}
+		runtime.Spec.Shoot.Provider.Type = "aws"
+		aclConfig := config.ACL{EnableACL: true}
+
+		extender := NewKubeServerACLExtenderPatch(aclConfig)
+
+		// when
+		err := extender(runtime, &shoot)
+
+		// then
+		require.NoError(t, err)
+		require.Len(t, shoot.Spec.Extensions, 1)
+		assert.Equal(t, "shoot-cert-service", shoot.Spec.Extensions[0].Type)
+	})
+
+	t.Run("Should apply ACL extension on shoot for AWS", func(t *testing.T) {
+		// given
+		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
+		runtime := fixRuntimeWithACL("aws", []string{"1.2.3.4/32", "5.6.0.0/16"})
+		aclConfig := config.ACL{EnableACL: true}
+
+		extender := NewKubeServerACLExtenderPatch(aclConfig)
+
+		// when
+		err := extender(runtime, &shoot)
+
+		// then
+		require.NoError(t, err)
+		require.Len(t, shoot.Spec.Extensions, 1)
+
+		ext := shoot.Spec.Extensions[0]
+		assert.Equal(t, "acl", ext.Type)
+		assert.Equal(t, ptr.To(false), ext.Disabled)
+
+		var providerConfig aclProviderConfig
+		require.NoError(t, json.Unmarshal(ext.ProviderConfig.Raw, &providerConfig))
+
+		assert.Equal(t, "ALLOW", providerConfig.Rule.Action)
+		assert.Equal(t, "remote_ip", providerConfig.Rule.Type)
+		assert.Equal(t, []string{"1.2.3.4/32", "5.6.0.0/16"}, providerConfig.Rule.Cidrs)
+	})
+
+	t.Run("Should apply ACL extension on shoot for Azure", func(t *testing.T) {
+		// given
+		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
+		runtime := fixRuntimeWithACL("azure", []string{"192.168.1.0/24", "10.0.0.1/32"})
+		aclConfig := config.ACL{EnableACL: true}
+
+		extender := NewKubeServerACLExtenderPatch(aclConfig)
+
+		// when
+		err := extender(runtime, &shoot)
+
+		// then
+		require.NoError(t, err)
+		require.Len(t, shoot.Spec.Extensions, 1)
+
+		var providerConfig aclProviderConfig
+		require.NoError(t, json.Unmarshal(shoot.Spec.Extensions[0].ProviderConfig.Raw, &providerConfig))
+
+		assert.Equal(t, []string{"192.168.1.0/24", "10.0.0.1/32"}, providerConfig.Rule.Cidrs)
+	})
+
+	t.Run("Should append ACL extension to existing extensions", func(t *testing.T) {
+		// given
+		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
+		shoot.Spec.Extensions = []gardener.Extension{
+			{Type: "shoot-cert-service"},
+		}
+		runtime := fixRuntimeWithACL("aws", []string{"1.2.3.4/32"})
+		aclConfig := config.ACL{EnableACL: true}
+
+		extender := NewKubeServerACLExtenderPatch(aclConfig)
+
+		// when
+		err := extender(runtime, &shoot)
+
+		// then
+		require.NoError(t, err)
+		require.Len(t, shoot.Spec.Extensions, 2)
+		assert.Equal(t, "shoot-cert-service", shoot.Spec.Extensions[0].Type)
+		assert.Equal(t, "acl", shoot.Spec.Extensions[1].Type)
+	})
+}
+
 func fixRuntimeWithACL(providerType string, cidrs []string) imv1.Runtime {
 	return imv1.Runtime{
 		Spec: imv1.RuntimeSpec{

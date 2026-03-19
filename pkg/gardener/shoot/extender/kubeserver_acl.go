@@ -35,16 +35,16 @@ func NewKubeServerACLExtenderCreate(aclConfig config.ACL) func(runtime imv1.Runt
 			return nil
 		}
 
+		runtimeType := runtime.Spec.Shoot.Provider.Type
+		if runtimeType != hyperscaler.TypeAWS && runtimeType != hyperscaler.TypeAzure {
+			return nil
+		}
+
 		if runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL == nil {
 			return nil
 		}
 
 		if len(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs) == 0 {
-			return nil
-		}
-
-		runtimeType := runtime.Spec.Shoot.Provider.Type
-		if runtimeType != hyperscaler.TypeAWS && runtimeType != hyperscaler.TypeAzure {
 			return nil
 		}
 
@@ -68,7 +68,26 @@ func NewKubeServerACLExtenderCreate(aclConfig config.ACL) func(runtime imv1.Runt
 
 func NewKubeServerACLExtenderPatch(aclConfig config.ACL) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		return nil
+		if !aclConfig.EnableACL {
+			return nil
+		}
+
+		runtimeType := runtime.Spec.Shoot.Provider.Type
+		if runtimeType != hyperscaler.TypeAWS && runtimeType != hyperscaler.TypeAzure {
+			return nil
+		}
+
+		aclNilOrEmpty := runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL == nil ||
+			len(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs) == 0
+
+		if aclNilOrEmpty {
+			if checkIfACLExists(*shoot) {
+				removeAccessControlList(shoot)
+			}
+			return nil
+		}
+
+		return applyAccessControlList(shoot, runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs)
 	}
 }
 
@@ -112,6 +131,29 @@ func createAccessControlList(userCIDRs []string, volumeMountPath, ipKey, kcpKey 
 	allowedCIDRs = append(allowedCIDRs, aclList.KCPIp)
 
 	return allowedCIDRs, nil
+}
+
+func removeAccessControlList(shoot *gardener.Shoot) {
+	extensions := make([]gardener.Extension, 0, len(shoot.Spec.Extensions))
+	for _, ext := range shoot.Spec.Extensions {
+		if ext.Type != "acl" {
+			extensions = append(extensions, ext)
+		}
+	}
+	shoot.Spec.Extensions = extensions
+}
+
+func checkIfACLExists(shoot gardener.Shoot) bool {
+	if shoot.Spec.Extensions == nil {
+		return false
+	}
+
+	for _, ext := range shoot.Spec.Extensions {
+		if ext.Type == "acl" {
+			return true
+		}
+	}
+	return false
 }
 
 type readerGetter = func() (io.Reader, error)
