@@ -51,17 +51,8 @@ func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIM
 		if err = setWorkerConfig(provider, provider.Type, enableIMDSv2); err != nil {
 			return err
 		}
-		setWorkerSettings(provider)
-
-		if rt.Spec.Shoot.Networking.Pods != "" {
-			totalIPs, err := maxpods.MaxPodsFromPodsCIDR(rt.Spec.Shoot.Networking.Pods)
-			if err != nil {
-				return errors.Wrap(err, "invalid pods CIDR for maxPods calculation")
-			}
-			// Clamping uses provider.Workers order (Runtime CR order: main worker, then additional workers).
-			if err := maxpods.ApplyMaxPodsWithTotalCap(provider.Workers, totalIPs); err != nil {
-				return errors.Wrap(err, "maxPods clamping")
-			}
+		if err = setWorkerSettings(provider, rt.Spec.Shoot.Networking.Pods); err != nil {
+			return err
 		}
 
 		return nil
@@ -123,18 +114,8 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 			return err
 		}
 
-		setWorkerSettings(provider)
-
-		if rt.Spec.Shoot.Networking.Pods != "" {
-			totalIPs, err := maxpods.MaxPodsFromPodsCIDR(rt.Spec.Shoot.Networking.Pods)
-			if err != nil {
-				return errors.Wrap(err, "invalid pods CIDR for maxPods calculation")
-			}
-			// Clamping uses provider.Workers order (Shoot order from sortWorkersToShootOrder), not Runtime CR order.
-			// The last worker in this list gets clamped first when sum exceeds totalIPs.
-			if err := maxpods.ApplyMaxPodsWithTotalCap(provider.Workers, totalIPs); err != nil {
-				return errors.Wrap(err, "maxPods clamping")
-			}
+		if err = setWorkerSettings(provider, rt.Spec.Shoot.Networking.Pods); err != nil {
+			return err
 		}
 
 		// alignWorkersWithGardener runs after maxPods clamping. It only aligns zones, machine image, and
@@ -295,12 +276,22 @@ func setWorkerConfig(provider *gardener.Provider, providerType string, enableIMD
 	return nil
 }
 
-func setWorkerSettings(provider *gardener.Provider) {
+func setWorkerSettings(provider *gardener.Provider, podsCIDR string) error {
 	provider.WorkersSettings = &gardener.WorkersSettings{
 		SSHAccess: &gardener.SSHAccess{
 			Enabled: false,
 		},
 	}
+	if podsCIDR != "" {
+		totalIPs, err := maxpods.MaxPodsFromPodsCIDR(podsCIDR)
+		if err != nil {
+			return errors.Wrap(err, "invalid pods CIDR for maxPods calculation")
+		}
+		if err := maxpods.ApplyMaxPodsWithTotalCap(provider.Workers, totalIPs); err != nil {
+			return errors.Wrap(err, "maxPods clamping")
+		}
+	}
+	return nil
 }
 
 // It sets the machine image name and version to the values specified in the Runtime worker configuration.

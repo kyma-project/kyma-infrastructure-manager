@@ -1,5 +1,5 @@
 /*
-Copyright 2023.
+Copyright 2026.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,15 +25,13 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-// MaxPodsFromPodsCIDR parses the pods CIDR (IPv4 e.g. "100.64.0.0/24" or IPv6 e.g. "2001:db8::/32") and returns
+// MaxPodsFromPodsCIDR parses the pods CIDR (IPv4 only, e.g. "100.64.0.0/24") and returns
 // the number of usable pod IPs, accounting for reserved network and broadcast addresses.
 // IPv4: /32: 1 usable (host route). /31: 2 usable (point-to-point, RFC 3021).
 // /30 and larger: 2^(32-mask) - 2 (network + broadcast reserved).
-// IPv6: /128: 1 usable. /127: 2 usable. /126 and larger: 2^(128-mask) - 2.
-// We use the same convention for both address families for consistency; Kubernetes CNI may use all addresses in practice.
-// Results exceeding int32 are capped at math.MaxInt32.
-// Returns error if the CIDR is invalid or the mask is out of range (IPv4: 2-32, IPv6: 2-128).
-func MaxPodsFromPodsCIDR(podsCIDR string) (int32, error) {
+// Results exceeding math.MaxInt32 are capped at math.MaxInt32.
+// Returns error if the CIDR is invalid, the mask is out of range (2-32), or the CIDR is IPv6.
+func MaxPodsFromPodsCIDR(podsCIDR string) (int64, error) {
 	prefix, err := netip.ParsePrefix(podsCIDR)
 	if err != nil {
 		return 0, errors.Wrap(err, "failed to parse pods CIDR")
@@ -56,30 +54,11 @@ func MaxPodsFromPodsCIDR(podsCIDR string) (int32, error) {
 			if count > math.MaxInt32 {
 				return math.MaxInt32, nil
 			}
-			return int32(count), nil // network and broadcast addresses reserved
+			return int64(count), nil // network and broadcast addresses reserved
 		}
 	}
 
-	// IPv6
-	if bits < 2 || bits > 128 {
-		return 0, fmt.Errorf("pods CIDR mask must be between 2 and 128 for IPv6, got %d", bits)
-	}
-	switch bits {
-	case 128:
-		return 1, nil // host route
-	case 127:
-		return 2, nil // point-to-point, both addresses usable (RFC 3021)
-	default:
-		hostBits := uint(128 - bits)
-		if hostBits > 63 {
-			return math.MaxInt32, nil // would overflow uint64
-		}
-		count := uint64(1<<hostBits) - 2
-		if count > math.MaxInt32 {
-			return math.MaxInt32, nil
-		}
-		return int32(count), nil
-	}
+	return 0, fmt.Errorf("maxPods calculation supports IPv4 only, got IPv6 CIDR")
 }
 
 // ApplyMaxPodsWithTotalCap ensures sum(worker maxPods) <= totalIPs.
@@ -87,23 +66,21 @@ func MaxPodsFromPodsCIDR(podsCIDR string) (int32, error) {
 // When sum > totalIPs, clamps from the last worker backward until sum <= totalIPs.
 // Workers without maxPods set are skipped (they use Kubernetes default at runtime).
 // The guarantee sum(maxPods) <= totalIPs only holds when all workers have maxPods explicitly set.
-// totalIPs must be at least 1 (MaxPodsFromPodsCIDR guarantees this for valid CIDRs).
-// Returns error if totalIPs < 1 or if the constraint cannot be satisfied (e.g. more workers with maxPods=1 than totalIPs).
-func ApplyMaxPodsWithTotalCap(workers []gardener.Worker, totalIPs int32) error {
-	if totalIPs < 1 {
-		return fmt.Errorf("totalIPs must be at least 1, got %d", totalIPs)
+// totalIPs must be at least 512.
+// Returns error if totalIPs < 512 or if the constraint cannot be satisfied (e.g. more workers with maxPods=1 than totalIPs).
+func ApplyMaxPodsWithTotalCap(workers []gardener.Worker, totalIPs int64) error {
+	if totalIPs < 512 {
+		return fmt.Errorf("totalIPs must be at least 512, got %d", totalIPs)
 	}
 	currentSum, indicesWithMaxPods := collectMaxPodsIndices(workers)
-	totalIPs64 := int64(totalIPs)
-	if currentSum <= totalIPs64 {
+	if currentSum <= totalIPs {
 		return nil
 	}
-	excess := currentSum - totalIPs64
+	excess := currentSum - totalIPs
 	for i := len(indicesWithMaxPods) - 1; i >= 0 && excess > 0; i-- {
 		worker := &workers[indicesWithMaxPods[i]]
-		excessToReduce := int32(min(excess, math.MaxInt32))
-		reduction := reduceWorkerMaxPods(worker, excessToReduce)
-		excess -= int64(reduction)
+		reduction := reduceWorkerMaxPods(worker, excess)
+		excess -= reduction
 	}
 	if excess > 0 {
 		return fmt.Errorf("cannot satisfy maxPods constraint: %d workers with maxPods set (minimum 1 each) exceed totalIPs %d", len(indicesWithMaxPods), totalIPs)
@@ -128,12 +105,12 @@ func collectMaxPodsIndices(workers []gardener.Worker) (int64, []int) {
 
 // reduceWorkerMaxPods reduces the worker's maxPods by up to excess, but not below 1.
 // Returns the actual amount reduced. When current is 1 or less (invalid), returns 0 without modifying.
-func reduceWorkerMaxPods(w *gardener.Worker, excess int32) int32 {
+func reduceWorkerMaxPods(w *gardener.Worker, excess int64) int64 {
 	current := *w.Kubernetes.Kubelet.MaxPods
 	if current <= 1 {
 		return 0
 	}
-	reduction := min(excess, current-1)
-	w.Kubernetes.Kubelet.MaxPods = ptr.To(current - reduction)
+	reduction := min(excess, int64(current-1))
+	w.Kubernetes.Kubelet.MaxPods = ptr.To(current - int32(reduction))
 	return reduction
 }
