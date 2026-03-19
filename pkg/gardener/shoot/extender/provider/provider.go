@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maxpods"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -50,9 +51,11 @@ func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIM
 		if err = setWorkerConfig(provider, provider.Type, enableIMDSv2); err != nil {
 			return err
 		}
-		setWorkerSettings(provider)
+		if err = setWorkerSettings(provider, rt.Spec.Shoot.Networking.Pods); err != nil {
+			return err
+		}
 
-		return err
+		return nil
 	}
 }
 
@@ -111,7 +114,12 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 			return err
 		}
 
-		setWorkerSettings(provider)
+		if err = setWorkerSettings(provider, rt.Spec.Shoot.Networking.Pods); err != nil {
+			return err
+		}
+
+		// alignWorkersWithGardener runs after maxPods clamping. It only aligns zones, machine image, and
+		// update strategy from existing Shoot workers; it does not touch maxPods, so clamped values are preserved.
 		alignWorkersWithGardener(provider, shootWorkers)
 
 		return nil
@@ -268,12 +276,22 @@ func setWorkerConfig(provider *gardener.Provider, providerType string, enableIMD
 	return nil
 }
 
-func setWorkerSettings(provider *gardener.Provider) {
+func setWorkerSettings(provider *gardener.Provider, podsCIDR string) error {
 	provider.WorkersSettings = &gardener.WorkersSettings{
 		SSHAccess: &gardener.SSHAccess{
 			Enabled: false,
 		},
 	}
+	if podsCIDR != "" {
+		totalIPs, err := maxpods.MaxPodsFromPodsCIDR(podsCIDR)
+		if err != nil {
+			return errors.Wrap(err, "invalid pods CIDR for maxPods calculation")
+		}
+		if err := maxpods.ApplyMaxPodsWithTotalCap(provider.Workers, totalIPs); err != nil {
+			return errors.Wrap(err, "maxPods clamping")
+		}
+	}
+	return nil
 }
 
 // It sets the machine image name and version to the values specified in the Runtime worker configuration.
