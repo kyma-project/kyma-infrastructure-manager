@@ -14,7 +14,7 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-type ACLList struct {
+type aclList struct {
 	OperatorIPs []string
 	KCPIp       string
 }
@@ -114,7 +114,7 @@ func applyAccessControlList(shoot *gardener.Shoot, aclList []string) error {
 }
 
 func createAccessControlList(userCIDRs []string, volumeMountPath, ipKey, kcpKey string) ([]string, error) {
-	aclList := ACLList{}
+	aclList := aclList{}
 	var allowedCIDRs []string
 
 	operatorPath := path.Join(volumeMountPath, ipKey)
@@ -165,7 +165,7 @@ func checkIfACLExists(shoot gardener.Shoot) bool {
 
 type readerGetter = func() (io.Reader, error)
 
-func (ac *ACLList) loadOperatorData(f readerGetter) error {
+func (ac *aclList) loadOperatorData(f readerGetter) error {
 	r, err := f()
 	if err != nil {
 		return err
@@ -176,7 +176,7 @@ func (ac *ACLList) loadOperatorData(f readerGetter) error {
 	return json.NewDecoder(r).Decode(&ac.OperatorIPs)
 }
 
-func (ac *ACLList) loadKcpData(f readerGetter) error {
+func (ac *aclList) loadKcpData(f readerGetter) error {
 	r, err := f()
 	if err != nil {
 		return err
