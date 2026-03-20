@@ -72,7 +72,7 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 	}
 
 	var kubeAPIServer KubeAPIServer
-	if acl := AppliedACL(runtime); acl != nil {
+	if acl := AppliedACL(runtime); len(acl) > 0 {
 		kubeAPIServer = KubeAPIServer{ACL: acl}
 	}
 
