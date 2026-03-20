@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	fsm_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"github.com/stretchr/testify/mock"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -282,6 +283,7 @@ func TestSkrConfigState(t *testing.T) {
 		ctx := context.Background()
 
 		runtime := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
+		runtime.Spec.Shoot.Provider.Type = hyperscaler.TypeAWS
 		runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL = &imv1.ACL{AllowedCIDRs: []string{"1.2.3.4/32", "5.6.7.8/16"}}
 		shootStub := fsm_testing.TestShootForPatch()
 		oidcService := gardener.Extension{
