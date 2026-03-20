@@ -34,6 +34,7 @@ patchesStrategicMerge:
 - manager_converter_config_patch.yaml
 - manager_maintenance_window_patch.yaml
 - manager_audit_tenant_patch.yaml
+- manager_acl_whitelist_patch.yaml
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix including the one in
 # crd/kustomization.yaml
 #- manager_webhook_patch.yaml

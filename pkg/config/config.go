@@ -2,8 +2,9 @@ package config
 
 import (
 	"encoding/json"
-	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"io"
+
+	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 type Config struct {
@@ -30,7 +31,7 @@ type DNSConfig struct {
 }
 
 type KubernetesConfig struct {
-	KubeApiServer                       KubeApiServer `json:"kubeApiServer"`
+	KubeApiServer                       KubeApiServer `json:"kubeApiServer" validate:"required"`
 	Kubelet                             Kubelet       `json:"kubelet"`
 	DefaultVersion                      string        `json:"defaultVersion" validate:"required"`
 	EnableKubernetesVersionAutoUpdate   bool          `json:"enableKubernetesVersionAutoUpdate"`
@@ -76,8 +77,15 @@ type MachineImageConfig struct {
 	DefaultName    string `json:"defaultName" validate:"required"`
 	DefaultVersion string `json:"defaultVersion" validate:"required"`
 }
+type ACL struct {
+	EnableACL       bool   `json:"enableACL"`
+	VolumeMountPath string `json:"volumeMountPath"`
+	IpAddressesKey  string `json:"ipAddressesKey"`
+	KcpAddressKey   string `json:"kcpAddressKey"`
+}
 
 type KubeApiServer struct {
+	ACL                ACL             `json:"acl" validate:"required"`
 	MaxTokenExpiration string          `json:"maxTokenExpiration"`
 	RuntimeConfig      map[string]bool `json:"runtimeConfig"`
 	FeatureGates       map[string]bool `json:"featureGates"`

@@ -562,7 +562,10 @@ var testReader io.Reader = strings.NewReader(
 		"usernamePrefix": "-"
 		},
 		"kubeApiServer": {
-            "maxTokenExpiration": "721h"
+            "maxTokenExpiration": "721h",
+			"acl": {
+				"enableACL": true
+			}
 		}
   },
   "dns": {
@@ -625,6 +628,9 @@ func Test_ConverterConfig_Load_OK(t *testing.T) {
 				},
 				KubeApiServer: config.KubeApiServer{
 					MaxTokenExpiration: "721h",
+					ACL: config.ACL{
+						EnableACL: true,
+					},
 				},
 			},
 			DNS: config.DNSConfig{
