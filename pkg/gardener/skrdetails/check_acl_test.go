@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,6 +25,9 @@ func TestAppliedACL(t *testing.T) {
 		runtime := imv1.Runtime{
 			Spec: imv1.RuntimeSpec{
 				Shoot: imv1.RuntimeShoot{
+					Provider: imv1.Provider{
+						Type: hyperscaler.TypeAWS,
+					},
 					Kubernetes: imv1.Kubernetes{
 						KubeAPIServer: imv1.APIServer{
 							ACL: &imv1.ACL{
@@ -48,6 +52,9 @@ func TestAppliedACL(t *testing.T) {
 		runtime := imv1.Runtime{
 			Spec: imv1.RuntimeSpec{
 				Shoot: imv1.RuntimeShoot{
+					Provider: imv1.Provider{
+						Type: hyperscaler.TypeAWS,
+					},
 					Kubernetes: imv1.Kubernetes{
 						KubeAPIServer: imv1.APIServer{
 							ACL: &imv1.ACL{
@@ -71,6 +78,9 @@ func TestAppliedACL(t *testing.T) {
 		runtime := imv1.Runtime{
 			Spec: imv1.RuntimeSpec{
 				Shoot: imv1.RuntimeShoot{
+					Provider: imv1.Provider{
+						Type: hyperscaler.TypeAWS,
+					},
 					Kubernetes: imv1.Kubernetes{
 						KubeAPIServer: imv1.APIServer{
 							ACL: &imv1.ACL{
@@ -87,5 +97,31 @@ func TestAppliedACL(t *testing.T) {
 
 		// then
 		require.Equal(t, []string{"10.0.0.0/8"}, got)
+	})
+
+	t.Run("Should return nil when the provider is different than AWS or Azure", func(t *testing.T) {
+		// given
+		runtime := imv1.Runtime{
+			Spec: imv1.RuntimeSpec{
+				Shoot: imv1.RuntimeShoot{
+					Provider: imv1.Provider{
+						Type: hyperscaler.TypeGCP,
+					},
+					Kubernetes: imv1.Kubernetes{
+						KubeAPIServer: imv1.APIServer{
+							ACL: &imv1.ACL{
+								AllowedCIDRs: []string{"10.0.0.0/8"},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		// when
+		got := AppliedACL(runtime)
+
+		// then
+		require.Nil(t, got)
 	})
 }
