@@ -13,7 +13,7 @@ spec:
             optional: true # for compatibility with other landscapes where this configmap is not present
             items:
               - key: acl-list.json
-                path: acl-list.json
+                path: acl-ips.json
               - key: kcp-external-nat-ip.json
                 path: kcp-external-nat-ip.json
       containers:
