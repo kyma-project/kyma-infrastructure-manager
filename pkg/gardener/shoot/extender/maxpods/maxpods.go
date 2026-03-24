@@ -61,11 +61,9 @@ func MaxPodsFromPodsCIDR(podsCIDR string) (int64, error) {
 	return 0, fmt.Errorf("maxPods calculation supports IPv4 only, got IPv6 CIDR")
 }
 
-// MaxPodsPerNodeSlash24 returns usable IPv4 pod addresses for a /24 prefix
-// (2^(32-24) - 2 for network and broadcast), matching MaxPodsFromPodsCIDR semantics.
-func MaxPodsPerNodeSlash24() int64 {
-	return int64(1<<(32-24)) - 2
-}
+// CanonicalPodsCIDRSlash24 is passed to MaxPodsFromPodsCIDR to derive the per-node kubelet maxPods ceiling
+// (usable IPv4 addresses in a /24). The base address is irrelevant; only the prefix length matters.
+const CanonicalPodsCIDRSlash24 = "0.0.0.0/24"
 
 // ApplyPerNodeMaxPodsCap clamps each worker's kubelet maxPods to perNodeLimit when set and above the limit.
 // Workers without maxPods are unchanged. perNodeLimit matches kubelet MaxPods (int32).

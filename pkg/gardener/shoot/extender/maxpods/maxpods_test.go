@@ -290,14 +290,10 @@ func TestApplyMaxPodsWithTotalCap(t *testing.T) {
 	}
 }
 
-func TestMaxPodsPerNodeSlash24(t *testing.T) {
-	want, err := MaxPodsFromPodsCIDR("10.0.0.0/24")
-	require.NoError(t, err)
-	assert.Equal(t, want, MaxPodsPerNodeSlash24())
-}
-
 func TestApplyPerNodeMaxPodsCap(t *testing.T) {
-	limit := int32(MaxPodsPerNodeSlash24())
+	limit64, err := MaxPodsFromPodsCIDR(CanonicalPodsCIDRSlash24)
+	require.NoError(t, err)
+	limit := int32(limit64)
 
 	t.Run("clamps above limit", func(t *testing.T) {
 		workers := []gardener.Worker{

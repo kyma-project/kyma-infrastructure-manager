@@ -283,7 +283,11 @@ func setWorkerSettings(provider *gardener.Provider, podsCIDR string) error {
 		},
 	}
 	if podsCIDR != "" {
-		maxpods.ApplyPerNodeMaxPodsCap(provider.Workers, int32(maxpods.MaxPodsPerNodeSlash24()))
+		perNodeLimit, err := maxpods.MaxPodsFromPodsCIDR(maxpods.CanonicalPodsCIDRSlash24)
+		if err != nil {
+			return errors.Wrap(err, "per-node maxPods limit from /24 pods CIDR")
+		}
+		maxpods.ApplyPerNodeMaxPodsCap(provider.Workers, int32(perNodeLimit))
 		totalIPs, err := maxpods.MaxPodsFromPodsCIDR(podsCIDR)
 		if err != nil {
 			return errors.Wrap(err, "invalid pods CIDR for maxPods calculation")
