@@ -19,6 +19,10 @@ package runtime
 import (
 	"context"
 	"encoding/json"
+	"path/filepath"
+	"testing"
+	"time"
+
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardener_oidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -37,9 +41,7 @@ import (
 	v12 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"path/filepath"
-	"testing"
-	"time"
+
 	//nolint:revive
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -149,7 +151,7 @@ var _ = BeforeSuite(func() {
 		RequeueDurationShootDelete:    3 * time.Second,
 	}
 
-	runtimeReconciler = NewRuntimeReconciler(mgr, gardenerTestClient, runtimeClientGetterMock, logger, fsmCfg)
+	runtimeReconciler = NewRuntimeReconciler(mgr, gardenerTestClient, runtimeClientGetterMock, nil, logger, fsmCfg)
 	Expect(runtimeReconciler).NotTo(BeNil())
 	err = runtimeReconciler.SetupWithManager(mgr, 1)
 	Expect(err).To(BeNil())

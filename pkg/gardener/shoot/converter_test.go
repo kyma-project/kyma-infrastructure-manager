@@ -282,7 +282,7 @@ func TestConverter(t *testing.T) {
 func assertShootFields(t *testing.T, runtime imv1.Runtime, shoot gardener.Shoot) {
 	assert.Equal(t, runtime.Spec.Shoot.Purpose, *shoot.Spec.Purpose)
 	assert.Equal(t, runtime.Spec.Shoot.Region, shoot.Spec.Region)
-	assert.Equal(t, runtime.Spec.Shoot.SecretBindingName, *shoot.Spec.SecretBindingName) //nolint:staticcheck
+	assert.Equal(t, runtime.Spec.Shoot.SecretBindingName, *shoot.Spec.CredentialsBindingName)
 	assert.Equal(t, runtime.Spec.Shoot.ControlPlane, shoot.Spec.ControlPlane)
 	assert.Equal(t, runtime.Spec.Shoot.Networking.Nodes, *shoot.Spec.Networking.Nodes)
 	assert.Equal(t, runtime.Spec.Shoot.Networking.Pods, *shoot.Spec.Networking.Pods)
@@ -333,6 +333,9 @@ func fixConverterConfig() config.ConverterConfig {
 		MachineImage: config.MachineImageConfig{
 			DefaultName:    "gardenlinux",
 			DefaultVersion: "1592.1.0",
+		},
+		Gardener: config.GardenerConfig{
+			EnableCredentialBinding: true,
 		},
 	}
 }
@@ -577,7 +580,8 @@ var testReader io.Reader = strings.NewReader(
 		"defaultVersion": "0.1.2.3.4"
   },
   "gardener": {
-		"projectName": "test-project"
+		"projectName": "test-project",
+		"enableCredentialBinding": true
   },
   "auditLogging": {
 		"policyConfigMapName": "test-policy",
@@ -638,7 +642,8 @@ func Test_ConverterConfig_Load_OK(t *testing.T) {
 				DefaultVersion: "0.1.2.3.4",
 			},
 			Gardener: config.GardenerConfig{
-				ProjectName: "test-project",
+				ProjectName:             "test-project",
+				EnableCredentialBinding: true,
 			},
 			AuditLog: config.AuditLogConfig{
 				PolicyConfigMapName: "test-policy",

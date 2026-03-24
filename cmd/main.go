@@ -25,26 +25,19 @@ import (
 	"os"
 	"time"
 
+	configctrl "github.com/kyma-project/infrastructure-manager/internal/controller/rtbootstrapperconfig"
+	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
+
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenerapis "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	"github.com/go-logr/logr"
 	validator "github.com/go-playground/validator/v10"
-	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	kubeconfigcontroller "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
-	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
-	runtimecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
-	"github.com/kyma-project/infrastructure-manager/pkg/config"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8slabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -56,6 +49,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
+	gardeneroidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
+	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	kubeconfigcontroller "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig"
+	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
+	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
+	runtimecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
+	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
+	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
+	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 var (
@@ -104,6 +113,16 @@ func main() {
 	var converterConfigFilepath string
 	var auditLogMandatory bool
 	var registryCacheConfigControllerEnabled bool
+	var runtimeBootstrapperEnabled bool
+	var runtimeBootstrapperKCPConfigName string
+	var runtimeBootstrapperKCPPullSecretName string
+	var runtimeBootstrapperManifestsConfigMapName string
+	var runtimeBootstrapperKCPClusterTrustBundle string
+	var runtimeBootstrapperSKRDeploymentName string
+	var runtimeBootstrapperSKRConfigName string
+	var runtimeBootstrapperSKRPullSecretName string
+	var runtimeBootstrapperSKRClusterTrustBundle string
+	var runtimeBootstrapperSKRNamespace string
 
 	//Kubebuilder related parameters:
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to. Monitoring and alerting tools can use this endpoint to collect application specific metrics during runtime")
@@ -133,6 +152,21 @@ func main() {
 	//Feature flags:
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration. When enabled this feature, a Shoot cluster will only be created when an auditlog tenant exists (this is defined in the auditlog mapping configuration file)")
 	flag.BoolVar(&registryCacheConfigControllerEnabled, "registry-cache-config-controller-enabled", false, "Feature flag to enable registry cache config controller")
+	flag.BoolVar(&runtimeBootstrapperEnabled, "runtime-bootstrapper-enabled", false, "Feature flag to enable runtime bootstrapper")
+
+	// Runtime bootstrapper configuration
+	flag.StringVar(&runtimeBootstrapperManifestsConfigMapName, "runtime-bootstrapper-manifests-config-map-name", "runtime-bootstrapper-manifests", "Config map with Runtime Bootstrapper manifests.")
+
+	flag.StringVar(&runtimeBootstrapperKCPConfigName, "runtime-bootstrapper-kcp-config-name", "rt-bootstrapper-config", "Name of the the runtime bootstrapper config map to be copied to SKR.")
+	flag.StringVar(&runtimeBootstrapperKCPPullSecretName, "runtime-bootstrapper-kcp-pull-secret-name", "", "Name of the pull secret to be copied to SKR.")
+	flag.StringVar(&runtimeBootstrapperKCPClusterTrustBundle, "runtime-bootstrapper-kcp-cluster-trust-bundle", "", "Name of the cluster trust bundle to be copied to SKR.")
+
+	flag.StringVar(&runtimeBootstrapperSKRConfigName, "runtime-bootstrapper-skr-config-name", "rt-bootstrapper-config", "Name of the runtime bootstrapper config map on SKR.")
+	flag.StringVar(&runtimeBootstrapperSKRPullSecretName, "runtime-bootstrapper-skr-pull-secret-name", "registry-credentials", "Name of the pull secret on SKR.")
+	flag.StringVar(&runtimeBootstrapperSKRClusterTrustBundle, "runtime-bootstrapper-skr-cluster-trust-bundle", "", "Name of the cluster trust bundle on SKR.")
+	flag.StringVar(&runtimeBootstrapperSKRNamespace, "runtime-bootstrapper-skr-namespace", "kyma-system", "Name of the the runtime bootstrapper namespace on SKR.")
+
+	flag.StringVar(&runtimeBootstrapperSKRDeploymentName, "runtime-bootstrapper-skr-deployment-name", "rt-bootstrapper-controller-manager", "Name of the deployment to be observed to verify if installation succeeded.")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
@@ -227,6 +261,90 @@ func main() {
 		os.Exit(1)
 	}
 
+	// build a shared scheme used for runtime clients to avoid concurrent AddToScheme calls
+	prebuiltRuntimeScheme := CreateRuntimeScheme()
+
+	// create a RuntimeClientGetter that uses the prebuilt scheme
+	runtimeClientGetter := fsm.NewRuntimeClientGetterWithScheme(mgr.GetClient(), prebuiltRuntimeScheme)
+
+	var runtimeBootstrapperInstaller *rtbootstrapper.Installer
+
+	if runtimeBootstrapperEnabled {
+		if runtimeBootstrapperKCPClusterTrustBundle != "" {
+			// ClusterTrustBundle is a beta feature and needs to be explicitly enabled in the converter config
+			// When the feature is generally available, this code can be removed
+			// As of the time of writing (December 2025) there is no GA release date announced
+			// Details: https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#cluster-trust-bundles
+			enableClusterTrustBundleFeatureForSKR(&config.ConverterConfig)
+		}
+
+		rtbConfig := rtbootstrapper.Config{
+			KCPConfig: rtbootstrapper.KCPConfig{
+				PullSecretName:         runtimeBootstrapperKCPPullSecretName,
+				ClusterTrustBundleName: runtimeBootstrapperKCPClusterTrustBundle,
+				ConfigName:             runtimeBootstrapperKCPConfigName,
+				ManifestsConfigMapName: runtimeBootstrapperManifestsConfigMapName,
+			},
+			SKRConfig: rtbootstrapper.SKRConfig{
+				Namespace:              runtimeBootstrapperSKRNamespace,
+				PullSecretName:         runtimeBootstrapperSKRPullSecretName,
+				ClusterTrustBundleName: runtimeBootstrapperSKRClusterTrustBundle,
+				ConfigName:             runtimeBootstrapperSKRConfigName,
+				DeploymentName:         runtimeBootstrapperSKRDeploymentName,
+			},
+		}
+
+		cfg, err := ctrl.GetConfig()
+		if err != nil {
+			setupLog.Error(err, "unable to get rest config")
+			os.Exit(1)
+		}
+		kcpClient, err := client.New(cfg, client.Options{Scheme: scheme})
+		if err != nil {
+			setupLog.Error(err, "unable to create client")
+			os.Exit(1)
+		}
+
+		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(rtbConfig, runtimeClientGetter, kcpClient)
+		if err != nil {
+			setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
+			os.Exit(1)
+		}
+
+		watcherConfig := configctrl.Cfg{
+			Client:    kcpClient,
+			Namespace: "kcp-system",
+			RtBootstrapperCfg: types.NamespacedName{
+				Name:      runtimeBootstrapperKCPConfigName,
+				Namespace: "kcp-system",
+			},
+			RtBootstrapperManifests: types.NamespacedName{
+				Name:      runtimeBootstrapperManifestsConfigMapName,
+				Namespace: "kcp-system",
+			},
+		}
+
+		if runtimeBootstrapperKCPPullSecretName != "" {
+			watcherConfig.ImagePullSecret = types.NamespacedName{
+				Name:      runtimeBootstrapperKCPPullSecretName,
+				Namespace: "kcp-system",
+			}
+		}
+
+		if runtimeBootstrapperKCPClusterTrustBundle != "" {
+			watcherConfig.ClusterTrustBundle = types.NamespacedName{
+				Name: runtimeBootstrapperKCPClusterTrustBundle,
+			}
+		}
+
+		if err := (&configctrl.RuntimeBootstrapperConfigWatcher{
+			Kcp: watcherConfig,
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Secret")
+			os.Exit(1)
+		}
+	}
+
 	cfg := fsm.RCCfg{
 		GardenerRequeueDuration:              defaultGardenerRequeueDuration,
 		RequeueDurationShootCreate:           defaultShootCreateRequeueDuration,
@@ -240,12 +358,15 @@ func main() {
 		Metrics:                              metrics,
 		AuditLogging:                         auditLogDataMap,
 		RegistryCacheConfigControllerEnabled: registryCacheConfigControllerEnabled,
+		RuntimeBootstrapperEnabled:           runtimeBootstrapperEnabled,
+		RuntimeBootstrapperInstaller:         runtimeBootstrapperInstaller,
 	}
 
 	runtimeReconciler := runtimecontroller.NewRuntimeReconciler(
 		mgr,
 		gardenerClient,
-		fsm.NewRuntimeClientGetter(mgr.GetClient()),
+		runtimeClientGetter,
+		runtimeBootstrapperInstaller,
 		logger,
 		cfg,
 	)
@@ -269,7 +390,12 @@ func main() {
 	refreshRuntimeMetrics(restConfig, logger, metrics)
 
 	if registryCacheConfigControllerEnabled {
-		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, gardener.GetRuntimeClient)
+		// use closure that creates runtime client with prebuilt scheme
+		runtimeClientClosure := func(secret corev1.Secret) (client.Client, error) {
+			return gardener.GetRuntimeClientWithScheme(secret, prebuiltRuntimeScheme)
+		}
+
+		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, runtimeClientClosure)
 		if err = registryCacheConfigReconciler.SetupWithManager(mgr, 1); err != nil {
 			setupLog.Error(err, "unable to setup registry cache config controller with Manager", "controller", "Runtime")
 			os.Exit(1)
@@ -282,6 +408,17 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func CreateRuntimeScheme() *runtime.Scheme {
+	prebuiltRuntimeScheme := runtime.NewScheme()
+	// register the types used by runtime clients
+	utilruntime.Must(clientgoscheme.AddToScheme(prebuiltRuntimeScheme))
+	utilruntime.Must(registrycacheapi.AddToScheme(prebuiltRuntimeScheme))
+	utilruntime.Must(kyma.AddToScheme(prebuiltRuntimeScheme))
+	utilruntime.Must(gardeneroidc.AddToScheme(prebuiltRuntimeScheme))
+	utilruntime.Must(apiextensions.AddToScheme(prebuiltRuntimeScheme))
+	return prebuiltRuntimeScheme
 }
 
 func initGardenerClients(kubeconfigPath string, namespace string, timeout time.Duration, rlQPS, rlBurst int) (client.Client, gardenerapis.ShootInterface, client.SubResourceClient, error) {
@@ -366,6 +503,12 @@ func refreshRuntimeMetrics(restConfig *rest.Config, logger logr.Logger, metrics 
 func restrictWatchedNamespace() cache.Options {
 	return cache.Options{
 		ByObject: map[client.Object]cache.ByObject{
+			&corev1.ConfigMap{}: {
+				Label: k8slabels.Everything(),
+				Namespaces: map[string]cache.Config{
+					"kcp-system": {},
+				},
+			},
 			&corev1.Secret{}: {
 				Label: k8slabels.Everything(),
 				Namespaces: map[string]cache.Config{
@@ -384,4 +527,34 @@ func restrictWatchedNamespace() cache.Options {
 			},
 		},
 	}
+}
+
+func configureRuntimeBootstrapper(config rtbootstrapper.Config, runtimeClientGetter fsm.RuntimeClientGetter, kcpClient client.Client) (*rtbootstrapper.Installer, error) {
+	err := rtbootstrapper.NewValidator(config, kcpClient).Validate(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	return rtbootstrapper.NewInstaller(config, kcpClient, runtimeClientGetter, fsm.NewRuntimeDynamicClientGetter(kcpClient)), nil
+}
+
+func enableClusterTrustBundleFeatureForSKR(converterConfig *config.ConverterConfig) {
+	if converterConfig.Kubernetes.KubeApiServer.FeatureGates == nil {
+		converterConfig.Kubernetes.KubeApiServer.FeatureGates = make(map[string]bool)
+	}
+
+	if converterConfig.Kubernetes.KubeApiServer.RuntimeConfig == nil {
+		converterConfig.Kubernetes.KubeApiServer.RuntimeConfig = make(map[string]bool)
+	}
+
+	// Feature gates docs: https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
+	converterConfig.Kubernetes.KubeApiServer.FeatureGates["ClusterTrustBundle"] = true
+	// Runtime Bootstrapper requires ClusterTrustBundleProjection to be enabled as well to mount the trust bundle into pods
+	converterConfig.Kubernetes.KubeApiServer.FeatureGates["ClusterTrustBundleProjection"] = true
+	converterConfig.Kubernetes.KubeApiServer.RuntimeConfig["certificates.k8s.io/v1beta1/clustertrustbundles"] = true
+
+	if converterConfig.Kubernetes.Kubelet.FeatureGates == nil {
+		converterConfig.Kubernetes.Kubelet.FeatureGates = make(map[string]bool)
+	}
+	converterConfig.Kubernetes.Kubelet.FeatureGates["ClusterTrustBundleProjection"] = true
 }

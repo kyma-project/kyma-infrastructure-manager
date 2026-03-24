@@ -7,6 +7,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -22,7 +23,7 @@ func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (state
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRegistryCacheConfigured,
 				imv1.ConditionReasonRegistryCacheGardenClusterConfigurationFailed,
-				"False",
+				metav1.ConditionFalse,
 				err.Error(),
 			)
 			m.log.Error(err, "Failed to get runtime client")
@@ -47,7 +48,7 @@ func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (state
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRegistryCacheConfigured,
 				imv1.ConditionReasonRegistryCacheGardenClusterConfigurationFailed,
-				"False",
+				metav1.ConditionFalse,
 				err.Error(),
 			)
 			m.log.Error(err, "Failed to sync registry cache secrets")

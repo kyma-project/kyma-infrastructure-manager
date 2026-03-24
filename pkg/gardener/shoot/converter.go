@@ -21,7 +21,7 @@ import (
 
 type Extend func(imv1.Runtime, *gardener.Shoot) error
 
-func baseExtenders() []Extend {
+func baseExtenders(converterConfig config.ConverterConfig) []Extend {
 
 	return []Extend{
 		extender2.ExtendWithAnnotations,
@@ -31,6 +31,8 @@ func baseExtenders() []Extend {
 		extender2.ExtendWithCloudProfile,
 		extender2.ExtendWithExposureClassName,
 		restrictions.ExtendWithAccessRestriction(),
+		extender2.NewFeatureGatesExtender(converterConfig.Kubernetes.KubeApiServer.FeatureGates, converterConfig.Kubernetes.Kubelet.FeatureGates),
+		extender2.NewKubernetesRuntimeConfigExtender(converterConfig.Kubernetes.KubeApiServer.RuntimeConfig),
 	}
 }
 
@@ -70,7 +72,7 @@ type PatchOpts struct {
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {
-	extendersForCreate := baseExtenders()
+	extendersForCreate := baseExtenders(opts.ConverterConfig)
 
 	extendersForCreate = append(extendersForCreate,
 		provider.NewProviderExtenderForCreateOperation(
@@ -99,14 +101,14 @@ func NewConverterCreate(opts CreateOpts) Converter {
 	}
 
 	extendersForCreate = append(extendersForCreate, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration))
-
 	extendersForCreate = append(extendersForCreate, networking.ExtendWithNetworking(opts.Networking.EnableDualStackIP))
+	extendersForCreate = append(extendersForCreate, extender2.ExtendWithCredentialsBinding(opts.Gardener.EnableCredentialBinding))
 
 	return newConverter(opts.ConverterConfig, extendersForCreate...)
 }
 
 func NewConverterPatch(opts PatchOpts) Converter {
-	extendersForPatch := baseExtenders()
+	extendersForPatch := baseExtenders(opts.ConverterConfig)
 
 	extendersForPatch = append(extendersForPatch,
 		provider.NewProviderExtenderPatchOperation(
@@ -122,8 +124,8 @@ func NewConverterPatch(opts PatchOpts) Converter {
 		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.Extensions))
 
 	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
-
 	extendersForPatch = append(extendersForPatch, maintenance.NewMaintenanceExtender(opts.Kubernetes.EnableKubernetesVersionAutoUpdate, opts.Kubernetes.EnableMachineImageVersionAutoUpdate, opts.MaintenanceTimeWindow))
+	extendersForPatch = append(extendersForPatch, extender2.ExtendWithCredentialsBinding(opts.Gardener.EnableCredentialBinding))
 
 	if opts.AuditLogData != (auditlogs.AuditLogData{}) {
 		extendersForPatch = append(extendersForPatch,
@@ -150,9 +152,8 @@ func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
 			Namespace: fmt.Sprintf("garden-%s", c.config.Gardener.ProjectName),
 		},
 		Spec: gardener.ShootSpec{
-			Purpose:                &runtime.Spec.Shoot.Purpose,
-			Region:                 runtime.Spec.Shoot.Region,
-			SecretBindingName: &runtime.Spec.Shoot.SecretBindingName,
+			Purpose: &runtime.Spec.Shoot.Purpose,
+			Region:  runtime.Spec.Shoot.Region,
 			Networking: &gardener.Networking{
 				Type:     runtime.Spec.Shoot.Networking.Type,
 				Nodes:    &runtime.Spec.Shoot.Networking.Nodes,

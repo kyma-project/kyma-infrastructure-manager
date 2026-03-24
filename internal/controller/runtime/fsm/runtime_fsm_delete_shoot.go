@@ -2,10 +2,12 @@ package fsm
 
 import (
 	"context"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -15,6 +17,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	// wait section
 	if !s.shoot.GetDeletionTimestamp().IsZero() {
 		m.log.V(log_level.DEBUG).Info("Waiting for shoot to be deleted", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
+		LogLastErrors(s, m)
 		return updateStatusAndRequeueAfter(m.RequeueDurationShootDelete)
 	}
 
@@ -44,7 +47,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		s.instance.UpdateStateDeletion(
 			imv1.ConditionTypeRuntimeDeprovisioned,
 			imv1.ConditionReasonStructuredConfigDeleted,
-			"False",
+			metav1.ConditionFalse,
 			"Gardener API structured authentication configmap delete error",
 		)
 
@@ -59,14 +62,14 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		s.instance.UpdateStateDeletion(
 			imv1.ConditionTypeRuntimeDeprovisioned,
 			imv1.ConditionReasonGardenerShootDeleted,
-			"False",
+			metav1.ConditionFalse,
 			"Gardener API shoot delete error",
 		)
 	} else {
 		s.instance.UpdateStateDeletion(
 			imv1.ConditionTypeRuntimeDeprovisioned,
 			imv1.ConditionReasonGardenerShootDeleted,
-			"Unknown",
+			metav1.ConditionUnknown,
 			"Runtime shoot deletion started",
 		)
 	}
