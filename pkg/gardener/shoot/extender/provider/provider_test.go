@@ -19,7 +19,7 @@ import (
 
 func TestMaxPodsClamping(t *testing.T) {
 	t.Run("Clamp maxPods when higher than calculated from pods CIDR", func(t *testing.T) {
-		// given: pods /22 = 1022 usable (1024 minus network and broadcast), worker has maxPods 2000
+		// given: per-node /24 cap first (2000 -> 254), then pool /22 = 1022; sum 254 within pool
 		shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 		workers := fixWorkers("worker", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a"})
 		workers[0].Kubernetes = &gardener.WorkerKubernetes{
@@ -47,7 +47,7 @@ func TestMaxPodsClamping(t *testing.T) {
 		require.NotNil(t, shoot.Spec.Provider.Workers[0].Kubernetes)
 		require.NotNil(t, shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet)
 		require.NotNil(t, shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.MaxPods)
-		assert.Equal(t, int32(1022), *shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.MaxPods)
+		assert.Equal(t, int32(254), *shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.MaxPods)
 	})
 	t.Run("Leave maxPods unchanged when in valid range", func(t *testing.T) {
 		// given: pods /22 = 1022 usable, worker has maxPods 100
@@ -152,7 +152,7 @@ func TestMaxPodsClamping(t *testing.T) {
 		assert.Equal(t, int32(500), *shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.MaxPods)
 	})
 	t.Run("Clamp last worker when sum exceeds totalIPs", func(t *testing.T) {
-		// given: pods /22 = 1022 usable, worker1=100 worker2=1000, sum=1100 > 1022
+		// given: per-node cap leaves worker2 at 254; pods /24 = 254 total; sum 100+254 > 254 — clamp last
 		shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 		workers := fixMultipleWorkers([]workerConfig{
 			{"worker1", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a"}},
@@ -165,7 +165,7 @@ func TestMaxPodsClamping(t *testing.T) {
 				Shoot: imv1.RuntimeShoot{
 					Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeAWS, workers, fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a"}), fixAWSControlPlaneConfig()),
 					Networking: imv1.Networking{
-						Pods:     "100.64.0.0/22",
+						Pods:     "100.64.0.0/24",
 						Nodes:    "10.250.0.0/22",
 						Services: "100.104.0.0/13",
 					},
@@ -177,10 +177,10 @@ func TestMaxPodsClamping(t *testing.T) {
 		extender := NewProviderExtenderForCreateOperation(false, false, "gardenlinux", "1312.3.0")
 		err := extender(rt, &shoot)
 
-		// then: worker1 unchanged (100), worker2 clamped (1000 -> 922)
+		// then: worker1 unchanged (100), worker2 aggregate-clamped (254 -> 154)
 		require.NoError(t, err)
 		assert.Equal(t, int32(100), *shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.MaxPods)
-		assert.Equal(t, int32(922), *shoot.Spec.Provider.Workers[1].Kubernetes.Kubelet.MaxPods)
+		assert.Equal(t, int32(154), *shoot.Spec.Provider.Workers[1].Kubernetes.Kubelet.MaxPods)
 	})
 }
 

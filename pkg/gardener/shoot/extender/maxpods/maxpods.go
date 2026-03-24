@@ -61,6 +61,26 @@ func MaxPodsFromPodsCIDR(podsCIDR string) (int64, error) {
 	return 0, fmt.Errorf("maxPods calculation supports IPv4 only, got IPv6 CIDR")
 }
 
+// MaxPodsPerNodeSlash24 returns usable IPv4 pod addresses for a /24 prefix
+// (2^(32-24) - 2 for network and broadcast), matching MaxPodsFromPodsCIDR semantics.
+func MaxPodsPerNodeSlash24() int64 {
+	return int64(1<<(32-24)) - 2
+}
+
+// ApplyPerNodeMaxPodsCap clamps each worker's kubelet maxPods to perNodeLimit when set and above the limit.
+// Workers without maxPods are unchanged. perNodeLimit matches kubelet MaxPods (int32).
+func ApplyPerNodeMaxPodsCap(workers []gardener.Worker, perNodeLimit int32) {
+	for i := range workers {
+		w := &workers[i]
+		if w.Kubernetes == nil || w.Kubernetes.Kubelet == nil || w.Kubernetes.Kubelet.MaxPods == nil {
+			continue
+		}
+		if *w.Kubernetes.Kubelet.MaxPods > perNodeLimit {
+			w.Kubernetes.Kubelet.MaxPods = ptr.To(perNodeLimit)
+		}
+	}
+}
+
 // ApplyMaxPodsWithTotalCap ensures sum(worker maxPods) <= totalIPs.
 // Workers keep their declared maxPods unless the sum exceeds totalIPs.
 // When sum > totalIPs, clamps from the last worker backward until sum <= totalIPs.

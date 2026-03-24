@@ -289,3 +289,54 @@ func TestApplyMaxPodsWithTotalCap(t *testing.T) {
 		})
 	}
 }
+
+func TestMaxPodsPerNodeSlash24(t *testing.T) {
+	want, err := MaxPodsFromPodsCIDR("10.0.0.0/24")
+	require.NoError(t, err)
+	assert.Equal(t, want, MaxPodsPerNodeSlash24())
+}
+
+func TestApplyPerNodeMaxPodsCap(t *testing.T) {
+	limit := int32(MaxPodsPerNodeSlash24())
+
+	t.Run("clamps above limit", func(t *testing.T) {
+		workers := []gardener.Worker{
+			{
+				Kubernetes: &gardener.WorkerKubernetes{
+					Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(500))},
+				},
+			},
+		}
+		ApplyPerNodeMaxPodsCap(workers, limit)
+		require.NotNil(t, workers[0].Kubernetes.Kubelet.MaxPods)
+		assert.Equal(t, int32(254), *workers[0].Kubernetes.Kubelet.MaxPods)
+	})
+
+	t.Run("nil maxPods unchanged", func(t *testing.T) {
+		workers := []gardener.Worker{
+			{Kubernetes: nil},
+			{Kubernetes: &gardener.WorkerKubernetes{Kubelet: &gardener.KubeletConfig{MaxPods: nil}}},
+		}
+		ApplyPerNodeMaxPodsCap(workers, limit)
+		assert.Nil(t, workers[0].Kubernetes)
+		assert.Nil(t, workers[1].Kubernetes.Kubelet.MaxPods)
+	})
+
+	t.Run("at or below limit unchanged", func(t *testing.T) {
+		workers := []gardener.Worker{
+			{
+				Kubernetes: &gardener.WorkerKubernetes{
+					Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(100))},
+				},
+			},
+			{
+				Kubernetes: &gardener.WorkerKubernetes{
+					Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(254))},
+				},
+			},
+		}
+		ApplyPerNodeMaxPodsCap(workers, limit)
+		assert.Equal(t, int32(100), *workers[0].Kubernetes.Kubelet.MaxPods)
+		assert.Equal(t, int32(254), *workers[1].Kubernetes.Kubelet.MaxPods)
+	})
+}
