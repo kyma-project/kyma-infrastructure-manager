@@ -20,9 +20,9 @@ func TestNewKubeServerACLExtenderCreate(t *testing.T) {
 		// given
 		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
 		runtime := fixRuntimeWithACL("aws", []string{"1.2.3.4/32"})
-		aclConfig := config.ACL{EnableACL: false}
+		aclConfig := config.ACL{}
 
-		extender := NewKubeServerACLExtenderCreate(aclConfig)
+		extender := NewKubeServerACLExtenderCreate(aclConfig, false)
 
 		// when
 		err := extender(runtime, &shoot)
@@ -37,9 +37,9 @@ func TestNewKubeServerACLExtenderCreate(t *testing.T) {
 		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
 		runtime := imv1.Runtime{}
 		runtime.Spec.Shoot.Provider.Type = "aws"
-		aclConfig := config.ACL{EnableACL: true}
+		aclConfig := config.ACL{}
 
-		extender := NewKubeServerACLExtenderCreate(aclConfig)
+		extender := NewKubeServerACLExtenderCreate(aclConfig, true)
 
 		// when
 		err := extender(runtime, &shoot)
@@ -53,9 +53,9 @@ func TestNewKubeServerACLExtenderCreate(t *testing.T) {
 		// given
 		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
 		runtime := fixRuntimeWithACL("aws", []string{})
-		aclConfig := config.ACL{EnableACL: true}
+		aclConfig := config.ACL{}
 
-		extender := NewKubeServerACLExtenderCreate(aclConfig)
+		extender := NewKubeServerACLExtenderCreate(aclConfig, true)
 
 		// when
 		err := extender(runtime, &shoot)
@@ -69,9 +69,9 @@ func TestNewKubeServerACLExtenderCreate(t *testing.T) {
 		// given
 		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
 		runtime := fixRuntimeWithACL("gcp", []string{"1.2.3.4/32"})
-		aclConfig := config.ACL{EnableACL: true}
+		aclConfig := config.ACL{}
 
-		extender := NewKubeServerACLExtenderCreate(aclConfig)
+		extender := NewKubeServerACLExtenderCreate(aclConfig, true)
 
 		// when
 		err := extender(runtime, &shoot)
@@ -87,7 +87,7 @@ func TestNewKubeServerACLExtenderCreate(t *testing.T) {
 		runtime := fixRuntimeWithACL("aws", []string{"1.2.3.4/32", "5.6.0.0/16"})
 		aclConfig := fixACLConfig(t, `["10.0.0.1/32","10.0.0.2/32"]`, `"172.16.0.1/32"`)
 
-		extender := NewKubeServerACLExtenderCreate(aclConfig)
+		extender := NewKubeServerACLExtenderCreate(aclConfig, true)
 
 		// when
 		err := extender(runtime, &shoot)
@@ -114,7 +114,7 @@ func TestNewKubeServerACLExtenderCreate(t *testing.T) {
 		runtime := fixRuntimeWithACL("azure", []string{"192.168.1.0/24"})
 		aclConfig := fixACLConfig(t, `["10.0.0.1/32"]`, `"172.16.0.1/32"`)
 
-		extender := NewKubeServerACLExtenderCreate(aclConfig)
+		extender := NewKubeServerACLExtenderCreate(aclConfig, true)
 
 		// when
 		err := extender(runtime, &shoot)
@@ -138,7 +138,7 @@ func TestNewKubeServerACLExtenderCreate(t *testing.T) {
 		runtime := fixRuntimeWithACL("aws", []string{"1.2.3.4/32"})
 		aclConfig := fixACLConfig(t, `["10.0.0.1/32"]`, `"172.16.0.1/32"`)
 
-		extender := NewKubeServerACLExtenderCreate(aclConfig)
+		extender := NewKubeServerACLExtenderCreate(aclConfig, true)
 
 		// when
 		err := extender(runtime, &shoot)
@@ -155,13 +155,11 @@ func TestNewKubeServerACLExtenderCreate(t *testing.T) {
 		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
 		runtime := fixRuntimeWithACL("aws", []string{"1.2.3.4/32"})
 		aclConfig := config.ACL{
-			EnableACL:       true,
-			VolumeMountPath: t.TempDir(),
-			IpAddressesKey:  "missing.json",
-			KcpAddressKey:   "kcp-ip.json",
+			IpAddressesPath: "dir/missing.json",
+			KcpAddressPath:  "dir/kcp-ip.json",
 		}
 
-		extender := NewKubeServerACLExtenderCreate(aclConfig)
+		extender := NewKubeServerACLExtenderCreate(aclConfig, true)
 
 		// when
 		err := extender(runtime, &shoot)
@@ -180,13 +178,11 @@ func TestNewKubeServerACLExtenderCreate(t *testing.T) {
 		writeFile(t, dir, "operator-ips.json", `["10.0.0.1/32"]`)
 
 		aclConfig := config.ACL{
-			EnableACL:       true,
-			VolumeMountPath: dir,
-			IpAddressesKey:  "operator-ips.json",
-			KcpAddressKey:   "missing.json",
+			IpAddressesPath: dir + "/operator-ips.json",
+			KcpAddressPath:  dir + "/missing.json",
 		}
 
-		extender := NewKubeServerACLExtenderCreate(aclConfig)
+		extender := NewKubeServerACLExtenderCreate(aclConfig, true)
 
 		// when
 		err := extender(runtime, &shoot)
@@ -206,13 +202,11 @@ func TestNewKubeServerACLExtenderCreate(t *testing.T) {
 		writeFile(t, dir, "kcp-ip.json", `"172.16.0.1/32"`)
 
 		aclConfig := config.ACL{
-			EnableACL:       true,
-			VolumeMountPath: dir,
-			IpAddressesKey:  "operator-ips.json",
-			KcpAddressKey:   "kcp-ip.json",
+			IpAddressesPath: dir + "/operator-ips.json",
+			KcpAddressPath:  dir + "/kcp-ip.json",
 		}
 
-		extender := NewKubeServerACLExtenderCreate(aclConfig)
+		extender := NewKubeServerACLExtenderCreate(aclConfig, true)
 
 		// when
 		err := extender(runtime, &shoot)
@@ -228,9 +222,9 @@ func TestNewKubeServerACLExtenderPatch(t *testing.T) {
 		// given
 		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
 		runtime := fixRuntimeWithACL("aws", []string{"1.2.3.4/32"})
-		aclConfig := config.ACL{EnableACL: false}
+		aclConfig := config.ACL{}
 
-		extender := NewKubeServerACLExtenderPatch(aclConfig)
+		extender := NewKubeServerACLExtenderPatch(aclConfig, false)
 
 		// when
 		err := extender(runtime, &shoot)
@@ -248,9 +242,9 @@ func TestNewKubeServerACLExtenderPatch(t *testing.T) {
 			{Type: "shoot-cert-service"},
 		}
 		runtime := fixRuntimeWithACL("aws", []string{"1.2.3.4/32"})
-		aclConfig := config.ACL{EnableACL: false}
+		aclConfig := config.ACL{}
 
-		extender := NewKubeServerACLExtenderPatch(aclConfig)
+		extender := NewKubeServerACLExtenderPatch(aclConfig, false)
 
 		// when
 		err := extender(runtime, &shoot)
@@ -266,9 +260,9 @@ func TestNewKubeServerACLExtenderPatch(t *testing.T) {
 		// given
 		shoot := testutils.FixEmptyGardenerShoot("shoot", "kcp-system")
 		runtime := fixRuntimeWithACL("gcp", []string{"1.2.3.4/32"})
-		aclConfig := config.ACL{EnableACL: true}
+		aclConfig := config.ACL{}
 
-		extender := NewKubeServerACLExtenderPatch(aclConfig)
+		extender := NewKubeServerACLExtenderPatch(aclConfig, true)
 
 		// when
 		err := extender(runtime, &shoot)
@@ -286,9 +280,9 @@ func TestNewKubeServerACLExtenderPatch(t *testing.T) {
 			{Type: "acl"},
 		}
 		runtime := fixRuntimeWithACL("gcp", []string{"1.2.3.4/32"})
-		aclConfig := config.ACL{EnableACL: true}
+		aclConfig := config.ACL{}
 
-		extender := NewKubeServerACLExtenderPatch(aclConfig)
+		extender := NewKubeServerACLExtenderPatch(aclConfig, true)
 
 		// when
 		err := extender(runtime, &shoot)
@@ -309,9 +303,9 @@ func TestNewKubeServerACLExtenderPatch(t *testing.T) {
 		}
 		runtime := imv1.Runtime{}
 		runtime.Spec.Shoot.Provider.Type = "aws"
-		aclConfig := config.ACL{EnableACL: true}
+		aclConfig := config.ACL{}
 
-		extender := NewKubeServerACLExtenderPatch(aclConfig)
+		extender := NewKubeServerACLExtenderPatch(aclConfig, true)
 
 		// when
 		err := extender(runtime, &shoot)
@@ -330,9 +324,9 @@ func TestNewKubeServerACLExtenderPatch(t *testing.T) {
 			{Type: "acl"},
 		}
 		runtime := fixRuntimeWithACL("aws", []string{})
-		aclConfig := config.ACL{EnableACL: true}
+		aclConfig := config.ACL{}
 
-		extender := NewKubeServerACLExtenderPatch(aclConfig)
+		extender := NewKubeServerACLExtenderPatch(aclConfig, true)
 
 		// when
 		err := extender(runtime, &shoot)
@@ -349,7 +343,7 @@ func TestNewKubeServerACLExtenderPatch(t *testing.T) {
 		runtime := fixRuntimeWithACL("aws", []string{"1.2.3.4/32", "5.6.0.0/16"})
 		aclConfig := fixACLConfig(t, `["10.0.0.1/32","10.0.0.2/32"]`, `"172.16.0.1/32"`)
 
-		extender := NewKubeServerACLExtenderPatch(aclConfig)
+		extender := NewKubeServerACLExtenderPatch(aclConfig, true)
 
 		// when
 		err := extender(runtime, &shoot)
@@ -376,7 +370,7 @@ func TestNewKubeServerACLExtenderPatch(t *testing.T) {
 		runtime := fixRuntimeWithACL("azure", []string{"192.168.1.0/24"})
 		aclConfig := fixACLConfig(t, `["10.0.0.1/32"]`, `"172.16.0.1/32"`)
 
-		extender := NewKubeServerACLExtenderPatch(aclConfig)
+		extender := NewKubeServerACLExtenderPatch(aclConfig, true)
 
 		// when
 		err := extender(runtime, &shoot)
@@ -407,7 +401,7 @@ func TestNewKubeServerACLExtenderPatch(t *testing.T) {
 		runtimeCR := fixRuntimeWithACL("aws", []string{"1.2.3.4/32"})
 		aclConfig := fixACLConfig(t, `["10.0.0.1/32"]`, `"172.16.0.1/32"`)
 
-		extender := NewKubeServerACLExtenderPatch(aclConfig)
+		extender := NewKubeServerACLExtenderPatch(aclConfig, true)
 
 		// when
 		err := extender(runtimeCR, &shoot)
@@ -450,10 +444,8 @@ func fixACLConfig(t *testing.T, operatorIPsJSON, kcpIPJSON string) config.ACL {
 	writeFile(t, dir, "operator-ips.json", operatorIPsJSON)
 	writeFile(t, dir, "kcp-ip.json", kcpIPJSON)
 	return config.ACL{
-		EnableACL:       true,
-		VolumeMountPath: dir,
-		IpAddressesKey:  "operator-ips.json",
-		KcpAddressKey:   "kcp-ip.json",
+		IpAddressesPath: dir + "/operator-ips.json",
+		KcpAddressPath:  dir + "/kcp-ip.json",
 	}
 }
 

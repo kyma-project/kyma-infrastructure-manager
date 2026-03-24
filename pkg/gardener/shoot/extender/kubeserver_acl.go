@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"path"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -29,9 +28,9 @@ type aclRule struct {
 	Type   string   `json:"type"`
 }
 
-func NewKubeServerACLExtenderCreate(aclConfig config.ACL) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewKubeServerACLExtenderCreate(aclConfig config.ACL, aclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		if !aclConfig.EnableACL {
+		if !aclEnabled {
 			return nil
 		}
 
@@ -50,9 +49,8 @@ func NewKubeServerACLExtenderCreate(aclConfig config.ACL) func(runtime imv1.Runt
 
 		acl, err := createAccessControlList(
 			runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs,
-			aclConfig.VolumeMountPath,
-			aclConfig.IpAddressesKey,
-			aclConfig.KcpAddressKey)
+			aclConfig.IpAddressesPath,
+			aclConfig.KcpAddressPath)
 		if err != nil {
 			// there was an error during os opening, file not existing
 			return err
@@ -62,9 +60,9 @@ func NewKubeServerACLExtenderCreate(aclConfig config.ACL) func(runtime imv1.Runt
 	}
 }
 
-func NewKubeServerACLExtenderPatch(aclConfig config.ACL) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewKubeServerACLExtenderPatch(aclConfig config.ACL, aclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		if !aclConfig.EnableACL {
+		if !aclEnabled {
 			return nil
 		}
 
@@ -85,9 +83,8 @@ func NewKubeServerACLExtenderPatch(aclConfig config.ACL) func(runtime imv1.Runti
 
 		acl, err := createAccessControlList(
 			runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs,
-			aclConfig.VolumeMountPath,
-			aclConfig.IpAddressesKey,
-			aclConfig.KcpAddressKey)
+			aclConfig.IpAddressesPath,
+			aclConfig.KcpAddressPath)
 		if err != nil {
 			// there was an error during os opening, file not existing
 			return err
@@ -113,21 +110,19 @@ func applyAccessControlList(shoot *gardener.Shoot, aclList []string) error {
 	return nil
 }
 
-func createAccessControlList(userCIDRs []string, volumeMountPath, ipKey, kcpKey string) ([]string, error) {
+func createAccessControlList(userCIDRs []string, operatorIpPath, kcpIpPath string) ([]string, error) {
 	aclList := aclList{}
 	var allowedCIDRs []string
 
-	operatorPath := path.Join(volumeMountPath, ipKey)
 	err := aclList.loadOperatorData(func() (io.Reader, error) {
-		return os.Open(operatorPath)
+		return os.Open(operatorIpPath)
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	kcpPath := path.Join(volumeMountPath, kcpKey)
 	err = aclList.loadKcpData(func() (io.Reader, error) {
-		return os.Open(kcpPath)
+		return os.Open(kcpIpPath)
 	})
 	if err != nil {
 		return nil, err

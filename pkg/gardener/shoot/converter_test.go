@@ -564,7 +564,8 @@ var testReader io.Reader = strings.NewReader(
 		"kubeApiServer": {
             "maxTokenExpiration": "721h",
 			"acl": {
-				"enableACL": true
+				"ipAddressesPath": "test-path/ip-file.json",
+				"kcpAddressPath": "test-path/kcp-file.json"
 			}
 		}
   },
@@ -629,7 +630,8 @@ func Test_ConverterConfig_Load_OK(t *testing.T) {
 				KubeApiServer: config.KubeApiServer{
 					MaxTokenExpiration: "721h",
 					ACL: config.ACL{
-						EnableACL: true,
+						IpAddressesPath: "test-path/ip-file.json",
+						KcpAddressPath:  "test-path/kcp-file.json",
 					},
 				},
 			},
