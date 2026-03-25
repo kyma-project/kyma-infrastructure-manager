@@ -2,6 +2,8 @@ package extensions
 
 import (
 	"encoding/json"
+	"io"
+	"os"
 	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -64,6 +66,34 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 				}
 
 				return NewRegistryCacheExtension(registryCache, nil)
+			},
+		},
+		{
+			Type: ApiServerACLExtensionType,
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+				// warunki brzegowe
+				if !aclNeedToBeEnabled(apiServerAclEnabled) {
+					return nil, nil
+				}
+
+				// otwietnanie plikow
+				aclList := AclList{}
+
+				err := aclList.loadOperatorData(func() (io.Reader, error) {
+					return os.Open(config.Kubernetes.KubeApiServer.ACL.IpAddressesPath)
+				})
+				if err != nil {
+					return nil, err
+				}
+
+				err = aclList.loadKcpData(func() (io.Reader, error) {
+					return os.Open(config.Kubernetes.KubeApiServer.ACL.KcpAddressPath)
+				})
+				if err != nil {
+					return nil, err
+				}
+
+				return NewApiServerACLExtension(aclList.OperatorIPs, aclList.KCPIp)
 			},
 		},
 	}, nil)
@@ -162,4 +192,32 @@ func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensi
 
 		return nil
 	}
+}
+
+type readerGetter = func() (io.Reader, error)
+
+func (ac *AclList) loadOperatorData(f readerGetter) error {
+	r, err := f()
+	if err != nil {
+		return err
+	}
+	if closer, ok := r.(io.Closer); ok {
+		defer closer.Close()
+	}
+	return json.NewDecoder(r).Decode(&ac.OperatorIPs)
+}
+
+func (ac *AclList) loadKcpData(f readerGetter) error {
+	r, err := f()
+	if err != nil {
+		return err
+	}
+	if closer, ok := r.(io.Closer); ok {
+		defer closer.Close()
+	}
+	return json.NewDecoder(r).Decode(&ac.KCPIp)
+}
+
+func aclNeedToBeEnabled(apiServerAclEnabled bool) bool {
+	return apiServerAclEnabled
 }

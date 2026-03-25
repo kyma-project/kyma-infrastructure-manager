@@ -28,6 +28,14 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 			DomainPrefix: "test-domain",
 			ProviderType: "test-provider",
 		},
+		Kubernetes: config.KubernetesConfig{
+			KubeApiServer: config.KubeApiServer{
+				ACL: config.ACL{
+					IpAddressesPath: "./testdata/acl-ip-list/acl-ips.json",
+					KcpAddressPath:  "./testdata/acl-ip-list/kcp-external-nat-ip.json",
+				},
+			},
+		},
 	}
 
 	newAuditLogData := auditlogs.AuditLogData{
@@ -50,6 +58,8 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 		inputAuditLogData   auditlogs.AuditLogData
 		enableNetworkFilter bool
 		registryCache       []imv1.ImageRegistryCache
+		apiServerACL        []string
+		apiServerACLEnabled bool
 		extensionOrderMap   map[string]int
 	}{
 		{
@@ -57,6 +67,8 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 			inputAuditLogData:   newAuditLogData,
 			enableNetworkFilter: true,
 			registryCache:       registryCache,
+			apiServerACL:        []string{"1.1.1.1/32", "2.2.2.2/32"},
+			apiServerACLEnabled: true,
 			extensionOrderMap:   getExpectedExtensionsOrderMapForCreate(),
 		},
 		{
@@ -64,6 +76,8 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 			inputAuditLogData:   newAuditLogData,
 			enableNetworkFilter: false,
 			registryCache:       registryCache,
+			apiServerACL:        []string{"1.1.1.1/32", "2.2.2.2/32"},
+			apiServerACLEnabled: true,
 			extensionOrderMap:   getExpectedExtensionsOrderMapForCreate(),
 		},
 		{
@@ -73,7 +87,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			runtime := fixRuntimeCRForExtensionExtenderTests(testcase.enableNetworkFilter, testcase.registryCache)
+			runtime := fixRuntimeCRForExtensionExtenderTests(testcase.enableNetworkFilter, testcase.registryCache, testcase.apiServerACL)
 
 			shoot := &gardener.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -81,7 +95,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 				},
 			}
 
-			extender := NewExtensionsExtenderForCreate(config, testcase.inputAuditLogData, testcase.registryCache, false)
+			extender := NewExtensionsExtenderForCreate(config, testcase.inputAuditLogData, testcase.registryCache, testcase.apiServerACLEnabled)
 
 			err := extender(runtime, shoot)
 			assert.NoError(t, err)
@@ -258,7 +272,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			runtime := fixRuntimeCRForExtensionExtenderTests(testCase.enableNetworkFilter, testCase.registryCaches)
+			runtime := fixRuntimeCRForExtensionExtenderTests(testCase.enableNetworkFilter, testCase.registryCaches, nil)
 
 			shoot := &gardener.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -409,6 +423,7 @@ func getExpectedExtensionsOrderMapForCreate() map[string]int {
 	extensionOrderMap[OidcExtensionType] = 3
 	extensionOrderMap[AuditlogExtensionType] = 4
 	extensionOrderMap[RegistryCacheExtensionType] = 5
+	extensionOrderMap[ApiServerACLExtensionType] = 6
 
 	return extensionOrderMap
 }
@@ -521,11 +536,18 @@ func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches 
 	assert.Nil(t, registryConfig.Caches[0].Proxy)
 }
 
-func fixRuntimeCRForExtensionExtenderTests(networkFilterEnabled bool, registryCache []imv1.ImageRegistryCache) imv1.Runtime {
+func fixRuntimeCRForExtensionExtenderTests(networkFilterEnabled bool, registryCache []imv1.ImageRegistryCache, apiServerACL []string) imv1.Runtime {
 	runtime := imv1.Runtime{
 		Spec: imv1.RuntimeSpec{
 			Shoot: imv1.RuntimeShoot{
 				Name: "myshoot",
+				Kubernetes: imv1.Kubernetes{
+					KubeAPIServer: imv1.APIServer{
+						ACL: &imv1.ACL{
+							AllowedCIDRs: apiServerACL,
+						},
+					},
+				},
 			},
 			Caching: registryCache,
 			Security: imv1.Security{
