@@ -2,6 +2,7 @@ package extensions
 
 import (
 	"encoding/json"
+	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,7 +29,7 @@ type aclRule struct {
 func NewApiServerACLExtension(userIPs, operatorIPs []string, kcpIP string) (*gardener.Extension, error) {
 	if len(userIPs) != 0 {
 		// create / update flow
-		return applyAccessControlList(createAccessControlList(userIPs, operatorIPs, kcpIP))
+		return applyAccessControlList(slices.Concat(userIPs, operatorIPs, []string{kcpIP}))
 	}
 
 	// disable flow
@@ -36,16 +37,6 @@ func NewApiServerACLExtension(userIPs, operatorIPs []string, kcpIP string) (*gar
 		Type:     ApiServerACLExtensionType,
 		Disabled: ptr.To(true),
 	}, nil
-}
-
-func createAccessControlList(userIPs, operatorIPs []string, kcpIP string) []string {
-	var allowedCIDRs []string
-
-	allowedCIDRs = append(allowedCIDRs, userIPs...)
-	allowedCIDRs = append(allowedCIDRs, operatorIPs...)
-	allowedCIDRs = append(allowedCIDRs, kcpIP)
-
-	return allowedCIDRs
 }
 
 func applyAccessControlList(aclList []string) (*gardener.Extension, error) {
