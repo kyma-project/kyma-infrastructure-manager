@@ -247,25 +247,6 @@ func (ac *AclList) loadKcpData(f readerGetter) error {
 }
 
 func aclNeedToBeEnabled(apiServerAclEnabled bool, runtime imv1.Runtime) bool {
-	//if !apiServerAclEnabled {
-	//	return false
-	//}
-	//
-	//runtimeType := runtime.Spec.Shoot.Provider.Type
-	//if runtimeType =0= hyperscaler.TypeAWS && runtimeType != hyperscaler.TypeAzure {
-	//	return false
-	//}
-	//
-	//if runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL == nil {
-	//	return false
-	//}
-	//
-	//if len(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs) == 0 {
-	//	return false
-	//}
-	//
-	//return true
-
 	runtimeType := runtime.Spec.Shoot.Provider.Type
 
 	return apiServerAclEnabled &&
