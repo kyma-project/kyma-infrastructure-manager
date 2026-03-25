@@ -56,7 +56,7 @@ func applyAccessControlList(aclList []string) (*gardener.Extension, error) {
 	}
 
 	return &gardener.Extension{
-		Type:           "acl",
+		Type:           ApiServerACLExtensionType,
 		ProviderConfig: &runtime.RawExtension{Raw: rawExtension},
 		Disabled:       ptr.To(false),
 	}, nil
