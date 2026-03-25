@@ -26,7 +26,16 @@ type aclRule struct {
 }
 
 func NewApiServerACLExtension(userIPs, operatorIPs []string, kcpIP string) (*gardener.Extension, error) {
-	return applyAccessControlList(createAccessControlList(userIPs, operatorIPs, kcpIP))
+	if len(userIPs) != 0 {
+		// create / update flow
+		return applyAccessControlList(createAccessControlList(userIPs, operatorIPs, kcpIP))
+	}
+
+	// disable flow
+	return &gardener.Extension{
+		Type:     ApiServerACLExtensionType,
+		Disabled: ptr.To(true),
+	}, nil
 }
 
 func createAccessControlList(userIPs, operatorIPs []string, kcpIP string) []string {

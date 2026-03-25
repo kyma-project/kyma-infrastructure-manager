@@ -169,6 +169,22 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 }
 
 func TestNewExtensionsExtenderForPatch(t *testing.T) {
+	config := config.ConverterConfig{
+		DNS: config.DNSConfig{
+			SecretName:   "test-dns-secret",
+			DomainPrefix: "test-domain",
+			ProviderType: "test-provider",
+		},
+		Kubernetes: config.KubernetesConfig{
+			KubeApiServer: config.KubeApiServer{
+				ACL: config.ACL{
+					IpAddressesPath: "./testdata/acl-ip-list/acl-ips.json",
+					KcpAddressPath:  "./testdata/acl-ip-list/kcp-external-nat-ip.json",
+				},
+			},
+		},
+	}
+
 	oldAuditLogData := auditlogs.AuditLogData{
 		TenantID:   "test-auditlog-tenant",
 		ServiceURL: "test-auditlog-service-url",
@@ -200,6 +216,9 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		expectedAuditLogData auditlogs.AuditLogData
 		registryCaches       []imv1.ImageRegistryCache
 		enableNetworkFilter  bool
+		apiServerACL         []string
+		apiServerACLEnabled  bool
+		providerType         string
 	}{
 		{
 			name:                 "Should add AuditLog extension at the end without changing order and data of other extensions",
@@ -251,7 +270,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		},
 		{
 			name:                 "Existing extensions should not change order during patching if nothing has changed",
-			previousExtensions:   fixAllExtensionsOnTheShoot(),
+			previousExtensions:   fixAllExtensionsOnTheShoot(true),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
 			registryCaches:       newCaches,
@@ -259,7 +278,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		},
 		{
 			name:                 "Should update Audit Log extension without changing order and data of other extensions",
-			previousExtensions:   fixAllExtensionsOnTheShoot(),
+			previousExtensions:   fixAllExtensionsOnTheShoot(true),
 			inputAuditLogData:    newAuditLogData,
 			expectedAuditLogData: newAuditLogData,
 			registryCaches:       oldCaches,
@@ -267,7 +286,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		},
 		{
 			name:                 "Should update Network filter extension without changing order and data of other extensions",
-			previousExtensions:   fixAllExtensionsOnTheShoot(),
+			previousExtensions:   fixAllExtensionsOnTheShoot(true),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
 			registryCaches:       oldCaches,
@@ -275,7 +294,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		},
 		{
 			name:                 "Should update RegistryCache extension without changing order and data of other extensions",
-			previousExtensions:   fixAllExtensionsOnTheShoot(),
+			previousExtensions:   fixAllExtensionsOnTheShoot(true),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
 			registryCaches:       newCaches,
@@ -283,7 +302,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		},
 		{
 			name:                 "Should disable RegistryCache extension when cache is not enabled on Runtime CR without changing order and data of other extensions",
-			previousExtensions:   fixAllExtensionsOnTheShoot(),
+			previousExtensions:   fixAllExtensionsOnTheShoot(true),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
 			registryCaches:       newCaches,
@@ -291,7 +310,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		},
 		{
 			name:                 "Should disable RegistryCache extension when cache is not enabled on Runtime CR without changing order and data of other extensions",
-			previousExtensions:   fixAllExtensionsOnTheShoot(),
+			previousExtensions:   fixAllExtensionsOnTheShoot(true),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
 			registryCaches:       []imv1.ImageRegistryCache{},
@@ -299,15 +318,59 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		},
 		{
 			name:                 "Should not update existing AuditLog extension when input auditLogData is empty",
-			previousExtensions:   fixAllExtensionsOnTheShoot(),
+			previousExtensions:   fixAllExtensionsOnTheShoot(true),
 			inputAuditLogData:    auditlogs.AuditLogData{},
 			expectedAuditLogData: oldAuditLogData,
 			registryCaches:       oldCaches,
 			enableNetworkFilter:  false,
 		},
+		{
+			name:                 "Should update ACL extension without changing order and data of other extensions",
+			previousExtensions:   fixAllExtensionsOnTheShoot(true),
+			inputAuditLogData:    oldAuditLogData,
+			expectedAuditLogData: oldAuditLogData,
+			registryCaches:       newCaches,
+			enableNetworkFilter:  false,
+			apiServerACL:         []string{"1.1.1.1/32", "2.2.2.2/32"},
+			apiServerACLEnabled:  true,
+			providerType:         hyperscaler.TypeAWS,
+		},
+		{
+			name:                 "Should disable ACL extension without changing order and data of other extensions",
+			previousExtensions:   fixAllExtensionsOnTheShoot(true),
+			inputAuditLogData:    oldAuditLogData,
+			expectedAuditLogData: oldAuditLogData,
+			registryCaches:       newCaches,
+			enableNetworkFilter:  false,
+			apiServerACL:         []string{},
+			apiServerACLEnabled:  true,
+			providerType:         hyperscaler.TypeAWS,
+		},
+		{
+			name:                 "Should not add ACL extension when acl list is empty",
+			previousExtensions:   fixAllExtensionsOnTheShoot(false),
+			inputAuditLogData:    oldAuditLogData,
+			expectedAuditLogData: oldAuditLogData,
+			registryCaches:       newCaches,
+			enableNetworkFilter:  false,
+			apiServerACL:         []string{},
+			apiServerACLEnabled:  true,
+			providerType:         hyperscaler.TypeAWS,
+		},
+		{
+			name:                 "Should not add ACL extension when acl is disabled",
+			previousExtensions:   fixAllExtensionsOnTheShoot(false),
+			inputAuditLogData:    oldAuditLogData,
+			expectedAuditLogData: oldAuditLogData,
+			registryCaches:       newCaches,
+			enableNetworkFilter:  false,
+			apiServerACL:         []string{},
+			apiServerACLEnabled:  false,
+			providerType:         hyperscaler.TypeAWS,
+		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			runtime := fixRuntimeCRForExtensionExtenderTests(testCase.enableNetworkFilter, testCase.registryCaches, nil, "")
+			runtime := fixRuntimeCRForExtensionExtenderTests(testCase.enableNetworkFilter, testCase.registryCaches, testCase.apiServerACL, testCase.providerType)
 
 			shoot := &gardener.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -317,9 +380,10 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 
 			auditLogDataProvided := testCase.inputAuditLogData != (auditlogs.AuditLogData{})
 			registryCacheDataProvided := len(testCase.registryCaches) != 0
+			kubeApiServerACLEnabled := testCase.apiServerACLEnabled && len(testCase.apiServerACL) != 0 && (testCase.providerType == hyperscaler.TypeAWS || testCase.providerType == hyperscaler.TypeAzure)
 
-			extender := NewExtensionsExtenderForPatch(testCase.inputAuditLogData, testCase.previousExtensions, false)
-			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided)
+			extender := NewExtensionsExtenderForPatch(config, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled)
+			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided, kubeApiServerACLEnabled)
 
 			err := extender(runtime, shoot)
 			assert.NoError(t, err)
@@ -348,21 +412,39 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 
 				case RegistryCacheExtensionType:
 					verifyRegistryCacheExtension(t, &ext, testCase.registryCaches)
+				case ApiServerACLExtensionType:
+					{
+						mergedACL := make([]string, 0)
+						if len(testCase.apiServerACL) != 0 {
+							mergedACL = append(mergedACL, testCase.apiServerACL...)
+							mergedACL = append(mergedACL, "2.2.2.2/29", "3.3.3.3/29", "4.4.4.4/29")
+							mergedACL = append(mergedACL, "1.1.1.1/32")
+						}
+
+						verifyACLExtension(t, &ext, mergedACL)
+					}
 				}
 			}
 		})
 	}
 }
 
-func fixAllExtensionsOnTheShoot() []gardener.Extension {
-	return []gardener.Extension{
+func fixAllExtensionsOnTheShoot(aclEnabled bool) []gardener.Extension {
+	extensions := []gardener.Extension{
 		fixAuditLogExtensions(),
 		fixDNSExtension(),
 		fixCertExtension(),
 		fixNetworkExtension(),
 		fixOIDCExtensions(),
 		fixRegistryCacheExtension(),
+		fixKubeApiServerACLExtension(),
 	}
+
+	if aclEnabled {
+		extensions = append(extensions, fixKubeApiServerACLExtension())
+	}
+
+	return extensions
 }
 
 func fixAuditLogExtensions() gardener.Extension {
@@ -416,7 +498,17 @@ func fixRegistryCacheExtension() gardener.Extension {
 	}
 }
 
-func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extension, networkExtAdded bool, auditLogExtAdded bool, registryCacheExtAdded bool) map[string]int {
+func fixKubeApiServerACLExtension() gardener.Extension {
+	return gardener.Extension{
+		Type:     ApiServerACLExtensionType,
+		Disabled: ptr.To(false),
+		ProviderConfig: &runtime.RawExtension{
+			Raw: []byte(`{"rule": {"action": "ALLOW","type": "remote_ip", "cidrs": ["3.3.3.3/32", "4.4.4.4/32"]}}`),
+		},
+	}
+}
+
+func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extension, networkExtAdded bool, auditLogExtAdded bool, registryCacheExtAdded bool, kubeApiServerACLEnabled bool) map[string]int {
 	extensionOrderMap := make(map[string]int)
 
 	for idx, ext := range previousExtensions {
@@ -442,6 +534,20 @@ func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extensi
 
 		if !found {
 			extensionOrderMap[RegistryCacheExtensionType] = len(extensionOrderMap)
+		}
+	}
+
+	if networkExtAdded {
+		_, found := extensionOrderMap[NetworkFilterType]
+		if !found {
+			extensionOrderMap[NetworkFilterType] = len(extensionOrderMap)
+		}
+	}
+
+	if kubeApiServerACLEnabled {
+		_, found := extensionOrderMap[NetworkFilterType]
+		if !found {
+			extensionOrderMap[NetworkFilterType] = len(extensionOrderMap)
 		}
 	}
 

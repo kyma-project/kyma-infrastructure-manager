@@ -98,7 +98,7 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 	}, nil)
 }
 
-func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForPatch(config config.ConverterConfig, auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			AuditlogExtensionType,
@@ -155,6 +155,35 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensio
 				}
 
 				return NewRegistryCacheExtension(runtime.Spec.Caching, existingExtension)
+			},
+		},
+		{
+			Type: ApiServerACLExtensionType,
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+				if !aclNeedToBeEnabled(apiServerAclEnabled, runtime) {
+					if existingExtension(ApiServerACLExtensionType, shoot) == nil {
+						return nil, nil
+					}
+
+					return NewApiServerACLExtension(nil, nil, "")
+				}
+				aclList := AclList{}
+
+				err := aclList.loadOperatorData(func() (io.Reader, error) {
+					return os.Open(config.Kubernetes.KubeApiServer.ACL.IpAddressesPath)
+				})
+				if err != nil {
+					return nil, err
+				}
+
+				err = aclList.loadKcpData(func() (io.Reader, error) {
+					return os.Open(config.Kubernetes.KubeApiServer.ACL.KcpAddressPath)
+				})
+				if err != nil {
+					return nil, err
+				}
+
+				return NewApiServerACLExtension(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs, aclList.OperatorIPs, aclList.KCPIp)
 			},
 		},
 	}, extensionsOnTheShoot)
@@ -218,22 +247,38 @@ func (ac *AclList) loadKcpData(f readerGetter) error {
 }
 
 func aclNeedToBeEnabled(apiServerAclEnabled bool, runtime imv1.Runtime) bool {
-	if !apiServerAclEnabled {
-		return false
-	}
+	//if !apiServerAclEnabled {
+	//	return false
+	//}
+	//
+	//runtimeType := runtime.Spec.Shoot.Provider.Type
+	//if runtimeType =0= hyperscaler.TypeAWS && runtimeType != hyperscaler.TypeAzure {
+	//	return false
+	//}
+	//
+	//if runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL == nil {
+	//	return false
+	//}
+	//
+	//if len(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs) == 0 {
+	//	return false
+	//}
+	//
+	//return true
 
 	runtimeType := runtime.Spec.Shoot.Provider.Type
-	if runtimeType != hyperscaler.TypeAWS && runtimeType != hyperscaler.TypeAzure {
-		return false
-	}
 
-	if runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL == nil {
-		return false
-	}
+	return apiServerAclEnabled &&
+		(runtimeType == hyperscaler.TypeAWS || runtimeType == hyperscaler.TypeAzure) &&
+		runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL != nil &&
+		len(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs) > 0
+}
 
-	if len(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs) == 0 {
-		return false
+func existingExtension(extensionType string, shoot gardener.Shoot) *gardener.Extension {
+	for _, ext := range shoot.Spec.Extensions {
+		if ext.Type == extensionType {
+			return &ext
+		}
 	}
-
-	return true
+	return nil
 }
