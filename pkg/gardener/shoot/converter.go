@@ -105,7 +105,6 @@ func NewConverterCreate(opts CreateOpts) Converter {
 	extendersForCreate = append(extendersForCreate, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration))
 	extendersForCreate = append(extendersForCreate, networking.ExtendWithNetworking(opts.Networking.EnableDualStackIP))
 	extendersForCreate = append(extendersForCreate, extender2.ExtendWithCredentialsBinding(opts.Gardener.EnableCredentialBinding))
-	extendersForCreate = append(extendersForCreate, extender2.NewKubeServerACLExtenderCreate(opts.Kubernetes.KubeApiServer.ACL, opts.ApiServerAclEnabled))
 	return newConverter(opts.ConverterConfig, extendersForCreate...)
 }
 
@@ -128,7 +127,6 @@ func NewConverterPatch(opts PatchOpts) Converter {
 	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
 	extendersForPatch = append(extendersForPatch, maintenance.NewMaintenanceExtender(opts.Kubernetes.EnableKubernetesVersionAutoUpdate, opts.Kubernetes.EnableMachineImageVersionAutoUpdate, opts.MaintenanceTimeWindow))
 	extendersForPatch = append(extendersForPatch, extender2.ExtendWithCredentialsBinding(opts.Gardener.EnableCredentialBinding))
-	extendersForPatch = append(extendersForPatch, extender2.NewKubeServerACLExtenderPatch(opts.Kubernetes.KubeApiServer.ACL, opts.ApiServerAclEnabled))
 
 	if opts.AuditLogData != (auditlogs.AuditLogData{}) {
 		extendersForPatch = append(extendersForPatch,
