@@ -437,7 +437,6 @@ func fixAllExtensionsOnTheShoot(aclEnabled bool) []gardener.Extension {
 		fixNetworkExtension(),
 		fixOIDCExtensions(),
 		fixRegistryCacheExtension(),
-		fixKubeApiServerACLExtension(),
 	}
 
 	if aclEnabled {
@@ -545,9 +544,9 @@ func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extensi
 	}
 
 	if kubeApiServerACLEnabled {
-		_, found := extensionOrderMap[NetworkFilterType]
+		_, found := extensionOrderMap[ApiServerACLExtensionType]
 		if !found {
-			extensionOrderMap[NetworkFilterType] = len(extensionOrderMap)
+			extensionOrderMap[ApiServerACLExtensionType] = len(extensionOrderMap)
 		}
 	}
 
