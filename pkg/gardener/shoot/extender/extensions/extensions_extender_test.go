@@ -3,6 +3,7 @@ package extensions
 import (
 	"encoding/json"
 	"fmt"
+
 	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
 	registrycache "github.com/kyma-project/registry-cache/api/v1beta1"
 	"github.com/stretchr/testify/require"
@@ -80,7 +81,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 				},
 			}
 
-			extender := NewExtensionsExtenderForCreate(config, testcase.inputAuditLogData, testcase.registryCache)
+			extender := NewExtensionsExtenderForCreate(config, testcase.inputAuditLogData, testcase.registryCache, false)
 
 			err := extender(runtime, shoot)
 			assert.NoError(t, err)
@@ -268,7 +269,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			auditLogDataProvided := testCase.inputAuditLogData != (auditlogs.AuditLogData{})
 			registryCacheDataProvided := len(testCase.registryCaches) != 0
 
-			extender := NewExtensionsExtenderForPatch(testCase.inputAuditLogData, testCase.previousExtensions)
+			extender := NewExtensionsExtenderForPatch(testCase.inputAuditLogData, testCase.previousExtensions, false)
 			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided)
 
 			err := extender(runtime, shoot)
