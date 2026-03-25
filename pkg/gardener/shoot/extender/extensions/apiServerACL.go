@@ -15,12 +15,40 @@ type AclList struct {
 	KCPIp       string
 }
 
-func NewApiServerACLExtension(operatorIPs []string, kcpIP string) (*gardener.Extension, error) {
-	rawExtension, err := json.Marshal("test")
+type aclProviderConfig struct {
+	Rule aclRule `json:"rule"`
+}
+
+type aclRule struct {
+	Action string   `json:"action"`
+	Cidrs  []string `json:"cidrs"`
+	Type   string   `json:"type"`
+}
+
+func NewApiServerACLExtension(userIPs, operatorIPs []string, kcpIP string) (*gardener.Extension, error) {
+	return applyAccessControlList(createAccessControlList(userIPs, operatorIPs, kcpIP))
+}
+
+func createAccessControlList(userIPs, operatorIPs []string, kcpIP string) []string {
+	var allowedCIDRs []string
+
+	allowedCIDRs = append(allowedCIDRs, userIPs...)
+	allowedCIDRs = append(allowedCIDRs, operatorIPs...)
+	allowedCIDRs = append(allowedCIDRs, kcpIP)
+
+	return allowedCIDRs
+}
+
+func applyAccessControlList(aclList []string) (*gardener.Extension, error) {
+	aclExtension := aclProviderConfig{Rule: aclRule{Action: "ALLOW", Cidrs: aclList, Type: "remote_ip"}}
+	rawExtension, encodingErr := json.Marshal(aclExtension)
+	if encodingErr != nil {
+		return nil, encodingErr
+	}
 
 	return &gardener.Extension{
 		Type:           "acl",
 		ProviderConfig: &runtime.RawExtension{Raw: rawExtension},
 		Disabled:       ptr.To(false),
-	}, err
+	}, nil
 }

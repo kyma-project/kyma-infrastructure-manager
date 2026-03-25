@@ -141,23 +141,27 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 
 				switch ext.Type {
 				case NetworkFilterType:
-
 					verifyNetworkFilterExtension(t, ext, testcase.enableNetworkFilter)
 
 				case CertExtensionType:
-
 					verifyCertExtension(t, ext)
 
 				case DNSExtensionType:
-
 					verifyDNSExtension(t, ext)
 
 				case OidcExtensionType:
-
 					verifyOIDCExtension(t, ext)
 
 				case RegistryCacheExtensionType:
 					verifyRegistryCacheExtension(t, &ext, testcase.registryCache)
+				case ApiServerACLExtensionType:
+					{
+						mergedACL := testcase.apiServerACL
+						mergedACL = append(mergedACL, "2.2.2.2/29", "3.3.3.3/29", "4.4.4.4/29")
+						mergedACL = append(mergedACL, "1.1.1.1/32")
+
+						verifyACLExtension(t, &ext, mergedACL)
+					}
 				}
 			}
 		})
@@ -565,6 +569,25 @@ func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches 
 	}
 
 	assert.Nil(t, registryConfig.Caches[0].Proxy)
+}
+
+func verifyACLExtension(t *testing.T, ext *gardener.Extension, acl []string) {
+	if len(acl) == 0 {
+		assert.True(t, ext != nil || (ext.ProviderConfig == nil && *ext.Disabled))
+
+		return
+	}
+
+	require.NotNil(t, ext.Disabled)
+	require.Equal(t, false, *ext.Disabled)
+
+	var aclConfig aclProviderConfig
+	err := json.Unmarshal(ext.ProviderConfig.Raw, &aclConfig)
+	require.NoError(t, err)
+
+	assert.Equal(t, "ALLOW", aclConfig.Rule.Action)
+	assert.Equal(t, "remote_ip", aclConfig.Rule.Type)
+	assert.Equal(t, acl, aclConfig.Rule.Cidrs)
 }
 
 func fixRuntimeCRForExtensionExtenderTests(networkFilterEnabled bool, registryCache []imv1.ImageRegistryCache, apiServerACL []string, providerType string) imv1.Runtime {

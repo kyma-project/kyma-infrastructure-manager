@@ -92,7 +92,7 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 					return nil, err
 				}
 
-				return NewApiServerACLExtension(aclList.OperatorIPs, aclList.KCPIp)
+				return NewApiServerACLExtension(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs, aclList.OperatorIPs, aclList.KCPIp)
 			},
 		},
 	}, nil)
