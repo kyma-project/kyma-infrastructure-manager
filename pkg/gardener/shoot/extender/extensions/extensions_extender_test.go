@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	registrycache "github.com/kyma-project/registry-cache/api/v1beta1"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,6 +62,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 		apiServerACL        []string
 		apiServerACLEnabled bool
 		extensionOrderMap   map[string]int
+		providerType        string
 	}{
 		{
 			name:                "Should create all extensions for new Shoot in the right order, network filter is enabled",
@@ -70,6 +72,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 			apiServerACL:        []string{"1.1.1.1/32", "2.2.2.2/32"},
 			apiServerACLEnabled: true,
 			extensionOrderMap:   getExpectedExtensionsOrderMapForCreate(),
+			providerType:        hyperscaler.TypeAWS,
 		},
 		{
 			name:                "Should create all extensions for new Shoot in the right order, network filter is disabled",
@@ -79,15 +82,43 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 			apiServerACL:        []string{"1.1.1.1/32", "2.2.2.2/32"},
 			apiServerACLEnabled: true,
 			extensionOrderMap:   getExpectedExtensionsOrderMapForCreate(),
+			providerType:        hyperscaler.TypeAzure,
 		},
 		{
-			name:              "Should not include AuditLog extension for new Shoot when input auditLogData is empty",
-			inputAuditLogData: auditlogs.AuditLogData{},
-			extensionOrderMap: getExpectedExtensionsOrderMapForCreateWithoutOptional(),
+			name:                "Should not include AuditLog extension for new Shoot when input auditLogData is empty",
+			inputAuditLogData:   auditlogs.AuditLogData{},
+			extensionOrderMap:   getExpectedExtensionsOrderMapForCreateWithoutOptional(),
+			providerType:        hyperscaler.TypeAWS,
+			apiServerACLEnabled: false,
+		},
+		{
+			name:                "Should not include ACL extension for new Shoot when feature flag in disabled",
+			inputAuditLogData:   auditlogs.AuditLogData{},
+			apiServerACL:        []string{"1.1.1.1/32", "2.2.2.2/32"},
+			apiServerACLEnabled: false,
+			extensionOrderMap:   getExpectedExtensionsOrderMapForCreateWithoutOptional(),
+			providerType:        hyperscaler.TypeAWS,
+		},
+		{
+			name:                "Should not include ACL extension for new Shoot when hyperscaler type is not supported",
+			inputAuditLogData:   auditlogs.AuditLogData{},
+			apiServerACL:        []string{"1.1.1.1/32", "2.2.2.2/32"},
+			apiServerACLEnabled: true,
+			extensionOrderMap:   getExpectedExtensionsOrderMapForCreateWithoutOptional(),
+			providerType:        hyperscaler.TypeGCP,
+		},
+		{
+			name:                "Should not include ACL extension for new Shoot when ACL is empty",
+			inputAuditLogData:   auditlogs.AuditLogData{},
+			apiServerACL:        []string{},
+			apiServerACLEnabled: true,
+			extensionOrderMap:   getExpectedExtensionsOrderMapForCreateWithoutOptional(),
+			providerType:        hyperscaler.TypeAWS,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			runtime := fixRuntimeCRForExtensionExtenderTests(testcase.enableNetworkFilter, testcase.registryCache, testcase.apiServerACL)
+			providerType := testcase.providerType
+			runtime := fixRuntimeCRForExtensionExtenderTests(testcase.enableNetworkFilter, testcase.registryCache, testcase.apiServerACL, providerType)
 
 			shoot := &gardener.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -272,7 +303,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			runtime := fixRuntimeCRForExtensionExtenderTests(testCase.enableNetworkFilter, testCase.registryCaches, nil)
+			runtime := fixRuntimeCRForExtensionExtenderTests(testCase.enableNetworkFilter, testCase.registryCaches, nil, "")
 
 			shoot := &gardener.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -536,11 +567,14 @@ func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches 
 	assert.Nil(t, registryConfig.Caches[0].Proxy)
 }
 
-func fixRuntimeCRForExtensionExtenderTests(networkFilterEnabled bool, registryCache []imv1.ImageRegistryCache, apiServerACL []string) imv1.Runtime {
+func fixRuntimeCRForExtensionExtenderTests(networkFilterEnabled bool, registryCache []imv1.ImageRegistryCache, apiServerACL []string, providerType string) imv1.Runtime {
 	runtime := imv1.Runtime{
 		Spec: imv1.RuntimeSpec{
 			Shoot: imv1.RuntimeShoot{
 				Name: "myshoot",
+				Provider: imv1.Provider{
+					Type: providerType,
+				},
 				Kubernetes: imv1.Kubernetes{
 					KubeAPIServer: imv1.APIServer{
 						ACL: &imv1.ACL{

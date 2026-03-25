@@ -10,6 +10,7 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 )
 
 type CreateExtensionFunc func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error)
@@ -71,12 +72,10 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 		{
 			Type: ApiServerACLExtensionType,
 			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-				// warunki brzegowe
-				if !aclNeedToBeEnabled(apiServerAclEnabled) {
+				if !aclNeedToBeEnabled(apiServerAclEnabled, runtime) {
 					return nil, nil
 				}
 
-				// otwietnanie plikow
 				aclList := AclList{}
 
 				err := aclList.loadOperatorData(func() (io.Reader, error) {
@@ -218,6 +217,23 @@ func (ac *AclList) loadKcpData(f readerGetter) error {
 	return json.NewDecoder(r).Decode(&ac.KCPIp)
 }
 
-func aclNeedToBeEnabled(apiServerAclEnabled bool) bool {
-	return apiServerAclEnabled
+func aclNeedToBeEnabled(apiServerAclEnabled bool, runtime imv1.Runtime) bool {
+	if !apiServerAclEnabled {
+		return false
+	}
+
+	runtimeType := runtime.Spec.Shoot.Provider.Type
+	if runtimeType != hyperscaler.TypeAWS && runtimeType != hyperscaler.TypeAzure {
+		return false
+	}
+
+	if runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL == nil {
+		return false
+	}
+
+	if len(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs) == 0 {
+		return false
+	}
+
+	return true
 }
