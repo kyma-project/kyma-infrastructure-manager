@@ -155,13 +155,11 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 				case RegistryCacheExtensionType:
 					verifyRegistryCacheExtension(t, &ext, testcase.registryCache)
 				case ApiServerACLExtensionType:
-					{
-						mergedACL := testcase.apiServerACL
-						mergedACL = append(mergedACL, "2.2.2.2/29", "3.3.3.3/29", "4.4.4.4/29")
-						mergedACL = append(mergedACL, "1.1.1.1/32")
+					mergedACL := testcase.apiServerACL
+					mergedACL = append(mergedACL, "2.2.2.2/29", "3.3.3.3/29", "4.4.4.4/29")
+					mergedACL = append(mergedACL, "1.1.1.1/32")
 
-						verifyACLExtension(t, &ext, mergedACL)
-					}
+					verifyACLExtension(t, &ext, mergedACL)
 				}
 			}
 		})
@@ -402,16 +400,15 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 				case RegistryCacheExtensionType:
 					verifyRegistryCacheExtension(t, &ext, testCase.registryCaches)
 				case ApiServerACLExtensionType:
-					{
-						mergedACL := make([]string, 0)
-						if len(testCase.apiServerACL) != 0 {
-							mergedACL = append(mergedACL, testCase.apiServerACL...)
-							mergedACL = append(mergedACL, "2.2.2.2/29", "3.3.3.3/29", "4.4.4.4/29")
-							mergedACL = append(mergedACL, "1.1.1.1/32")
-						}
-
-						verifyACLExtension(t, &ext, mergedACL)
+					mergedACL := make([]string, 0)
+					if len(testCase.apiServerACL) != 0 {
+						mergedACL = append(mergedACL, testCase.apiServerACL...)
+						mergedACL = append(mergedACL, "2.2.2.2/29", "3.3.3.3/29", "4.4.4.4/29")
+						mergedACL = append(mergedACL, "1.1.1.1/32")
 					}
+
+					verifyACLExtension(t, &ext, mergedACL)
+
 				}
 			}
 		})
