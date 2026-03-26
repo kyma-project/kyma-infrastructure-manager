@@ -2,6 +2,7 @@ package extensions
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"slices"
 
@@ -195,14 +196,17 @@ func loadIPsFromFile(kcpIpPath string, operatorIPPath string) (kcpIp string, ope
 	loadIPs := func(path string, ips any) error {
 		f, err := os.Open(path)
 		if err != nil {
-			return err
+			return fmt.Errorf("opening %s: %w", path, err)
 		}
 
 		defer func() {
 			_ = f.Close()
 		}()
 
-		return json.NewDecoder(f).Decode(ips)
+		if err := json.NewDecoder(f).Decode(ips); err != nil {
+			return fmt.Errorf("decoding %s: %w", path, err)
+		}
+		return nil
 	}
 
 	err = loadIPs(kcpIpPath, &kcpIp)
