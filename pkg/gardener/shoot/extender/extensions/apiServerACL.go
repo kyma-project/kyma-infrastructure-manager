@@ -3,10 +3,11 @@ package extensions
 import (
 	"encoding/json"
 	"fmt"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"os"
 	"slices"
+
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
