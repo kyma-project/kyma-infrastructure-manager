@@ -11,11 +11,6 @@ import (
 
 const ApiServerACLExtensionType string = "acl"
 
-type AclList struct {
-	OperatorIPs []string
-	KCPIp       string
-}
-
 type aclProviderConfig struct {
 	Rule aclRule `json:"rule"`
 }
@@ -28,11 +23,9 @@ type aclRule struct {
 
 func NewApiServerACLExtension(userIPs, operatorIPs []string, kcpIP string) (*gardener.Extension, error) {
 	if len(userIPs) != 0 {
-		// create / update flow
 		return applyAccessControlList(slices.Concat(userIPs, operatorIPs, []string{kcpIP}))
 	}
 
-	// disable flow
 	return &gardener.Extension{
 		Type:     ApiServerACLExtensionType,
 		Disabled: ptr.To(true),

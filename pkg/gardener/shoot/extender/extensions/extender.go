@@ -2,7 +2,6 @@ package extensions
 
 import (
 	"encoding/json"
-	"io"
 	"os"
 	"slices"
 
@@ -72,27 +71,15 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 		{
 			Type: ApiServerACLExtensionType,
 			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-				if !aclNeedToBeEnabled(apiServerAclEnabled, runtime) {
+				if !aclNeedsToBeEnabled(apiServerAclEnabled, runtime) {
 					return nil, nil
 				}
 
-				aclList := AclList{}
-
-				err := aclList.loadOperatorData(func() (io.Reader, error) {
-					return os.Open(config.Kubernetes.KubeApiServer.ACL.IpAddressesPath)
-				})
+				kcpIPs, operatorIPs, err := loadIPsFromFile(config.Kubernetes.KubeApiServer.ACL.KcpAddressPath, config.Kubernetes.KubeApiServer.ACL.IpAddressesPath)
 				if err != nil {
 					return nil, err
 				}
-
-				err = aclList.loadKcpData(func() (io.Reader, error) {
-					return os.Open(config.Kubernetes.KubeApiServer.ACL.KcpAddressPath)
-				})
-				if err != nil {
-					return nil, err
-				}
-
-				return NewApiServerACLExtension(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs, aclList.OperatorIPs, aclList.KCPIp)
+				return NewApiServerACLExtension(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs, operatorIPs, kcpIPs)
 			},
 		},
 	}, nil)
@@ -145,45 +132,26 @@ func NewExtensionsExtenderForPatch(config config.ConverterConfig, auditLogData a
 		{
 			Type: RegistryCacheExtensionType,
 			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-				var existingExtension *gardener.Extension
-
-				for _, ext := range shoot.Spec.Extensions {
-					if ext.Type == RegistryCacheExtensionType {
-						existingExtension = &ext
-						break
-					}
-				}
-
-				return NewRegistryCacheExtension(runtime.Spec.Caching, existingExtension)
+				return NewRegistryCacheExtension(runtime.Spec.Caching, existingExtension(RegistryCacheExtensionType, shoot))
 			},
 		},
 		{
 			Type: ApiServerACLExtensionType,
 			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-				if !aclNeedToBeEnabled(apiServerAclEnabled, runtime) {
+				if !aclNeedsToBeEnabled(apiServerAclEnabled, runtime) {
 					if existingExtension(ApiServerACLExtensionType, shoot) == nil {
 						return nil, nil
 					}
 
 					return NewApiServerACLExtension(nil, nil, "")
 				}
-				aclList := AclList{}
 
-				err := aclList.loadOperatorData(func() (io.Reader, error) {
-					return os.Open(config.Kubernetes.KubeApiServer.ACL.IpAddressesPath)
-				})
+				kcpIPs, operatorIPs, err := loadIPsFromFile(config.Kubernetes.KubeApiServer.ACL.KcpAddressPath, config.Kubernetes.KubeApiServer.ACL.IpAddressesPath)
 				if err != nil {
 					return nil, err
 				}
 
-				err = aclList.loadKcpData(func() (io.Reader, error) {
-					return os.Open(config.Kubernetes.KubeApiServer.ACL.KcpAddressPath)
-				})
-				if err != nil {
-					return nil, err
-				}
-
-				return NewApiServerACLExtension(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs, aclList.OperatorIPs, aclList.KCPIp)
+				return NewApiServerACLExtension(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs, operatorIPs, kcpIPs)
 			},
 		},
 	}, extensionsOnTheShoot)
@@ -222,31 +190,35 @@ func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensi
 	}
 }
 
-type readerGetter = func() (io.Reader, error)
+func loadIPsFromFile(kcpIpPath string, operatorIPPath string) (kcpIp string, operatorIPs []string, err error) {
 
-func (ac *AclList) loadOperatorData(f readerGetter) error {
-	r, err := f()
+	loadIPs := func(path string, ips any) error {
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+
+		defer func() {
+			_ = f.Close()
+		}()
+
+		return json.NewDecoder(f).Decode(ips)
+	}
+
+	err = loadIPs(kcpIpPath, &kcpIp)
 	if err != nil {
-		return err
+		return "", nil, err
 	}
-	if closer, ok := r.(io.Closer); ok {
-		defer closer.Close()
+
+	err = loadIPs(operatorIPPath, &operatorIPs)
+	if err != nil {
+		return "", nil, err
 	}
-	return json.NewDecoder(r).Decode(&ac.OperatorIPs)
+
+	return kcpIp, operatorIPs, nil
 }
 
-func (ac *AclList) loadKcpData(f readerGetter) error {
-	r, err := f()
-	if err != nil {
-		return err
-	}
-	if closer, ok := r.(io.Closer); ok {
-		defer closer.Close()
-	}
-	return json.NewDecoder(r).Decode(&ac.KCPIp)
-}
-
-func aclNeedToBeEnabled(apiServerAclEnabled bool, runtime imv1.Runtime) bool {
+func aclNeedsToBeEnabled(apiServerAclEnabled bool, runtime imv1.Runtime) bool {
 	runtimeType := runtime.Spec.Shoot.Provider.Type
 
 	return apiServerAclEnabled &&
