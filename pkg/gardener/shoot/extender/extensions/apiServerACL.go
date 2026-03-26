@@ -52,7 +52,6 @@ func applyAccessControlList(aclList []string) (*gardener.Extension, error) {
 }
 
 func loadIPsFromFile(kcpIpPath string, operatorIPPath string) (operatorIPs []string, kcpIp string, err error) {
-
 	loadIPs := func(path string, ips any) error {
 		f, err := os.Open(path)
 		if err != nil {
