@@ -25,13 +25,13 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-// MaxPodsFromPodsCIDR parses the pods CIDR (IPv4 only, e.g. "100.64.0.0/24") and returns
+// MaxPodsFromCIDR parses the pods CIDR (IPv4 only, e.g. "100.64.0.0/24") and returns
 // the number of usable pod IPs, accounting for reserved network and broadcast addresses.
 // IPv4: /32: 1 usable (host route). /31: 2 usable (point-to-point, RFC 3021).
 // /30 and larger: 2^(32-mask) - 2 (network + broadcast reserved).
 // Results exceeding math.MaxInt32 are capped at math.MaxInt32.
 // Returns error if the CIDR is invalid, the mask is out of range (2-32), or the CIDR is IPv6.
-func MaxPodsFromPodsCIDR(podsCIDR string) (int64, error) {
+func MaxPodsFromCIDR(podsCIDR string) (int64, error) {
 	prefix, err := netip.ParsePrefix(podsCIDR)
 	if err != nil {
 		return 0, errors.Wrap(err, "failed to parse pods CIDR")

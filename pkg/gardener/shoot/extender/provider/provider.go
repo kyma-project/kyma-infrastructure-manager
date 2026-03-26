@@ -282,20 +282,25 @@ func setWorkerSettings(provider *gardener.Provider, podsCIDR string) error {
 			Enabled: false,
 		},
 	}
-	if podsCIDR != "" {
-		perNodeLimit, err := maxpods.MaxPodsFromPodsCIDR(maxpods.CanonicalPodsCIDRSlash24)
-		if err != nil {
-			return errors.Wrap(err, "per-node maxPods limit from /24 pods CIDR")
-		}
-		maxpods.ApplyPerNodeMaxPodsCap(provider.Workers, int32(perNodeLimit))
-		totalIPs, err := maxpods.MaxPodsFromPodsCIDR(podsCIDR)
-		if err != nil {
-			return errors.Wrap(err, "invalid pods CIDR for maxPods calculation")
-		}
-		if err := maxpods.ApplyMaxPodsWithTotalCap(provider.Workers, totalIPs); err != nil {
-			return errors.Wrap(err, "maxPods clamping")
-		}
+	perNodeLimit, err := maxpods.MaxPodsFromCIDR(maxpods.CanonicalPodsCIDRSlash24)
+	if err != nil {
+		return errors.Wrap(err, "per-node maxPods limit from /24 pods CIDR")
 	}
+	maxpods.ApplyPerNodeMaxPodsCap(provider.Workers, int32(perNodeLimit))
+
+	if podsCIDR == "" {
+		return nil
+	}
+
+	totalIPs, err := maxpods.MaxPodsFromCIDR(podsCIDR)
+	if err != nil {
+		return errors.Wrap(err, "invalid pods CIDR for maxPods calculation")
+	}
+
+	if err := maxpods.ApplyMaxPodsWithTotalCap(provider.Workers, totalIPs); err != nil {
+		return errors.Wrap(err, "maxPods clamping")
+	}
+
 	return nil
 }
 
