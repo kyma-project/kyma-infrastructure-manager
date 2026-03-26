@@ -282,6 +282,7 @@ func setWorkerSettings(provider *gardener.Provider, podsCIDR string) error {
 			Enabled: false,
 		},
 	}
+
 	perNodeLimit, err := maxpods.MaxPodsFromCIDR(maxpods.CanonicalPodsCIDRSlash24)
 	if err != nil {
 		return errors.Wrap(err, "per-node maxPods limit from /24 pods CIDR")

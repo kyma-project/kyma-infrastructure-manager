@@ -123,8 +123,8 @@ func TestMaxPodsClamping(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid pods CIDR for maxPods calculation")
 	})
-	t.Run("Skip maxPods clamping when pods CIDR is empty", func(t *testing.T) {
-		// given: empty pods CIDR - extender should succeed without applying maxPods logic
+	t.Run("Empty pods CIDR: per-node /24 cap only, skip aggregate clamping", func(t *testing.T) {
+		// given: no pods CIDR — cannot sum maxPods against cluster pod IPs; /24 per-node limit still applies
 		shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 		workers := fixWorkers("worker", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a"})
 		workers[0].Kubernetes = &gardener.WorkerKubernetes{
@@ -135,7 +135,7 @@ func TestMaxPodsClamping(t *testing.T) {
 				Shoot: imv1.RuntimeShoot{
 					Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAWS, workers),
 					Networking: imv1.Networking{
-						Pods:     "", // empty - skip maxPods
+						Pods:     "",
 						Nodes:    "10.250.0.0/22",
 						Services: "100.104.0.0/13",
 					},
@@ -147,9 +147,9 @@ func TestMaxPodsClamping(t *testing.T) {
 		extender := NewProviderExtenderForCreateOperation(false, false, "gardenlinux", "1312.3.0")
 		err := extender(rt, &shoot)
 
-		// then: no error, maxPods left unchanged (500)
+		// then: no error, maxPods clamped to /24 ceiling (254)
 		require.NoError(t, err)
-		assert.Equal(t, int32(500), *shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.MaxPods)
+		assert.Equal(t, int32(254), *shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.MaxPods)
 	})
 	t.Run("Clamp last worker when sum exceeds totalIPs", func(t *testing.T) {
 		// given: per-node cap leaves worker2 at 254; pods /24 = 254 total; sum 100+254 > 254 — clamp last
