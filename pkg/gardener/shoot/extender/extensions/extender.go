@@ -17,7 +17,7 @@ type Extension struct {
 	Create CreateExtensionFunc
 }
 
-func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData auditlogs.AuditLogData, registryCache []imv1.ImageRegistryCache) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData auditlogs.AuditLogData, registryCache []imv1.ImageRegistryCache, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			Type: NetworkFilterType,
@@ -66,10 +66,24 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 				return NewRegistryCacheExtension(registryCache, nil)
 			},
 		},
+		{
+			Type: ApiServerACLExtensionType,
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+				if !aclNeedsToBeEnabled(apiServerAclEnabled, runtime) {
+					return nil, nil
+				}
+
+				operatorIPs, kcpIPs, err := loadIPsFromFile(config.Kubernetes.KubeApiServer.ACL.KcpAddressPath, config.Kubernetes.KubeApiServer.ACL.IpAddressesPath)
+				if err != nil {
+					return nil, err
+				}
+				return NewApiServerACLExtension(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs, operatorIPs, kcpIPs)
+			},
+		},
 	}, nil)
 }
 
-func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForPatch(config config.ConverterConfig, auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			AuditlogExtensionType,
@@ -116,16 +130,26 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensio
 		{
 			Type: RegistryCacheExtensionType,
 			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-				var existingExtension *gardener.Extension
-
-				for _, ext := range shoot.Spec.Extensions {
-					if ext.Type == RegistryCacheExtensionType {
-						existingExtension = &ext
-						break
+				return NewRegistryCacheExtension(runtime.Spec.Caching, existingExtension(RegistryCacheExtensionType, shoot))
+			},
+		},
+		{
+			Type: ApiServerACLExtensionType,
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+				if !aclNeedsToBeEnabled(apiServerAclEnabled, runtime) {
+					if existingExtension(ApiServerACLExtensionType, shoot) == nil {
+						return nil, nil
 					}
+
+					return NewApiServerACLExtension(nil, nil, "")
 				}
 
-				return NewRegistryCacheExtension(runtime.Spec.Caching, existingExtension)
+				operatorIPs, kcpIPs, err := loadIPsFromFile(config.Kubernetes.KubeApiServer.ACL.KcpAddressPath, config.Kubernetes.KubeApiServer.ACL.IpAddressesPath)
+				if err != nil {
+					return nil, err
+				}
+
+				return NewApiServerACLExtension(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs, operatorIPs, kcpIPs)
 			},
 		},
 	}, extensionsOnTheShoot)
@@ -162,4 +186,13 @@ func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensi
 
 		return nil
 	}
+}
+
+func existingExtension(extensionType string, shoot gardener.Shoot) *gardener.Extension {
+	for _, ext := range shoot.Spec.Extensions {
+		if ext.Type == extensionType {
+			return &ext
+		}
+	}
+	return nil
 }
