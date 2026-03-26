@@ -511,10 +511,11 @@ func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extensi
 		}
 	}
 
-	_, found := extensionOrderMap[NetworkFilterType]
-
-	if !found {
-		extensionOrderMap[NetworkFilterType] = len(extensionOrderMap)
+	if networkExtAdded {
+		_, found := extensionOrderMap[NetworkFilterType]
+		if !found {
+			extensionOrderMap[NetworkFilterType] = len(extensionOrderMap)
+		}
 	}
 
 	if registryCacheExtAdded {
@@ -522,13 +523,6 @@ func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extensi
 
 		if !found {
 			extensionOrderMap[RegistryCacheExtensionType] = len(extensionOrderMap)
-		}
-	}
-
-	if networkExtAdded {
-		_, found := extensionOrderMap[NetworkFilterType]
-		if !found {
-			extensionOrderMap[NetworkFilterType] = len(extensionOrderMap)
 		}
 	}
 

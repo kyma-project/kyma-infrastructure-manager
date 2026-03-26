@@ -2,15 +2,12 @@ package extensions
 
 import (
 	"encoding/json"
-	"fmt"
-	"os"
 	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 )
 
 type CreateExtensionFunc func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error)
@@ -189,46 +186,6 @@ func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensi
 
 		return nil
 	}
-}
-
-func loadIPsFromFile(kcpIpPath string, operatorIPPath string) (operatorIPs []string, kcpIp string, err error) {
-
-	loadIPs := func(path string, ips any) error {
-		f, err := os.Open(path)
-		if err != nil {
-			return fmt.Errorf("opening %s: %w", path, err)
-		}
-
-		defer func() {
-			_ = f.Close()
-		}()
-
-		if err := json.NewDecoder(f).Decode(ips); err != nil {
-			return fmt.Errorf("decoding %s: %w", path, err)
-		}
-		return nil
-	}
-
-	err = loadIPs(operatorIPPath, &operatorIPs)
-	if err != nil {
-		return nil, "", err
-	}
-
-	err = loadIPs(kcpIpPath, &kcpIp)
-	if err != nil {
-		return nil, "", err
-	}
-
-	return operatorIPs, kcpIp, nil
-}
-
-func aclNeedsToBeEnabled(apiServerAclEnabled bool, runtime imv1.Runtime) bool {
-	runtimeType := runtime.Spec.Shoot.Provider.Type
-
-	return apiServerAclEnabled &&
-		(runtimeType == hyperscaler.TypeAWS || runtimeType == hyperscaler.TypeAzure) &&
-		runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL != nil &&
-		len(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs) > 0
 }
 
 func existingExtension(extensionType string, shoot gardener.Shoot) *gardener.Extension {
