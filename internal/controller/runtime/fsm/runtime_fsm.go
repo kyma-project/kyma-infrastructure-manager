@@ -33,6 +33,7 @@ type RCCfg struct {
 	Finalizer                            string
 	ShootNamesapace                      string
 	AuditLogMandatory                    bool
+	ApiServerAclEnabled                  bool
 	Metrics                              metrics.Metrics
 	AuditLogging                         auditlogs.Configuration
 	RegistryCacheConfigControllerEnabled bool

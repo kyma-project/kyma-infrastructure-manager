@@ -32,7 +32,12 @@ type WorkerPool struct {
 }
 
 type NetworkDetails struct {
-	DualStackIPEnabled bool `json:"dualStackIPEnabled"`
+	DualStackIPEnabled bool          `json:"dualStackIPEnabled"`
+	KubeAPIServer      KubeAPIServer `json:"kubeAPIServer,omitzero"`
+}
+
+type KubeAPIServer struct {
+	ACL []string `json:"acl,omitzero"`
 }
 
 func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaProvisioningInfo {
@@ -66,6 +71,11 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 		}
 	}
 
+	var kubeAPIServer KubeAPIServer
+	if acl := AppliedACL(runtime); len(acl) > 0 {
+		kubeAPIServer = KubeAPIServer{ACL: acl}
+	}
+
 	return KymaProvisioningInfo{
 		WorkerPools: WorkerPools{
 			Kyma:   kymaWorkerPool,
@@ -78,6 +88,7 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 		InfrastructureConfig:  *shoot.Spec.Provider.InfrastructureConfig,
 		NetworkDetails: NetworkDetails{
 			DualStackIPEnabled: IsDualStackEnabled(shoot),
+			KubeAPIServer:      kubeAPIServer,
 		},
 	}
 }
