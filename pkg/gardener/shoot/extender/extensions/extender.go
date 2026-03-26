@@ -76,7 +76,7 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 					return nil, nil
 				}
 
-				kcpIPs, operatorIPs, err := loadIPsFromFile(config.Kubernetes.KubeApiServer.ACL.KcpAddressPath, config.Kubernetes.KubeApiServer.ACL.IpAddressesPath)
+				operatorIPs, kcpIPs, err := loadIPsFromFile(config.Kubernetes.KubeApiServer.ACL.KcpAddressPath, config.Kubernetes.KubeApiServer.ACL.IpAddressesPath)
 				if err != nil {
 					return nil, err
 				}
@@ -147,7 +147,7 @@ func NewExtensionsExtenderForPatch(config config.ConverterConfig, auditLogData a
 					return NewApiServerACLExtension(nil, nil, "")
 				}
 
-				kcpIPs, operatorIPs, err := loadIPsFromFile(config.Kubernetes.KubeApiServer.ACL.KcpAddressPath, config.Kubernetes.KubeApiServer.ACL.IpAddressesPath)
+				operatorIPs, kcpIPs, err := loadIPsFromFile(config.Kubernetes.KubeApiServer.ACL.KcpAddressPath, config.Kubernetes.KubeApiServer.ACL.IpAddressesPath)
 				if err != nil {
 					return nil, err
 				}
@@ -191,7 +191,7 @@ func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensi
 	}
 }
 
-func loadIPsFromFile(kcpIpPath string, operatorIPPath string) (kcpIp string, operatorIPs []string, err error) {
+func loadIPsFromFile(kcpIpPath string, operatorIPPath string) (operatorIPs []string, kcpIp string, err error) {
 
 	loadIPs := func(path string, ips any) error {
 		f, err := os.Open(path)
@@ -209,17 +209,17 @@ func loadIPsFromFile(kcpIpPath string, operatorIPPath string) (kcpIp string, ope
 		return nil
 	}
 
-	err = loadIPs(kcpIpPath, &kcpIp)
-	if err != nil {
-		return "", nil, err
-	}
-
 	err = loadIPs(operatorIPPath, &operatorIPs)
 	if err != nil {
-		return "", nil, err
+		return nil, "", err
 	}
 
-	return kcpIp, operatorIPs, nil
+	err = loadIPs(kcpIpPath, &kcpIp)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return operatorIPs, kcpIp, nil
 }
 
 func aclNeedsToBeEnabled(apiServerAclEnabled bool, runtime imv1.Runtime) bool {

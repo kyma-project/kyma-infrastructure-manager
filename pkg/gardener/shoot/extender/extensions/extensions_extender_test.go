@@ -100,20 +100,20 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 			providerType:        hyperscaler.TypeAWS,
 		},
 		{
+			name:                "Should not include ACL extension for new Shoot when ACL is empty on Runtime CR",
+			inputAuditLogData:   auditlogs.AuditLogData{},
+			apiServerACL:        []string{},
+			apiServerACLEnabled: true,
+			extensionOrderMap:   getExpectedExtensionsOrderMapForCreateWithoutOptional(),
+			providerType:        hyperscaler.TypeAWS,
+		},
+		{
 			name:                "Should not include ACL extension for new Shoot when hyperscaler type is not supported",
 			inputAuditLogData:   auditlogs.AuditLogData{},
 			apiServerACL:        []string{"1.1.1.1/32", "2.2.2.2/32"},
 			apiServerACLEnabled: true,
 			extensionOrderMap:   getExpectedExtensionsOrderMapForCreateWithoutOptional(),
 			providerType:        hyperscaler.TypeGCP,
-		},
-		{
-			name:                "Should not include ACL extension for new Shoot when ACL is empty",
-			inputAuditLogData:   auditlogs.AuditLogData{},
-			apiServerACL:        []string{},
-			apiServerACLEnabled: true,
-			extensionOrderMap:   getExpectedExtensionsOrderMapForCreateWithoutOptional(),
-			providerType:        hyperscaler.TypeAWS,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
@@ -336,19 +336,8 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			providerType:         hyperscaler.TypeAWS,
 		},
 		{
-			name:                 "Should disable ACL extension without changing order and data of other extensions",
+			name:                 "Should disable ACL extension without changing order and data of other extensions when acl is empty on Runtime CR",
 			previousExtensions:   fixAllExtensionsOnTheShoot(true),
-			inputAuditLogData:    oldAuditLogData,
-			expectedAuditLogData: oldAuditLogData,
-			registryCaches:       newCaches,
-			enableNetworkFilter:  false,
-			apiServerACL:         []string{},
-			apiServerACLEnabled:  true,
-			providerType:         hyperscaler.TypeAWS,
-		},
-		{
-			name:                 "Should not add ACL extension when acl list is empty",
-			previousExtensions:   fixAllExtensionsOnTheShoot(false),
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
 			registryCaches:       newCaches,
@@ -364,7 +353,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			expectedAuditLogData: oldAuditLogData,
 			registryCaches:       newCaches,
 			enableNetworkFilter:  false,
-			apiServerACL:         []string{},
+			apiServerACL:         []string{"1.1.1.1/32", "2.2.2.2/32"},
 			apiServerACLEnabled:  false,
 			providerType:         hyperscaler.TypeAWS,
 		},
@@ -649,7 +638,7 @@ func verifyNetworkFilterExtension(t *testing.T, ext gardener.Extension, isEnable
 
 func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches []imv1.ImageRegistryCache) {
 	if len(caches) == 0 {
-		assert.True(t, ext != nil || (ext.ProviderConfig == nil && *ext.Disabled))
+		assert.True(t, ext != nil && (ext.ProviderConfig != nil && *ext.Disabled))
 
 		return
 	}
@@ -678,7 +667,7 @@ func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches 
 
 func verifyACLExtension(t *testing.T, ext *gardener.Extension, acl []string) {
 	if len(acl) == 0 {
-		assert.True(t, ext != nil || (ext.ProviderConfig == nil && *ext.Disabled))
+		assert.True(t, ext != nil && (ext.ProviderConfig == nil && *ext.Disabled))
 
 		return
 	}
