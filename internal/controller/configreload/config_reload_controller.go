@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package rtbootstrapperconfig
+package configreload
 
 import (
 	"context"
@@ -46,8 +46,8 @@ type Cfg struct {
 	client.Client
 }
 
-// RuntimeBootstrapperConfigWatcher reconciles a Secret object
-type RuntimeBootstrapperConfigWatcher struct {
+// ConfigReloadWatcher reconciles a Secret object
+type ConfigReloadWatcher struct {
 	Kcp Cfg
 }
 
@@ -56,7 +56,7 @@ type RuntimeBootstrapperConfigWatcher struct {
 // +kubebuilder:rbac:groups=certificates.k8s.io,resources=clustertrustbundles,verbs=watch;list,namespace=kcp-system
 // +kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=runtimes,verbs=list;patch,namespace=kcp-system
 
-func (r *RuntimeBootstrapperConfigWatcher) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
+func (r *ConfigReloadWatcher) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
 	logger := logf.FromContext(ctx)
 
 	var runtimes imv1.RuntimeList
@@ -105,7 +105,7 @@ func (r *RuntimeBootstrapperConfigWatcher) Reconcile(ctx context.Context, _ ctrl
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *RuntimeBootstrapperConfigWatcher) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ConfigReloadWatcher) SetupWithManager(mgr ctrl.Manager) error {
 
 	controller := ctrl.NewControllerManagedBy(mgr).
 		Named("config").

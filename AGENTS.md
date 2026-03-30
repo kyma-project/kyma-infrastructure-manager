@@ -28,7 +28,7 @@ internal/
   controller/
     runtime/                     Runtime controller and FSM
       fsm/                       Finite-state machine states (one file per state)
-    rtbootstrapperconfig/        RegistryCacheConfig controller
+    configreload/                    Config reload controller (watches ConfigMaps/Secrets and forces Runtime reconciliation)
     metrics/                     Prometheus metrics
   log_level/                     Structured log-level helpers
   rtbootstrapper/                Runtime bootstrapper install logic

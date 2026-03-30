@@ -25,7 +25,7 @@ import (
 	"os"
 	"time"
 
-	configctrl "github.com/kyma-project/infrastructure-manager/internal/controller/rtbootstrapperconfig"
+	configctrl "github.com/kyma-project/infrastructure-manager/internal/controller/configreload"
 	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -339,7 +339,7 @@ func main() {
 			}
 		}
 
-		if err := (&configctrl.RuntimeBootstrapperConfigWatcher{
+		if err := (&configctrl.ConfigReloadWatcher{
 			Kcp: watcherConfig,
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Secret")
