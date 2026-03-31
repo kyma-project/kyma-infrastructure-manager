@@ -9,36 +9,36 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-var _ predicate.TypedPredicate[client.Object] = &objectUpdatedPredicate{}
+var _ predicate.TypedPredicate[client.Object] = &ObjectUpdatedPredicate{}
 
-type objectUpdatedPredicate struct {
+type ObjectUpdatedPredicate struct {
 	types.NamespacedName
 }
 
-func (p objectUpdatedPredicate) slogArgs() []any {
+func (p ObjectUpdatedPredicate) slogArgs() []any {
 	return []any{
 		"name", p.Name,
 		"namespace", p.Namespace,
 	}
 }
 
-func (p objectUpdatedPredicate) match(e event.TypedUpdateEvent[client.Object]) bool {
+func (p ObjectUpdatedPredicate) match(e event.TypedUpdateEvent[client.Object]) bool {
 	return p.Name == e.ObjectNew.GetName() && p.Namespace == e.ObjectNew.GetNamespace()
 }
 
 // Create - handles the case of namespace creation (omits events comming from
 // the master secret namespace)
-func (p objectUpdatedPredicate) Create(e event.TypedCreateEvent[client.Object]) bool {
+func (p ObjectUpdatedPredicate) Create(e event.TypedCreateEvent[client.Object]) bool {
 	return false
 }
 
 // Delete - omit event
-func (p objectUpdatedPredicate) Delete(event.TypedDeleteEvent[client.Object]) bool {
+func (p ObjectUpdatedPredicate) Delete(event.TypedDeleteEvent[client.Object]) bool {
 	return false
 }
 
 // Update - omit event
-func (p objectUpdatedPredicate) Update(e event.TypedUpdateEvent[client.Object]) bool {
+func (p ObjectUpdatedPredicate) Update(e event.TypedUpdateEvent[client.Object]) bool {
 	if !p.match(e) {
 		return false
 	}
@@ -51,6 +51,6 @@ func (p objectUpdatedPredicate) Update(e event.TypedUpdateEvent[client.Object]) 
 }
 
 // Generic - omit event
-func (p objectUpdatedPredicate) Generic(event.TypedGenericEvent[client.Object]) bool {
+func (p ObjectUpdatedPredicate) Generic(event.TypedGenericEvent[client.Object]) bool {
 	return false
 }

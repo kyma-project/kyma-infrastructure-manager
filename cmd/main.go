@@ -346,8 +346,22 @@ func main() {
 			}
 		}
 
+		configMapPredicates := []configctrl.ObjectUpdatedPredicate{
+			{NamespacedName: watcherConfig.RtBootstrapperCfg},
+			{NamespacedName: watcherConfig.RtBootstrapperManifests},
+		}
+
+		if watcherConfig.ImagePullSecret.Name != "" && watcherConfig.ImagePullSecret.Namespace != "" {
+			configMapPredicates = append(configMapPredicates, configctrl.ObjectUpdatedPredicate{NamespacedName: watcherConfig.ImagePullSecret})
+		}
+
+		if watcherConfig.ClusterTrustBundle.Name != "" {
+			configMapPredicates = append(configMapPredicates, configctrl.ObjectUpdatedPredicate{NamespacedName: watcherConfig.ClusterTrustBundle})
+		}
+
 		if err := (&configctrl.ConfigReloadWatcher{
-			Kcp: watcherConfig,
+			Kcp:                 watcherConfig,
+			ConfigMapPredicates: configMapPredicates,
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Secret")
 			os.Exit(1)

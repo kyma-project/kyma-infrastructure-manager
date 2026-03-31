@@ -21,7 +21,6 @@ import (
 	"fmt"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -48,7 +47,9 @@ type Cfg struct {
 
 // ConfigReloadWatcher reconciles a Secret object
 type ConfigReloadWatcher struct {
-	Kcp Cfg
+	Kcp                 Cfg
+	ConfigMapPredicates []ObjectUpdatedPredicate
+	SecretPredicates    []ObjectUpdatedPredicate
 }
 
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=watch;list,namespace=kcp-system
@@ -107,30 +108,19 @@ func (r *ConfigReloadWatcher) Reconcile(ctx context.Context, _ ctrl.Request) (ct
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ConfigReloadWatcher) SetupWithManager(mgr ctrl.Manager) error {
-
 	controller := ctrl.NewControllerManagedBy(mgr).
-		Named("config").
-		Watches(&corev1.ConfigMap{},
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(objectUpdatedPredicate{
-				r.Kcp.RtBootstrapperCfg})).
-		Watches(&corev1.ConfigMap{},
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(objectUpdatedPredicate{
-				r.Kcp.RtBootstrapperManifests}))
+		Named("config")
 
-	if r.Kcp.ImagePullSecret.Name != "" && r.Kcp.ImagePullSecret.Namespace != "" {
-		controller = controller.Watches(&corev1.Secret{},
+	for _, p := range r.ConfigMapPredicates {
+		controller = controller.Watches(&corev1.ConfigMap{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(objectUpdatedPredicate{
-				r.Kcp.ImagePullSecret}))
+			builder.WithPredicates(p))
 	}
 
-	if r.Kcp.ClusterTrustBundle.Name != "" {
-		controller = controller.Watches(&certificatesv1beta1.ClusterTrustBundle{},
+	for _, p := range r.SecretPredicates {
+		controller = controller.Watches(&corev1.Secret{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(objectUpdatedPredicate{
-				r.Kcp.ClusterTrustBundle}))
+			builder.WithPredicates(p))
 	}
 
 	return controller.Complete(r)
