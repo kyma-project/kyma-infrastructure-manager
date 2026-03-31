@@ -314,8 +314,6 @@ func main() {
 		}
 
 		watcherConfig := configctrl.Cfg{
-			Client:    kcpClient,
-			Namespace: "kcp-system",
 			RtBootstrapperCfg: types.NamespacedName{
 				Name:      runtimeBootstrapperKCPConfigName,
 				Namespace: "kcp-system",
@@ -353,7 +351,8 @@ func main() {
 		}
 
 		if err := (&configctrl.ConfigReloadWatcher{
-			Kcp:                 watcherConfig,
+			KcpClient:           kcpClient,
+			Namespace:           "kcp-system",
 			ConfigMapPredicates: configMapPredicates,
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Secret")

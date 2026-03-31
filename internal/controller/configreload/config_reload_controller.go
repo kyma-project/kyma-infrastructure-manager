@@ -37,17 +37,16 @@ var (
 )
 
 type Cfg struct {
-	Namespace               string
 	ClusterTrustBundle      types.NamespacedName
 	ImagePullSecret         types.NamespacedName
 	RtBootstrapperCfg       types.NamespacedName
 	RtBootstrapperManifests types.NamespacedName
-	client.Client
 }
 
 // ConfigReloadWatcher reconciles a Secret object
 type ConfigReloadWatcher struct {
-	Kcp                 Cfg
+	KcpClient           client.Client
+	Namespace           string
 	ConfigMapPredicates []ObjectUpdatedPredicate
 	SecretPredicates    []ObjectUpdatedPredicate
 }
@@ -61,12 +60,12 @@ func (r *ConfigReloadWatcher) Reconcile(ctx context.Context, _ ctrl.Request) (ct
 	logger := logf.FromContext(ctx)
 
 	var runtimes imv1.RuntimeList
-	err := r.Kcp.List(ctx, &runtimes, &client.ListOptions{
-		Namespace: r.Kcp.Namespace,
+	err := r.KcpClient.List(ctx, &runtimes, &client.ListOptions{
+		Namespace: r.Namespace,
 	})
 	if err != nil {
 		logger.Error(err, "unable to list runtimes",
-			"namespace", r.Kcp.Namespace)
+			"namespace", r.Namespace)
 		return ctrl.Result{}, err
 	}
 
@@ -86,7 +85,7 @@ func (r *ConfigReloadWatcher) Reconcile(ctx context.Context, _ ctrl.Request) (ct
 		newItem.Annotations[reconciler.ForceReconcileAnnotation] = "true"
 		newItem.ManagedFields = nil
 
-		if err := r.Kcp.Patch(ctx, newItem, client.Apply, &client.PatchOptions{
+		if err := r.KcpClient.Patch(ctx, newItem, client.Apply, &client.PatchOptions{
 			FieldManager: fieldManager,
 			Force:        ptr.To(true),
 		}); err != nil {
