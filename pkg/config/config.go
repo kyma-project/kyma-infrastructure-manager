@@ -83,7 +83,7 @@ type ACL struct {
 }
 
 type KubeApiServer struct {
-	ACL                ACL             `json:"acl" validate:"required"`
+	ACL                ACL             `json:"acl"`
 	MaxTokenExpiration string          `json:"maxTokenExpiration"`
 	RuntimeConfig      map[string]bool `json:"runtimeConfig"`
 	FeatureGates       map[string]bool `json:"featureGates"`
