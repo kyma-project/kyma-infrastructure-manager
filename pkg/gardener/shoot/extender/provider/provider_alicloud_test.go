@@ -33,7 +33,9 @@ func TestProviderExtenderForCreateAlicloud(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAlicloud, "gardenlinux", "1312.2.0", []string{"eu-central-1a"}),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -49,7 +51,9 @@ func TestProviderExtenderForCreateAlicloud(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAlicloud, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b"}),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -65,7 +69,9 @@ func TestProviderExtenderForCreateAlicloud(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAlicloud, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -81,7 +87,9 @@ func TestProviderExtenderForCreateAlicloud(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAlicloud, "", "", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -130,7 +138,9 @@ func TestProviderExtenderForPatchSingleWorkerAlicloud(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAlicloud, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -150,6 +160,11 @@ func TestProviderExtenderForPatchSingleWorkerAlicloud(t *testing.T) {
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAlicloud, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+						Networking: imv1.Networking{
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
+						},
 					},
 				},
 			},
@@ -168,6 +183,11 @@ func TestProviderExtenderForPatchSingleWorkerAlicloud(t *testing.T) {
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAlicloud, "", "", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+						Networking: imv1.Networking{
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
+						},
 					},
 				},
 			},
@@ -186,6 +206,11 @@ func TestProviderExtenderForPatchSingleWorkerAlicloud(t *testing.T) {
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAlicloud, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+						Networking: imv1.Networking{
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
+						},
 					},
 				},
 			},
@@ -204,6 +229,11 @@ func TestProviderExtenderForPatchSingleWorkerAlicloud(t *testing.T) {
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAlicloud, "", "", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+						Networking: imv1.Networking{
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
+						},
 					},
 				},
 			},
@@ -222,6 +252,11 @@ func TestProviderExtenderForPatchSingleWorkerAlicloud(t *testing.T) {
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAlicloud, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+						Networking: imv1.Networking{
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
+						},
 					},
 				},
 			},
@@ -240,6 +275,11 @@ func TestProviderExtenderForPatchSingleWorkerAlicloud(t *testing.T) {
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAlicloud, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+						Networking: imv1.Networking{
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
+						},
 					},
 				},
 			},

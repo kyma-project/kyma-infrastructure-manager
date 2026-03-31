@@ -113,6 +113,7 @@ func main() {
 	var converterConfigFilepath string
 	var auditLogMandatory bool
 	var registryCacheConfigControllerEnabled bool
+	var apiServerAclEnabled bool
 	var runtimeBootstrapperEnabled bool
 	var runtimeBootstrapperKCPConfigName string
 	var runtimeBootstrapperKCPPullSecretName string
@@ -153,6 +154,7 @@ func main() {
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration. When enabled this feature, a Shoot cluster will only be created when an auditlog tenant exists (this is defined in the auditlog mapping configuration file)")
 	flag.BoolVar(&registryCacheConfigControllerEnabled, "registry-cache-config-controller-enabled", false, "Feature flag to enable registry cache config controller")
 	flag.BoolVar(&runtimeBootstrapperEnabled, "runtime-bootstrapper-enabled", false, "Feature flag to enable runtime bootstrapper")
+	flag.BoolVar(&apiServerAclEnabled, "api-server-acl-enabled", false, "Feature flag to enable the shoot API server ACL extender which restricts access to the API server to a defined set of CIDRs")
 
 	// Runtime bootstrapper configuration
 	flag.StringVar(&runtimeBootstrapperManifestsConfigMapName, "runtime-bootstrapper-manifests-config-map-name", "runtime-bootstrapper-manifests", "Config map with Runtime Bootstrapper manifests.")
@@ -247,6 +249,13 @@ func main() {
 	if err = validate.Struct(config); err != nil {
 		setupLog.Error(err, "invalid converter configuration")
 		os.Exit(1)
+	}
+
+	if apiServerAclEnabled {
+		if config.ConverterConfig.Kubernetes.KubeApiServer.ACL.IpAddressesPath == "" || config.ConverterConfig.Kubernetes.KubeApiServer.ACL.KcpAddressPath == "" {
+			setupLog.Error(fmt.Errorf("both ACL IP addresses path and KCP IP path need to be set when API server ACL is enabled"), "invalid API server ACL configuration")
+			os.Exit(1)
+		}
 	}
 
 	auditLogDataMap, err := loadAuditLogDataMap(config.ConverterConfig.AuditLog.TenantConfigPath)
@@ -355,6 +364,7 @@ func main() {
 		ShootNamesapace:                      gardenerNamespace,
 		Config:                               config,
 		AuditLogMandatory:                    auditLogMandatory,
+		ApiServerAclEnabled:                  apiServerAclEnabled,
 		Metrics:                              metrics,
 		AuditLogging:                         auditLogDataMap,
 		RegistryCacheConfigControllerEnabled: registryCacheConfigControllerEnabled,
