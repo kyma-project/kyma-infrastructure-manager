@@ -1,10 +1,11 @@
-package provider
+package extender
 
 import (
 	"encoding/json"
 	"testing"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -92,6 +93,33 @@ func TestApplyDefaultGVisorNetRaw(t *testing.T) {
 		require.NotNil(t, workers[0].CRI.ContainerRuntimes[0].ProviderConfig)
 		var m map[string]interface{}
 		require.NoError(t, json.Unmarshal(workers[0].CRI.ContainerRuntimes[0].ProviderConfig.Raw, &m))
+		flags := m["configFlags"].(map[string]interface{})
+		require.Equal(t, gvisorNetRawDefaultValue, flags[gvisorNetRawConfigKey])
+	})
+}
+
+func TestExtendWithGVisorNetRawDefault(t *testing.T) {
+	t.Run("invokes defaulting on shoot provider workers", func(t *testing.T) {
+		shoot := gardener.Shoot{
+			Spec: gardener.ShootSpec{
+				Provider: gardener.Provider{
+					Workers: []gardener.Worker{{
+						Name: "w",
+						CRI: &gardener.CRI{
+							Name: "containerd",
+							ContainerRuntimes: []gardener.ContainerRuntime{
+								{Type: gvisorContainerRuntimeType},
+							},
+						},
+					}},
+				},
+			},
+		}
+		require.NoError(t, ExtendWithGVisorNetRawDefault(imv1.Runtime{}, &shoot))
+		pc := shoot.Spec.Provider.Workers[0].CRI.ContainerRuntimes[0].ProviderConfig
+		require.NotNil(t, pc)
+		var m map[string]interface{}
+		require.NoError(t, json.Unmarshal(pc.Raw, &m))
 		flags := m["configFlags"].(map[string]interface{})
 		require.Equal(t, gvisorNetRawDefaultValue, flags[gvisorNetRawConfigKey])
 	})

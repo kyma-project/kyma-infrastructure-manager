@@ -55,7 +55,7 @@ func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIM
 			return err
 		}
 
-		return applyDefaultGVisorNetRaw(provider.Workers)
+		return nil
 	}
 }
 
@@ -122,7 +122,7 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 		// update strategy from existing Shoot workers; it does not touch maxPods, so clamped values are preserved.
 		alignWorkersWithGardener(provider, shootWorkers)
 
-		return applyDefaultGVisorNetRaw(provider.Workers)
+		return nil
 	}
 }
 

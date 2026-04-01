@@ -1,9 +1,10 @@
-package provider
+package extender
 
 import (
 	"encoding/json"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -16,9 +17,13 @@ const (
 	gvisorProviderConfigKind   = "GVisorConfiguration"
 )
 
-// applyDefaultGVisorNetRaw sets configFlags["net-raw"] = "true" on each gVisor container runtime
+// ExtendWithGVisorNetRawDefault sets configFlags["net-raw"] = "true" on each gVisor container runtime
 // when the Runtime CR does not define that key (required for Istio). If net-raw is present,
 // the Runtime CR value is kept.
+func ExtendWithGVisorNetRawDefault(_ imv1.Runtime, shoot *gardener.Shoot) error {
+	return applyDefaultGVisorNetRaw(shoot.Spec.Provider.Workers)
+}
+
 func applyDefaultGVisorNetRaw(workers []gardener.Worker) error {
 	for i := range workers {
 		if workers[i].CRI == nil {
