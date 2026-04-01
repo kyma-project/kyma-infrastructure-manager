@@ -48,7 +48,7 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 		}
 		setWorkerSettings(provider)
 
-		return err
+		return applyDefaultGVisorNetRaw(provider.Workers)
 	}
 }
 
@@ -110,7 +110,7 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 		setWorkerSettings(provider)
 		alignWorkersWithGardener(provider, shootWorkers)
 
-		return nil
+		return applyDefaultGVisorNetRaw(provider.Workers)
 	}
 }
 
