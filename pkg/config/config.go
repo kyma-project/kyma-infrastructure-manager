@@ -31,10 +31,12 @@ type DNSConfig struct {
 }
 
 type KubernetesConfig struct {
-	DefaultVersion                      string       `json:"defaultVersion" validate:"required"`
-	EnableKubernetesVersionAutoUpdate   bool         `json:"enableKubernetesVersionAutoUpdate"`
-	EnableMachineImageVersionAutoUpdate bool         `json:"enableMachineImageVersionVersionAutoUpdate"`
-	DefaultOperatorOidc                 OidcProvider `json:"defaultOperatorOidc" validate:"required"`
+	KubeApiServer                       KubeApiServer `json:"kubeApiServer" validate:"required"`
+	Kubelet                             Kubelet       `json:"kubelet"`
+	DefaultVersion                      string        `json:"defaultVersion" validate:"required"`
+	EnableKubernetesVersionAutoUpdate   bool          `json:"enableKubernetesVersionAutoUpdate"`
+	EnableMachineImageVersionAutoUpdate bool          `json:"enableMachineImageVersionAutoUpdate"`
+	DefaultOperatorOidc                 OidcProvider  `json:"defaultOperatorOidc" validate:"required"`
 }
 
 type OidcProvider struct {
@@ -67,12 +69,34 @@ type MaintenanceWindowConfig struct {
 }
 
 type GardenerConfig struct {
-	ProjectName string `json:"projectName" validate:"required"`
+	ProjectName             string `json:"projectName" validate:"required"`
+	EnableCredentialBinding bool   `json:"enableCredentialBinding"`
 }
 
 type MachineImageConfig struct {
 	DefaultName    string `json:"defaultName" validate:"required"`
 	DefaultVersion string `json:"defaultVersion" validate:"required"`
+}
+type ACL struct {
+	IpAddressesPath string `json:"ipAddressesPath"`
+	KcpAddressPath  string `json:"kcpAddressPath"`
+}
+
+type KubeApiServer struct {
+	ACL                ACL             `json:"acl"`
+	MaxTokenExpiration string          `json:"maxTokenExpiration"`
+	RuntimeConfig      map[string]bool `json:"runtimeConfig"`
+	FeatureGates       map[string]bool `json:"featureGates"`
+}
+
+type Kubelet struct {
+	FeatureGates map[string]bool `json:"featureGates"`
+}
+
+type TolerationsConfig map[string][]gardener.Toleration
+
+type Networking struct {
+	EnableDualStackIP bool `json:"enableDualStackIP"`
 }
 
 type ConverterConfig struct {
@@ -83,6 +107,8 @@ type ConverterConfig struct {
 	Gardener          GardenerConfig          `json:"gardener" validate:"required"`
 	AuditLog          AuditLogConfig          `json:"auditLogging" validate:"required"`
 	MaintenanceWindow MaintenanceWindowConfig `json:"maintenanceWindow"`
+	Tolerations       TolerationsConfig       `json:"tolerations"`
+	Networking        Networking              `json:"networking"`
 }
 
 // special case for own Gardener's DNS solution

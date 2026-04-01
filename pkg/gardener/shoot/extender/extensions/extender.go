@@ -2,8 +2,6 @@ package extensions
 
 import (
 	"encoding/json"
-	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
-	"k8s.io/utils/ptr"
 	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -19,7 +17,7 @@ type Extension struct {
 	Create CreateExtensionFunc
 }
 
-func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData auditlogs.AuditLogData, registryCache []registrycache.RegistryCache) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData auditlogs.AuditLogData, registryCache []imv1.ImageRegistryCache, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			Type: NetworkFilterType,
@@ -65,13 +63,27 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 					return nil, nil
 				}
 
-				return NewRegistryCacheExtension(registryCache, true)
+				return NewRegistryCacheExtension(registryCache, nil)
+			},
+		},
+		{
+			Type: ApiServerACLExtensionType,
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+				if !aclNeedsToBeEnabled(apiServerAclEnabled, runtime) {
+					return nil, nil
+				}
+
+				operatorIPs, kcpIPs, err := loadIPsFromFile(config.Kubernetes.KubeApiServer.ACL.KcpAddressPath, config.Kubernetes.KubeApiServer.ACL.IpAddressesPath)
+				if err != nil {
+					return nil, err
+				}
+				return NewApiServerACLExtension(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs, operatorIPs, kcpIPs)
 			},
 		},
 	}, nil)
 }
 
-func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, registryCache []registrycache.RegistryCache, extensionsOnTheShoot []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForPatch(config config.ConverterConfig, auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			AuditlogExtensionType,
@@ -118,19 +130,26 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, registry
 		{
 			Type: RegistryCacheExtensionType,
 			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-
-				if runtime.Spec.Caching != nil && runtime.Spec.Caching.Enabled && len(registryCache) > 0 {
-					return NewRegistryCacheExtension(registryCache, true)
-				}
-
-				for _, ext := range shoot.Spec.Extensions {
-					if ext.Type == RegistryCacheExtensionType {
-						ext.Disabled = ptr.To(true)
-						return &ext, nil
+				return NewRegistryCacheExtension(runtime.Spec.Caching, existingExtension(RegistryCacheExtensionType, shoot))
+			},
+		},
+		{
+			Type: ApiServerACLExtensionType,
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+				if !aclNeedsToBeEnabled(apiServerAclEnabled, runtime) {
+					if existingExtension(ApiServerACLExtensionType, shoot) == nil {
+						return nil, nil
 					}
+
+					return NewApiServerACLExtension(nil, nil, "")
 				}
 
-				return nil, nil
+				operatorIPs, kcpIPs, err := loadIPsFromFile(config.Kubernetes.KubeApiServer.ACL.KcpAddressPath, config.Kubernetes.KubeApiServer.ACL.IpAddressesPath)
+				if err != nil {
+					return nil, err
+				}
+
+				return NewApiServerACLExtension(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs, operatorIPs, kcpIPs)
 			},
 		},
 	}, extensionsOnTheShoot)
@@ -138,7 +157,10 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, registry
 
 func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensions []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		shoot.Spec.Extensions = currentGardenerExtensions
+
+		for _, currentExtension := range currentGardenerExtensions {
+			shoot.Spec.Extensions = append(shoot.Spec.Extensions, *currentExtension.DeepCopy())
+		}
 
 		for _, ext := range extensionsToApply {
 			gardenerExtension, err := ext.Create(runtime, *shoot)
@@ -164,4 +186,13 @@ func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensi
 
 		return nil
 	}
+}
+
+func existingExtension(extensionType string, shoot gardener.Shoot) *gardener.Extension {
+	for _, ext := range shoot.Spec.Extensions {
+		if ext.Type == extensionType {
+			return &ext
+		}
+	}
+	return nil
 }

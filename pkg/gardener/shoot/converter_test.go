@@ -282,7 +282,7 @@ func TestConverter(t *testing.T) {
 func assertShootFields(t *testing.T, runtime imv1.Runtime, shoot gardener.Shoot) {
 	assert.Equal(t, runtime.Spec.Shoot.Purpose, *shoot.Spec.Purpose)
 	assert.Equal(t, runtime.Spec.Shoot.Region, shoot.Spec.Region)
-	assert.Equal(t, runtime.Spec.Shoot.SecretBindingName, *shoot.Spec.SecretBindingName)
+	assert.Equal(t, runtime.Spec.Shoot.SecretBindingName, *shoot.Spec.CredentialsBindingName)
 	assert.Equal(t, runtime.Spec.Shoot.ControlPlane, shoot.Spec.ControlPlane)
 	assert.Equal(t, runtime.Spec.Shoot.Networking.Nodes, *shoot.Spec.Networking.Nodes)
 	assert.Equal(t, runtime.Spec.Shoot.Networking.Pods, *shoot.Spec.Networking.Pods)
@@ -333,6 +333,9 @@ func fixConverterConfig() config.ConverterConfig {
 		MachineImage: config.MachineImageConfig{
 			DefaultName:    "gardenlinux",
 			DefaultVersion: "1592.1.0",
+		},
+		Gardener: config.GardenerConfig{
+			EnableCredentialBinding: true,
 		},
 	}
 }
@@ -541,7 +544,7 @@ var testReader io.Reader = strings.NewReader(
   "kubernetes": {
 		"defaultVersion": "0.1.2.3",
 		"enableKubernetesVersionAutoUpdate": true,
-		"enableMachineImageVersionAutoUpdate": false,
+		"enableMachineImageVersionAutoUpdate": true,
 		"defaultOperatorOidc": {
 		"clientID": "test-clientID",
 		"groupsClaim": "test-group",
@@ -557,6 +560,13 @@ var testReader io.Reader = strings.NewReader(
 		"signingAlgs": ["test-alg"],
 		"usernameClaim": "test-username-claim",
 		"usernamePrefix": "-"
+		},
+		"kubeApiServer": {
+            "maxTokenExpiration": "721h",
+			"acl": {
+				"ipAddressesPath": "test-path/ip-file.json",
+				"kcpAddressPath": "test-path/kcp-file.json"
+			}
 		}
   },
   "dns": {
@@ -574,7 +584,8 @@ var testReader io.Reader = strings.NewReader(
 		"defaultVersion": "0.1.2.3.4"
   },
   "gardener": {
-		"projectName": "test-project"
+		"projectName": "test-project",
+		"enableCredentialBinding": true
   },
   "auditLogging": {
 		"policyConfigMapName": "test-policy",
@@ -607,7 +618,7 @@ func Test_ConverterConfig_Load_OK(t *testing.T) {
 			Kubernetes: config.KubernetesConfig{
 				DefaultVersion:                      "0.1.2.3",
 				EnableKubernetesVersionAutoUpdate:   true,
-				EnableMachineImageVersionAutoUpdate: false,
+				EnableMachineImageVersionAutoUpdate: true,
 				DefaultOperatorOidc: config.OidcProvider{
 					ClientID:       "test-clientID",
 					GroupsClaim:    "test-group",
@@ -615,6 +626,13 @@ func Test_ConverterConfig_Load_OK(t *testing.T) {
 					SigningAlgs:    []string{"test-alg"},
 					UsernameClaim:  "test-username-claim",
 					UsernamePrefix: "-",
+				},
+				KubeApiServer: config.KubeApiServer{
+					MaxTokenExpiration: "721h",
+					ACL: config.ACL{
+						IpAddressesPath: "test-path/ip-file.json",
+						KcpAddressPath:  "test-path/kcp-file.json",
+					},
 				},
 			},
 			DNS: config.DNSConfig{
@@ -632,7 +650,8 @@ func Test_ConverterConfig_Load_OK(t *testing.T) {
 				DefaultVersion: "0.1.2.3.4",
 			},
 			Gardener: config.GardenerConfig{
-				ProjectName: "test-project",
+				ProjectName:             "test-project",
+				EnableCredentialBinding: true,
 			},
 			AuditLog: config.AuditLogConfig{
 				PolicyConfigMapName: "test-policy",

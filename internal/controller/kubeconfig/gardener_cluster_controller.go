@@ -49,7 +49,7 @@ const (
 
 // GardenerClusterController reconciles a GardenerCluster object
 type GardenerClusterController struct {
-	client.Client
+	client.Client            // KcpClient
 	Scheme                   *runtime.Scheme
 	KubeconfigProvider       KubeconfigProvider
 	log                      logr.Logger

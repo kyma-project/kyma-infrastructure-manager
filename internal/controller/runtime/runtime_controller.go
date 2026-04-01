@@ -18,6 +18,7 @@ package runtime
 
 import (
 	"context"
+	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 	"sync/atomic"
 
 	"github.com/go-logr/logr"
@@ -35,13 +36,16 @@ import (
 // RuntimeReconciler reconciles a Runtime object
 // nolint:revive
 type RuntimeReconciler struct {
-	client.Client
-	Scheme        *runtime.Scheme
-	ShootClient   client.Client
-	Log           logr.Logger
-	Cfg           fsm.RCCfg
-	EventRecorder record.EventRecorder
-	RequestID     atomic.Uint64
+	KcpClient client.Client
+	Scheme    *runtime.Scheme
+	// GardenClient is the client for the Garden cluster, used to manage shoots (please see the docs: https://github.com/gardener/gardener/blob/master/docs/concepts/architecture.md).
+	GardenClient                 client.Client
+	Log                          logr.Logger
+	Cfg                          fsm.RCCfg
+	EventRecorder                record.EventRecorder
+	RequestID                    atomic.Uint64
+	RuntimeClientGetter          fsm.RuntimeClientGetter
+	RuntimeBootstrapperInstaller *rtbootstrapper.Installer
 }
 
 //+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=runtimes,verbs=get;list;watch;create;update;patch,namespace=kcp-system
@@ -52,7 +56,7 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 	r.Log.V(log_level.TRACE).Info(request.String())
 
 	var runtime imv1.Runtime
-	if err := r.Get(ctx, request.NamespacedName, &runtime); err != nil {
+	if err := r.KcpClient.Get(ctx, request.NamespacedName, &runtime); err != nil {
 		return ctrl.Result{
 			Requeue: false,
 		}, client.IgnoreNotFound(err)
@@ -70,22 +74,25 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		log,
 		r.Cfg,
 		fsm.K8s{
-			Client:        r.Client,
-			ShootClient:   r.ShootClient,
-			EventRecorder: r.EventRecorder,
+			KcpClient:           r.KcpClient,
+			GardenClient:        r.GardenClient,
+			EventRecorder:       r.EventRecorder,
+			RuntimeClientGetter: r.RuntimeClientGetter,
 		})
 
 	return stateFSM.Run(ctx, runtime)
 }
 
-func NewRuntimeReconciler(mgr ctrl.Manager, shootClient client.Client, logger logr.Logger, cfg fsm.RCCfg) *RuntimeReconciler {
+func NewRuntimeReconciler(mgr ctrl.Manager, gardenClient client.Client, runtimeClientGetter fsm.RuntimeClientGetter, RuntimeBootstrapperInstaller *rtbootstrapper.Installer, logger logr.Logger, cfg fsm.RCCfg) *RuntimeReconciler {
 	return &RuntimeReconciler{
-		Client:        mgr.GetClient(),
-		Scheme:        mgr.GetScheme(),
-		ShootClient:   shootClient,
-		EventRecorder: mgr.GetEventRecorderFor("runtime-controller"),
-		Log:           logger,
-		Cfg:           cfg,
+		KcpClient:                    mgr.GetClient(),
+		Scheme:                       mgr.GetScheme(),
+		GardenClient:                 gardenClient,
+		EventRecorder:                mgr.GetEventRecorderFor("runtime-controller"),
+		Log:                          logger,
+		Cfg:                          cfg,
+		RuntimeClientGetter:          runtimeClientGetter,
+		RuntimeBootstrapperInstaller: RuntimeBootstrapperInstaller,
 	}
 }
 

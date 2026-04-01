@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infrastructure-manager
+  namespace: system
+spec:
+  template:
+    spec:
+      volumes:
+        - name: acl-ip-list
+          configMap:
+            name: acl-ip-list
+            optional: true # for compatibility with other landscapes where this configmap is not present
+            items:
+              - key: acl-list.json
+                path: acl-ips.json
+              - key: kcp-external-nat-ip.json
+                path: kcp-external-nat-ip.json
+      containers:
+        - name: manager
+          volumeMounts:
+            - name: acl-ip-list
+              mountPath: /acl-ip-list

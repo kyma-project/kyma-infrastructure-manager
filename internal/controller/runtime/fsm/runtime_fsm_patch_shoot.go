@@ -4,18 +4,20 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
+	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
-	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
-	"github.com/kyma-project/kim-snatch/api/v1beta1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -36,49 +38,34 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	if err != nil && m.AuditLogMandatory {
 		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(
+		return updateStateFailedWithErrorAndStop(
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonAuditLogError,
 			msgFailedToConfigureAuditlogs)
 	}
 
-	if m.StructuredAuthEnabled {
-		oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
+	oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
 
-		cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
-		err = structuredauth.CreateOrUpdateStructuredAuthConfigMap(
-			ctx,
-			m.ShootClient,
-			types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace},
-			oidcConfig,
-		)
+	cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
+	err = structuredauth.CreateOrUpdateStructuredAuthConfigMap(
+		ctx,
+		m.GardenClient,
+		types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace},
+		oidcConfig,
+	)
 
-		if err != nil {
-			m.Metrics.IncRuntimeFSMStopCounter()
-			return updateStatePendingWithErrorAndStop(
-				&s.instance,
-				imv1.ConditionTypeRuntimeProvisioned,
-				imv1.ConditionReasonOidcError,
-				msgFailedStructuredConfigMap)
-		}
+	if err != nil {
+		m.Metrics.IncRuntimeFSMStopCounter()
+		return updateStateFailedWithErrorAndStop(
+			&s.instance,
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonOidcError,
+			msgFailedStructuredConfigMap)
 	}
 
-	var registrycache []v1beta1.RegistryCache
-	if s.instance.Spec.Caching != nil && s.instance.Spec.Caching.Enabled {
-		registrycache, err = getRegistryCache(ctx, m.Client, s.instance)
-
-		if err != nil {
-			m.log.Error(err, "Failed to get Registry Cache Config")
-
-			m.Metrics.IncRuntimeFSMStopCounter()
-			return updateStatePendingWithErrorAndStop(
-				&s.instance,
-				imv1.ConditionTypeRuntimeProvisioned,
-				imv1.ConditionReasonRegistryCacheError,
-				msgFailedToConfigureRegistryCache)
-		}
-	}
+	timeBoundaries, _ := token.ValidateTokenExpirationTime(m.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
+	logTokenExpirationInfo(m.log, timeBoundaries)
 
 	// NOTE: In the future we want to pass the whole shoot object here
 	updatedShoot, err := convertPatch(&s.instance, gardener_shoot.PatchOpts{
@@ -91,44 +78,59 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		Resources:             s.shoot.Spec.Resources,
 		InfrastructureConfig:  s.shoot.Spec.Provider.InfrastructureConfig,
 		ControlPlaneConfig:    s.shoot.Spec.Provider.ControlPlaneConfig,
-		Log:                   ptr.To(m.log),
-		StructuredAuthEnabled: m.StructuredAuthEnabled,
-		RegistryCache:         registrycache,
+		ApiServerAclEnabled:   m.ApiServerAclEnabled,
 	})
 
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object, exiting with no retry")
 		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonConversionError, fmt.Sprintf("Runtime conversion error %v", err))
+
+		runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
+		if err != nil {
+			m.log.Error(err, "Failed to get Runtime Client to set Registry Cache status")
+		}
+
+		statusManager := registrycache.NewStatusManager(runtimeClient)
+		err = statusManager.SetStatusFailed(ctx, s.instance, registrycacheapi.ConditionReasonRegistryCacheExtensionConfigurationFailed, "failed to apply registry cache configuration")
+		if err != nil {
+			m.log.Error(err, "Failed to get Runtime Client to set Registry Cache status")
+		}
+
+		return updateStateFailedWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonConversionError, fmt.Sprintf("Runtime conversion error %v", err))
 	}
 
 	m.log.V(log_level.DEBUG).Info("Shoot converted successfully", "Name", updatedShoot.Name, "Namespace", updatedShoot.Namespace)
 
-	if m.StructuredAuthEnabled {
-		// The additional update operation is required to migrate OIDC to structured authentication. Thr Gardener doesn't support setting spec.kubernetes.kubeAPIServer.OIDCConfig and spec.kubernetes.kubeAPIServer.structuredAuthentication at the same time.
-		// Patch operation is not enough to nil the OIDCConfig field in the shoot object. The OIDCConfig field is marked with omitempty so that the server patch apply cannot remove it.
-		// The attempt to set the empty OIDCConfig field didn't work as the validation code checks if the OIDCConfig is not nil (https://github.com/gardener/gardener/blob/d48ed8610558c98e3a9fd3de963c11c13402c534/pkg/apis/core/validation/shoot.go#L1416).
-		// Once the migration is done this code should be removed
-		err = migrateOIDCToStructuredAuth(ctx, updatedShoot, m, s)
-		nextState, res, err := handleUpdateError(err, m, s, "Failed to migrate shoot object to structured authentication", "Gardener API shoot update error")
+	registryCacheSecretShouldBeRemoved, err := registrycache.GardenSecretNeedToBeRemoved(s.shoot.Spec.Extensions, s.instance.Spec.Caching)
+	if err != nil {
+		m.log.Error(err, "Failed to check if registry cache secret should be removed")
 
-		if nextState != nil {
-			return nextState, res, err
-		}
+		s.instance.UpdateStatePending(imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonRegistryCacheConfigured, metav1.ConditionFalse, "Failed to check if registry cache secret should be removed")
+		return updateStatusAndRequeue()
 	}
 
-	// The additional Update function is required to fully replace shoot Workers collection with workers defined in updated runtime object.
-	// This is a workaround for the sigs.k8s.io/controller-runtime/pkg/client, which does not support replacing the Workers collection with client.Patch
-	// This could caused some workers to be not removed from the shoot object during update
+	workersShouldBeUpdated := !workersAreEqual(s.shoot.Spec.Provider.Workers, updatedShoot.Spec.Provider.Workers)
+
+	// The additional Update function is required to fully replace collections with the ones defined in updated runtime object.
+	// This is a workaround for the sigs.k8s.io/controller-runtime/pkg/client, which does not support replacing collections with client.Patch.
+	// The client is able to add an item to the collection, but not to remove it.
 	// More info: https://github.com/kyma-project/infrastructure-manager/issues/640
 
-	if !workersAreEqual(s.shoot.Spec.Provider.Workers, updatedShoot.Spec.Provider.Workers) {
+	if workersShouldBeUpdated || registryCacheSecretShouldBeRemoved {
 		copyShoot := s.shoot.DeepCopy()
-		copyShoot.Spec.Provider.Workers = updatedShoot.Spec.Provider.Workers
-		copyShoot.Spec.Provider.ControlPlaneConfig = updatedShoot.Spec.Provider.ControlPlaneConfig
-		copyShoot.Spec.Provider.InfrastructureConfig = updatedShoot.Spec.Provider.InfrastructureConfig
 
-		updateErr := m.ShootClient.Update(ctx, copyShoot,
+		if workersShouldBeUpdated {
+			copyShoot.Spec.Provider.Workers = updatedShoot.Spec.Provider.Workers
+			copyShoot.Spec.Provider.ControlPlaneConfig = updatedShoot.Spec.Provider.ControlPlaneConfig
+			copyShoot.Spec.Provider.InfrastructureConfig = updatedShoot.Spec.Provider.InfrastructureConfig
+		}
+
+		if registryCacheSecretShouldBeRemoved {
+			copyShoot.Spec.Extensions = updatedShoot.Spec.Extensions
+			copyShoot.Spec.Resources = updatedShoot.Spec.Resources
+		}
+
+		updateErr := m.GardenClient.Update(ctx, copyShoot,
 			&client.UpdateOptions{
 				FieldManager: fieldManagerName,
 			})
@@ -137,19 +139,29 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		if nextState != nil {
 			return nextState, res, err
 		}
+	}
 
-		nextState, res, err = waitForWorkerPoolUpdate(ctx, m, s, copyShoot)
-		if err != nil {
+	bindingShouldBePatched := m.ConverterConfig.Gardener.EnableCredentialBinding && s.shoot.Spec.SecretBindingName != nil && *s.shoot.Spec.SecretBindingName != "" //nolint:staticcheck
+	// Gardener is not handling properly the change from SecretBindingName to CredentialsBindingName with the Patch operation.
+	// Therefore, we need to do an additional Update operation to set the CredentialsBindingName and remove the SecretBindingName.
+	// This update can be removed after migration to CredentialsBinding is completed and all runtimes are using it.
+	if bindingShouldBePatched {
+		copyShoot := s.shoot.DeepCopy()
+		copyShoot.Spec.CredentialsBindingName = ptr.To(s.instance.Spec.Shoot.SecretBindingName)
+		copyShoot.Spec.SecretBindingName = nil //nolint:staticcheck
 
-			return requeue()
-		}
+		updateErr := m.GardenClient.Update(ctx, copyShoot,
+			&client.UpdateOptions{
+				FieldManager: fieldManagerName,
+			})
 
+		nextState, res, err := handleUpdateError(updateErr, m, s, "Failed to update shoot object with new CredentialsBinding, exiting with no retry", "Gardener API shoot update error")
 		if nextState != nil {
 			return nextState, res, err
 		}
 	}
 
-	patchErr := m.ShootClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
+	patchErr := m.GardenClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
 	})
@@ -171,7 +183,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonProcessing,
-			"True",
+			metav1.ConditionTrue,
 			"Shoot patched without changes",
 		)
 
@@ -183,11 +195,21 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	s.instance.UpdateStatePending(
 		imv1.ConditionTypeRuntimeProvisioned,
 		imv1.ConditionReasonProcessing,
-		"Unknown",
+		metav1.ConditionUnknown,
 		"Shoot is pending for update after patch",
 	)
 
 	return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
+}
+
+func registryCacheExists(runtime imv1.Runtime) bool {
+	for _, cache := range runtime.Spec.Caching {
+		if cache.Config.SecretReferenceName != nil && *cache.Config.SecretReferenceName != "" {
+			return true
+		}
+	}
+
+	return false
 }
 
 func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg string) (stateFn, *ctrl.Result, error) {
@@ -198,7 +220,7 @@ func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg stri
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRuntimeProvisioned,
 				imv1.ConditionReasonProcessing,
-				"Unknown",
+				metav1.ConditionUnknown,
 				"Shoot is pending for update after conflict error",
 			)
 
@@ -207,12 +229,12 @@ func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg stri
 
 		// We're retrying on Forbidden error because Gardener returns them from time too time for operations that are properly authorized.
 		if k8serrors.IsForbidden(err) {
-			m.log.Info("Gardener shoot for runtime is forbidden, retrying")
+			m.log.Error(err, "Gardener shoot for runtime is forbidden, retrying")
 
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRuntimeProvisioned,
 				imv1.ConditionReasonProcessing,
-				"Unknown",
+				metav1.ConditionUnknown,
 				"Shoot is pending for update after forbidden error",
 			)
 
@@ -221,39 +243,7 @@ func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg stri
 
 		m.log.Error(err, errMsg)
 		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("%s: %v", statusMsg, err))
-	}
-
-	return nil, nil, nil
-}
-
-// This function verifies whether the update was applied on the server. For more info please see the following issues:
-// - https://github.com/kyma-project/infrastructure-manager/issues/673
-// - https://github.com/kyma-project/infrastructure-manager/issues/674
-func waitForWorkerPoolUpdate(ctx context.Context, m *fsm, s *systemState, shoot *gardener.Shoot) (stateFn, *ctrl.Result, error) {
-	var newShoot gardener.Shoot
-	delay := time.Millisecond * 200
-
-	for i := 0; i < 5; i++ {
-		time.Sleep(time.Duration(i) * delay)
-
-		err := m.ShootClient.Get(ctx, types.NamespacedName{
-			Name:      s.instance.Spec.Shoot.Name,
-			Namespace: m.ShootNamesapace,
-		}, &newShoot, &client.GetOptions{})
-
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if workersAreEqual(shoot.Spec.Provider.Workers, newShoot.Spec.Provider.Workers) {
-			break
-		}
-		m.log.Info(fmt.Sprintf("Worker pool is not in sync. Attempt: %d.Retrying.", i+1))
-	}
-
-	if !workersAreEqual(shoot.Spec.Provider.Workers, newShoot.Spec.Provider.Workers) {
-		return updateStatePendingWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, "Workers pool not synchronised")
+		return updateStateFailedWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonProcessingErr, fmt.Sprintf("%s: %v", statusMsg, err))
 	}
 
 	return nil, nil, nil
@@ -279,7 +269,7 @@ func handleForceReconciliationAnnotation(runtime *imv1.Runtime, fsm *fsm, ctx co
 		delete(annotations, reconciler.ForceReconcileAnnotation)
 		runtime.SetAnnotations(annotations)
 
-		err := fsm.Update(ctx, runtime)
+		err := fsm.KcpClient.Update(ctx, runtime)
 		if err != nil {
 			return err
 		}
@@ -302,51 +292,9 @@ func convertPatch(instance *imv1.Runtime, opts gardener_shoot.PatchOpts) (garden
 	return newShoot, nil
 }
 
-func updateStatePendingWithErrorAndStop(instance *imv1.Runtime,
+func updateStateFailedWithErrorAndStop(instance *imv1.Runtime,
 	//nolint:unparam
 	c imv1.RuntimeConditionType, r imv1.RuntimeConditionReason, msg string) (stateFn, *ctrl.Result, error) {
-	instance.UpdateStatePending(c, r, "False", msg)
+	instance.UpdateStateFailed(c, r, msg)
 	return updateStatusAndStop()
-}
-
-func migrateOIDCToStructuredAuth(ctx context.Context, shootToUpdate gardener.Shoot, m *fsm, s *systemState) error {
-
-	var err error
-
-	if shootToUpdate.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication != nil &&
-		structuredauth.OIDCConfigured(*s.shoot) {
-		m.log.Info("Migrating OIDC to structured authentication")
-
-		copyShoot := s.shoot.DeepCopy()
-		// nolint: staticcheck
-		copyShoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
-
-		err = m.ShootClient.Update(ctx, copyShoot, &client.UpdateOptions{
-			FieldManager: fieldManagerName,
-		})
-
-		if err == nil {
-			err = m.ShootClient.Get(ctx, types.NamespacedName{
-				Name:      s.instance.Spec.Shoot.Name,
-				Namespace: m.ShootNamesapace,
-			}, s.shoot, &client.GetOptions{})
-		}
-
-	}
-
-	return err
-}
-
-func getRegistryCache(ctx context.Context, client client.Client, runtime imv1.Runtime) ([]v1beta1.RegistryCache, error) {
-	secret, err := getKubeconfigSecret(ctx, client, runtime.Labels[imv1.LabelKymaRuntimeID], runtime.Namespace)
-	if err != nil {
-		return nil, err
-	}
-
-	configExplorer, err := registrycache.NewConfigExplorer(ctx, secret)
-	if err != nil {
-		return nil, err
-	}
-
-	return configExplorer.GetRegistryCacheConfig()
 }

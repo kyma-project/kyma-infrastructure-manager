@@ -2,10 +2,12 @@ package fsm
 
 import (
 	"context"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -15,7 +17,8 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	// wait section
 	if !s.shoot.GetDeletionTimestamp().IsZero() {
 		m.log.V(log_level.DEBUG).Info("Waiting for shoot to be deleted", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
-		return requeueAfter(m.RequeueDurationShootDelete)
+		LogLastErrors(s, m)
+		return updateStatusAndRequeueAfter(m.RequeueDurationShootDelete)
 	}
 
 	// action section
@@ -25,7 +28,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		setObjectFields(s.shoot)
 		s.shoot.Annotations = addGardenerCloudDelConfirmation(s.shoot.Annotations)
 
-		err := m.ShootClient.Patch(ctx, s.shoot, client.Apply, &client.PatchOptions{
+		err := m.GardenClient.Patch(ctx, s.shoot, client.Apply, &client.PatchOptions{
 			FieldManager: "kim",
 			Force:        ptr.To(true),
 		})
@@ -36,39 +39,37 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		}
 	}
 
-	if m.StructuredAuthEnabled {
-		m.log.Info("deleting structured authentication config", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
-		err := structuredauth.DeleteStructuredConfigMap(ctx, m.ShootClient, *s.shoot)
-		if err != nil {
-			// action error handler section
-			m.log.Error(err, "Failed to delete structured authentication configmap")
-			s.instance.UpdateStateDeletion(
-				imv1.ConditionTypeRuntimeDeprovisioned,
-				imv1.ConditionReasonStructuredConfigDeleted,
-				"False",
-				"Gardener API structured authentication configmap delete error",
-			)
+	m.log.Info("deleting structured authentication config", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
+	err := structuredauth.DeleteStructuredConfigMap(ctx, m.GardenClient, *s.shoot)
+	if err != nil {
+		// action error handler section
+		m.log.Error(err, "Failed to delete structured authentication configmap")
+		s.instance.UpdateStateDeletion(
+			imv1.ConditionTypeRuntimeDeprovisioned,
+			imv1.ConditionReasonStructuredConfigDeleted,
+			metav1.ConditionFalse,
+			"Gardener API structured authentication configmap delete error",
+		)
 
-			return updateStatusAndRequeueAfter(m.RequeueDurationShootDelete)
-		}
+		return updateStatusAndRequeueAfter(m.RequeueDurationShootDelete)
 	}
 
 	m.log.Info("deleting shoot", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)
-	err := m.ShootClient.Delete(ctx, s.shoot)
+	err = m.GardenClient.Delete(ctx, s.shoot)
 	if err != nil {
 		// action error handler section
 		m.log.Error(err, "Failed to delete gardener Shoot")
 		s.instance.UpdateStateDeletion(
 			imv1.ConditionTypeRuntimeDeprovisioned,
 			imv1.ConditionReasonGardenerShootDeleted,
-			"False",
+			metav1.ConditionFalse,
 			"Gardener API shoot delete error",
 		)
 	} else {
 		s.instance.UpdateStateDeletion(
 			imv1.ConditionTypeRuntimeDeprovisioned,
 			imv1.ConditionReasonGardenerShootDeleted,
-			"Unknown",
+			metav1.ConditionUnknown,
 			"Runtime shoot deletion started",
 		)
 	}

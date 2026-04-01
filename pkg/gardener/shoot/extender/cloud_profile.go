@@ -5,7 +5,6 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"github.com/pkg/errors"
-	"k8s.io/utils/ptr"
 )
 
 const (
@@ -13,6 +12,8 @@ const (
 	DefaultAzureCloudProfileName     = "az"
 	DefaultGCPCloudProfileName       = "gcp"
 	DefaultOpenStackCloudProfileName = "converged-cloud-kyma"
+	DefaultAlicloudCloudProfileName  = "alicloud"
+	CloudProfileKind                 = "CloudProfile"
 )
 
 func ExtendWithCloudProfile(runtime imv1.Runtime, shoot *gardener.Shoot) error {
@@ -22,9 +23,16 @@ func ExtendWithCloudProfile(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		return err
 	}
 
-	shoot.Spec.CloudProfileName = ptr.To(cloudProfileName)
+	shoot.Spec.CloudProfile = CreateCloudProfileReference(cloudProfileName)
 
 	return nil
+}
+
+func CreateCloudProfileReference(cloudProfileName string) *gardener.CloudProfileReference {
+	return &gardener.CloudProfileReference{
+		Kind: CloudProfileKind,
+		Name: cloudProfileName,
+	}
 }
 
 func getCloudProfileName(runtime imv1.Runtime) (string, error) {
@@ -37,6 +45,8 @@ func getCloudProfileName(runtime imv1.Runtime) (string, error) {
 		return DefaultAzureCloudProfileName, nil
 	case hyperscaler.TypeOpenStack:
 		return DefaultOpenStackCloudProfileName, nil
+	case hyperscaler.TypeAlicloud:
+		return DefaultAlicloudCloudProfileName, nil
 	}
 
 	return "", errors.New("provider not supported")

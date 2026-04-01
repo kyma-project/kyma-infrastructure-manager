@@ -49,6 +49,12 @@ spec:
               - RS256
             usernameClaim: sub
             usernamePrefix: 'someother'
+        # spec.shoot.kubernetes.kubeAPIServer.acl is optional, if not provided, no restrictions to API server will be applied
+        acl:
+          allowedCIDRs:
+            - "1.1.1.1/32"
+            - "2.2.2.2/24"
+            - "3.3.3.3/16"
     provider:
       # spec.shoot.provider.type is required
       type: aws
@@ -84,6 +90,19 @@ spec:
           # spec.shoot.workers.maxUnavailable is required in the first release.
           # It can be optional in the future, as it is always set to 0
           maxUnavailable: 0
+          # enabling gVisor container runtime for this worker pool
+          cri:
+            name: containerd
+            containerRuntimes:
+            # See configuration options for gVisor container runtime at https://github.com/gardener/gardener-extension-runtime-gvisor
+              - type: gvisor 
+                providerConfig:
+                  apiVersion: gvisor.runtime.extensions.config.gardener.cloud/v1alpha1
+                  kind: GVisorConfiguration
+                  configFlags:
+                    debug: "false"
+                    net-raw: "false"
+                    nvproxy: "false"
     # spec.shoot.Networking is required
     networking:
       pods: 100.64.0.0/12

@@ -53,12 +53,104 @@ spec:
             description: RuntimeSpec defines the desired state of Runtime
             properties:
               imageRegistryCache:
-                properties:
-                  enabled:
-                    type: boolean
-                required:
-                - enabled
-                type: object
+                items:
+                  properties:
+                    config:
+                      description: RegistryCacheConfigSpec defines the desired state
+                        of RegistryCacheConfig.
+                      properties:
+                        garbageCollection:
+                          description: |-
+                            GarbageCollection contains settings for the garbage collection of content from the cache.
+                            Defaults to enabled garbage collection.
+                          properties:
+                            ttl:
+                              default: 168h
+                              description: |-
+                                TTL is the time to live of a blob in the cache.
+                                Set to 0s to disable the garbage collection.
+                                Defaults to 168h (7 days).
+                              type: string
+                          required:
+                          - ttl
+                          type: object
+                        http:
+                          description: HTTP contains settings for the HTTP server
+                            that hosts the registry cache.
+                          properties:
+                            tls:
+                              description: |-
+                                TLS indicates whether TLS is enabled for the HTTP server of the registry cache.
+                                Defaults to true.
+                              type: boolean
+                          type: object
+                        proxy:
+                          description: Proxy contains settings for a proxy used in
+                            the registry cache.
+                          properties:
+                            httpProxy:
+                              description: HTTPProxy field represents the proxy server
+                                for HTTP connections which is used by the registry
+                                cache.
+                              type: string
+                            httpsProxy:
+                              description: HTTPSProxy field represents the proxy server
+                                for HTTPS connections which is used by the registry
+                                cache.
+                              type: string
+                          type: object
+                        remoteURL:
+                          description: |-
+                            RemoteURL is the remote registry URL. The format must be `<scheme><host>[:<port>]` where
+                            `<scheme>` is `https://` or `http://` and `<host>[:<port>]` corresponds to the Upstream
+
+                            If defined, the value is set as `proxy.remoteurl` in the registry [configuration](https://github.com/distribution/distribution/blob/main/docs/content/recipes/mirror.md#configure-the-cache)
+                            and in containerd configuration as `server` field in [hosts.toml](https://github.com/containerd/containerd/blob/main/docs/hosts.md#server-field) file.
+                          type: string
+                        secretReferenceName:
+                          description: SecretReferenceName is the name of the reference
+                            for the Secret containing the upstream registry credentials.
+                          type: string
+                        upstream:
+                          description: Upstream is the remote registry host to cache.
+                          type: string
+                        volume:
+                          description: Volume contains settings for the registry cache
+                            volume.
+                          properties:
+                            size:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              default: 10Gi
+                              description: |-
+                                Size is the size of the registry cache volume.
+                                Defaults to 10Gi.
+                                This field is immutable.
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            storageClassName:
+                              description: |-
+                                StorageClassName is the name of the StorageClass used by the registry cache volume.
+                                This field is immutable.
+                              type: string
+                          type: object
+                      required:
+                      - upstream
+                      type: object
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    uid:
+                      type: string
+                  required:
+                  - config
+                  - name
+                  - namespace
+                  - uid
+                  type: object
+                type: array
               security:
                 properties:
                   administrators:
@@ -132,6 +224,13 @@ spec:
                     properties:
                       kubeAPIServer:
                         properties:
+                          acl:
+                            properties:
+                              allowedCIDRs:
+                                items:
+                                  type: string
+                                type: array
+                            type: object
                           additionalOidcConfig:
                             items:
                               description: |-
@@ -149,7 +248,7 @@ spec:
                                     ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
 
                                     Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31.
-                                    It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
+                                    It's use was planned for generating OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
                                   properties:
                                     extraConfig:
                                       additionalProperties:
@@ -236,7 +335,7 @@ spec:
                                   ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
 
                                   Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31.
-                                  It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
+                                  It's use was planned for generating OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
                                 properties:
                                   extraConfig:
                                     additionalProperties:
@@ -311,6 +410,8 @@ spec:
                     type: string
                   networking:
                     properties:
+                      dualStack:
+                        type: boolean
                       nodes:
                         type: string
                       pods:
@@ -318,6 +419,8 @@ spec:
                       services:
                         type: string
                       type:
+                        type: string
+                      vpcNetwork:
                         type: string
                     required:
                     - nodes
@@ -377,6 +480,75 @@ spec:
                               description: |-
                                 ControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.
                                 This is only relevant for autonomous shoot clusters.
+                              properties:
+                                backup:
+                                  description: |-
+                                    Backup holds the object store configuration for the backups of shoot (currently only etcd).
+                                    If it is not specified, then there won't be any backups taken.
+                                  properties:
+                                    credentialsRef:
+                                      description: |-
+                                        CredentialsRef is reference to a resource holding the credentials used for
+                                        authentication with the object store service where the backups are stored.
+                                        Supported referenced resources are v1.Secrets and
+                                        security.gardener.cloud/v1alpha1.WorkloadIdentity
+                                      properties:
+                                        apiVersion:
+                                          description: API version of the referent.
+                                          type: string
+                                        fieldPath:
+                                          description: |-
+                                            If referring to a piece of an object instead of an entire object, this string
+                                            should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                                            For example, if the object reference is to a container within a pod, this would take on a value like:
+                                            "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                                            the event) or if no container name is specified "spec.containers[2]" (container with
+                                            index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                                            referencing a part of an object.
+                                          type: string
+                                        kind:
+                                          description: |-
+                                            Kind of the referent.
+                                            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                                          type: string
+                                        name:
+                                          description: |-
+                                            Name of the referent.
+                                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace of the referent.
+                                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                                          type: string
+                                        resourceVersion:
+                                          description: |-
+                                            Specific resourceVersion to which this reference is made, if any.
+                                            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                                          type: string
+                                        uid:
+                                          description: |-
+                                            UID of the referent.
+                                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                                          type: string
+                                      type: object
+                                      x-kubernetes-map-type: atomic
+                                    provider:
+                                      description: Provider is a provider name. This
+                                        field is immutable.
+                                      type: string
+                                    providerConfig:
+                                      description: ProviderConfig is the configuration
+                                        passed to BackupBucket resource.
+                                      type: object
+                                      x-kubernetes-preserve-unknown-fields: true
+                                    region:
+                                      description: Region is a region name. This field
+                                        is immutable.
+                                      type: string
+                                  required:
+                                  - provider
+                                  type: object
                               type: object
                             cri:
                               description: |-
@@ -665,6 +837,16 @@ spec:
                                         Default: 40
                                       format: int32
                                       type: integer
+                                    imageMaximumGCAge:
+                                      description: |-
+                                        ImageMaximumGCAge is the maximum age of an unused image before it can be garbage collected.
+                                        Default: 0s
+                                      type: string
+                                    imageMinimumGCAge:
+                                      description: |-
+                                        ImageMinimumGCAge is the minimum age of an unused image before it can be garbage collected.
+                                        Default: 2m0s
+                                      type: string
                                     kubeReserved:
                                       description: |-
                                         KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).
@@ -701,6 +883,14 @@ spec:
                                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                           x-kubernetes-int-or-string: true
                                       type: object
+                                    maxParallelImagePulls:
+                                      description: |-
+                                        MaxParallelImagePulls describes the maximum number of image pulls in parallel. The value must be a positive number.
+                                        This field cannot be set if SerializeImagePulls (pull one image at a time) is set to true.
+                                        Setting it to nil means no limit.
+                                        Default: nil
+                                      format: int32
+                                      type: integer
                                     maxPods:
                                       description: |-
                                         MaxPods is the maximum number of Pods that are allowed by the Kubelet.
@@ -972,9 +1162,8 @@ spec:
                                       to a node.
                                     type: string
                                   timeAdded:
-                                    description: |-
-                                      TimeAdded represents the time at which the taint was added.
-                                      It is only written for NoExecute taints.
+                                    description: TimeAdded represents the time at
+                                      which the taint was added.
                                     format: date-time
                                     type: string
                                   value:
@@ -1036,6 +1225,7 @@ spec:
                         - azure
                         - gcp
                         - openstack
+                        - alicloud
                         type: string
                       workers:
                         items:
@@ -1086,6 +1276,75 @@ spec:
                               description: |-
                                 ControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.
                                 This is only relevant for autonomous shoot clusters.
+                              properties:
+                                backup:
+                                  description: |-
+                                    Backup holds the object store configuration for the backups of shoot (currently only etcd).
+                                    If it is not specified, then there won't be any backups taken.
+                                  properties:
+                                    credentialsRef:
+                                      description: |-
+                                        CredentialsRef is reference to a resource holding the credentials used for
+                                        authentication with the object store service where the backups are stored.
+                                        Supported referenced resources are v1.Secrets and
+                                        security.gardener.cloud/v1alpha1.WorkloadIdentity
+                                      properties:
+                                        apiVersion:
+                                          description: API version of the referent.
+                                          type: string
+                                        fieldPath:
+                                          description: |-
+                                            If referring to a piece of an object instead of an entire object, this string
+                                            should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                                            For example, if the object reference is to a container within a pod, this would take on a value like:
+                                            "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                                            the event) or if no container name is specified "spec.containers[2]" (container with
+                                            index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                                            referencing a part of an object.
+                                          type: string
+                                        kind:
+                                          description: |-
+                                            Kind of the referent.
+                                            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                                          type: string
+                                        name:
+                                          description: |-
+                                            Name of the referent.
+                                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace of the referent.
+                                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                                          type: string
+                                        resourceVersion:
+                                          description: |-
+                                            Specific resourceVersion to which this reference is made, if any.
+                                            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                                          type: string
+                                        uid:
+                                          description: |-
+                                            UID of the referent.
+                                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                                          type: string
+                                      type: object
+                                      x-kubernetes-map-type: atomic
+                                    provider:
+                                      description: Provider is a provider name. This
+                                        field is immutable.
+                                      type: string
+                                    providerConfig:
+                                      description: ProviderConfig is the configuration
+                                        passed to BackupBucket resource.
+                                      type: object
+                                      x-kubernetes-preserve-unknown-fields: true
+                                    region:
+                                      description: Region is a region name. This field
+                                        is immutable.
+                                      type: string
+                                  required:
+                                  - provider
+                                  type: object
                               type: object
                             cri:
                               description: |-
@@ -1374,6 +1633,16 @@ spec:
                                         Default: 40
                                       format: int32
                                       type: integer
+                                    imageMaximumGCAge:
+                                      description: |-
+                                        ImageMaximumGCAge is the maximum age of an unused image before it can be garbage collected.
+                                        Default: 0s
+                                      type: string
+                                    imageMinimumGCAge:
+                                      description: |-
+                                        ImageMinimumGCAge is the minimum age of an unused image before it can be garbage collected.
+                                        Default: 2m0s
+                                      type: string
                                     kubeReserved:
                                       description: |-
                                         KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).
@@ -1410,6 +1679,14 @@ spec:
                                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                           x-kubernetes-int-or-string: true
                                       type: object
+                                    maxParallelImagePulls:
+                                      description: |-
+                                        MaxParallelImagePulls describes the maximum number of image pulls in parallel. The value must be a positive number.
+                                        This field cannot be set if SerializeImagePulls (pull one image at a time) is set to true.
+                                        Setting it to nil means no limit.
+                                        Default: nil
+                                      format: int32
+                                      type: integer
                                     maxPods:
                                       description: |-
                                         MaxPods is the maximum number of Pods that are allowed by the Kubelet.
@@ -1681,9 +1958,8 @@ spec:
                                       to a node.
                                     type: string
                                   timeAdded:
-                                    description: |-
-                                      TimeAdded represents the time at which the taint was added.
-                                      It is only written for NoExecute taints.
+                                    description: TimeAdded represents the time at
+                                      which the taint was added.
                                     format: date-time
                                     type: string
                                   value:
@@ -1822,6 +2098,67 @@ spec:
                 description: ProvisioningCompleted indicates if the initial provisioning
                   of the cluster is completed
                 type: boolean
+              shootLastErrors:
+                description: LastError indicates the last occurred error for an operation
+                  on a Gardener's `shoot` resource.
+                items:
+                  description: LastError indicates the last occurred error for an
+                    operation on a resource.
+                  properties:
+                    codes:
+                      description: Well-defined error codes of the last error(s).
+                      items:
+                        description: ErrorCode is a string alias.
+                        type: string
+                      type: array
+                    description:
+                      description: A human readable message indicating details about
+                        the last error.
+                      type: string
+                    lastUpdateTime:
+                      description: Last time the error was reported
+                      format: date-time
+                      type: string
+                    taskID:
+                      description: ID of the task which caused this last error
+                      type: string
+                  required:
+                  - description
+                  type: object
+                type: array
+              shootLastOperation:
+                description: |-
+                  LastOperation indicates the type and the state of the last operation of Gardener's `shoot`, along with a description
+                  message and a progress indicator.
+                properties:
+                  description:
+                    description: A human readable message indicating details about
+                      the last operation.
+                    type: string
+                  lastUpdateTime:
+                    description: Last time the operation state transitioned from one
+                      to another.
+                    format: date-time
+                    type: string
+                  progress:
+                    description: The progress in percentage (0-100) of the last operation.
+                    format: int32
+                    type: integer
+                  state:
+                    description: Status of the last operation, one of Aborted, Processing,
+                      Succeeded, Error, Failed.
+                    type: string
+                  type:
+                    description: Type of the last operation, one of Create, Reconcile,
+                      Delete, Migrate, Restore.
+                    type: string
+                required:
+                - description
+                - lastUpdateTime
+                - progress
+                - state
+                - type
+                type: object
               state:
                 description: State signifies current state of Runtime
                 enum:

@@ -2,28 +2,40 @@ package extensions
 
 import (
 	"encoding/json"
+	"fmt"
 	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	registrycache "github.com/kyma-project/registry-cache/api/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 )
 
 const RegistryCacheExtensionType = "registry-cache"
+const RegistryCacheSecretPrefix = "reg-cache-"
+const RegistryCacheSecretNameFmt = RegistryCacheSecretPrefix + "%s"
 
-func NewRegistryCacheExtension(cache []registrycache.RegistryCache, enabled bool) (*gardener.Extension, error) {
-	return extension(cache, enabled)
+func NewRegistryCacheExtension(caches []imv1.ImageRegistryCache, existingRegistryCacheExt *gardener.Extension) (*gardener.Extension, error) {
+	if len(caches) > 0 {
+		return extension(caches)
+	}
+
+	if existingRegistryCacheExt != nil {
+		return disabledExtension(existingRegistryCacheExt)
+	}
+
+	return nil, nil
 }
 
-func extension(caches []registrycache.RegistryCache, enabled bool) (*gardener.Extension, error) {
+func extension(caches []imv1.ImageRegistryCache) (*gardener.Extension, error) {
 
 	registryConfig := registrycacheext.RegistryConfig{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: "registry.extensions.gardener.cloud/v1alpha3",
 			Kind:       "RegistryConfig",
 		},
-		Caches: toRegistryCacheExtension(caches),
+		Caches: ToRegistryCacheExtension(caches),
 	}
 
 	providerConfigBytes, err := json.Marshal(registryConfig)
@@ -36,11 +48,40 @@ func extension(caches []registrycache.RegistryCache, enabled bool) (*gardener.Ex
 		ProviderConfig: &runtime.RawExtension{
 			Raw: providerConfigBytes,
 		},
-		Disabled: ptr.To(!enabled),
+		Disabled: ptr.To(false),
 	}, nil
 }
 
-func toRegistryCacheExtension(cache []registrycache.RegistryCache) []registrycacheext.RegistryCache {
+func disabledExtension(existingRegistryCacheExt *gardener.Extension) (*gardener.Extension, error) {
+	var providerConfig registrycacheext.RegistryConfig
+
+	err := json.Unmarshal(existingRegistryCacheExt.ProviderConfig.Raw, &providerConfig)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 0; i < len(providerConfig.Caches); i++ {
+		providerConfig.Caches[i].SecretReferenceName = nil
+	}
+
+	providerConfigBytes, err := json.Marshal(providerConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// In case the extension is configured, and the user removes registry cache we disable the extension.
+	// In order to be able to remove registry credentials secret the reference to the secret name needs to be removed.
+	return &gardener.Extension{
+		Type: RegistryCacheExtensionType,
+		ProviderConfig: &runtime.RawExtension{
+			Raw: providerConfigBytes,
+		},
+		Disabled: ptr.To(true),
+	}, nil
+}
+
+func ToRegistryCacheExtension(caches []imv1.ImageRegistryCache) []registrycacheext.RegistryCache {
 
 	volumeToCacheExtension := func(volume *registrycache.Volume) *registrycacheext.Volume {
 
@@ -75,16 +116,24 @@ func toRegistryCacheExtension(cache []registrycache.RegistryCache) []registrycac
 		}
 	}
 
+	secretReferenceName := func(cache imv1.ImageRegistryCache) *string {
+		if cache.Config.SecretReferenceName == nil || *cache.Config.SecretReferenceName == "" {
+			return nil
+		}
+
+		return ptr.To(fmt.Sprintf(RegistryCacheSecretNameFmt, cache.UID))
+	}
+
 	// Convert the registry cache to the internal format
 	registryCaches := make([]registrycacheext.RegistryCache, 0)
-	for _, c := range cache {
+	for _, c := range caches {
 		registryCaches = append(registryCaches, registrycacheext.RegistryCache{
-			Upstream:            c.Upstream,
-			RemoteURL:           c.RemoteURL,
-			Volume:              volumeToCacheExtension(c.Volume),
-			GarbageCollection:   garbageCollectionExtension(c.GarbageCollection),
-			SecretReferenceName: c.SecretReferenceName,
-			Proxy:               proxyExtension(c.Proxy),
+			Upstream:            c.Config.Upstream,
+			RemoteURL:           c.Config.RemoteURL,
+			Volume:              volumeToCacheExtension(c.Config.Volume),
+			GarbageCollection:   garbageCollectionExtension(c.Config.GarbageCollection),
+			SecretReferenceName: secretReferenceName(c),
+			Proxy:               proxyExtension(c.Config.Proxy),
 		})
 	}
 	return registryCaches

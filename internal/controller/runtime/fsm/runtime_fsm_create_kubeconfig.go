@@ -22,7 +22,7 @@ func sFnHandleKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 
 	// get section
 	var cluster imv1.GardenerCluster
-	err := m.Get(ctx, types.NamespacedName{
+	err := m.KcpClient.Get(ctx, types.NamespacedName{
 		Namespace: s.instance.Namespace,
 		Name:      runtimeID,
 	}, &cluster)
@@ -30,10 +30,9 @@ func sFnHandleKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 	if err != nil {
 		if !k8serrors.IsNotFound(err) {
 			m.log.Error(err, "GardenerCluster CR read error", "name", runtimeID)
-			s.instance.UpdateStatePending(
+			s.instance.UpdateStateFailed(
 				imv1.ConditionTypeRuntimeKubeconfigReady,
 				imv1.ConditionReasonKubernetesAPIErr,
-				"False",
 				err.Error(),
 			)
 			m.Metrics.IncRuntimeFSMStopCounter()
@@ -41,20 +40,19 @@ func sFnHandleKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 		}
 
 		m.log.V(log_level.DEBUG).Info("GardenerCluster CR not found, creating a new one", "name", runtimeID)
-		err = m.Create(ctx, makeGardenerClusterForRuntime(s.instance, s.shoot))
+		err = m.KcpClient.Create(ctx, makeGardenerClusterForRuntime(s.instance, s.shoot))
 		if err != nil {
 			m.log.Error(err, "GardenerCluster CR create error", "name", runtimeID)
-			s.instance.UpdateStatePending(
+			s.instance.UpdateStateFailed(
 				imv1.ConditionTypeRuntimeKubeconfigReady,
 				imv1.ConditionReasonKubernetesAPIErr,
-				"False",
 				err.Error(),
 			)
 			m.Metrics.IncRuntimeFSMStopCounter()
 			return updateStatusAndStop()
 		}
 
-		s.instance.UpdateStatePending(imv1.ConditionTypeRuntimeKubeconfigReady, imv1.ConditionReasonGardenerCRCreated, "Unknown", "Gardener Cluster CR created, waiting for readiness")
+		s.instance.UpdateStatePending(imv1.ConditionTypeRuntimeKubeconfigReady, imv1.ConditionReasonGardenerCRCreated, metav1.ConditionUnknown, "Gardener Cluster CR created, waiting for readiness")
 		return updateStatusAndRequeueAfter(m.ControlPlaneRequeueDuration)
 	}
 
@@ -69,7 +67,7 @@ func sFnHandleKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 		imv1.ConditionTypeRuntimeKubeconfigReady,
 		imv1.ConditionReasonGardenerCRReady,
 		"Gardener Cluster CR is ready.",
-		sFnConfigureOidc)
+		sFnCreateKymaNamespace)
 }
 
 func makeGardenerClusterForRuntime(runtime imv1.Runtime, shoot *gardener.Shoot) *imv1.GardenerCluster {

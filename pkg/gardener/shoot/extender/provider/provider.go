@@ -1,13 +1,16 @@
 package provider
 
 import (
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	"slices"
 	"sort"
+
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maxpods"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/alicloud"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/aws"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/azure"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/gcp"
@@ -17,7 +20,7 @@ import (
 )
 
 // InfrastructureConfig and ControlPlaneConfig are generated unless they are specified in the RuntimeCR
-func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName, defMachineImgVer string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIMDSv2 bool, defMachineImgName, defMachineImgVer string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
 		provider.Type = rt.Spec.Shoot.Provider.Type
@@ -34,7 +37,9 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 
 		workerZones := getNetworkingZonesFromWorkers(provider.Workers)
 
-		infraConfig, controlPlaneConf, err := getConfig(rt.Spec.Shoot, workerZones, nil)
+		canEnableDualStack := rt.Spec.Shoot.Networking.DualStack != nil && *rt.Spec.Shoot.Networking.DualStack && infraSupportsDualStack
+
+		infraConfig, controlPlaneConf, err := getConfig(rt.Spec.Shoot, workerZones, canEnableDualStack, nil)
 		if err != nil {
 			return err
 		}
@@ -46,7 +51,9 @@ func NewProviderExtenderForCreateOperation(enableIMDSv2 bool, defMachineImgName,
 		if err = setWorkerConfig(provider, provider.Type, enableIMDSv2); err != nil {
 			return err
 		}
-		setWorkerSettings(provider)
+		if err = setWorkerSettings(provider, rt.Spec.Shoot.Networking.Pods); err != nil {
+			return err
+		}
 
 		return applyDefaultGVisorNetRaw(provider.Workers)
 	}
@@ -92,7 +99,7 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 		} else {
 			mergedWorkerZones := append(workerZonesFromShoot, zonesAdded...)
 
-			infraConfig, controlPlaneConfig, err := getConfig(rt.Spec.Shoot, mergedWorkerZones, existingInfraConfig.Raw)
+			infraConfig, controlPlaneConfig, err := getConfig(rt.Spec.Shoot, mergedWorkerZones, false, existingInfraConfig.Raw)
 			if err != nil {
 				return err
 			}
@@ -107,7 +114,12 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 			return err
 		}
 
-		setWorkerSettings(provider)
+		if err = setWorkerSettings(provider, rt.Spec.Shoot.Networking.Pods); err != nil {
+			return err
+		}
+
+		// alignWorkersWithGardener runs after maxPods clamping. It only aligns zones, machine image, and
+		// update strategy from existing Shoot workers; it does not touch maxPods, so clamped values are preserved.
 		alignWorkersWithGardener(provider, shootWorkers)
 
 		return applyDefaultGVisorNetRaw(provider.Workers)
@@ -169,7 +181,7 @@ func sortWorkersToShootOrder(runtimeWorkers []gardener.Worker, shootWorkers []ga
 type InfrastructureProviderFunc func(workersCidr string, zones []string) ([]byte, error)
 type ControlPlaneProviderFunc func(zones []string) ([]byte, error)
 
-func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, existingInfrastructureConfig []byte) (infrastructureConfig *runtime.RawExtension, controlPlaneConfig *runtime.RawExtension, err error) {
+func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, enableDualStack bool, existingInfrastructureConfig []byte) (infrastructureConfig *runtime.RawExtension, controlPlaneConfig *runtime.RawExtension, err error) {
 	getConfigForProvider := func(runtimeShoot imv1.RuntimeShoot, infrastructureConfigFunc InfrastructureProviderFunc, controlPlaneConfigFunc ControlPlaneProviderFunc) (*runtime.RawExtension, *runtime.RawExtension, error) {
 		infrastructureConfigBytes, err := infrastructureConfigFunc(runtimeShoot.Networking.Nodes, zones)
 		if err != nil {
@@ -192,6 +204,9 @@ func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, existingInfrastru
 					return aws.GetInfrastructureConfigForPatch(workersCidr, zones, existingInfrastructureConfig)
 				}, aws.GetControlPlaneConfig)
 			}
+			if enableDualStack {
+				return getConfigForProvider(runtimeShoot, aws.GetInfrastructureConfigForDualStack, aws.GetControlPlaneConfigForDualStack)
+			}
 			return getConfigForProvider(runtimeShoot, aws.GetInfrastructureConfig, aws.GetControlPlaneConfig)
 		}
 	case hyperscaler.TypeAzure:
@@ -211,6 +226,10 @@ func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, existingInfrastru
 	case hyperscaler.TypeOpenStack:
 		{
 			return getConfigForProvider(runtimeShoot, openstack.GetInfrastructureConfig, openstack.GetControlPlaneConfig)
+		}
+	case hyperscaler.TypeAlicloud:
+		{
+			return getConfigForProvider(runtimeShoot, alicloud.GetInfrastructureConfig, alicloud.GetControlPlaneConfig)
 		}
 	default:
 		return nil, nil, errors.New("provider not supported")
@@ -257,12 +276,33 @@ func setWorkerConfig(provider *gardener.Provider, providerType string, enableIMD
 	return nil
 }
 
-func setWorkerSettings(provider *gardener.Provider) {
+func setWorkerSettings(provider *gardener.Provider, podsCIDR string) error {
 	provider.WorkersSettings = &gardener.WorkersSettings{
 		SSHAccess: &gardener.SSHAccess{
 			Enabled: false,
 		},
 	}
+
+	perNodeLimit, err := maxpods.MaxPodsFromCIDR(maxpods.CanonicalPodsCIDRSlash24)
+	if err != nil {
+		return errors.Wrap(err, "per-node maxPods limit from /24 pods CIDR")
+	}
+	maxpods.ApplyPerNodeMaxPodsCap(provider.Workers, int32(perNodeLimit))
+
+	if podsCIDR == "" {
+		return nil
+	}
+
+	totalIPs, err := maxpods.MaxPodsFromCIDR(podsCIDR)
+	if err != nil {
+		return errors.Wrap(err, "invalid pods CIDR for maxPods calculation")
+	}
+
+	if err := maxpods.ApplyMaxPodsWithTotalCap(provider.Workers, totalIPs); err != nil {
+		return errors.Wrap(err, "maxPods clamping")
+	}
+
+	return nil
 }
 
 // It sets the machine image name and version to the values specified in the Runtime worker configuration.

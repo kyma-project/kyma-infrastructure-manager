@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,13 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 package v1
 
 import (
 	"fmt"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	registrycache "github.com/kyma-project/registry-cache/api/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -61,11 +61,14 @@ const (
 type RuntimeConditionType string
 
 const (
-	ConditionTypeRuntimeProvisioned     RuntimeConditionType = "Provisioned"
-	ConditionTypeRuntimeKubeconfigReady RuntimeConditionType = "KubeconfigReady"
-	ConditionTypeOidcConfigured         RuntimeConditionType = "OidcConfigured"
-	ConditionTypeRuntimeConfigured      RuntimeConditionType = "Configured"
-	ConditionTypeRuntimeDeprovisioned   RuntimeConditionType = "Deprovisioned"
+	ConditionTypeRuntimeProvisioned       RuntimeConditionType = "Provisioned"
+	ConditionTypeRuntimeKubeconfigReady   RuntimeConditionType = "KubeconfigReady"
+	ConditionTypeOidcAndCMsConfigured     RuntimeConditionType = "OidcAndConfigMapConfigured"
+	ConditionTypeKymaSystemCreated        RuntimeConditionType = "KymaSystemNSCreated"
+	ConditionTypeRuntimeConfigured        RuntimeConditionType = "Configured"
+	ConditionTypeRuntimeDeprovisioned     RuntimeConditionType = "Deprovisioned"
+	ConditionTypeRegistryCacheConfigured  RuntimeConditionType = "RegistryCacheConfigured"
+	ConditionTypeRuntimeBootstrapperReady RuntimeConditionType = "RuntimeBootstrapperReady"
 )
 
 type RuntimeConditionReason string
@@ -94,10 +97,26 @@ const (
 	ConditionReasonAuditLogError = RuntimeConditionReason("AuditLogErr")
 
 	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
-	ConditionReasonOidcConfigured           = RuntimeConditionReason("OidcConfigured")
+	ConditionReasonOidcAndCMsConfigured     = RuntimeConditionReason("OidcAndConfigMapsConfigured")
 	ConditionReasonOidcError                = RuntimeConditionReason("OidcConfigurationErr")
+	ConditionReasonCMError                  = RuntimeConditionReason("ConfigMapErr")
+	ConditionReasonKymaSystemNSError        = RuntimeConditionReason("KymaSystemNSError")
+	ConditionReasonKymaSystemNSReady        = RuntimeConditionReason("KymaSystemNSReady")
 	ConditionReasonSeedNotFound             = RuntimeConditionReason("SeedNotFound")
-	ConditionReasonRegistryCacheError       = RuntimeConditionReason("RegistryCacheConfigurationErr")
+
+	ConditionReasonRegistryCacheConfigured = RuntimeConditionReason("RegistryCacheConfigured")
+
+	ConditionReasonRegistryCacheError                            = RuntimeConditionReason("RegistryCacheError")
+	ConditionReasonRegistryCacheGardenClusterConfigurationFailed = RuntimeConditionReason("RegistryCacheGardenClusterConfigurationFailed")
+	ConditionReasonRegistryCacheGardenClusterCleanupFailed       = RuntimeConditionReason("RegistryCacheGardenClusterCleanupFailed")
+
+	ConditionReasonRuntimeBootstrapperStatusUnknown          = RuntimeConditionReason("RuntimeBootstrapperStatusUnknown")
+	ConditionReasonRuntimeBootstrapperInstallationFailed     = RuntimeConditionReason("RuntimeBootstrapperInstallationFailed")
+	ConditionReasonRuntimeBootstrapperInstallationInProgress = RuntimeConditionReason("RuntimeBootstrapperInstallationInProgress")
+	ConditionReasonRuntimeBootstrapperConfigured             = RuntimeConditionReason("RuntimeBootstrapperConfigured")
+	ConditionReasonRuntimeBootstrapperUpgradeFailed          = RuntimeConditionReason("RuntimeBootstrapperUpgradeFailed")
+	ConditionReasonRuntimeBootstrapperUpgradeInProgress      = RuntimeConditionReason("RuntimeBootstrapperUpgradeInProgress")
+	ConditionReasonRuntimeBootstrapperConfigurationFailed    = RuntimeConditionReason("RuntimeBootstrapperConfigurationFailed")
 )
 
 //+kubebuilder:object:root=true
@@ -127,13 +146,16 @@ type RuntimeList struct {
 
 // RuntimeSpec defines the desired state of Runtime
 type RuntimeSpec struct {
-	Shoot    RuntimeShoot        `json:"shoot"`
-	Security Security            `json:"security"`
-	Caching  *ImageRegistryCache `json:"imageRegistryCache,omitempty"`
+	Shoot    RuntimeShoot         `json:"shoot"`
+	Security Security             `json:"security"`
+	Caching  []ImageRegistryCache `json:"imageRegistryCache,omitempty"`
 }
 
 type ImageRegistryCache struct {
-	Enabled bool `json:"enabled"`
+	Name      string                                `json:"name"`
+	Namespace string                                `json:"namespace"`
+	UID       string                                `json:"uid"`
+	Config    registrycache.RegistryCacheConfigSpec `json:"config"`
 }
 
 // RuntimeStatus defines the observed state of Runtime
@@ -148,6 +170,13 @@ type RuntimeStatus struct {
 
 	// ProvisioningCompleted indicates if the initial provisioning of the cluster is completed
 	ProvisioningCompleted bool `json:"provisioningCompleted,omitempty"`
+
+	// LastOperation indicates the type and the state of the last operation of Gardener's `shoot`, along with a description
+	// message and a progress indicator.
+	ShootLastOperation *gardener.LastOperation `json:"shootLastOperation,omitempty" protobuf:"bytes,5,opt,name=lastOperation"`
+
+	// LastError indicates the last occurred error for an operation on a Gardener's `shoot` resource.
+	ShootLastErrors []gardener.LastError `json:"shootLastErrors,omitempty" protobuf:"bytes,6,rep,name=lastErrors"`
 }
 
 type RuntimeShoot struct {
@@ -179,10 +208,13 @@ type OIDCConfig struct {
 type APIServer struct {
 	OidcConfig           gardener.OIDCConfig `json:"oidcConfig,omitempty"`
 	AdditionalOidcConfig *[]OIDCConfig       `json:"additionalOidcConfig,omitempty"`
+	ACL                  *ACL                `json:"acl,omitempty"`
 }
-
+type ACL struct {
+	AllowedCIDRs []string `json:"allowedCIDRs,omitempty"`
+}
 type Provider struct {
-	//+kubebuilder:validation:Enum=aws;azure;gcp;openstack
+	//+kubebuilder:validation:Enum=aws;azure;gcp;openstack;alicloud
 	Type                 string                `json:"type"`
 	Workers              []gardener.Worker     `json:"workers"`
 	AdditionalWorkers    *[]gardener.Worker    `json:"additionalWorkers,omitempty"`
@@ -191,12 +223,13 @@ type Provider struct {
 }
 
 type Networking struct {
-	Type     *string `json:"type,omitempty"`
-	Pods     string  `json:"pods"`
-	Nodes    string  `json:"nodes"`
-	Services string  `json:"services"`
+	Type       *string `json:"type,omitempty"`
+	Pods       string  `json:"pods"`
+	Nodes      string  `json:"nodes"`
+	Services   string  `json:"services"`
+	DualStack  *bool   `json:"dualStack,omitempty"`
+	VPCNetwork *string `json:"vpcNetwork,omitempty"`
 }
-
 type Security struct {
 	Administrators []string           `json:"administrators"`
 	Networking     NetworkingSecurity `json:"networking"`
@@ -239,16 +272,12 @@ func (k *Runtime) UpdateStateReady(c RuntimeConditionType, r RuntimeConditionRea
 	meta.SetStatusCondition(&k.Status.Conditions, condition)
 }
 
-func (k *Runtime) UpdateStateDeletion(c RuntimeConditionType, r RuntimeConditionReason, status, msg string) {
-	if status != "False" {
-		k.Status.State = RuntimeStateTerminating
-	} else {
-		k.Status.State = RuntimeStateFailed
-	}
+func (k *Runtime) UpdateStateDeletion(c RuntimeConditionType, r RuntimeConditionReason, status metav1.ConditionStatus, msg string) {
+	k.Status.State = RuntimeStateTerminating
 
 	condition := metav1.Condition{
 		Type:               string(c),
-		Status:             metav1.ConditionStatus(status),
+		Status:             status,
 		LastTransitionTime: metav1.Now(),
 		Reason:             string(r),
 		Message:            msg,
@@ -256,16 +285,24 @@ func (k *Runtime) UpdateStateDeletion(c RuntimeConditionType, r RuntimeCondition
 	meta.SetStatusCondition(&k.Status.Conditions, condition)
 }
 
-func (k *Runtime) UpdateStatePending(c RuntimeConditionType, r RuntimeConditionReason, status, msg string) {
-	if status == "False" {
-		k.Status.State = RuntimeStateFailed
-	} else {
-		k.Status.State = RuntimeStatePending
+func (k *Runtime) UpdateStateFailed(c RuntimeConditionType, r RuntimeConditionReason, msg string) {
+	k.Status.State = RuntimeStateFailed
+	condition := metav1.Condition{
+		Type:               string(c),
+		Status:             metav1.ConditionFalse,
+		LastTransitionTime: metav1.Now(),
+		Reason:             string(r),
+		Message:            msg,
 	}
+	meta.SetStatusCondition(&k.Status.Conditions, condition)
+}
+
+func (k *Runtime) UpdateStatePending(c RuntimeConditionType, r RuntimeConditionReason, status metav1.ConditionStatus, msg string) {
+	k.Status.State = RuntimeStatePending
 
 	condition := metav1.Condition{
 		Type:               string(c),
-		Status:             metav1.ConditionStatus(status),
+		Status:             status,
 		LastTransitionTime: metav1.Now(),
 		Reason:             string(r),
 		Message:            msg,

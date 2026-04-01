@@ -1,0 +1,7 @@
+processor:
+  ignoreTypes:
+    # whole types can be ignored, please see https://github.com/elastic/crd-ref-docs?tab=readme-ov-file#configuration 
+  ignoreFields:
+    # concrete fields can be ignored, please see https://github.com/elastic/crd-ref-docs?tab=readme-ov-file#configuration 
+render:
+  kubernetesVersion: 1.32

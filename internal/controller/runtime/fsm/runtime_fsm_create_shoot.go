@@ -4,32 +4,35 @@ import (
 	"context"
 	"fmt"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/go-logr/logr"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 const (
-	msgFailedToConfigureAuditlogs     = "Failed to configure audit logs"
-	msgFailedStructuredConfigMap      = "Failed to create structured authentication config map"
-	msgFailedToConfigureRegistryCache = "Failed to configure registry cache"
+	msgFailedToConfigureAuditlogs = "Failed to configure audit logs"
+	msgFailedStructuredConfigMap  = "Failed to create structured authentication config map"
 )
 
 func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	if s.instance.Spec.Shoot.EnforceSeedLocation != nil && *s.instance.Spec.Shoot.EnforceSeedLocation {
-		seedAvailable, regionsWithSeeds, err := seedForRegionAvailable(ctx, m.ShootClient, s.instance.Spec.Shoot.Provider.Type, s.instance.Spec.Shoot.Region)
+		seedAvailable, regionsWithSeeds, err := seedForRegionAvailable(ctx, m.GardenClient, s.instance.Spec.Shoot.Provider.Type, s.instance.Spec.Shoot.Region)
 		if err != nil {
 			msg := fmt.Sprintf("Failed to verify whether seed is available for the region %s.", s.instance.Spec.Shoot.Region)
 			m.log.Error(err, msg)
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRuntimeProvisioned,
 				imv1.ConditionReasonGardenerError,
-				"False",
+				metav1.ConditionFalse,
 				msg,
 			)
 			return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
@@ -39,7 +42,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 			msg := fmt.Sprintf("Cannot find available seed for the region %s. The followig regions have seeds ready: %v.", s.instance.Spec.Shoot.Region, regionsWithSeeds)
 			m.log.Error(nil, msg)
 			m.Metrics.IncRuntimeFSMStopCounter()
-			return updateStatePendingWithErrorAndStop(
+			return updateStateFailedWithErrorAndStop(
 				&s.instance,
 				imv1.ConditionTypeRuntimeProvisioned,
 				imv1.ConditionReasonSeedNotFound,
@@ -47,21 +50,19 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		}
 	}
 
-	if m.StructuredAuthEnabled {
-		cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
-		oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
+	cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
+	oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
 
-		err := structuredauth.CreateOrUpdateStructuredAuthConfigMap(ctx, m.ShootClient, types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace}, oidcConfig)
-		if err != nil {
-			m.log.Error(err, "Failed to create structured authentication config map")
+	err := structuredauth.CreateOrUpdateStructuredAuthConfigMap(ctx, m.GardenClient, types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace}, oidcConfig)
+	if err != nil {
+		m.log.Error(err, "Failed to create structured authentication config map")
 
-			m.Metrics.IncRuntimeFSMStopCounter()
-			return updateStatePendingWithErrorAndStop(
-				&s.instance,
-				imv1.ConditionTypeRuntimeProvisioned,
-				imv1.ConditionReasonOidcError,
-				msgFailedStructuredConfigMap)
-		}
+		m.Metrics.IncRuntimeFSMStopCounter()
+		return updateStateFailedWithErrorAndStop(
+			&s.instance,
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonOidcError,
+			msgFailedStructuredConfigMap)
 	}
 
 	data, err := m.AuditLogging.GetAuditLogData(
@@ -74,36 +75,39 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 
 	if err != nil && m.AuditLogMandatory {
 		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(
+		return updateStateFailedWithErrorAndStop(
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonAuditLogError,
 			msgFailedToConfigureAuditlogs)
 	}
 
+	timeBoundaries, _ := token.ValidateTokenExpirationTime(m.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
+	logTokenExpirationInfo(m.log, timeBoundaries)
+
 	shoot, err := convertCreate(&s.instance, gardener_shoot.CreateOpts{
 		ConverterConfig:       m.ConverterConfig,
 		AuditLogData:          data,
 		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
-		StructuredAuthEnabled: m.StructuredAuthEnabled,
+		ApiServerAclEnabled:   m.ApiServerAclEnabled,
 	})
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object")
 		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(
+		return updateStateFailedWithErrorAndStop(
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonConversionError,
 			fmt.Sprintf("Runtime conversion error %v", err))
 	}
 
-	err = m.ShootClient.Create(ctx, &shoot)
+	err = m.GardenClient.Create(ctx, &shoot)
 	if err != nil {
 		m.log.Error(err, "Failed to create new gardener Shoot")
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonGardenerError,
-			"False",
+			metav1.ConditionFalse,
 			fmt.Sprintf("Gardener API create error: %v", err),
 		)
 		return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
@@ -118,7 +122,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	s.instance.UpdateStatePending(
 		imv1.ConditionTypeRuntimeProvisioned,
 		imv1.ConditionReasonShootCreationPending,
-		"Unknown",
+		metav1.ConditionUnknown,
 		"Shoot is pending",
 	)
 
@@ -137,4 +141,16 @@ func convertCreate(instance *imv1.Runtime, opts gardener_shoot.CreateOpts) (gard
 	}
 
 	return newShoot, nil
+}
+
+func logTokenExpirationInfo(log logr.Logger, tokenLiveTime token.TimeBoundaries) {
+	if tokenLiveTime.NotDefined {
+		log.Info("Token expiration time is not defined, defaulting to minimum of 30 days.", "severity", "warning")
+	}
+	if tokenLiveTime.TooShort {
+		log.Info("Token expiration below allowed minimum, using minimum of 30 days.", "severity", "warning")
+	}
+	if tokenLiveTime.TooLong {
+		log.Info("Token expiration above allowed maximum, using maximum of 90 days.", "severity", "warning")
+	}
 }

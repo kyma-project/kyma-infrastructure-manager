@@ -2,11 +2,12 @@ package shoot
 
 import (
 	"fmt"
-	"github.com/go-logr/logr"
+
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/networking"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/restrictions"
-	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -20,22 +21,18 @@ import (
 
 type Extend func(imv1.Runtime, *gardener.Shoot) error
 
-func baseExtenders(cfg config.ConverterConfig, structuredAuthEnabled bool) []Extend {
-
-	oidcExtender := extender2.NewLegacyOidcExtender(cfg.Kubernetes.DefaultOperatorOidc)
-
-	if structuredAuthEnabled {
-		oidcExtender = extender2.NewOidcExtender()
-	}
+func baseExtenders(converterConfig config.ConverterConfig) []Extend {
 
 	return []Extend{
 		extender2.ExtendWithAnnotations,
 		extender2.ExtendWithLabels,
 		extender2.ExtendWithSeedSelector,
-		oidcExtender,
+		extender2.NewOidcExtender(),
 		extender2.ExtendWithCloudProfile,
 		extender2.ExtendWithExposureClassName,
 		restrictions.ExtendWithAccessRestriction(),
+		extender2.NewFeatureGatesExtender(converterConfig.Kubernetes.KubeApiServer.FeatureGates, converterConfig.Kubernetes.Kubelet.FeatureGates),
+		extender2.NewKubernetesRuntimeConfigExtender(converterConfig.Kubernetes.KubeApiServer.RuntimeConfig),
 	}
 }
 
@@ -55,7 +52,7 @@ type CreateOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
-	StructuredAuthEnabled bool
+	ApiServerAclEnabled bool
 }
 
 type WorkerZones struct {
@@ -67,33 +64,32 @@ type PatchOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
-	ShootK8SVersion       string
-	Workers               []gardener.Worker
-	Extensions            []gardener.Extension
-	Resources             []gardener.NamedResourceReference
-	InfrastructureConfig  *runtime.RawExtension
-	ControlPlaneConfig    *runtime.RawExtension
-	Log                   *logr.Logger
-	StructuredAuthEnabled bool
-	RegistryCache         []registrycache.RegistryCache
+	ShootK8SVersion      string
+	Workers              []gardener.Worker
+	Extensions           []gardener.Extension
+	Resources            []gardener.NamedResourceReference
+	InfrastructureConfig *runtime.RawExtension
+	ControlPlaneConfig   *runtime.RawExtension
+	ApiServerAclEnabled  bool
 }
 
 func NewConverterCreate(opts CreateOpts) Converter {
-	extendersForCreate := baseExtenders(opts.ConverterConfig, opts.StructuredAuthEnabled)
+	extendersForCreate := baseExtenders(opts.ConverterConfig)
 
 	extendersForCreate = append(extendersForCreate,
 		provider.NewProviderExtenderForCreateOperation(
+			opts.Networking.EnableDualStackIP,
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
 		),
-		extender2.ExtendWithTolerations,
+		extender2.NewTolerationsExtender(opts.Tolerations),
 	)
 
 	if !opts.DNS.IsGardenerInternal() {
 		extendersForCreate = append(extendersForCreate, extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType))
 	}
-	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.ConverterConfig, opts.AuditLogData, nil))
+	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.ConverterConfig, opts.AuditLogData, nil, opts.ApiServerAclEnabled))
 	extendersForCreate = append(extendersForCreate,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
 
@@ -106,11 +102,14 @@ func NewConverterCreate(opts CreateOpts) Converter {
 				opts.AuditLogData))
 	}
 
+	extendersForCreate = append(extendersForCreate, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration))
+	extendersForCreate = append(extendersForCreate, networking.ExtendWithNetworking(opts.Networking.EnableDualStackIP))
+	extendersForCreate = append(extendersForCreate, extender2.ExtendWithCredentialsBinding(opts.Gardener.EnableCredentialBinding))
 	return newConverter(opts.ConverterConfig, extendersForCreate...)
 }
 
 func NewConverterPatch(opts PatchOpts) Converter {
-	extendersForPatch := baseExtenders(opts.ConverterConfig, opts.StructuredAuthEnabled)
+	extendersForPatch := baseExtenders(opts.ConverterConfig)
 
 	extendersForPatch = append(extendersForPatch,
 		provider.NewProviderExtenderPatchOperation(
@@ -122,12 +121,12 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.ControlPlaneConfig))
 
 	extendersForPatch = append(extendersForPatch,
-		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.RegistryCache, opts.Extensions),
-		extender2.NewResourcesExtenderForPatch(opts.Resources))
+		extender2.NewResourcesExtenderForPatch(opts.Resources),
+		extensions.NewExtensionsExtenderForPatch(opts.ConverterConfig, opts.AuditLogData, opts.Extensions, opts.ApiServerAclEnabled))
 
 	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
-
 	extendersForPatch = append(extendersForPatch, maintenance.NewMaintenanceExtender(opts.Kubernetes.EnableKubernetesVersionAutoUpdate, opts.Kubernetes.EnableMachineImageVersionAutoUpdate, opts.MaintenanceTimeWindow))
+	extendersForPatch = append(extendersForPatch, extender2.ExtendWithCredentialsBinding(opts.Gardener.EnableCredentialBinding))
 
 	if opts.AuditLogData != (auditlogs.AuditLogData{}) {
 		extendersForPatch = append(extendersForPatch,
@@ -154,9 +153,8 @@ func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
 			Namespace: fmt.Sprintf("garden-%s", c.config.Gardener.ProjectName),
 		},
 		Spec: gardener.ShootSpec{
-			Purpose:           &runtime.Spec.Shoot.Purpose,
-			Region:            runtime.Spec.Shoot.Region,
-			SecretBindingName: &runtime.Spec.Shoot.SecretBindingName,
+			Purpose: &runtime.Spec.Shoot.Purpose,
+			Region:  runtime.Spec.Shoot.Region,
 			Networking: &gardener.Networking{
 				Type:     runtime.Spec.Shoot.Networking.Type,
 				Nodes:    &runtime.Spec.Shoot.Networking.Nodes,

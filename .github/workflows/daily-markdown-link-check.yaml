@@ -8,7 +8,7 @@ jobs:
   daily-markdown-link-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: gaurav-nelson/github-action-markdown-link-check@0524e79d8d7d1606112722dd7a3b5f5ce367de3e
         with:
           use-quiet-mode: 'yes'  

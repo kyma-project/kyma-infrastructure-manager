@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
@@ -178,16 +177,6 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 	testScheme, err := newTestScheme()
 	Expect(err).ShouldNot(HaveOccurred())
 
-	defaultSetup := func(f *fsm) error {
-		GetShootClient = func(
-			_ context.Context,
-			_ client.Client,
-			_ imv1.Runtime) (client.Client, error) {
-			return f.Client, nil
-		}
-		return nil
-	}
-
 	DescribeTable("sFnApplyClusterRoleBindings",
 		func(tc tcApplySfn) {
 			// initialize test data if required
@@ -220,7 +209,6 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 				withMockedMetrics(),
 				withDefaultReconcileDuration(),
 			),
-			setup: defaultSetup,
 		}),
 
 		Entry("nothing change", tcApplySfn{
@@ -237,32 +225,22 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 				withMockedMetrics(),
 				withDefaultReconcileDuration(),
 			),
-			setup: defaultSetup,
 		}),
 
 		Entry("error getting client", tcApplySfn{
 			instance: testRuntime,
 			expected: tcSfnExpected{
-				err: testErr,
+				err:    nil,
+				result: ctrl.Result{RequeueAfter: defaultControlPlaneRequeueDuration},
 			},
 			fsm: must(
 				newFakeFSM,
-				withFakedK8sClient(testScheme, &testRuntime),
+				withFailedRuntimeK8sClient(testErr, testScheme, &testRuntime),
 				withFn(sFnApplyClusterRoleBindingsStateSetup),
 				withFakeEventRecorder(1),
 				withMockedMetrics(),
 				withDefaultReconcileDuration(),
 			),
-			setup: func(f *fsm) error {
-				GetShootClient = func(
-					_ context.Context,
-					_ client.Client,
-					_ imv1.Runtime) (client.Client, error) {
-					return nil, testErr
-				}
-				return nil
-
-			},
 		}),
 	)
 })

@@ -1,0 +1,20 @@
+package fsm
+
+import (
+	"context"
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
+)
+
+//mockery:generate: true
+type RuntimeBootstrapperInstaller interface {
+	Configure(ctx context.Context, runtime imv1.Runtime) error
+	Install(context context.Context, runtime imv1.Runtime, manifests string) error
+	InstallationInfo(context context.Context, runtime imv1.Runtime) (rtbootstrapper.InstallationStatus, string, error)
+	Cleanup(ctx context.Context, runtime imv1.Runtime) error
+}
+
+//mockery:generate: true
+type RuntimeBootstrapperConfigurator interface {
+	Configure(context context.Context, runtime imv1.Runtime) error
+}

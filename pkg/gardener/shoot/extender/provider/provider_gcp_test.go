@@ -2,6 +2,8 @@ package provider
 
 import (
 	"encoding/json"
+	"testing"
+
 	gcpext "github.com/gardener/gardener-extension-provider-gcp/pkg/apis/gcp/v1alpha1"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -11,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
-	"testing"
 )
 
 func TestProviderExtenderForCreateGCP(t *testing.T) {
@@ -31,7 +32,9 @@ func TestProviderExtenderForCreateGCP(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeGCP, "ubuntu", "18.04", []string{"us-central1-a"}),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -46,7 +49,9 @@ func TestProviderExtenderForCreateGCP(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeGCP, "ubuntu", "18.04", []string{"us-central1-a", "us-central1-b"}),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -61,7 +66,9 @@ func TestProviderExtenderForCreateGCP(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeGCP, "ubuntu", "18.04", []string{"us-central1-a", "us-central1-b", "us-central1-c"}),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -77,7 +84,7 @@ func TestProviderExtenderForCreateGCP(t *testing.T) {
 
 			// when
 
-			extender := NewProviderExtenderForCreateOperation(false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
+			extender := NewProviderExtenderForCreateOperation(false, false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
 			err := extender(tc.Runtime, &shoot)
 
 			// then
@@ -109,7 +116,9 @@ func TestProviderExtenderForPatchWorkersUpdateGCP(t *testing.T) {
 							{"next-worker", "n2-standard-2", "gardenlinux", "1312.2.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-c"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -132,7 +141,9 @@ func TestProviderExtenderForPatchWorkersUpdateGCP(t *testing.T) {
 							{"next-worker", "n2-standard-2", "gardenlinux", "1312.2.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-d"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -156,7 +167,9 @@ func TestProviderExtenderForPatchWorkersUpdateGCP(t *testing.T) {
 							{"additional", "n2-standard-2", "gardenlinux", "1312.2.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-c"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -181,7 +194,9 @@ func TestProviderExtenderForPatchWorkersUpdateGCP(t *testing.T) {
 							{"additional", "n2-standard-2", "gardenlinux", "1312.2.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-d"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -206,7 +221,9 @@ func TestProviderExtenderForPatchWorkersUpdateGCP(t *testing.T) {
 							{"additional", "n2-standard-2", "gardenlinux", "1312.2.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-d"}},
 						}), fixGCPInfrastructureConfig("10.250.0.0/22"), fixGCPControlPlaneConfig([]string{"us-central1-a", "us-central1-b", "us-central1-c"})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -229,7 +246,9 @@ func TestProviderExtenderForPatchWorkersUpdateGCP(t *testing.T) {
 						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeGCP, fixMultipleWorkers([]workerConfig{
 							{"main-worker", "n2-standard-2", "gardenlinux", "1312.4.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-c"}}})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -253,7 +272,9 @@ func TestProviderExtenderForPatchWorkersUpdateGCP(t *testing.T) {
 							{"additional", "n2-standard-4", "gardenlinux", "1313.2.0", 1, 3, []string{"us-central1-a", "us-central1-b", "us-central1-c"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -277,7 +298,9 @@ func TestProviderExtenderForPatchWorkersUpdateGCP(t *testing.T) {
 							{"main-worker", "n2-standard-2", "gardenlinux", "1313.4.0", 1, 3, []string{"us-central1-a"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -301,7 +324,9 @@ func TestProviderExtenderForPatchWorkersUpdateGCP(t *testing.T) {
 							{"next-worker", "n2-standard-3", "gardenlinux", "1313.2.0", 1, 3, []string{"us-central1-a", "us-central1-b"}},
 						}), fixGCPInfrastructureConfig("10.250.0.0/22"), fixGCPControlPlaneConfig([]string{"us-central1-a", "us-central1-b", "us-central1-c"})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -356,7 +381,9 @@ func TestProviderExtenderForCreateMultipleWorkersGCP(t *testing.T) {
 							{"another", "gcp.large", "gardenlinux", "1312.2.0", 3, 5, []string{"us-central1-c"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -374,7 +401,7 @@ func TestProviderExtenderForCreateMultipleWorkersGCP(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderForCreateOperation(false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
+			extender := NewProviderExtenderForCreateOperation(false, false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
 			err := extender(tc.Runtime, &shoot)
 
 			// then

@@ -21,32 +21,23 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/customconfig"
-	registrycache2 "github.com/kyma-project/infrastructure-manager/internal/registrycache"
-	registrycache "github.com/kyma-project/kim-snatch/api/v1beta1"
 	"io"
 	"os"
 	"time"
 
+	configctrl "github.com/kyma-project/infrastructure-manager/internal/controller/rtbootstrapperconfig"
+	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
+
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardener_apis "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
-	gardener_oidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
+	gardenerapis "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	"github.com/go-logr/logr"
 	validator "github.com/go-playground/validator/v10"
-	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	kubeconfig_controller "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
-	runtime_controller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
-	"github.com/kyma-project/infrastructure-manager/pkg/config"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8slabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -58,6 +49,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
+	gardeneroidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
+	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	kubeconfigcontroller "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig"
+	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
+	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
+	runtimecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
+	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
+	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
+	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 var (
@@ -69,7 +76,6 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(infrastructuremanagerv1.AddToScheme(scheme))
 	utilruntime.Must(rbacv1.AddToScheme(scheme))
-	utilruntime.Must(gardener_oidc.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -106,28 +112,63 @@ func main() {
 	var gardenerClusterCtrlWorkersCnt int
 	var converterConfigFilepath string
 	var auditLogMandatory bool
-	var structuredAuthEnabled bool
-	var customConfigControllerEnabled bool
+	var registryCacheConfigControllerEnabled bool
+	var apiServerAclEnabled bool
+	var runtimeBootstrapperEnabled bool
+	var runtimeBootstrapperKCPConfigName string
+	var runtimeBootstrapperKCPPullSecretName string
+	var runtimeBootstrapperManifestsConfigMapName string
+	var runtimeBootstrapperKCPClusterTrustBundle string
+	var runtimeBootstrapperSKRDeploymentName string
+	var runtimeBootstrapperSKRConfigName string
+	var runtimeBootstrapperSKRPullSecretName string
+	var runtimeBootstrapperSKRClusterTrustBundle string
+	var runtimeBootstrapperSKRNamespace string
 
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	//Kubebuilder related parameters:
+	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to. Monitoring and alerting tools can use this endpoint to collect application specific metrics during runtime")
+	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to. Kubernetes is using the probe endpoint to determine the health state of the application process")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&gardenerKubeconfigPath, "gardener-kubeconfig-path", "/gardener/kubeconfig/kubeconfig", "Kubeconfig file for Gardener cluster")
-	flag.StringVar(&gardenerProjectName, "gardener-project-name", "gardener-project", "Name of the Gardener project")
-	flag.Float64Var(&minimalRotationTimeRatio, "minimal-rotation-time", defaultMinimalRotationTimeRatio, "The ratio determines what is the minimal time that needs to pass to rotate certificate.")
-	flag.DurationVar(&expirationTime, "kubeconfig-expiration-time", defaultExpirationTime, "Dynamic kubeconfig expiration time")
-	flag.DurationVar(&gardenerCtrlReconciliationTimeout, "gardener-ctrl-reconcilation-timeout", defaultGardenerReconciliationTimeout, "Timeout duration for reconlication for Gardener Cluster Controller")
-	flag.DurationVar(&runtimeCtrlGardenerRequestTimeout, "gardener-request-timeout", defaultGardenerRequestTimeout, "Timeout duration for Gardener client for Runtime Controller")
-	flag.IntVar(&runtimeCtrlGardenerRateLimiterQPS, "gardener-ratelimiter-qps", defaultGardenerRateLimiterQPS, "Gardener client rate limiter QPS for Runtime Controller")
-	flag.IntVar(&runtimeCtrlGardenerRateLimiterBurst, "gardener-ratelimiter-burst", defaultGardenerRateLimiterBurst, "Gardener client rate limiter burst for Runtime Controller")
-	flag.IntVar(&runtimeCtrlWorkersCnt, "runtime-ctrl-workers-cnt", defaultRuntimeCtrlWorkersCnt, "A number of workers running in parallel for Runtime Controller")
-	flag.IntVar(&gardenerClusterCtrlWorkersCnt, "gardener-cluster-ctrl-workers-cnt", defaultGardenerClusterCtrlWorkersCnt, "A number of workers running in parallel for Gardener Cluster Controller")
-	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "A file path to the gardener shoot converter configuration.")
-	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration")
-	flag.BoolVar(&structuredAuthEnabled, "structured-auth-enabled", false, "Feature flag to enable structured authentication")
-	flag.BoolVar(&customConfigControllerEnabled, "custom-config-controller-enabled", false, "Feature flag to custom config controller")
+	//Gardener related parameters:
+	flag.StringVar(&gardenerKubeconfigPath, "gardener-kubeconfig-path", "/gardener/kubeconfig/kubeconfig", "Path to the kubeconfig file by KIM to access the for Gardener cluster")
+	flag.StringVar(&gardenerProjectName, "gardener-project-name", "gardener-project", "Name of the Gardener project which is used for storing Shoot definitions")
+
+	// Kubeconfig Controller specific parameters:
+	flag.Float64Var(&minimalRotationTimeRatio, "minimal-rotation-time", defaultMinimalRotationTimeRatio, "The ratio determines what is the minimal time that needs to pass to rotate the kubeconfig of Shoot clusters. "+
+		"The ratio determines what is the minimal time that needs to pass to rotate the kubeconfig of Shoot clusters. "+
+		"For example if `kubeconfig-expiration-time` is set to `24hs` and `minimal-rotation-time` is set to `0.5`, then the next reconciliation after 12 hours will trigger the rotation")
+	flag.DurationVar(&expirationTime, "kubeconfig-expiration-time", defaultExpirationTime, "Expiration time is the maximum age of a Shoot kubeconfig until it is considered as invalid")
+	flag.DurationVar(&gardenerCtrlReconciliationTimeout, "gardener-ctrl-reconcilation-timeout", defaultGardenerReconciliationTimeout, "Timeout duration for reconiling a kubeconfig for Gardener Cluster Controller. The reconciliation of a kubeconfig is cancelled when this timeout is reached")
+	flag.IntVar(&gardenerClusterCtrlWorkersCnt, "gardener-cluster-ctrl-workers-cnt", defaultGardenerClusterCtrlWorkersCnt, "Number of workers running in parallel for Gardener Cluster Controller. The number of parallel workers has an impact on the amount of requests send to the Gardener cluster")
+
+	// Runtime Controller specific parameters:
+	flag.DurationVar(&runtimeCtrlGardenerRequestTimeout, "gardener-request-timeout", defaultGardenerRequestTimeout, "Timeout duration for Gardener client for Runtime Controller. Requests to the Gardener cluster are cancelled when this timeout is reached")
+	flag.IntVar(&runtimeCtrlGardenerRateLimiterQPS, "gardener-ratelimiter-qps", defaultGardenerRateLimiterQPS, "Gardener client rate limiter QPS (queries per seconds) for Runtime Controller. The queries per second has direct impact on the load produced for the Gardener cluster (see https://cloud.google.com/config-connector/docs/how-to/customize-controller-manager-rate-limit)")
+	flag.IntVar(&runtimeCtrlGardenerRateLimiterBurst, "gardener-ratelimiter-burst", defaultGardenerRateLimiterBurst, "Gardener client rate limiter burst for Runtime Controller. The burst value allows for more requests than the qps limit for short periods (see https://cloud.google.com/config-connector/docs/how-to/customize-controller-manager-rate-limit)")
+	flag.IntVar(&runtimeCtrlWorkersCnt, "runtime-ctrl-workers-cnt", defaultRuntimeCtrlWorkersCnt, "Number of workers running in parallel for Runtime Controller. The number of parallel workers has an impact on the amount of requests send to the Gardener cluster")
+	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "File path to the gardener shoot converter configuration.")
+
+	//Feature flags:
+	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration. When enabled this feature, a Shoot cluster will only be created when an auditlog tenant exists (this is defined in the auditlog mapping configuration file)")
+	flag.BoolVar(&registryCacheConfigControllerEnabled, "registry-cache-config-controller-enabled", false, "Feature flag to enable registry cache config controller")
+	flag.BoolVar(&runtimeBootstrapperEnabled, "runtime-bootstrapper-enabled", false, "Feature flag to enable runtime bootstrapper")
+	flag.BoolVar(&apiServerAclEnabled, "api-server-acl-enabled", false, "Feature flag to enable the shoot API server ACL extender which restricts access to the API server to a defined set of CIDRs")
+
+	// Runtime bootstrapper configuration
+	flag.StringVar(&runtimeBootstrapperManifestsConfigMapName, "runtime-bootstrapper-manifests-config-map-name", "runtime-bootstrapper-manifests", "Config map with Runtime Bootstrapper manifests.")
+
+	flag.StringVar(&runtimeBootstrapperKCPConfigName, "runtime-bootstrapper-kcp-config-name", "rt-bootstrapper-config", "Name of the the runtime bootstrapper config map to be copied to SKR.")
+	flag.StringVar(&runtimeBootstrapperKCPPullSecretName, "runtime-bootstrapper-kcp-pull-secret-name", "", "Name of the pull secret to be copied to SKR.")
+	flag.StringVar(&runtimeBootstrapperKCPClusterTrustBundle, "runtime-bootstrapper-kcp-cluster-trust-bundle", "", "Name of the cluster trust bundle to be copied to SKR.")
+
+	flag.StringVar(&runtimeBootstrapperSKRConfigName, "runtime-bootstrapper-skr-config-name", "rt-bootstrapper-config", "Name of the runtime bootstrapper config map on SKR.")
+	flag.StringVar(&runtimeBootstrapperSKRPullSecretName, "runtime-bootstrapper-skr-pull-secret-name", "registry-credentials", "Name of the pull secret on SKR.")
+	flag.StringVar(&runtimeBootstrapperSKRClusterTrustBundle, "runtime-bootstrapper-skr-cluster-trust-bundle", "", "Name of the cluster trust bundle on SKR.")
+	flag.StringVar(&runtimeBootstrapperSKRNamespace, "runtime-bootstrapper-skr-namespace", "kyma-system", "Name of the the runtime bootstrapper namespace on SKR.")
+
+	flag.StringVar(&runtimeBootstrapperSKRDeploymentName, "runtime-bootstrapper-skr-deployment-name", "rt-bootstrapper-controller-manager", "Name of the deployment to be observed to verify if installation succeeded.")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
@@ -181,7 +222,7 @@ func main() {
 
 	rotationPeriod := time.Duration(minimalRotationTimeRatio*expirationTime.Minutes()) * time.Minute
 	metrics := metrics.NewMetrics()
-	if err = kubeconfig_controller.NewGardenerClusterController(
+	if err = kubeconfigcontroller.NewGardenerClusterController(
 		mgr,
 		kubeconfigProvider,
 		logger,
@@ -210,30 +251,132 @@ func main() {
 		os.Exit(1)
 	}
 
+	if apiServerAclEnabled {
+		if config.ConverterConfig.Kubernetes.KubeApiServer.ACL.IpAddressesPath == "" || config.ConverterConfig.Kubernetes.KubeApiServer.ACL.KcpAddressPath == "" {
+			setupLog.Error(fmt.Errorf("both ACL IP addresses path and KCP IP path need to be set when API server ACL is enabled"), "invalid API server ACL configuration")
+			os.Exit(1)
+		}
+	}
+
 	auditLogDataMap, err := loadAuditLogDataMap(config.ConverterConfig.AuditLog.TenantConfigPath)
 	if err != nil {
 		setupLog.Error(err, "invalid audit log tenant configuration")
 		os.Exit(1)
 	}
 
-	cfg := fsm.RCCfg{
-		GardenerRequeueDuration:       defaultGardenerRequeueDuration,
-		RequeueDurationShootCreate:    defaultShootCreateRequeueDuration,
-		RequeueDurationShootDelete:    defaultShootDeleteRequeueDuration,
-		RequeueDurationShootReconcile: defaultShootReconcileRequeueDuration,
-		ControlPlaneRequeueDuration:   defaultControlPlaneRequeueDuration,
-		Finalizer:                     infrastructuremanagerv1.Finalizer,
-		ShootNamesapace:               gardenerNamespace,
-		Config:                        config,
-		AuditLogMandatory:             auditLogMandatory,
-		Metrics:                       metrics,
-		AuditLogging:                  auditLogDataMap,
-		StructuredAuthEnabled:         structuredAuthEnabled,
+	_, err = token.ValidateTokenExpirationTime(config.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
+	if err != nil {
+		setupLog.Error(err, "invalid token expiration format in converter configuration")
+		os.Exit(1)
 	}
 
-	runtimeReconciler := runtime_controller.NewRuntimeReconciler(
+	// build a shared scheme used for runtime clients to avoid concurrent AddToScheme calls
+	prebuiltRuntimeScheme := CreateRuntimeScheme()
+
+	// create a RuntimeClientGetter that uses the prebuilt scheme
+	runtimeClientGetter := fsm.NewRuntimeClientGetterWithScheme(mgr.GetClient(), prebuiltRuntimeScheme)
+
+	var runtimeBootstrapperInstaller *rtbootstrapper.Installer
+
+	if runtimeBootstrapperEnabled {
+		if runtimeBootstrapperKCPClusterTrustBundle != "" {
+			// ClusterTrustBundle is a beta feature and needs to be explicitly enabled in the converter config
+			// When the feature is generally available, this code can be removed
+			// As of the time of writing (December 2025) there is no GA release date announced
+			// Details: https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#cluster-trust-bundles
+			enableClusterTrustBundleFeatureForSKR(&config.ConverterConfig)
+		}
+
+		rtbConfig := rtbootstrapper.Config{
+			KCPConfig: rtbootstrapper.KCPConfig{
+				PullSecretName:         runtimeBootstrapperKCPPullSecretName,
+				ClusterTrustBundleName: runtimeBootstrapperKCPClusterTrustBundle,
+				ConfigName:             runtimeBootstrapperKCPConfigName,
+				ManifestsConfigMapName: runtimeBootstrapperManifestsConfigMapName,
+			},
+			SKRConfig: rtbootstrapper.SKRConfig{
+				Namespace:              runtimeBootstrapperSKRNamespace,
+				PullSecretName:         runtimeBootstrapperSKRPullSecretName,
+				ClusterTrustBundleName: runtimeBootstrapperSKRClusterTrustBundle,
+				ConfigName:             runtimeBootstrapperSKRConfigName,
+				DeploymentName:         runtimeBootstrapperSKRDeploymentName,
+			},
+		}
+
+		cfg, err := ctrl.GetConfig()
+		if err != nil {
+			setupLog.Error(err, "unable to get rest config")
+			os.Exit(1)
+		}
+		kcpClient, err := client.New(cfg, client.Options{Scheme: scheme})
+		if err != nil {
+			setupLog.Error(err, "unable to create client")
+			os.Exit(1)
+		}
+
+		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(rtbConfig, runtimeClientGetter, kcpClient)
+		if err != nil {
+			setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
+			os.Exit(1)
+		}
+
+		watcherConfig := configctrl.Cfg{
+			Client:    kcpClient,
+			Namespace: "kcp-system",
+			RtBootstrapperCfg: types.NamespacedName{
+				Name:      runtimeBootstrapperKCPConfigName,
+				Namespace: "kcp-system",
+			},
+			RtBootstrapperManifests: types.NamespacedName{
+				Name:      runtimeBootstrapperManifestsConfigMapName,
+				Namespace: "kcp-system",
+			},
+		}
+
+		if runtimeBootstrapperKCPPullSecretName != "" {
+			watcherConfig.ImagePullSecret = types.NamespacedName{
+				Name:      runtimeBootstrapperKCPPullSecretName,
+				Namespace: "kcp-system",
+			}
+		}
+
+		if runtimeBootstrapperKCPClusterTrustBundle != "" {
+			watcherConfig.ClusterTrustBundle = types.NamespacedName{
+				Name: runtimeBootstrapperKCPClusterTrustBundle,
+			}
+		}
+
+		if err := (&configctrl.RuntimeBootstrapperConfigWatcher{
+			Kcp: watcherConfig,
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Secret")
+			os.Exit(1)
+		}
+	}
+
+	cfg := fsm.RCCfg{
+		GardenerRequeueDuration:              defaultGardenerRequeueDuration,
+		RequeueDurationShootCreate:           defaultShootCreateRequeueDuration,
+		RequeueDurationShootDelete:           defaultShootDeleteRequeueDuration,
+		RequeueDurationShootReconcile:        defaultShootReconcileRequeueDuration,
+		ControlPlaneRequeueDuration:          defaultControlPlaneRequeueDuration,
+		Finalizer:                            infrastructuremanagerv1.Finalizer,
+		ShootNamesapace:                      gardenerNamespace,
+		Config:                               config,
+		AuditLogMandatory:                    auditLogMandatory,
+		ApiServerAclEnabled:                  apiServerAclEnabled,
+		Metrics:                              metrics,
+		AuditLogging:                         auditLogDataMap,
+		RegistryCacheConfigControllerEnabled: registryCacheConfigControllerEnabled,
+		RuntimeBootstrapperEnabled:           runtimeBootstrapperEnabled,
+		RuntimeBootstrapperInstaller:         runtimeBootstrapperInstaller,
+	}
+
+	runtimeReconciler := runtimecontroller.NewRuntimeReconciler(
 		mgr,
 		gardenerClient,
+		runtimeClientGetter,
+		runtimeBootstrapperInstaller,
 		logger,
 		cfg,
 	)
@@ -256,12 +399,15 @@ func main() {
 
 	refreshRuntimeMetrics(restConfig, logger, metrics)
 
-	if customConfigControllerEnabled {
-		customConfigReconciler := customconfig.NewCustomConfigReconciler(mgr, logger, func(secret corev1.Secret) (customconfig.RegistryCache, error) {
-			return registrycache2.NewConfigExplorer(context.Background(), secret)
-		})
-		if err = customConfigReconciler.SetupWithManager(mgr, 1); err != nil {
-			setupLog.Error(err, "unable to setup custom config controller with Manager", "controller", "Runtime")
+	if registryCacheConfigControllerEnabled {
+		// use closure that creates runtime client with prebuilt scheme
+		runtimeClientClosure := func(secret corev1.Secret) (client.Client, error) {
+			return gardener.GetRuntimeClientWithScheme(secret, prebuiltRuntimeScheme)
+		}
+
+		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, runtimeClientClosure)
+		if err = registryCacheConfigReconciler.SetupWithManager(mgr, 1); err != nil {
+			setupLog.Error(err, "unable to setup registry cache config controller with Manager", "controller", "Runtime")
 			os.Exit(1)
 		}
 	}
@@ -274,7 +420,18 @@ func main() {
 	}
 }
 
-func initGardenerClients(kubeconfigPath string, namespace string, timeout time.Duration, rlQPS, rlBurst int) (client.Client, gardener_apis.ShootInterface, client.SubResourceClient, error) {
+func CreateRuntimeScheme() *runtime.Scheme {
+	prebuiltRuntimeScheme := runtime.NewScheme()
+	// register the types used by runtime clients
+	utilruntime.Must(clientgoscheme.AddToScheme(prebuiltRuntimeScheme))
+	utilruntime.Must(registrycacheapi.AddToScheme(prebuiltRuntimeScheme))
+	utilruntime.Must(kyma.AddToScheme(prebuiltRuntimeScheme))
+	utilruntime.Must(gardeneroidc.AddToScheme(prebuiltRuntimeScheme))
+	utilruntime.Must(apiextensions.AddToScheme(prebuiltRuntimeScheme))
+	return prebuiltRuntimeScheme
+}
+
+func initGardenerClients(kubeconfigPath string, namespace string, timeout time.Duration, rlQPS, rlBurst int) (client.Client, gardenerapis.ShootInterface, client.SubResourceClient, error) {
 	restConfig, err := gardener.NewRestConfigFromFile(kubeconfigPath)
 	if err != nil {
 		return nil, nil, nil, err
@@ -283,7 +440,7 @@ func initGardenerClients(kubeconfigPath string, namespace string, timeout time.D
 	restConfig.Timeout = timeout
 	restConfig.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(float32(rlQPS), rlBurst)
 
-	gardenerClientSet, err := gardener_apis.NewForConfig(restConfig)
+	gardenerClientSet, err := gardenerapis.NewForConfig(restConfig)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -294,16 +451,6 @@ func initGardenerClients(kubeconfigPath string, namespace string, timeout time.D
 	}
 
 	err = v1beta1.AddToScheme(gardenerClient.Scheme())
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to register Gardener schema")
-	}
-
-	err = gardener_oidc.AddToScheme(gardenerClient.Scheme())
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to register Gardener schema")
-	}
-
-	err = registrycache.AddToScheme(gardenerClient.Scheme())
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to register Gardener schema")
 	}
@@ -366,6 +513,12 @@ func refreshRuntimeMetrics(restConfig *rest.Config, logger logr.Logger, metrics 
 func restrictWatchedNamespace() cache.Options {
 	return cache.Options{
 		ByObject: map[client.Object]cache.ByObject{
+			&corev1.ConfigMap{}: {
+				Label: k8slabels.Everything(),
+				Namespaces: map[string]cache.Config{
+					"kcp-system": {},
+				},
+			},
 			&corev1.Secret{}: {
 				Label: k8slabels.Everything(),
 				Namespaces: map[string]cache.Config{
@@ -384,4 +537,34 @@ func restrictWatchedNamespace() cache.Options {
 			},
 		},
 	}
+}
+
+func configureRuntimeBootstrapper(config rtbootstrapper.Config, runtimeClientGetter fsm.RuntimeClientGetter, kcpClient client.Client) (*rtbootstrapper.Installer, error) {
+	err := rtbootstrapper.NewValidator(config, kcpClient).Validate(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	return rtbootstrapper.NewInstaller(config, kcpClient, runtimeClientGetter, fsm.NewRuntimeDynamicClientGetter(kcpClient)), nil
+}
+
+func enableClusterTrustBundleFeatureForSKR(converterConfig *config.ConverterConfig) {
+	if converterConfig.Kubernetes.KubeApiServer.FeatureGates == nil {
+		converterConfig.Kubernetes.KubeApiServer.FeatureGates = make(map[string]bool)
+	}
+
+	if converterConfig.Kubernetes.KubeApiServer.RuntimeConfig == nil {
+		converterConfig.Kubernetes.KubeApiServer.RuntimeConfig = make(map[string]bool)
+	}
+
+	// Feature gates docs: https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
+	converterConfig.Kubernetes.KubeApiServer.FeatureGates["ClusterTrustBundle"] = true
+	// Runtime Bootstrapper requires ClusterTrustBundleProjection to be enabled as well to mount the trust bundle into pods
+	converterConfig.Kubernetes.KubeApiServer.FeatureGates["ClusterTrustBundleProjection"] = true
+	converterConfig.Kubernetes.KubeApiServer.RuntimeConfig["certificates.k8s.io/v1beta1/clustertrustbundles"] = true
+
+	if converterConfig.Kubernetes.Kubelet.FeatureGates == nil {
+		converterConfig.Kubernetes.Kubelet.FeatureGates = make(map[string]bool)
+	}
+	converterConfig.Kubernetes.Kubelet.FeatureGates["ClusterTrustBundleProjection"] = true
 }

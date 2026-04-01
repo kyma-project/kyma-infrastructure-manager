@@ -25,17 +25,20 @@ type stateFn func(context.Context, *fsm, *systemState) (stateFn, *ctrl.Result, e
 
 // runtime reconciler specific configuration
 type RCCfg struct {
-	GardenerRequeueDuration       time.Duration
-	RequeueDurationShootCreate    time.Duration
-	RequeueDurationShootDelete    time.Duration
-	RequeueDurationShootReconcile time.Duration
-	ControlPlaneRequeueDuration   time.Duration
-	Finalizer                     string
-	ShootNamesapace               string
-	AuditLogMandatory             bool
-	Metrics                       metrics.Metrics
-	AuditLogging                  auditlogs.Configuration
-	StructuredAuthEnabled         bool
+	GardenerRequeueDuration              time.Duration
+	RequeueDurationShootCreate           time.Duration
+	RequeueDurationShootDelete           time.Duration
+	RequeueDurationShootReconcile        time.Duration
+	ControlPlaneRequeueDuration          time.Duration
+	Finalizer                            string
+	ShootNamesapace                      string
+	AuditLogMandatory                    bool
+	ApiServerAclEnabled                  bool
+	Metrics                              metrics.Metrics
+	AuditLogging                         auditlogs.Configuration
+	RegistryCacheConfigControllerEnabled bool
+	RuntimeBootstrapperEnabled           bool
+	RuntimeBootstrapperInstaller         RuntimeBootstrapperInstaller
 	config.Config
 }
 
@@ -51,11 +54,13 @@ func (f stateFn) name() string {
 type Watch = func(src source.Source, eventhandler handler.EventHandler, predicates ...predicate.Predicate) error
 
 type K8s struct {
-	client.Client
+	KcpClient client.Client
 	record.EventRecorder
-	ShootClient client.Client
+	GardenClient        client.Client
+	RuntimeClientGetter RuntimeClientGetter
 }
 
+//mockery:generate: false
 type Fsm interface {
 	Run(ctx context.Context, v imv1.Runtime) (ctrl.Result, error)
 }
