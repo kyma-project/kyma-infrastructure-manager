@@ -344,6 +344,8 @@ func main() {
 			KcpClient:           kcpClient,
 			Namespace:           "kcp-system",
 			ConfigMapPredicates: configMapPredicates,
+			// This function must be modified when implementing ACL checks
+			RuntimePredicate: func(configObject types.NamespacedName, runtime infrastructuremanagerv1.Runtime) bool { return true },
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Secret")
 			os.Exit(1)
