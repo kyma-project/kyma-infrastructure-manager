@@ -22,7 +22,6 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -35,13 +34,6 @@ var (
 	ErrRuntimeNotificationFailed = fmt.Errorf("runtime notification failed")
 	fieldManager                 = "config-watcher"
 )
-
-type Cfg struct {
-	ClusterTrustBundle      types.NamespacedName
-	ImagePullSecret         types.NamespacedName
-	RtBootstrapperCfg       types.NamespacedName
-	RtBootstrapperManifests types.NamespacedName
-}
 
 // ConfigReloadWatcher reconciles a Secret object
 type ConfigReloadWatcher struct {

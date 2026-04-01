@@ -313,41 +313,31 @@ func main() {
 			os.Exit(1)
 		}
 
-		watcherConfig := configctrl.Cfg{
-			RtBootstrapperCfg: types.NamespacedName{
-				Name:      runtimeBootstrapperKCPConfigName,
-				Namespace: "kcp-system",
-			},
-			RtBootstrapperManifests: types.NamespacedName{
-				Name:      runtimeBootstrapperManifestsConfigMapName,
-				Namespace: "kcp-system",
-			},
+		rtBootstrapperCfgNN := types.NamespacedName{
+			Name:      runtimeBootstrapperKCPConfigName,
+			Namespace: "kcp-system",
 		}
-
-		if runtimeBootstrapperKCPPullSecretName != "" {
-			watcherConfig.ImagePullSecret = types.NamespacedName{
-				Name:      runtimeBootstrapperKCPPullSecretName,
-				Namespace: "kcp-system",
-			}
-		}
-
-		if runtimeBootstrapperKCPClusterTrustBundle != "" {
-			watcherConfig.ClusterTrustBundle = types.NamespacedName{
-				Name: runtimeBootstrapperKCPClusterTrustBundle,
-			}
+		rtBootstrapperManifestsNN := types.NamespacedName{
+			Name:      runtimeBootstrapperManifestsConfigMapName,
+			Namespace: "kcp-system",
 		}
 
 		configMapPredicates := []configctrl.ObjectUpdatedPredicate{
-			{NamespacedName: watcherConfig.RtBootstrapperCfg},
-			{NamespacedName: watcherConfig.RtBootstrapperManifests},
+			{NamespacedName: rtBootstrapperCfgNN},
+			{NamespacedName: rtBootstrapperManifestsNN},
 		}
 
-		if watcherConfig.ImagePullSecret.Name != "" && watcherConfig.ImagePullSecret.Namespace != "" {
-			configMapPredicates = append(configMapPredicates, configctrl.ObjectUpdatedPredicate{NamespacedName: watcherConfig.ImagePullSecret})
+		if runtimeBootstrapperKCPPullSecretName != "" {
+			configMapPredicates = append(configMapPredicates, configctrl.ObjectUpdatedPredicate{NamespacedName: types.NamespacedName{
+				Name:      runtimeBootstrapperKCPPullSecretName,
+				Namespace: "kcp-system",
+			}})
 		}
 
-		if watcherConfig.ClusterTrustBundle.Name != "" {
-			configMapPredicates = append(configMapPredicates, configctrl.ObjectUpdatedPredicate{NamespacedName: watcherConfig.ClusterTrustBundle})
+		if runtimeBootstrapperKCPClusterTrustBundle != "" {
+			configMapPredicates = append(configMapPredicates, configctrl.ObjectUpdatedPredicate{NamespacedName: types.NamespacedName{
+				Name: runtimeBootstrapperKCPClusterTrustBundle,
+			}})
 		}
 
 		if err := (&configctrl.ConfigReloadWatcher{
