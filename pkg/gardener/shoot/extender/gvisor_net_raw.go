@@ -50,7 +50,7 @@ func ensureGVisorNetRawDefault(pc *runtime.RawExtension) (*runtime.RawExtension,
 
 	var obj map[string]interface{}
 	if err := json.Unmarshal(pc.Raw, &obj); err != nil {
-		return nil, errors.Wrap(err, "unmarshal gVisor providerConfig")
+		return nil, errors.Wrap(err, "unmarshal gVisor providerConfig failed")
 	}
 
 	flagsRaw, exists := obj["configFlags"]
