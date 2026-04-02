@@ -32,8 +32,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 		Kubernetes: config.KubernetesConfig{
 			KubeApiServer: config.KubeApiServer{
 				ACL: config.ACL{
-					IpAddressesPath: "./testdata/acl-ip-list/acl-ips.json",
-					KcpAddressPath:  "./testdata/acl-ip-list/kcp-external-nat-ip.json",
+					ConfigMapName: "acl-ip-list",
 				},
 			},
 		},
@@ -176,8 +175,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		Kubernetes: config.KubernetesConfig{
 			KubeApiServer: config.KubeApiServer{
 				ACL: config.ACL{
-					IpAddressesPath: "./testdata/acl-ip-list/acl-ips.json",
-					KcpAddressPath:  "./testdata/acl-ip-list/kcp-external-nat-ip.json",
+					ConfigMapName: "acl-ip-list",
 				},
 			},
 		},
