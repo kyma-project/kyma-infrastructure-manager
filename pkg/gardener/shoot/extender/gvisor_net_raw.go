@@ -64,9 +64,6 @@ func ensureGVisorNetRawDefault(pc *runtime.RawExtension) (*runtime.RawExtension,
 		obj["configFlags"] = map[string]interface{}{
 			gvisorNetRawConfigKey: gvisorNetRawDefaultValue,
 		}
-
-			gvisorNetRawConfigKey: gvisorNetRawDefaultValue,
-		}
 	} else {
 		flags, ok := flagsRaw.(map[string]interface{})
 		if !ok {
