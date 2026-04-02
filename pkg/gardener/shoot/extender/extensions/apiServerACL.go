@@ -2,8 +2,6 @@ package extensions
 
 import (
 	"encoding/json"
-	"fmt"
-	"os"
 	"slices"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -51,33 +49,7 @@ func applyAccessControlList(aclList []string) (*gardener.Extension, error) {
 	}, nil
 }
 
-func loadIPsFromFile(kcpIpPath string, operatorIPPath string) (operatorIPs []string, kcpIp string, err error) {
-	loadIPs := func(path string, ips any) error {
-		f, err := os.Open(path)
-		if err != nil {
-			return fmt.Errorf("opening %s: %w", path, err)
-		}
-
-		defer func() {
-			_ = f.Close()
-		}()
-
-		if err := json.NewDecoder(f).Decode(ips); err != nil {
-			return fmt.Errorf("decoding %s: %w", path, err)
-		}
-		return nil
-	}
-
-	err = loadIPs(operatorIPPath, &operatorIPs)
-	if err != nil {
-		return nil, "", err
-	}
-
-	err = loadIPs(kcpIpPath, &kcpIp)
-	if err != nil {
-		return nil, "", err
-	}
-
+func loadIPsFromConfigMap(aclMapName string) (operatorIPs []string, kcpIp string, err error) {
 	return operatorIPs, kcpIp, nil
 }
 

@@ -73,7 +73,7 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 					return nil, nil
 				}
 
-				operatorIPs, kcpIPs, err := loadIPsFromFile(config.Kubernetes.KubeApiServer.ACL.KcpAddressPath, config.Kubernetes.KubeApiServer.ACL.IpAddressesPath)
+				operatorIPs, kcpIPs, err := loadIPsFromConfigMap("mapName")
 				if err != nil {
 					return nil, err
 				}
@@ -144,7 +144,7 @@ func NewExtensionsExtenderForPatch(config config.ConverterConfig, auditLogData a
 					return NewApiServerACLExtension(nil, nil, "")
 				}
 
-				operatorIPs, kcpIPs, err := loadIPsFromFile(config.Kubernetes.KubeApiServer.ACL.KcpAddressPath, config.Kubernetes.KubeApiServer.ACL.IpAddressesPath)
+				operatorIPs, kcpIPs, err := loadIPsFromConfigMap("mapName")
 				if err != nil {
 					return nil, err
 				}
