@@ -6,6 +6,7 @@ import (
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -49,7 +50,7 @@ func applyAccessControlList(aclList []string) (*gardener.Extension, error) {
 	}, nil
 }
 
-func loadIPsFromConfigMap(aclMapName string) (operatorIPs []string, kcpIp string, err error) {
+func loadIPsFromConfigMap(aclMapName string, kcpClient client.Client) (operatorIPs []string, kcpIp string, err error) {
 	return []string{"2.2.2.2/29", "3.3.3.3/29", "4.4.4.4/29"}, "1.1.1.1/32", nil
 }
 

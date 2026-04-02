@@ -86,6 +86,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	logTokenExpirationInfo(m.log, timeBoundaries)
 
 	shoot, err := convertCreate(&s.instance, gardener_shoot.CreateOpts{
+		KcpClient:             m.KcpClient,
 		ConverterConfig:       m.ConverterConfig,
 		AuditLogData:          data,
 		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),

@@ -9,6 +9,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/restrictions"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -49,6 +50,7 @@ func newConverter(config config.ConverterConfig, extenders ...Extend) Converter 
 }
 
 type CreateOpts struct {
+	KcpClient client.Client
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
@@ -89,7 +91,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 	if !opts.DNS.IsGardenerInternal() {
 		extendersForCreate = append(extendersForCreate, extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType))
 	}
-	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.ConverterConfig, opts.AuditLogData, nil, opts.ApiServerAclEnabled))
+	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.ConverterConfig, opts.KcpClient, opts.AuditLogData, nil, opts.ApiServerAclEnabled))
 	extendersForCreate = append(extendersForCreate,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
 

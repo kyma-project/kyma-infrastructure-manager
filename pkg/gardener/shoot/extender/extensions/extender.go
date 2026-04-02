@@ -8,6 +8,7 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type CreateExtensionFunc func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error)
@@ -17,7 +18,7 @@ type Extension struct {
 	Create CreateExtensionFunc
 }
 
-func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData auditlogs.AuditLogData, registryCache []imv1.ImageRegistryCache, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForCreate(config config.ConverterConfig, kcpClient client.Client, auditLogData auditlogs.AuditLogData, registryCache []imv1.ImageRegistryCache, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			Type: NetworkFilterType,
@@ -73,7 +74,7 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 					return nil, nil
 				}
 
-				operatorIPs, kcpIPs, err := loadIPsFromConfigMap(config.Kubernetes.KubeApiServer.ACL.ConfigMapName)
+				operatorIPs, kcpIPs, err := loadIPsFromConfigMap(config.Kubernetes.KubeApiServer.ACL.ConfigMapName, kcpClient)
 				if err != nil {
 					return nil, err
 				}
@@ -144,7 +145,7 @@ func NewExtensionsExtenderForPatch(config config.ConverterConfig, auditLogData a
 					return NewApiServerACLExtension(nil, nil, "")
 				}
 
-				operatorIPs, kcpIPs, err := loadIPsFromConfigMap("mapName")
+				operatorIPs, kcpIPs, err := loadIPsFromConfigMap("", nil)
 				if err != nil {
 					return nil, err
 				}
