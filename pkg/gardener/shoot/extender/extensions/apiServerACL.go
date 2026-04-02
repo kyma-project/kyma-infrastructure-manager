@@ -1,11 +1,13 @@
 package extensions
 
 import (
+	"context"
 	"encoding/json"
 	"slices"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -51,7 +53,24 @@ func applyAccessControlList(aclList []string) (*gardener.Extension, error) {
 }
 
 func loadIPsFromConfigMap(aclMapName string, kcpClient client.Client) (operatorIPs []string, kcpIp string, err error) {
-	return []string{"2.2.2.2/29", "3.3.3.3/29", "4.4.4.4/29"}, "1.1.1.1/32", nil
+	var aclConfigMap corev1.ConfigMap
+	err = kcpClient.Get(context.Background(), client.ObjectKey{
+		Namespace: "kcp-system",
+		Name:      aclMapName,
+	}, &aclConfigMap)
+
+	if err != nil {
+		return operatorIPs, kcpIp, err
+	}
+
+	err = json.Unmarshal([]byte(aclConfigMap.Data["acl-list.json"]), &operatorIPs)
+	if err != nil {
+		return operatorIPs, kcpIp, err
+	}
+
+	err = json.Unmarshal([]byte(aclConfigMap.Data["kcp-external-nat-ip.json"]), &kcpIp)
+
+	return operatorIPs, kcpIp, err
 }
 
 func aclNeedsToBeEnabled(apiServerAclEnabled bool, runtime imv1.Runtime) bool {
