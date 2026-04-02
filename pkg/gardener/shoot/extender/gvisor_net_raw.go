@@ -55,7 +55,16 @@ func ensureGVisorNetRawDefault(pc *runtime.RawExtension) (*runtime.RawExtension,
 
 	flagsRaw, exists := obj["configFlags"]
 	if !exists || flagsRaw == nil {
+		if _, hasAPIVersion := obj["apiVersion"]; !hasAPIVersion {
+			obj["apiVersion"] = gvisorProviderConfigAPIVer
+		}
+		if _, hasKind := obj["kind"]; !hasKind {
+			obj["kind"] = gvisorProviderConfigKind
+		}
 		obj["configFlags"] = map[string]interface{}{
+			gvisorNetRawConfigKey: gvisorNetRawDefaultValue,
+		}
+
 			gvisorNetRawConfigKey: gvisorNetRawDefaultValue,
 		}
 	} else {
