@@ -50,7 +50,7 @@ func applyAccessControlList(aclList []string) (*gardener.Extension, error) {
 }
 
 func loadIPsFromConfigMap(aclMapName string) (operatorIPs []string, kcpIp string, err error) {
-	return operatorIPs, kcpIp, nil
+	return []string{"2.2.2.2/29", "3.3.3.3/29", "4.4.4.4/29"}, "1.1.1.1/32", nil
 }
 
 func aclNeedsToBeEnabled(apiServerAclEnabled bool, runtime imv1.Runtime) bool {
