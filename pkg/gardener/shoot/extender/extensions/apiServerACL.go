@@ -1,6 +1,7 @@
 package extensions
 
 import (
+	"context"
 	"encoding/json"
 	"slices"
 
@@ -53,9 +54,9 @@ func applyAccessControlList(aclList []string) (*gardener.Extension, error) {
 	}, nil
 }
 
-func loadIPsFromConfigMap(aclMapName string, kcp Kcp) (operatorIPs []string, kcpIp string, err error) {
+func loadIPsFromConfigMap(aclMapName string, kcpClient client.Client, ctx context.Context) (operatorIPs []string, kcpIp string, err error) {
 	var aclConfigMap corev1.ConfigMap
-	err = kcp.Client.Get(kcp.Context, client.ObjectKey{
+	err = kcpClient.Get(ctx, client.ObjectKey{
 		Namespace: "kcp-system",
 		Name:      aclMapName,
 	}, &aclConfigMap)
