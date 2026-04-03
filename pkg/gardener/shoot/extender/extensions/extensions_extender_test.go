@@ -127,17 +127,14 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 
 			configMapGetCalled := false
 			fakeClient := buildFakeClientWithACLConfigMap(t, &configMapGetCalled)
-			fakeKcpConfig := Kcp{
-				Client:  fakeClient,
-				Context: context.Background(),
-			}
+
 			shoot := &gardener.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-shoot-name",
 				},
 			}
 
-			extender := NewExtensionsExtenderForCreate(config, fakeKcpConfig, testcase.inputAuditLogData, testcase.registryCache, testcase.apiServerACLEnabled)
+			extender := NewExtensionsExtenderForCreate(config, fakeClient, context.Background(), testcase.inputAuditLogData, testcase.registryCache, testcase.apiServerACLEnabled)
 
 			err := extender(testRuntime, shoot)
 			assert.NoError(t, err)
@@ -372,10 +369,6 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 
 			configMapGetCalled := false
 			fakeClient := buildFakeClientWithACLConfigMap(t, &configMapGetCalled)
-			fakeKcpConfig := Kcp{
-				Client:  fakeClient,
-				Context: context.Background(),
-			}
 
 			shoot := &gardener.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -387,7 +380,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			registryCacheDataProvided := len(testCase.registryCaches) != 0
 			kubeApiServerACLEnabled := aclNeedsToBeEnabled(testCase.apiServerACLEnabled, testRuntime)
 
-			extender := NewExtensionsExtenderForPatch(config, fakeKcpConfig, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled)
+			extender := NewExtensionsExtenderForPatch(config, fakeClient, context.Background(), testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled)
 			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided, kubeApiServerACLEnabled)
 
 			err := extender(testRuntime, shoot)
