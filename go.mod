@@ -10,9 +10,10 @@ require (
 	github.com/gardener/gardener-extension-provider-gcp v1.47.0
 	github.com/gardener/gardener-extension-provider-openstack v1.51.0
 	github.com/gardener/gardener-extension-registry-cache v0.18.0
+	github.com/gardener/gardener-extension-runtime-gvisor v0.24.0
 	github.com/gardener/oidc-webhook-authenticator v0.38.0
 	github.com/go-logr/logr v1.4.3
-	github.com/go-playground/validator/v10 v10.30.1
+	github.com/go-playground/validator/v10 v10.30.2
 	github.com/kyma-project/lifecycle-manager/api v0.0.0-20250415061517-3922bac13370
 	github.com/kyma-project/registry-cache v0.0.0-20251023124504-71bc19cf102a
 	github.com/onsi/ginkgo/v2 v2.28.1
@@ -38,8 +39,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.12 // indirect
-	github.com/gardener/gardener-extension-runtime-gvisor v0.24.0 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.22.4 // indirect
 	github.com/go-openapi/jsonreference v0.21.4 // indirect
