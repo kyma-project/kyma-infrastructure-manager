@@ -83,7 +83,7 @@ func newGVisorProviderConfigWithNetRawDefault() (*runtime.RawExtension, error) {
 		ConfigFlags: &flags,
 	}
 	config.APIVersion = gvisorProviderConfigAPIVer
-	config.Kind = gvisorProviderConfigKind
+	config.Kind = gvisorv1alpha1.
 
 	raw, err := json.Marshal(config)
 	if err != nil {
