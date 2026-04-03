@@ -61,8 +61,11 @@ func ensureGVisorNetRawDefault(pc *runtime.RawExtension) (*runtime.RawExtension,
 			gvisorNetRawConfigKey: gvisorNetRawDefaultValue,
 		}
 		config.ConfigFlags = &flags
-	} else if _, has := (*config.ConfigFlags)[gvisorNetRawConfigKey]; !has {
-		(*config.ConfigFlags)[gvisorNetRawConfigKey] = gvisorNetRawDefaultValue
+	} else {
+		flags := *config.ConfigFlags
+		if _, has := flags[gvisorNetRawConfigKey]; !has {
+			flags[gvisorNetRawConfigKey] = gvisorNetRawDefaultValue
+		}
 	}
 
 	raw, err := json.Marshal(config)
