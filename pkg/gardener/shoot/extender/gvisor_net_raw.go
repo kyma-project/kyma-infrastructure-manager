@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gvisorv1alpha1 "github.com/gardener/gardener-extension-runtime-gvisor/pkg/apis/config/v1alpha1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -48,33 +49,23 @@ func ensureGVisorNetRawDefault(pc *runtime.RawExtension) (*runtime.RawExtension,
 		return newGVisorProviderConfigWithNetRawDefault()
 	}
 
-	var obj map[string]interface{}
-	if err := json.Unmarshal(pc.Raw, &obj); err != nil {
+	var config gvisorv1alpha1.GVisorConfiguration
+	if err := json.Unmarshal(pc.Raw, &config); err != nil {
 		return nil, errors.Wrap(err, "unmarshal gVisor providerConfig failed")
 	}
 
-	flagsRaw, exists := obj["configFlags"]
-	if !exists || flagsRaw == nil {
-		if _, hasAPIVersion := obj["apiVersion"]; !hasAPIVersion {
-			obj["apiVersion"] = gvisorProviderConfigAPIVer
-		}
-		if _, hasKind := obj["kind"]; !hasKind {
-			obj["kind"] = gvisorProviderConfigKind
-		}
-		obj["configFlags"] = map[string]interface{}{
+	if config.ConfigFlags == nil {
+		config.APIVersion = gvisorProviderConfigAPIVer
+		config.Kind = gvisorProviderConfigKind
+		flags := map[string]string{
 			gvisorNetRawConfigKey: gvisorNetRawDefaultValue,
 		}
-	} else {
-		flags, ok := flagsRaw.(map[string]interface{})
-		if !ok {
-			return nil, errors.New("gVisor configFlags must be a JSON object")
-		}
-		if _, has := flags[gvisorNetRawConfigKey]; !has {
-			flags[gvisorNetRawConfigKey] = gvisorNetRawDefaultValue
-		}
+		config.ConfigFlags = &flags
+	} else if _, has := (*config.ConfigFlags)[gvisorNetRawConfigKey]; !has {
+		(*config.ConfigFlags)[gvisorNetRawConfigKey] = gvisorNetRawDefaultValue
 	}
 
-	raw, err := json.Marshal(obj)
+	raw, err := json.Marshal(config)
 	if err != nil {
 		return nil, errors.Wrap(err, "marshal gVisor providerConfig")
 	}
@@ -82,14 +73,16 @@ func ensureGVisorNetRawDefault(pc *runtime.RawExtension) (*runtime.RawExtension,
 }
 
 func newGVisorProviderConfigWithNetRawDefault() (*runtime.RawExtension, error) {
-	obj := map[string]interface{}{
-		"apiVersion": gvisorProviderConfigAPIVer,
-		"kind":       gvisorProviderConfigKind,
-		"configFlags": map[string]interface{}{
-			gvisorNetRawConfigKey: gvisorNetRawDefaultValue,
-		},
+	flags := map[string]string{
+		gvisorNetRawConfigKey: gvisorNetRawDefaultValue,
 	}
-	raw, err := json.Marshal(obj)
+	config := gvisorv1alpha1.GVisorConfiguration{
+		ConfigFlags: &flags,
+	}
+	config.APIVersion = gvisorProviderConfigAPIVer
+	config.Kind = gvisorProviderConfigKind
+
+	raw, err := json.Marshal(config)
 	if err != nil {
 		return nil, err
 	}

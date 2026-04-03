@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gvisorv1alpha1 "github.com/gardener/gardener-extension-runtime-gvisor/pkg/apis/config/v1alpha1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,47 +16,47 @@ func TestEnsureGVisorNetRawDefault(t *testing.T) {
 		out, err := ensureGVisorNetRawDefault(nil)
 		require.NoError(t, err)
 		require.NotNil(t, out)
-		var m map[string]interface{}
-		require.NoError(t, json.Unmarshal(out.Raw, &m))
-		require.Equal(t, gvisorProviderConfigAPIVer, m["apiVersion"])
-		require.Equal(t, gvisorProviderConfigKind, m["kind"])
-		flags := m["configFlags"].(map[string]interface{})
-		require.Equal(t, gvisorNetRawDefaultValue, flags[gvisorNetRawConfigKey])
+		var config gvisorv1alpha1.GVisorConfiguration
+		require.NoError(t, json.Unmarshal(out.Raw, &config))
+		require.Equal(t, gvisorProviderConfigAPIVer, config.APIVersion)
+		require.Equal(t, gvisorProviderConfigKind, config.Kind)
+		require.NotNil(t, config.ConfigFlags)
+		require.Equal(t, gvisorNetRawDefaultValue, (*config.ConfigFlags)[gvisorNetRawConfigKey])
 	})
 
 	t.Run("existing config without net-raw adds net-raw true", func(t *testing.T) {
-		raw, err := json.Marshal(map[string]interface{}{
-			"apiVersion": gvisorProviderConfigAPIVer,
-			"kind":       gvisorProviderConfigKind,
-			"configFlags": map[string]interface{}{
-				"debug": "false",
-			},
-		})
+		flags := map[string]string{"debug": "false"}
+		config := gvisorv1alpha1.GVisorConfiguration{
+			ConfigFlags: &flags,
+		}
+		config.APIVersion = gvisorProviderConfigAPIVer
+		config.Kind = gvisorProviderConfigKind
+		raw, err := json.Marshal(config)
 		require.NoError(t, err)
 		out, err := ensureGVisorNetRawDefault(&runtime.RawExtension{Raw: raw})
 		require.NoError(t, err)
-		var m map[string]interface{}
-		require.NoError(t, json.Unmarshal(out.Raw, &m))
-		flags := m["configFlags"].(map[string]interface{})
-		require.Equal(t, "false", flags["debug"])
-		require.Equal(t, gvisorNetRawDefaultValue, flags[gvisorNetRawConfigKey])
+		var outConfig gvisorv1alpha1.GVisorConfiguration
+		require.NoError(t, json.Unmarshal(out.Raw, &outConfig))
+		require.NotNil(t, outConfig.ConfigFlags)
+		require.Equal(t, "false", (*outConfig.ConfigFlags)["debug"])
+		require.Equal(t, gvisorNetRawDefaultValue, (*outConfig.ConfigFlags)[gvisorNetRawConfigKey])
 	})
 
 	t.Run("explicit net-raw is preserved", func(t *testing.T) {
-		raw, err := json.Marshal(map[string]interface{}{
-			"apiVersion": gvisorProviderConfigAPIVer,
-			"kind":       gvisorProviderConfigKind,
-			"configFlags": map[string]interface{}{
-				gvisorNetRawConfigKey: "false",
-			},
-		})
+		flags := map[string]string{gvisorNetRawConfigKey: "false"}
+		config := gvisorv1alpha1.GVisorConfiguration{
+			ConfigFlags: &flags,
+		}
+		config.APIVersion = gvisorProviderConfigAPIVer
+		config.Kind = gvisorProviderConfigKind
+		raw, err := json.Marshal(config)
 		require.NoError(t, err)
 		out, err := ensureGVisorNetRawDefault(&runtime.RawExtension{Raw: raw})
 		require.NoError(t, err)
-		var m map[string]interface{}
-		require.NoError(t, json.Unmarshal(out.Raw, &m))
-		flags := m["configFlags"].(map[string]interface{})
-		require.Equal(t, "false", flags[gvisorNetRawConfigKey])
+		var outConfig gvisorv1alpha1.GVisorConfiguration
+		require.NoError(t, json.Unmarshal(out.Raw, &outConfig))
+		require.NotNil(t, outConfig.ConfigFlags)
+		require.Equal(t, "false", (*outConfig.ConfigFlags)[gvisorNetRawConfigKey])
 	})
 
 	t.Run("invalid JSON returns error", func(t *testing.T) {
@@ -91,10 +92,10 @@ func TestApplyDefaultGVisorNetRaw(t *testing.T) {
 		}}
 		require.NoError(t, applyDefaultGVisorNetRaw(workers))
 		require.NotNil(t, workers[0].CRI.ContainerRuntimes[0].ProviderConfig)
-		var m map[string]interface{}
-		require.NoError(t, json.Unmarshal(workers[0].CRI.ContainerRuntimes[0].ProviderConfig.Raw, &m))
-		flags := m["configFlags"].(map[string]interface{})
-		require.Equal(t, gvisorNetRawDefaultValue, flags[gvisorNetRawConfigKey])
+		var config gvisorv1alpha1.GVisorConfiguration
+		require.NoError(t, json.Unmarshal(workers[0].CRI.ContainerRuntimes[0].ProviderConfig.Raw, &config))
+		require.NotNil(t, config.ConfigFlags)
+		require.Equal(t, gvisorNetRawDefaultValue, (*config.ConfigFlags)[gvisorNetRawConfigKey])
 	})
 }
 
@@ -118,9 +119,9 @@ func TestExtendWithGVisorNetRawDefault(t *testing.T) {
 		require.NoError(t, ExtendWithGVisorNetRawDefault(imv1.Runtime{}, &shoot))
 		pc := shoot.Spec.Provider.Workers[0].CRI.ContainerRuntimes[0].ProviderConfig
 		require.NotNil(t, pc)
-		var m map[string]interface{}
-		require.NoError(t, json.Unmarshal(pc.Raw, &m))
-		flags := m["configFlags"].(map[string]interface{})
-		require.Equal(t, gvisorNetRawDefaultValue, flags[gvisorNetRawConfigKey])
+		var config gvisorv1alpha1.GVisorConfiguration
+		require.NoError(t, json.Unmarshal(pc.Raw, &config))
+		require.NotNil(t, config.ConfigFlags)
+		require.Equal(t, gvisorNetRawDefaultValue, (*config.ConfigFlags)[gvisorNetRawConfigKey])
 	})
 }
