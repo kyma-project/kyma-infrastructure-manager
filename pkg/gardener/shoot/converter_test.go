@@ -1,6 +1,7 @@
 package shoot
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -664,3 +665,202 @@ func Test_ConverterConfig_Load_OK(t *testing.T) {
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	assert.Nil(t, validate.Struct(cfg))
 }
+
+func TestConverter_GVisorNetRaw(t *testing.T) {
+	t.Run("Create shoot with gvisor runtime defaults net-raw to true", func(t *testing.T) {
+		// given
+		runtime := fixRuntimeWithGVisor()
+		converterConfig := fixConverterConfig()
+		converter := NewConverterCreate(CreateOpts{
+			ConverterConfig: converterConfig,
+		})
+
+		// when
+		shoot, err := converter.ToShoot(runtime)
+
+		// then
+		require.NoError(t, err)
+		require.Len(t, shoot.Spec.Provider.Workers, 1)
+		require.NotNil(t, shoot.Spec.Provider.Workers[0].CRI)
+		require.Len(t, shoot.Spec.Provider.Workers[0].CRI.ContainerRuntimes, 1)
+		require.Equal(t, "gvisor", shoot.Spec.Provider.Workers[0].CRI.ContainerRuntimes[0].Type)
+		require.NotNil(t, shoot.Spec.Provider.Workers[0].CRI.ContainerRuntimes[0].ProviderConfig)
+
+		var config map[string]interface{}
+		require.NoError(t, json.Unmarshal(shoot.Spec.Provider.Workers[0].CRI.ContainerRuntimes[0].ProviderConfig.Raw, &config))
+		configFlags := config["configFlags"].(map[string]interface{})
+		assert.Equal(t, "true", configFlags["net-raw"])
+	})
+
+	t.Run("Create shoot with gvisor and explicit net-raw false preserves value", func(t *testing.T) {
+		// given
+		runtime := fixRuntimeWithGVisorNetRawFalse()
+		converterConfig := fixConverterConfig()
+		converter := NewConverterCreate(CreateOpts{
+			ConverterConfig: converterConfig,
+		})
+
+		// when
+		shoot, err := converter.ToShoot(runtime)
+
+		// then
+		require.NoError(t, err)
+		var config map[string]interface{}
+		require.NoError(t, json.Unmarshal(shoot.Spec.Provider.Workers[0].CRI.ContainerRuntimes[0].ProviderConfig.Raw, &config))
+		configFlags := config["configFlags"].(map[string]interface{})
+		assert.Equal(t, "false", configFlags["net-raw"])
+	})
+
+	t.Run("Create shoot with gvisor and existing configFlags adds net-raw", func(t *testing.T) {
+		// given
+		runtime := fixRuntimeWithGVisorWithoutNetRaw()
+		converterConfig := fixConverterConfig()
+		converter := NewConverterCreate(CreateOpts{
+			ConverterConfig: converterConfig,
+		})
+
+		// when
+		shoot, err := converter.ToShoot(runtime)
+
+		// then
+		require.NoError(t, err)
+		var config map[string]interface{}
+		require.NoError(t, json.Unmarshal(shoot.Spec.Provider.Workers[0].CRI.ContainerRuntimes[0].ProviderConfig.Raw, &config))
+		configFlags := config["configFlags"].(map[string]interface{})
+		assert.Equal(t, "true", configFlags["net-raw"])
+		assert.Equal(t, "false", configFlags["debug"])
+		assert.Equal(t, "false", configFlags["nvproxy"])
+	})
+
+	t.Run("Patch shoot with gvisor defaults net-raw to true", func(t *testing.T) {
+		// given
+		runtime := fixRuntimeWithGVisor()
+		converterConfig := fixConverterConfig()
+		existingWorkers := fixWorkersWithGVisor()
+		converter := NewConverterPatch(PatchOpts{
+			ConverterConfig:      converterConfig,
+			Workers:              existingWorkers,
+			ShootK8SVersion:      "1.28",
+			Extensions:           []gardener.Extension{},
+			InfrastructureConfig: fixAWSInfrastructureConfig("10.250.0.0/16", []string{"eu-central-1a"}),
+			ControlPlaneConfig:   fixAWSControlPlaneConfig(),
+		})
+
+		// when
+		shoot, err := converter.ToShoot(runtime)
+
+		// then
+		require.NoError(t, err)
+		var config map[string]interface{}
+		require.NoError(t, json.Unmarshal(shoot.Spec.Provider.Workers[0].CRI.ContainerRuntimes[0].ProviderConfig.Raw, &config))
+		configFlags := config["configFlags"].(map[string]interface{})
+		assert.Equal(t, "true", configFlags["net-raw"])
+	})
+
+	t.Run("Create shoot with worker having multiple runtimes", func(t *testing.T) {
+		// given
+		runtime := fixRuntimeWithMultipleRuntimes()
+		converterConfig := fixConverterConfig()
+		converter := NewConverterCreate(CreateOpts{
+			ConverterConfig: converterConfig,
+		})
+
+		// when
+		shoot, err := converter.ToShoot(runtime)
+
+		// then
+		require.NoError(t, err)
+		require.Len(t, shoot.Spec.Provider.Workers, 1)
+		require.Len(t, shoot.Spec.Provider.Workers[0].CRI.ContainerRuntimes, 2)
+
+		// First runtime is runc - no providerConfig
+		require.Equal(t, "runc", shoot.Spec.Provider.Workers[0].CRI.ContainerRuntimes[0].Type)
+		require.Nil(t, shoot.Spec.Provider.Workers[0].CRI.ContainerRuntimes[0].ProviderConfig)
+
+		// Second runtime is gvisor - should have net-raw default
+		require.Equal(t, "gvisor", shoot.Spec.Provider.Workers[0].CRI.ContainerRuntimes[1].Type)
+		require.NotNil(t, shoot.Spec.Provider.Workers[0].CRI.ContainerRuntimes[1].ProviderConfig)
+		var config map[string]interface{}
+		require.NoError(t, json.Unmarshal(shoot.Spec.Provider.Workers[0].CRI.ContainerRuntimes[1].ProviderConfig.Raw, &config))
+		configFlags := config["configFlags"].(map[string]interface{})
+		assert.Equal(t, "true", configFlags["net-raw"])
+	})
+}
+
+func fixRuntimeWithGVisor() imv1.Runtime {
+	rt := fixRuntime(gardener.ShootPurposeProduction)
+	rt.Spec.Shoot.Provider.Workers[0].CRI = &gardener.CRI{
+		Name: "containerd",
+		ContainerRuntimes: []gardener.ContainerRuntime{
+			{Type: "gvisor"},
+		},
+	}
+	return rt
+}
+
+func fixRuntimeWithGVisorNetRawFalse() imv1.Runtime {
+	rt := fixRuntime(gardener.ShootPurposeProduction)
+	providerConfig := &runtime.RawExtension{
+		Raw: []byte(`{"apiVersion":"gvisor.runtime.extensions.config.gardener.cloud/v1alpha1","kind":"GVisorConfiguration","configFlags":{"net-raw":"false"}}`),
+	}
+	rt.Spec.Shoot.Provider.Workers[0].CRI = &gardener.CRI{
+		Name: "containerd",
+		ContainerRuntimes: []gardener.ContainerRuntime{
+			{
+				Type:           "gvisor",
+				ProviderConfig: providerConfig,
+			},
+		},
+	}
+	return rt
+}
+
+func fixRuntimeWithGVisorWithoutNetRaw() imv1.Runtime {
+	rt := fixRuntime(gardener.ShootPurposeProduction)
+	providerConfig := &runtime.RawExtension{
+		Raw: []byte(`{"apiVersion":"gvisor.runtime.extensions.config.gardener.cloud/v1alpha1","kind":"GVisorConfiguration","configFlags":{"debug":"false","nvproxy":"false"}}`),
+	}
+	rt.Spec.Shoot.Provider.Workers[0].CRI = &gardener.CRI{
+		Name: "containerd",
+		ContainerRuntimes: []gardener.ContainerRuntime{
+			{
+				Type:           "gvisor",
+				ProviderConfig: providerConfig,
+			},
+		},
+	}
+	return rt
+}
+
+func fixWorkersWithGVisor() []gardener.Worker {
+	return []gardener.Worker{
+		{
+			Name: "worker",
+			Machine: gardener.Machine{
+				Type: "m6i.large",
+			},
+			Minimum: 1,
+			Maximum: 3,
+			Zones:   []string{"eu-central-1a"},
+			CRI: &gardener.CRI{
+				Name: "containerd",
+				ContainerRuntimes: []gardener.ContainerRuntime{
+					{Type: "gvisor"},
+				},
+			},
+		},
+	}
+}
+
+func fixRuntimeWithMultipleRuntimes() imv1.Runtime {
+	rt := fixRuntime(gardener.ShootPurposeProduction)
+	rt.Spec.Shoot.Provider.Workers[0].CRI = &gardener.CRI{
+		Name: "containerd",
+		ContainerRuntimes: []gardener.ContainerRuntime{
+			{Type: "runc"},
+			{Type: "gvisor"},
+		},
+	}
+	return rt
+}
+

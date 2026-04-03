@@ -63,6 +63,72 @@ func TestEnsureGVisorNetRawDefault(t *testing.T) {
 		_, err := ensureGVisorNetRawDefault(&runtime.RawExtension{Raw: []byte(`{`)})
 		require.Error(t, err)
 	})
+
+	t.Run("empty raw extension creates default config", func(t *testing.T) {
+		out, err := ensureGVisorNetRawDefault(&runtime.RawExtension{Raw: []byte{}})
+		require.NoError(t, err)
+		require.NotNil(t, out)
+		var config gvisorv1alpha1.GVisorConfiguration
+		require.NoError(t, json.Unmarshal(out.Raw, &config))
+		require.Equal(t, gvisorNetRawDefaultValue, (*config.ConfigFlags)[gvisorNetRawConfigKey])
+	})
+
+	t.Run("config with nil ConfigFlags gets initialized", func(t *testing.T) {
+		config := gvisorv1alpha1.GVisorConfiguration{
+			ConfigFlags: nil,
+		}
+		config.APIVersion = gvisorProviderConfigAPIVer
+		config.Kind = gvisorProviderConfigKind
+		raw, err := json.Marshal(config)
+		require.NoError(t, err)
+		out, err := ensureGVisorNetRawDefault(&runtime.RawExtension{Raw: raw})
+		require.NoError(t, err)
+		var outConfig gvisorv1alpha1.GVisorConfiguration
+		require.NoError(t, json.Unmarshal(out.Raw, &outConfig))
+		require.NotNil(t, outConfig.ConfigFlags)
+		require.Equal(t, gvisorNetRawDefaultValue, (*outConfig.ConfigFlags)[gvisorNetRawConfigKey])
+		require.Equal(t, gvisorProviderConfigAPIVer, outConfig.APIVersion)
+		require.Equal(t, gvisorProviderConfigKind, outConfig.Kind)
+	})
+
+	t.Run("existing net-raw true is preserved", func(t *testing.T) {
+		flags := map[string]string{gvisorNetRawConfigKey: "true"}
+		config := gvisorv1alpha1.GVisorConfiguration{
+			ConfigFlags: &flags,
+		}
+		config.APIVersion = gvisorProviderConfigAPIVer
+		config.Kind = gvisorProviderConfigKind
+		raw, err := json.Marshal(config)
+		require.NoError(t, err)
+		out, err := ensureGVisorNetRawDefault(&runtime.RawExtension{Raw: raw})
+		require.NoError(t, err)
+		var outConfig gvisorv1alpha1.GVisorConfiguration
+		require.NoError(t, json.Unmarshal(out.Raw, &outConfig))
+		require.Equal(t, "true", (*outConfig.ConfigFlags)[gvisorNetRawConfigKey])
+	})
+
+	t.Run("multiple existing flags are preserved", func(t *testing.T) {
+		flags := map[string]string{
+			"debug":   "true",
+			"nvproxy": "false",
+			"foo":     "bar",
+		}
+		config := gvisorv1alpha1.GVisorConfiguration{
+			ConfigFlags: &flags,
+		}
+		config.APIVersion = gvisorProviderConfigAPIVer
+		config.Kind = gvisorProviderConfigKind
+		raw, err := json.Marshal(config)
+		require.NoError(t, err)
+		out, err := ensureGVisorNetRawDefault(&runtime.RawExtension{Raw: raw})
+		require.NoError(t, err)
+		var outConfig gvisorv1alpha1.GVisorConfiguration
+		require.NoError(t, json.Unmarshal(out.Raw, &outConfig))
+		require.Equal(t, "true", (*outConfig.ConfigFlags)["debug"])
+		require.Equal(t, "false", (*outConfig.ConfigFlags)["nvproxy"])
+		require.Equal(t, "bar", (*outConfig.ConfigFlags)["foo"])
+		require.Equal(t, gvisorNetRawDefaultValue, (*outConfig.ConfigFlags)[gvisorNetRawConfigKey])
+	})
 }
 
 func TestApplyDefaultGVisorNetRaw(t *testing.T) {
@@ -96,6 +162,111 @@ func TestApplyDefaultGVisorNetRaw(t *testing.T) {
 		require.NoError(t, json.Unmarshal(workers[0].CRI.ContainerRuntimes[0].ProviderConfig.Raw, &config))
 		require.NotNil(t, config.ConfigFlags)
 		require.Equal(t, gvisorNetRawDefaultValue, (*config.ConfigFlags)[gvisorNetRawConfigKey])
+	})
+
+	t.Run("worker with nil CRI is skipped", func(t *testing.T) {
+		workers := []gardener.Worker{{
+			Name: "w1",
+			CRI:  nil,
+		}}
+		require.NoError(t, applyDefaultGVisorNetRaw(workers))
+		require.Nil(t, workers[0].CRI)
+	})
+
+	t.Run("multiple container runtimes with mixed types", func(t *testing.T) {
+		workers := []gardener.Worker{{
+			Name: "w",
+			CRI: &gardener.CRI{
+				Name: "containerd",
+				ContainerRuntimes: []gardener.ContainerRuntime{
+					{Type: "runc"},
+					{Type: gvisorContainerRuntimeType},
+					{Type: "kata"},
+				},
+			},
+		}}
+		require.NoError(t, applyDefaultGVisorNetRaw(workers))
+		require.Nil(t, workers[0].CRI.ContainerRuntimes[0].ProviderConfig)
+		require.NotNil(t, workers[0].CRI.ContainerRuntimes[1].ProviderConfig)
+		require.Nil(t, workers[0].CRI.ContainerRuntimes[2].ProviderConfig)
+
+		var config gvisorv1alpha1.GVisorConfiguration
+		require.NoError(t, json.Unmarshal(workers[0].CRI.ContainerRuntimes[1].ProviderConfig.Raw, &config))
+		require.Equal(t, gvisorNetRawDefaultValue, (*config.ConfigFlags)[gvisorNetRawConfigKey])
+	})
+
+	t.Run("multiple gvisor runtimes in same worker", func(t *testing.T) {
+		workers := []gardener.Worker{{
+			Name: "w",
+			CRI: &gardener.CRI{
+				Name: "containerd",
+				ContainerRuntimes: []gardener.ContainerRuntime{
+					{Type: gvisorContainerRuntimeType},
+					{Type: gvisorContainerRuntimeType},
+				},
+			},
+		}}
+		require.NoError(t, applyDefaultGVisorNetRaw(workers))
+		for i := range workers[0].CRI.ContainerRuntimes {
+			require.NotNil(t, workers[0].CRI.ContainerRuntimes[i].ProviderConfig)
+			var config gvisorv1alpha1.GVisorConfiguration
+			require.NoError(t, json.Unmarshal(workers[0].CRI.ContainerRuntimes[i].ProviderConfig.Raw, &config))
+			require.Equal(t, gvisorNetRawDefaultValue, (*config.ConfigFlags)[gvisorNetRawConfigKey])
+		}
+	})
+
+	t.Run("invalid providerConfig returns error", func(t *testing.T) {
+		workers := []gardener.Worker{{
+			Name: "w",
+			CRI: &gardener.CRI{
+				Name: "containerd",
+				ContainerRuntimes: []gardener.ContainerRuntime{
+					{
+						Type:           gvisorContainerRuntimeType,
+						ProviderConfig: &runtime.RawExtension{Raw: []byte(`{invalid`)},
+					},
+				},
+			},
+		}}
+		err := applyDefaultGVisorNetRaw(workers)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "unmarshal")
+	})
+
+	t.Run("multiple workers with gvisor", func(t *testing.T) {
+		workers := []gardener.Worker{
+			{
+				Name: "w1",
+				CRI: &gardener.CRI{
+					Name: "containerd",
+					ContainerRuntimes: []gardener.ContainerRuntime{
+						{Type: gvisorContainerRuntimeType},
+					},
+				},
+			},
+			{
+				Name: "w2",
+				CRI: &gardener.CRI{
+					Name: "containerd",
+					ContainerRuntimes: []gardener.ContainerRuntime{
+						{Type: "runc"},
+					},
+				},
+			},
+			{
+				Name: "w3",
+				CRI: &gardener.CRI{
+					Name: "containerd",
+					ContainerRuntimes: []gardener.ContainerRuntime{
+						{Type: gvisorContainerRuntimeType},
+					},
+				},
+			},
+		}
+		require.NoError(t, applyDefaultGVisorNetRaw(workers))
+		require.NotNil(t, workers[0].CRI.ContainerRuntimes[0].ProviderConfig)
+		require.Nil(t, workers[1].CRI.ContainerRuntimes[0].ProviderConfig)
+		require.NotNil(t, workers[2].CRI.ContainerRuntimes[0].ProviderConfig)
 	})
 }
 
