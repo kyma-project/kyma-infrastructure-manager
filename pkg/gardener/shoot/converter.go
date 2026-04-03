@@ -83,6 +83,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
 		),
+		extender2.ExtendWithGVisorNetRawDefault,
 		extender2.NewTolerationsExtender(opts.Tolerations),
 	)
 
@@ -119,6 +120,7 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.Workers,
 			opts.InfrastructureConfig,
 			opts.ControlPlaneConfig))
+	extendersForPatch = append(extendersForPatch, extender2.ExtendWithGVisorNetRawDefault)
 
 	extendersForPatch = append(extendersForPatch,
 		extender2.NewResourcesExtenderForPatch(opts.Resources),

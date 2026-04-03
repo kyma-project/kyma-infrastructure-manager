@@ -63,6 +63,8 @@ github.com/gardener/gardener-extension-provider-openstack v1.51.0 h1:w80d0V9LYJZ
 github.com/gardener/gardener-extension-provider-openstack v1.51.0/go.mod h1:KzD2GS1jf61Q1djrVBDODyFmBnyUop3zdTlxYUrrXUo=
 github.com/gardener/gardener-extension-registry-cache v0.18.0 h1:PQqkX4fIbRwWGfXdFvM5dx1tOlndP5y43H5hlUJgcHE=
 github.com/gardener/gardener-extension-registry-cache v0.18.0/go.mod h1:h2BwDf3xYB1glxuO/9sIiCRgv29Xes1CY5uS4xsxTEk=
+github.com/gardener/gardener-extension-runtime-gvisor v0.24.0 h1:nSPAlUrz3ObMisBsBkxh1VHCIW2SoMXjsft5CYh2P5U=
+github.com/gardener/gardener-extension-runtime-gvisor v0.24.0/go.mod h1:SRsGVhGq+O2FBJDPObf8nd3kXNt52Uya8g6EN9Ud2pY=
 github.com/gardener/machine-controller-manager v0.60.2 h1:lY6z67lDlwl9dQUEmlJbrmpxWK10o/rVRUu4JB7xK4U=
 github.com/gardener/machine-controller-manager v0.60.2/go.mod h1:8eE1qLztrWIbOM71mHSQGaC6Q+pl5lvOyN08qP39D7o=
 github.com/gardener/oidc-webhook-authenticator v0.38.0 h1:fLuFPwzXezx1HYzCS6BbZ61c6OrLlDygkgAgCKCxsC4=
