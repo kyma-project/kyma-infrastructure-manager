@@ -3,21 +3,19 @@ package shoot
 import (
 	"fmt"
 
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/networking"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/restrictions"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	extender2 "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/networking"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/restrictions"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 type Extend func(imv1.Runtime, *gardener.Shoot) error
@@ -50,7 +48,7 @@ func newConverter(config config.ConverterConfig, extenders ...Extend) Converter 
 }
 
 type CreateOpts struct {
-	KcpClient client.Client
+	Kcp extensions.Kcp
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
@@ -58,10 +56,10 @@ type CreateOpts struct {
 }
 
 type PatchOpts struct {
+	Kcp extensions.Kcp
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
-	KcpClient            client.Client
 	ShootK8SVersion      string
 	Workers              []gardener.Worker
 	Extensions           []gardener.Extension
@@ -88,7 +86,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 	if !opts.DNS.IsGardenerInternal() {
 		extendersForCreate = append(extendersForCreate, extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType))
 	}
-	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.ConverterConfig, opts.KcpClient, opts.AuditLogData, nil, opts.ApiServerAclEnabled))
+	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.ConverterConfig, opts.Kcp, opts.AuditLogData, nil, opts.ApiServerAclEnabled))
 	extendersForCreate = append(extendersForCreate,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
 
@@ -122,7 +120,7 @@ func NewConverterPatch(opts PatchOpts) Converter {
 
 	extendersForPatch = append(extendersForPatch,
 		extender2.NewResourcesExtenderForPatch(opts.Resources),
-		extensions.NewExtensionsExtenderForPatch(opts.ConverterConfig, opts.KcpClient, opts.AuditLogData, opts.Extensions, opts.ApiServerAclEnabled))
+		extensions.NewExtensionsExtenderForPatch(opts.ConverterConfig, opts.Kcp, opts.AuditLogData, opts.Extensions, opts.ApiServerAclEnabled))
 
 	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
 	extendersForPatch = append(extendersForPatch, maintenance.NewMaintenanceExtender(opts.Kubernetes.EnableKubernetesVersionAutoUpdate, opts.Kubernetes.EnableMachineImageVersionAutoUpdate, opts.MaintenanceTimeWindow))

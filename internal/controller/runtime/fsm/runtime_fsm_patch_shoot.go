@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
@@ -69,8 +70,11 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	// NOTE: In the future we want to pass the whole shoot object here
 	updatedShoot, err := convertPatch(&s.instance, gardener_shoot.PatchOpts{
+		Kcp: extensions.Kcp{
+			Client:  m.KcpClient,
+			Context: ctx,
+		},
 		ConverterConfig:       m.ConverterConfig,
-		KcpClient:             m.KcpClient,
 		AuditLogData:          data,
 		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
 		Workers:               s.shoot.Spec.Provider.Workers,

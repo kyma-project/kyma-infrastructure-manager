@@ -1,6 +1,7 @@
 package extensions
 
 import (
+	"context"
 	"encoding/json"
 	"slices"
 
@@ -13,12 +14,17 @@ import (
 
 type CreateExtensionFunc func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error)
 
+type Kcp struct {
+	Client  client.Client
+	Context context.Context
+}
+
 type Extension struct {
 	Type   string
 	Create CreateExtensionFunc
 }
 
-func NewExtensionsExtenderForCreate(config config.ConverterConfig, kcpClient client.Client, auditLogData auditlogs.AuditLogData, registryCache []imv1.ImageRegistryCache, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForCreate(config config.ConverterConfig, kcp Kcp, auditLogData auditlogs.AuditLogData, registryCache []imv1.ImageRegistryCache, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			Type: NetworkFilterType,
@@ -74,7 +80,7 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, kcpClient cli
 					return nil, nil
 				}
 
-				operatorIPs, kcpIPs, err := loadIPsFromConfigMap(config.Kubernetes.KubeApiServer.ACL.ConfigMapName, kcpClient)
+				operatorIPs, kcpIPs, err := loadIPsFromConfigMap(config.Kubernetes.KubeApiServer.ACL.ConfigMapName, kcp)
 				if err != nil {
 					return nil, err
 				}
@@ -84,7 +90,7 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, kcpClient cli
 	}, nil)
 }
 
-func NewExtensionsExtenderForPatch(config config.ConverterConfig, kcpClient client.Client, auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForPatch(config config.ConverterConfig, kcp Kcp, auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			AuditlogExtensionType,
@@ -145,7 +151,7 @@ func NewExtensionsExtenderForPatch(config config.ConverterConfig, kcpClient clie
 					return NewApiServerACLExtension(nil, nil, "")
 				}
 
-				operatorIPs, kcpIPs, err := loadIPsFromConfigMap(config.Kubernetes.KubeApiServer.ACL.ConfigMapName, kcpClient)
+				operatorIPs, kcpIPs, err := loadIPsFromConfigMap(config.Kubernetes.KubeApiServer.ACL.ConfigMapName, kcp)
 				if err != nil {
 					return nil, err
 				}
