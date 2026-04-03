@@ -14,7 +14,6 @@ const (
 	gvisorContainerRuntimeType = "gvisor"
 	gvisorNetRawConfigKey      = "net-raw"
 	gvisorNetRawDefaultValue   = "true"
-	gvisorProviderConfigAPIVer = "gvisor.runtime.extensions.config.gardener.cloud/v1alpha1"
 	gvisorProviderConfigKind   = "GVisorConfiguration"
 )
 
@@ -55,7 +54,7 @@ func ensureGVisorNetRawDefault(pc *runtime.RawExtension) (*runtime.RawExtension,
 	}
 
 	if config.ConfigFlags == nil {
-		config.APIVersion = gvisorProviderConfigAPIVer
+		config.APIVersion = gvisorv1alpha1.SchemeGroupVersion.String()
 		config.Kind = gvisorProviderConfigKind
 		flags := map[string]string{
 			gvisorNetRawConfigKey: gvisorNetRawDefaultValue,

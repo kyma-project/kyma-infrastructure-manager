@@ -18,7 +18,7 @@ func TestEnsureGVisorNetRawDefault(t *testing.T) {
 		require.NotNil(t, out)
 		var config gvisorv1alpha1.GVisorConfiguration
 		require.NoError(t, json.Unmarshal(out.Raw, &config))
-		require.Equal(t, gvisorProviderConfigAPIVer, config.APIVersion)
+		require.Equal(t, gvisorv1alpha1.SchemeGroupVersion.String(), config.APIVersion)
 		require.Equal(t, gvisorProviderConfigKind, config.Kind)
 		require.NotNil(t, config.ConfigFlags)
 		require.Equal(t, gvisorNetRawDefaultValue, (*config.ConfigFlags)[gvisorNetRawConfigKey])
@@ -29,7 +29,7 @@ func TestEnsureGVisorNetRawDefault(t *testing.T) {
 		config := gvisorv1alpha1.GVisorConfiguration{
 			ConfigFlags: &flags,
 		}
-		config.APIVersion = gvisorProviderConfigAPIVer
+		config.APIVersion = gvisorv1alpha1.SchemeGroupVersion.String()
 		config.Kind = gvisorProviderConfigKind
 		raw, err := json.Marshal(config)
 		require.NoError(t, err)
@@ -47,7 +47,7 @@ func TestEnsureGVisorNetRawDefault(t *testing.T) {
 		config := gvisorv1alpha1.GVisorConfiguration{
 			ConfigFlags: &flags,
 		}
-		config.APIVersion = gvisorProviderConfigAPIVer
+		config.APIVersion = gvisorv1alpha1.SchemeGroupVersion.String()
 		config.Kind = gvisorProviderConfigKind
 		raw, err := json.Marshal(config)
 		require.NoError(t, err)
@@ -77,7 +77,7 @@ func TestEnsureGVisorNetRawDefault(t *testing.T) {
 		config := gvisorv1alpha1.GVisorConfiguration{
 			ConfigFlags: nil,
 		}
-		config.APIVersion = gvisorProviderConfigAPIVer
+		config.APIVersion = gvisorv1alpha1.SchemeGroupVersion.String()
 		config.Kind = gvisorProviderConfigKind
 		raw, err := json.Marshal(config)
 		require.NoError(t, err)
@@ -87,7 +87,7 @@ func TestEnsureGVisorNetRawDefault(t *testing.T) {
 		require.NoError(t, json.Unmarshal(out.Raw, &outConfig))
 		require.NotNil(t, outConfig.ConfigFlags)
 		require.Equal(t, gvisorNetRawDefaultValue, (*outConfig.ConfigFlags)[gvisorNetRawConfigKey])
-		require.Equal(t, gvisorProviderConfigAPIVer, outConfig.APIVersion)
+		require.Equal(t, gvisorv1alpha1.SchemeGroupVersion.String(), outConfig.APIVersion)
 		require.Equal(t, gvisorProviderConfigKind, outConfig.Kind)
 	})
 
@@ -96,7 +96,7 @@ func TestEnsureGVisorNetRawDefault(t *testing.T) {
 		config := gvisorv1alpha1.GVisorConfiguration{
 			ConfigFlags: &flags,
 		}
-		config.APIVersion = gvisorProviderConfigAPIVer
+		config.APIVersion = gvisorv1alpha1.SchemeGroupVersion.String()
 		config.Kind = gvisorProviderConfigKind
 		raw, err := json.Marshal(config)
 		require.NoError(t, err)
@@ -116,7 +116,7 @@ func TestEnsureGVisorNetRawDefault(t *testing.T) {
 		config := gvisorv1alpha1.GVisorConfiguration{
 			ConfigFlags: &flags,
 		}
-		config.APIVersion = gvisorProviderConfigAPIVer
+		config.APIVersion = gvisorv1alpha1.SchemeGroupVersion.String()
 		config.Kind = gvisorProviderConfigKind
 		raw, err := json.Marshal(config)
 		require.NoError(t, err)
