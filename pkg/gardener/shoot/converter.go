@@ -54,7 +54,6 @@ type CreateOpts struct {
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
 	KcpClient           client.Client
-	Context             context.Context
 	ApiServerAclEnabled bool
 }
 
@@ -63,7 +62,6 @@ type PatchOpts struct {
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
 	KcpClient            client.Client
-	Context              context.Context
 	ShootK8SVersion      string
 	Workers              []gardener.Worker
 	Extensions           []gardener.Extension
@@ -73,7 +71,7 @@ type PatchOpts struct {
 	ApiServerAclEnabled  bool
 }
 
-func NewConverterCreate(opts CreateOpts) Converter {
+func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
 	extendersForCreate := baseExtenders(opts.ConverterConfig)
 
 	extendersForCreate = append(extendersForCreate,
@@ -90,7 +88,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 	if !opts.DNS.IsGardenerInternal() {
 		extendersForCreate = append(extendersForCreate, extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType))
 	}
-	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.Context, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, nil, opts.ApiServerAclEnabled))
+	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(ctx, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, nil, opts.ApiServerAclEnabled))
 	extendersForCreate = append(extendersForCreate,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
 
@@ -109,7 +107,7 @@ func NewConverterCreate(opts CreateOpts) Converter {
 	return newConverter(opts.ConverterConfig, extendersForCreate...)
 }
 
-func NewConverterPatch(opts PatchOpts) Converter {
+func NewConverterPatch(ctx context.Context, opts PatchOpts) Converter {
 	extendersForPatch := baseExtenders(opts.ConverterConfig)
 
 	extendersForPatch = append(extendersForPatch,
@@ -124,7 +122,7 @@ func NewConverterPatch(opts PatchOpts) Converter {
 
 	extendersForPatch = append(extendersForPatch,
 		extender2.NewResourcesExtenderForPatch(opts.Resources),
-		extensions.NewExtensionsExtenderForPatch(opts.Context, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, opts.Extensions, opts.ApiServerAclEnabled))
+		extensions.NewExtensionsExtenderForPatch(ctx, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, opts.Extensions, opts.ApiServerAclEnabled))
 
 	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
 	extendersForPatch = append(extendersForPatch, maintenance.NewMaintenanceExtender(opts.Kubernetes.EnableKubernetesVersionAutoUpdate, opts.Kubernetes.EnableMachineImageVersionAutoUpdate, opts.MaintenanceTimeWindow))

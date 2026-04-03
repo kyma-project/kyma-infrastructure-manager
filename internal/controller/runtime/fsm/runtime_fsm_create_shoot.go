@@ -85,9 +85,8 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	timeBoundaries, _ := token.ValidateTokenExpirationTime(m.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
 	logTokenExpirationInfo(m.log, timeBoundaries)
 
-	shoot, err := convertCreate(&s.instance, gardener_shoot.CreateOpts{
+	shoot, err := convertCreate(ctx, &s.instance, gardener_shoot.CreateOpts{
 		KcpClient:             m.KcpClient,
-		Context:               ctx,
 		ConverterConfig:       m.ConverterConfig,
 		AuditLogData:          data,
 		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
@@ -131,12 +130,12 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
 }
 
-func convertCreate(instance *imv1.Runtime, opts gardener_shoot.CreateOpts) (gardener.Shoot, error) {
+func convertCreate(ctx context.Context, instance *imv1.Runtime, opts gardener_shoot.CreateOpts) (gardener.Shoot, error) {
 	if err := instance.ValidateRequiredLabels(); err != nil {
 		return gardener.Shoot{}, err
 	}
 
-	converter := gardener_shoot.NewConverterCreate(opts)
+	converter := gardener_shoot.NewConverterCreate(ctx, opts)
 	newShoot, err := converter.ToShoot(*instance)
 	if err != nil {
 		return newShoot, err

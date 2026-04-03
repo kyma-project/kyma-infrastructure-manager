@@ -68,9 +68,8 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	logTokenExpirationInfo(m.log, timeBoundaries)
 
 	// NOTE: In the future we want to pass the whole shoot object here
-	updatedShoot, err := convertPatch(&s.instance, gardener_shoot.PatchOpts{
+	updatedShoot, err := convertPatch(ctx, &s.instance, gardener_shoot.PatchOpts{
 		KcpClient:             m.KcpClient,
-		Context:               ctx,
 		ConverterConfig:       m.ConverterConfig,
 		AuditLogData:          data,
 		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
@@ -280,12 +279,12 @@ func handleForceReconciliationAnnotation(runtime *imv1.Runtime, fsm *fsm, ctx co
 	return nil
 }
 
-func convertPatch(instance *imv1.Runtime, opts gardener_shoot.PatchOpts) (gardener.Shoot, error) {
+func convertPatch(ctx context.Context, instance *imv1.Runtime, opts gardener_shoot.PatchOpts) (gardener.Shoot, error) {
 	if err := instance.ValidateRequiredLabels(); err != nil {
 		return gardener.Shoot{}, err
 	}
 
-	converter := gardener_shoot.NewConverterPatch(opts)
+	converter := gardener_shoot.NewConverterPatch(ctx, opts)
 	newShoot, err := converter.ToShoot(*instance)
 	if err != nil {
 		return newShoot, err
