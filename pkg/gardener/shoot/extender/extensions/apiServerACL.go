@@ -16,6 +16,8 @@ import (
 )
 
 const ApiServerACLExtensionType string = "acl"
+const OperatorIpsKey string = "acl-list.json"
+const KcpExternalNatIpKey string = "kcp-external-nat-ip.json"
 
 type aclProviderConfig struct {
 	Rule aclRule `json:"rule"`
@@ -63,12 +65,12 @@ func loadIPsFromConfigMap(aclMapName string, kcpClient client.Client) (operatorI
 		return operatorIPs, kcpIp, err
 	}
 
-	err = json.Unmarshal([]byte(aclConfigMap.Data["acl-list.json"]), &operatorIPs)
+	err = json.Unmarshal([]byte(aclConfigMap.Data[OperatorIpsKey]), &operatorIPs)
 	if err != nil {
 		return operatorIPs, kcpIp, err
 	}
 
-	err = json.Unmarshal([]byte(aclConfigMap.Data["kcp-external-nat-ip.json"]), &kcpIp)
+	err = json.Unmarshal([]byte(aclConfigMap.Data[KcpExternalNatIpKey]), &kcpIp)
 
 	return operatorIPs, kcpIp, err
 }
