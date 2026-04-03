@@ -134,7 +134,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 				},
 			}
 
-			extender := NewExtensionsExtenderForCreate(config, fakeClient, context.Background(), testcase.inputAuditLogData, testcase.registryCache, testcase.apiServerACLEnabled)
+			extender := NewExtensionsExtenderForCreate(context.Background(), fakeClient, config, testcase.inputAuditLogData, testcase.registryCache, testcase.apiServerACLEnabled)
 
 			err := extender(testRuntime, shoot)
 			assert.NoError(t, err)
@@ -380,7 +380,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			registryCacheDataProvided := len(testCase.registryCaches) != 0
 			kubeApiServerACLEnabled := aclNeedsToBeEnabled(testCase.apiServerACLEnabled, testRuntime)
 
-			extender := NewExtensionsExtenderForPatch(config, fakeClient, context.Background(), testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled)
+			extender := NewExtensionsExtenderForPatch(context.Background(), fakeClient, config, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled)
 			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided, kubeApiServerACLEnabled)
 
 			err := extender(testRuntime, shoot)
