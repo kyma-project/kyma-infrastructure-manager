@@ -11,7 +11,7 @@ require (
 	github.com/gardener/gardener-extension-provider-openstack v1.51.0
 	github.com/gardener/gardener-extension-registry-cache v0.18.0
 	github.com/gardener/gardener-extension-runtime-gvisor v0.24.0
-	github.com/gardener/oidc-webhook-authenticator v0.38.0
+	github.com/gardener/oidc-webhook-authenticator v0.42.0
 	github.com/go-logr/logr v1.4.3
 	github.com/go-playground/validator/v10 v10.30.2
 	github.com/kyma-project/lifecycle-manager/api v0.0.0-20250415061517-3922bac13370
@@ -26,7 +26,7 @@ require (
 	k8s.io/apimachinery v0.35.3
 	k8s.io/client-go v0.35.3
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
-	sigs.k8s.io/controller-runtime v0.22.4
+	sigs.k8s.io/controller-runtime v0.23.1
 	sigs.k8s.io/yaml v1.6.0
 )
 
