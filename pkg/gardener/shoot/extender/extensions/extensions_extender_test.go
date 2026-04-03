@@ -365,7 +365,10 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			runtime := fixRuntimeCRForExtensionExtenderTests(testCase.enableNetworkFilter, testCase.registryCaches, testCase.apiServerACL, testCase.providerType)
+			testRuntime := fixRuntimeCRForExtensionExtenderTests(testCase.enableNetworkFilter, testCase.registryCaches, testCase.apiServerACL, testCase.providerType)
+
+			configMapGetCalled := false
+			fakeClient := buildFakeClientWithACLConfigMap(t, &configMapGetCalled)
 
 			shoot := &gardener.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -375,15 +378,16 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 
 			auditLogDataProvided := testCase.inputAuditLogData != (auditlogs.AuditLogData{})
 			registryCacheDataProvided := len(testCase.registryCaches) != 0
-			kubeApiServerACLEnabled := testCase.apiServerACLEnabled && len(testCase.apiServerACL) != 0 && (testCase.providerType == hyperscaler.TypeAWS || testCase.providerType == hyperscaler.TypeAzure)
+			kubeApiServerACLEnabled := aclNeedsToBeEnabled(testCase.apiServerACLEnabled, testRuntime)
 
-			extender := NewExtensionsExtenderForPatch(config, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled)
+			extender := NewExtensionsExtenderForPatch(config, fakeClient, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled)
 			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided, kubeApiServerACLEnabled)
 
-			err := extender(runtime, shoot)
+			err := extender(testRuntime, shoot)
 			assert.NoError(t, err)
 			assert.NotNil(t, shoot.Spec.Extensions)
 			require.Len(t, shoot.Spec.Extensions, len(orderMap))
+			assert.Equal(t, kubeApiServerACLEnabled, configMapGetCalled)
 
 			for idx, ext := range shoot.Spec.Extensions {
 				assert.NotEmpty(t, ext.Type)
