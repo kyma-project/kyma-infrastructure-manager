@@ -70,7 +70,7 @@ func ensureGVisorNetRawDefault(pc *runtime.RawExtension) (*runtime.RawExtension,
 
 	raw, err := json.Marshal(config)
 	if err != nil {
-		return nil, errors.Wrap(err, "marshal gVisor providerConfig")
+		return nil, errors.Wrap(err, "marshal gVisor providerConfig failed")
 	}
 	return &runtime.RawExtension{Raw: raw}, nil
 }
@@ -82,8 +82,8 @@ func newGVisorProviderConfigWithNetRawDefault() (*runtime.RawExtension, error) {
 	config := gvisorv1alpha1.GVisorConfiguration{
 		ConfigFlags: &flags,
 	}
-	config.APIVersion = gvisorProviderConfigAPIVer
-	config.Kind = gvisorv1alpha1.SchemeGroupVersion.String()
+	config.APIVersion = gvisorv1alpha1.SchemeGroupVersion.String()
+	config.Kind = gvisorProviderConfigKind
 
 	raw, err := json.Marshal(config)
 	if err != nil {
