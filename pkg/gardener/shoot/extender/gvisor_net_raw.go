@@ -3,8 +3,8 @@ package extender
 import (
 	"encoding/json"
 
-	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gvisorv1alpha1 "github.com/gardener/gardener-extension-runtime-gvisor/pkg/apis/config/v1alpha1"
+	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -83,7 +83,7 @@ func newGVisorProviderConfigWithNetRawDefault() (*runtime.RawExtension, error) {
 		ConfigFlags: &flags,
 	}
 	config.APIVersion = gvisorProviderConfigAPIVer
-	config.Kind = gvisorv1alpha1.
+	config.Kind = gvisorv1alpha1.SchemeGroupVersion.String()
 
 	raw, err := json.Marshal(config)
 	if err != nil {
