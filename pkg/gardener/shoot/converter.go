@@ -57,11 +57,6 @@ type CreateOpts struct {
 	ApiServerAclEnabled bool
 }
 
-type WorkerZones struct {
-	Zones      []string
-	WorkerName string
-}
-
 type PatchOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
