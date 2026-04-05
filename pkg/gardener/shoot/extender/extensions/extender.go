@@ -1,6 +1,7 @@
 package extensions
 
 import (
+	"context"
 	"encoding/json"
 	"slices"
 
@@ -8,6 +9,7 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type CreateExtensionFunc func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error)
@@ -17,7 +19,7 @@ type Extension struct {
 	Create CreateExtensionFunc
 }
 
-func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData auditlogs.AuditLogData, registryCache []imv1.ImageRegistryCache, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, registryCache []imv1.ImageRegistryCache, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			Type: NetworkFilterType,
@@ -73,7 +75,7 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 					return nil, nil
 				}
 
-				operatorIPs, kcpIPs, err := loadIPsFromFile(config.Kubernetes.KubeApiServer.ACL.KcpAddressPath, config.Kubernetes.KubeApiServer.ACL.IpAddressesPath)
+				operatorIPs, kcpIPs, err := loadIPsFromConfigMap(ctx, kcpClient, config.Kubernetes.KubeApiServer.ACL.ConfigMapName)
 				if err != nil {
 					return nil, err
 				}
@@ -83,7 +85,7 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 	}, nil)
 }
 
-func NewExtensionsExtenderForPatch(config config.ConverterConfig, auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			AuditlogExtensionType,
@@ -144,7 +146,7 @@ func NewExtensionsExtenderForPatch(config config.ConverterConfig, auditLogData a
 					return NewApiServerACLExtension(nil, nil, "")
 				}
 
-				operatorIPs, kcpIPs, err := loadIPsFromFile(config.Kubernetes.KubeApiServer.ACL.KcpAddressPath, config.Kubernetes.KubeApiServer.ACL.IpAddressesPath)
+				operatorIPs, kcpIPs, err := loadIPsFromConfigMap(ctx, kcpClient, config.Kubernetes.KubeApiServer.ACL.ConfigMapName)
 				if err != nil {
 					return nil, err
 				}
