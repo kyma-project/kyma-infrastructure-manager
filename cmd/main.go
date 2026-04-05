@@ -25,7 +25,7 @@ import (
 	"os"
 	"time"
 
-	configctrl "github.com/kyma-project/infrastructure-manager/internal/controller/rtbootstrapperconfig"
+	configctrl "github.com/kyma-project/infrastructure-manager/internal/controller/configreload"
 	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -320,34 +320,39 @@ func main() {
 			os.Exit(1)
 		}
 
-		watcherConfig := configctrl.Cfg{
-			Client:    kcpClient,
+		rtBootstrapperCfgNN := types.NamespacedName{
+			Name:      runtimeBootstrapperKCPConfigName,
 			Namespace: "kcp-system",
-			RtBootstrapperCfg: types.NamespacedName{
-				Name:      runtimeBootstrapperKCPConfigName,
-				Namespace: "kcp-system",
-			},
-			RtBootstrapperManifests: types.NamespacedName{
-				Name:      runtimeBootstrapperManifestsConfigMapName,
-				Namespace: "kcp-system",
-			},
+		}
+		rtBootstrapperManifestsNN := types.NamespacedName{
+			Name:      runtimeBootstrapperManifestsConfigMapName,
+			Namespace: "kcp-system",
+		}
+
+		configMapPredicates := []configctrl.ObjectUpdatedPredicate{
+			{NamespacedName: rtBootstrapperCfgNN},
+			{NamespacedName: rtBootstrapperManifestsNN},
 		}
 
 		if runtimeBootstrapperKCPPullSecretName != "" {
-			watcherConfig.ImagePullSecret = types.NamespacedName{
+			configMapPredicates = append(configMapPredicates, configctrl.ObjectUpdatedPredicate{NamespacedName: types.NamespacedName{
 				Name:      runtimeBootstrapperKCPPullSecretName,
 				Namespace: "kcp-system",
-			}
+			}})
 		}
 
 		if runtimeBootstrapperKCPClusterTrustBundle != "" {
-			watcherConfig.ClusterTrustBundle = types.NamespacedName{
+			configMapPredicates = append(configMapPredicates, configctrl.ObjectUpdatedPredicate{NamespacedName: types.NamespacedName{
 				Name: runtimeBootstrapperKCPClusterTrustBundle,
-			}
+			}})
 		}
 
-		if err := (&configctrl.RuntimeBootstrapperConfigWatcher{
-			Kcp: watcherConfig,
+		if err := (&configctrl.ConfigReloadWatcher{
+			KcpClient:           kcpClient,
+			Namespace:           "kcp-system",
+			ConfigMapPredicates: configMapPredicates,
+			// This function must be modified when implementing ACL checks
+			RuntimePredicate: func(configObject types.NamespacedName, runtime infrastructuremanagerv1.Runtime) bool { return true },
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Secret")
 			os.Exit(1)

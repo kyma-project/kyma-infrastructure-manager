@@ -14,14 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package rtbootstrapperconfig
+package configreload
 
 import (
 	"context"
 	"fmt"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -37,18 +36,15 @@ var (
 	fieldManager                 = "config-watcher"
 )
 
-type Cfg struct {
-	Namespace               string
-	ClusterTrustBundle      types.NamespacedName
-	ImagePullSecret         types.NamespacedName
-	RtBootstrapperCfg       types.NamespacedName
-	RtBootstrapperManifests types.NamespacedName
-	client.Client
-}
+type RuntimePredicate func(configObject types.NamespacedName, runtime imv1.Runtime) bool
 
-// RuntimeBootstrapperConfigWatcher reconciles a Secret object
-type RuntimeBootstrapperConfigWatcher struct {
-	Kcp Cfg
+// ConfigReloadWatcher reconciles a Secret object
+type ConfigReloadWatcher struct {
+	KcpClient           client.Client
+	Namespace           string
+	ConfigMapPredicates []ObjectUpdatedPredicate
+	SecretPredicates    []ObjectUpdatedPredicate
+	RuntimePredicate    RuntimePredicate
 }
 
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=watch;list,namespace=kcp-system
@@ -56,16 +52,16 @@ type RuntimeBootstrapperConfigWatcher struct {
 // +kubebuilder:rbac:groups=certificates.k8s.io,resources=clustertrustbundles,verbs=watch;list,namespace=kcp-system
 // +kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=runtimes,verbs=list;patch,namespace=kcp-system
 
-func (r *RuntimeBootstrapperConfigWatcher) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
+func (r *ConfigReloadWatcher) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := logf.FromContext(ctx)
 
 	var runtimes imv1.RuntimeList
-	err := r.Kcp.List(ctx, &runtimes, &client.ListOptions{
-		Namespace: r.Kcp.Namespace,
+	err := r.KcpClient.List(ctx, &runtimes, &client.ListOptions{
+		Namespace: r.Namespace,
 	})
 	if err != nil {
 		logger.Error(err, "unable to list runtimes",
-			"namespace", r.Kcp.Namespace)
+			"namespace", r.Namespace)
 		return ctrl.Result{}, err
 	}
 
@@ -74,6 +70,10 @@ func (r *RuntimeBootstrapperConfigWatcher) Reconcile(ctx context.Context, _ ctrl
 	logger.Info("Forcing configuration reloading on runtimes")
 
 	for _, item := range runtimes.Items {
+		if r.RuntimePredicate != nil && !r.RuntimePredicate(req.NamespacedName, item) {
+			continue
+		}
+
 		if item.Annotations != nil && item.Annotations[reconciler.ForceReconcileAnnotation] == "true" {
 			continue
 		}
@@ -85,7 +85,7 @@ func (r *RuntimeBootstrapperConfigWatcher) Reconcile(ctx context.Context, _ ctrl
 		newItem.Annotations[reconciler.ForceReconcileAnnotation] = "true"
 		newItem.ManagedFields = nil
 
-		if err := r.Kcp.Patch(ctx, newItem, client.Apply, &client.PatchOptions{
+		if err := r.KcpClient.Patch(ctx, newItem, client.Apply, &client.PatchOptions{
 			FieldManager: fieldManager,
 			Force:        ptr.To(true),
 		}); err != nil {
@@ -105,31 +105,20 @@ func (r *RuntimeBootstrapperConfigWatcher) Reconcile(ctx context.Context, _ ctrl
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *RuntimeBootstrapperConfigWatcher) SetupWithManager(mgr ctrl.Manager) error {
-
+func (r *ConfigReloadWatcher) SetupWithManager(mgr ctrl.Manager) error {
 	controller := ctrl.NewControllerManagedBy(mgr).
-		Named("config").
-		Watches(&corev1.ConfigMap{},
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(objectUpdatedPredicate{
-				r.Kcp.RtBootstrapperCfg})).
-		Watches(&corev1.ConfigMap{},
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(objectUpdatedPredicate{
-				r.Kcp.RtBootstrapperManifests}))
+		Named("config")
 
-	if r.Kcp.ImagePullSecret.Name != "" && r.Kcp.ImagePullSecret.Namespace != "" {
-		controller = controller.Watches(&corev1.Secret{},
+	for _, p := range r.ConfigMapPredicates {
+		controller = controller.Watches(&corev1.ConfigMap{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(objectUpdatedPredicate{
-				r.Kcp.ImagePullSecret}))
+			builder.WithPredicates(p))
 	}
 
-	if r.Kcp.ClusterTrustBundle.Name != "" {
-		controller = controller.Watches(&certificatesv1beta1.ClusterTrustBundle{},
+	for _, p := range r.SecretPredicates {
+		controller = controller.Watches(&corev1.Secret{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(objectUpdatedPredicate{
-				r.Kcp.ClusterTrustBundle}))
+			builder.WithPredicates(p))
 	}
 
 	return controller.Complete(r)
