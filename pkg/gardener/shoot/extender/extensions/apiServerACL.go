@@ -1,13 +1,14 @@
 package extensions
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
-	"os"
 	"slices"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,6 +16,8 @@ import (
 )
 
 const ApiServerACLExtensionType string = "acl"
+const OperatorIpsKey string = "acl-list.json"
+const KcpExternalNatIpKey string = "kcp-external-nat-ip.json"
 
 type aclProviderConfig struct {
 	Rule aclRule `json:"rule"`
@@ -51,34 +54,25 @@ func applyAccessControlList(aclList []string) (*gardener.Extension, error) {
 	}, nil
 }
 
-func loadIPsFromFile(kcpIpPath string, operatorIPPath string) (operatorIPs []string, kcpIp string, err error) {
-	loadIPs := func(path string, ips any) error {
-		f, err := os.Open(path)
-		if err != nil {
-			return fmt.Errorf("opening %s: %w", path, err)
-		}
+func loadIPsFromConfigMap(ctx context.Context, kcpClient client.Client, aclMapName string) (operatorIPs []string, kcpIp string, err error) {
+	var aclConfigMap corev1.ConfigMap
+	err = kcpClient.Get(ctx, client.ObjectKey{
+		Namespace: "kcp-system",
+		Name:      aclMapName,
+	}, &aclConfigMap)
 
-		defer func() {
-			_ = f.Close()
-		}()
-
-		if err := json.NewDecoder(f).Decode(ips); err != nil {
-			return fmt.Errorf("decoding %s: %w", path, err)
-		}
-		return nil
-	}
-
-	err = loadIPs(operatorIPPath, &operatorIPs)
 	if err != nil {
-		return nil, "", err
+		return operatorIPs, kcpIp, err
 	}
 
-	err = loadIPs(kcpIpPath, &kcpIp)
+	err = json.Unmarshal([]byte(aclConfigMap.Data[OperatorIpsKey]), &operatorIPs)
 	if err != nil {
-		return nil, "", err
+		return operatorIPs, kcpIp, err
 	}
 
-	return operatorIPs, kcpIp, nil
+	err = json.Unmarshal([]byte(aclConfigMap.Data[KcpExternalNatIpKey]), &kcpIp)
+
+	return operatorIPs, kcpIp, err
 }
 
 func aclNeedsToBeEnabled(apiServerAclEnabled bool, runtime imv1.Runtime) bool {

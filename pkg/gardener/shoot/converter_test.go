@@ -1,6 +1,7 @@
 package shoot
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -33,7 +34,7 @@ func TestConverter(t *testing.T) {
 			ServiceURL: "test-auditlog-service-url",
 			SecretName: "doesnt matter",
 		}
-		converter := NewConverterCreate(CreateOpts{
+		converter := NewConverterCreate(context.Background(), CreateOpts{
 			ConverterConfig: converterConfig,
 			AuditLogData:    auditLogData,
 		})
@@ -58,7 +59,7 @@ func TestConverter(t *testing.T) {
 		converterConfig := fixConverterConfig()
 		emptyAuditLogData := auditlogs.AuditLogData{}
 
-		converter := NewConverterCreate(CreateOpts{
+		converter := NewConverterCreate(context.Background(), CreateOpts{
 			ConverterConfig: converterConfig,
 			AuditLogData:    emptyAuditLogData,
 		})
@@ -86,7 +87,7 @@ func TestConverter(t *testing.T) {
 			ServiceURL: "test-auditlog-service-url",
 			SecretName: "doesnt matter",
 		}
-		converter := NewConverterCreate(CreateOpts{
+		converter := NewConverterCreate(context.Background(), CreateOpts{
 			ConverterConfig: converterConfig,
 			AuditLogData:    auditLogData,
 		})
@@ -116,7 +117,7 @@ func TestConverter(t *testing.T) {
 			SecretName: "doesnt matter",
 		}
 
-		converter := NewConverterPatch(PatchOpts{
+		converter := NewConverterPatch(context.Background(), PatchOpts{
 			ConverterConfig:      converterConfig,
 			Workers:              fixWorkersWithReversedZones("gardenlinux", "1592.2.0"),
 			ShootK8SVersion:      "1.30",
@@ -158,7 +159,7 @@ func TestConverter(t *testing.T) {
 			SecretName: "doesnt matter",
 		}
 
-		converter := NewConverterPatch(PatchOpts{
+		converter := NewConverterPatch(context.Background(), PatchOpts{
 			ConverterConfig:      converterConfig,
 			Workers:              fixWorkersWithReversedZones("gardenlinux", "1591.0.0"),
 			ShootK8SVersion:      "1.27",
@@ -205,7 +206,7 @@ func TestConverter(t *testing.T) {
 			End:   "230000+0000",
 		}
 
-		converter := NewConverterCreate(CreateOpts{
+		converter := NewConverterCreate(context.Background(), CreateOpts{
 			ConverterConfig:       converterConfig,
 			AuditLogData:          auditLogData,
 			MaintenanceTimeWindow: expectedMaintenanceWindow,
@@ -235,7 +236,7 @@ func TestConverter(t *testing.T) {
 
 		expectedMaintenanceWindow := &gardener.MaintenanceTimeWindow{}
 
-		converter := NewConverterCreate(CreateOpts{
+		converter := NewConverterCreate(context.Background(), CreateOpts{
 			ConverterConfig:       converterConfig,
 			AuditLogData:          auditLogData,
 			MaintenanceTimeWindow: expectedMaintenanceWindow,
@@ -263,7 +264,7 @@ func TestConverter(t *testing.T) {
 
 		expectedMaintenanceWindow := &gardener.MaintenanceTimeWindow{}
 
-		converter := NewConverterCreate(CreateOpts{
+		converter := NewConverterCreate(context.Background(), CreateOpts{
 			ConverterConfig:       converterConfig,
 			AuditLogData:          auditLogData,
 			MaintenanceTimeWindow: expectedMaintenanceWindow,
@@ -565,8 +566,7 @@ var testReader io.Reader = strings.NewReader(
 		"kubeApiServer": {
             "maxTokenExpiration": "721h",
 			"acl": {
-				"ipAddressesPath": "test-path/ip-file.json",
-				"kcpAddressPath": "test-path/kcp-file.json"
+				"configMapName": "acl-ip-list"
 			}
 		}
   },
@@ -631,8 +631,7 @@ func Test_ConverterConfig_Load_OK(t *testing.T) {
 				KubeApiServer: config.KubeApiServer{
 					MaxTokenExpiration: "721h",
 					ACL: config.ACL{
-						IpAddressesPath: "test-path/ip-file.json",
-						KcpAddressPath:  "test-path/kcp-file.json",
+						ConfigMapName: "acl-ip-list",
 					},
 				},
 			},
@@ -671,7 +670,7 @@ func TestConverter_GVisorNetRaw(t *testing.T) {
 		// given
 		runtime := fixRuntimeWithGVisor()
 		converterConfig := fixConverterConfig()
-		converter := NewConverterCreate(CreateOpts{
+		converter := NewConverterCreate(context.Background(), CreateOpts{
 			ConverterConfig: converterConfig,
 		})
 
@@ -696,7 +695,7 @@ func TestConverter_GVisorNetRaw(t *testing.T) {
 		// given
 		runtime := fixRuntimeWithGVisorNetRawFalse()
 		converterConfig := fixConverterConfig()
-		converter := NewConverterCreate(CreateOpts{
+		converter := NewConverterCreate(context.Background(), CreateOpts{
 			ConverterConfig: converterConfig,
 		})
 
@@ -715,7 +714,7 @@ func TestConverter_GVisorNetRaw(t *testing.T) {
 		// given
 		runtime := fixRuntimeWithGVisorWithoutNetRaw()
 		converterConfig := fixConverterConfig()
-		converter := NewConverterCreate(CreateOpts{
+		converter := NewConverterCreate(context.Background(), CreateOpts{
 			ConverterConfig: converterConfig,
 		})
 
@@ -737,7 +736,7 @@ func TestConverter_GVisorNetRaw(t *testing.T) {
 		runtime := fixRuntimeWithGVisor()
 		converterConfig := fixConverterConfig()
 		existingWorkers := fixWorkersWithGVisor()
-		converter := NewConverterPatch(PatchOpts{
+		converter := NewConverterPatch(context.Background(), PatchOpts{
 			ConverterConfig:      converterConfig,
 			Workers:              existingWorkers,
 			ShootK8SVersion:      "1.28",
@@ -761,7 +760,7 @@ func TestConverter_GVisorNetRaw(t *testing.T) {
 		// given
 		runtime := fixRuntimeWithMultipleRuntimes()
 		converterConfig := fixConverterConfig()
-		converter := NewConverterCreate(CreateOpts{
+		converter := NewConverterCreate(context.Background(), CreateOpts{
 			ConverterConfig: converterConfig,
 		})
 
@@ -863,4 +862,3 @@ func fixRuntimeWithMultipleRuntimes() imv1.Runtime {
 	}
 	return rt
 }
-

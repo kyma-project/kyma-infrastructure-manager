@@ -78,8 +78,7 @@ type MachineImageConfig struct {
 	DefaultVersion string `json:"defaultVersion" validate:"required"`
 }
 type ACL struct {
-	IpAddressesPath string `json:"ipAddressesPath"`
-	KcpAddressPath  string `json:"kcpAddressPath"`
+	ConfigMapName string `json:"configMapName"`
 }
 
 type KubeApiServer struct {

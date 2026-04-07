@@ -252,8 +252,8 @@ func main() {
 	}
 
 	if apiServerAclEnabled {
-		if config.ConverterConfig.Kubernetes.KubeApiServer.ACL.IpAddressesPath == "" || config.ConverterConfig.Kubernetes.KubeApiServer.ACL.KcpAddressPath == "" {
-			setupLog.Error(fmt.Errorf("both ACL IP addresses path and KCP IP path need to be set when API server ACL is enabled"), "invalid API server ACL configuration")
+		if config.ConverterConfig.Kubernetes.KubeApiServer.ACL.ConfigMapName == "" {
+			setupLog.Error(fmt.Errorf("acl configMap name need to be set when API server ACL is enabled"), "invalid API server ACL configuration")
 			os.Exit(1)
 		}
 	}
