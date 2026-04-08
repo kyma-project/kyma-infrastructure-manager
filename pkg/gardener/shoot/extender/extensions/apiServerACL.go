@@ -75,7 +75,7 @@ func loadIPsFromConfigMap(ctx context.Context, kcpClient client.Client, aclMapNa
 	return operatorIPs, kcpIp, err
 }
 
-func aclNeedsToBeEnabled(apiServerAclEnabled bool, runtime imv1.Runtime) bool {
+func AclNeedsToBeEnabled(apiServerAclEnabled bool, runtime imv1.Runtime) bool {
 	runtimeType := runtime.Spec.Shoot.Provider.Type
 
 	return apiServerAclEnabled &&
