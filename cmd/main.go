@@ -251,6 +251,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	if apiServerAclEnabled {
+		if config.ConverterConfig.Kubernetes.KubeApiServer.ACL.ConfigMapName == "" {
+			setupLog.Error(fmt.Errorf("acl configMap name need to be set when API server ACL is enabled"), "invalid API server ACL configuration")
+			os.Exit(1)
+		}
+	}
+
 	auditLogDataMap, err := loadAuditLogDataMap(config.ConverterConfig.AuditLog.TenantConfigPath)
 	if err != nil {
 		setupLog.Error(err, "invalid audit log tenant configuration")

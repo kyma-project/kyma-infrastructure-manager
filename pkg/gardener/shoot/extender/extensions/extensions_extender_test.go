@@ -1,16 +1,22 @@
 package extensions
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	registrycache "github.com/kyma-project/registry-cache/api/v1beta1"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/yaml"
 
 	"testing"
@@ -32,8 +38,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 		Kubernetes: config.KubernetesConfig{
 			KubeApiServer: config.KubeApiServer{
 				ACL: config.ACL{
-					IpAddressesPath: "./testdata/acl-ip-list/acl-ips.json",
-					KcpAddressPath:  "./testdata/acl-ip-list/kcp-external-nat-ip.json",
+					ConfigMapName: "acl-ip-list",
 				},
 			},
 		},
@@ -118,7 +123,10 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			providerType := testcase.providerType
-			runtime := fixRuntimeCRForExtensionExtenderTests(testcase.enableNetworkFilter, testcase.registryCache, testcase.apiServerACL, providerType)
+			testRuntime := fixRuntimeCRForExtensionExtenderTests(testcase.enableNetworkFilter, testcase.registryCache, testcase.apiServerACL, providerType)
+
+			configMapGetCalled := false
+			fakeClient := buildFakeClientWithACLConfigMap(t, &configMapGetCalled)
 
 			shoot := &gardener.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -126,11 +134,12 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 				},
 			}
 
-			extender := NewExtensionsExtenderForCreate(config, testcase.inputAuditLogData, testcase.registryCache, testcase.apiServerACLEnabled)
+			extender := NewExtensionsExtenderForCreate(context.Background(), fakeClient, config, testcase.inputAuditLogData, testcase.registryCache, testcase.apiServerACLEnabled)
 
-			err := extender(runtime, shoot)
+			err := extender(testRuntime, shoot)
 			assert.NoError(t, err)
 			assert.NotNil(t, shoot.Spec.Extensions)
+			assert.Equal(t, aclNeedsToBeEnabled(testcase.apiServerACLEnabled, testRuntime), configMapGetCalled)
 
 			orderMap := testcase.extensionOrderMap
 			require.Len(t, shoot.Spec.Extensions, len(orderMap))
@@ -176,8 +185,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		Kubernetes: config.KubernetesConfig{
 			KubeApiServer: config.KubeApiServer{
 				ACL: config.ACL{
-					IpAddressesPath: "./testdata/acl-ip-list/acl-ips.json",
-					KcpAddressPath:  "./testdata/acl-ip-list/kcp-external-nat-ip.json",
+					ConfigMapName: "acl-ip-list",
 				},
 			},
 		},
@@ -357,7 +365,10 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			runtime := fixRuntimeCRForExtensionExtenderTests(testCase.enableNetworkFilter, testCase.registryCaches, testCase.apiServerACL, testCase.providerType)
+			testRuntime := fixRuntimeCRForExtensionExtenderTests(testCase.enableNetworkFilter, testCase.registryCaches, testCase.apiServerACL, testCase.providerType)
+
+			configMapGetCalled := false
+			fakeClient := buildFakeClientWithACLConfigMap(t, &configMapGetCalled)
 
 			shoot := &gardener.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -367,15 +378,16 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 
 			auditLogDataProvided := testCase.inputAuditLogData != (auditlogs.AuditLogData{})
 			registryCacheDataProvided := len(testCase.registryCaches) != 0
-			kubeApiServerACLEnabled := testCase.apiServerACLEnabled && len(testCase.apiServerACL) != 0 && (testCase.providerType == hyperscaler.TypeAWS || testCase.providerType == hyperscaler.TypeAzure)
+			kubeApiServerACLEnabled := aclNeedsToBeEnabled(testCase.apiServerACLEnabled, testRuntime)
 
-			extender := NewExtensionsExtenderForPatch(config, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled)
+			extender := NewExtensionsExtenderForPatch(context.Background(), fakeClient, config, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled)
 			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided, kubeApiServerACLEnabled)
 
-			err := extender(runtime, shoot)
+			err := extender(testRuntime, shoot)
 			assert.NoError(t, err)
 			assert.NotNil(t, shoot.Spec.Extensions)
 			require.Len(t, shoot.Spec.Extensions, len(orderMap))
+			assert.Equal(t, kubeApiServerACLEnabled, configMapGetCalled)
 
 			for idx, ext := range shoot.Spec.Extensions {
 				assert.NotEmpty(t, ext.Type)
@@ -673,6 +685,29 @@ func verifyACLExtension(t *testing.T, ext *gardener.Extension, acl []string) {
 	assert.Equal(t, "ALLOW", aclConfig.Rule.Action)
 	assert.Equal(t, "remote_ip", aclConfig.Rule.Type)
 	assert.Equal(t, acl, aclConfig.Rule.Cidrs)
+}
+
+func buildFakeClientWithACLConfigMap(t *testing.T, configMapGetCalled *bool) client.Client {
+	ipData, err := os.ReadFile("testdata/config-map-ips.yaml")
+	require.NoError(t, err)
+	var cm corev1.ConfigMap
+	err = yaml.Unmarshal(ipData, &cm)
+	require.NoError(t, err)
+
+	scheme := runtime.NewScheme()
+	_ = corev1.AddToScheme(scheme)
+
+	return fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(&cm).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				if _, ok := obj.(*corev1.ConfigMap); ok {
+					*configMapGetCalled = true
+				}
+				return c.Get(ctx, key, obj, opts...)
+			},
+		}).Build()
 }
 
 func fixRuntimeCRForExtensionExtenderTests(networkFilterEnabled bool, registryCache []imv1.ImageRegistryCache, apiServerACL []string, providerType string) imv1.Runtime {

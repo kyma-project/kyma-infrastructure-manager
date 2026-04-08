@@ -31,7 +31,7 @@ type DNSConfig struct {
 }
 
 type KubernetesConfig struct {
-	KubeApiServer                       KubeApiServer `json:"kubeApiServer" validate:"required"`
+	KubeApiServer                       KubeApiServer `json:"kubeApiServer"`
 	Kubelet                             Kubelet       `json:"kubelet"`
 	DefaultVersion                      string        `json:"defaultVersion" validate:"required"`
 	EnableKubernetesVersionAutoUpdate   bool          `json:"enableKubernetesVersionAutoUpdate"`
@@ -78,12 +78,11 @@ type MachineImageConfig struct {
 	DefaultVersion string `json:"defaultVersion" validate:"required"`
 }
 type ACL struct {
-	IpAddressesPath string `json:"ipAddressesPath"`
-	KcpAddressPath  string `json:"kcpAddressPath"`
+	ConfigMapName string `json:"configMapName"`
 }
 
 type KubeApiServer struct {
-	ACL                ACL             `json:"acl" validate:"required"`
+	ACL                ACL             `json:"acl"`
 	MaxTokenExpiration string          `json:"maxTokenExpiration"`
 	RuntimeConfig      map[string]bool `json:"runtimeConfig"`
 	FeatureGates       map[string]bool `json:"featureGates"`
