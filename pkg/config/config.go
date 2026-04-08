@@ -31,7 +31,7 @@ type DNSConfig struct {
 }
 
 type KubernetesConfig struct {
-	KubeApiServer                       KubeApiServer `json:"kubeApiServer" validate:"required"`
+	KubeApiServer                       KubeApiServer `json:"kubeApiServer"`
 	Kubelet                             Kubelet       `json:"kubelet"`
 	DefaultVersion                      string        `json:"defaultVersion" validate:"required"`
 	EnableKubernetesVersionAutoUpdate   bool          `json:"enableKubernetesVersionAutoUpdate"`
