@@ -1,6 +1,7 @@
 package extender
 
 import (
+	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"testing"
 
@@ -8,39 +9,38 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/ptr"
 )
 
 func TestExtendWithCloudProfile(t *testing.T) {
 	for _, testCase := range []struct {
 		name            string
 		providerType    string
-		expectedProfile *string
+		expectedProfile *gardener.CloudProfileReference
 	}{
 		{
 			name:            "Set cloud profile name for aws",
 			providerType:    hyperscaler.TypeAWS,
-			expectedProfile: ptr.To(DefaultAWSCloudProfileName),
+			expectedProfile: CreateCloudProfileReference(DefaultAWSCloudProfileName),
 		},
 		{
 			name:            "Set cloud profile name for azure",
 			providerType:    hyperscaler.TypeAzure,
-			expectedProfile: ptr.To(DefaultAzureCloudProfileName),
+			expectedProfile: CreateCloudProfileReference(DefaultAzureCloudProfileName),
 		},
 		{
 			name:            "Set cloud profile for gcp",
 			providerType:    hyperscaler.TypeGCP,
-			expectedProfile: ptr.To(DefaultGCPCloudProfileName),
+			expectedProfile: CreateCloudProfileReference(DefaultGCPCloudProfileName),
 		},
 		{
 			name:            "Set cloud profile for openstack",
 			providerType:    hyperscaler.TypeOpenStack,
-			expectedProfile: ptr.To(DefaultOpenStackCloudProfileName),
+			expectedProfile: CreateCloudProfileReference(DefaultOpenStackCloudProfileName),
 		},
 		{
 			name:            "Set cloud profile for alicloud",
 			providerType:    hyperscaler.TypeAlicloud,
-			expectedProfile: ptr.To(DefaultAlicloudCloudProfileName),
+			expectedProfile: CreateCloudProfileReference(DefaultAlicloudCloudProfileName),
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -62,7 +62,8 @@ func TestExtendWithCloudProfile(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			assert.Equal(t, testCase.expectedProfile, shoot.Spec.CloudProfileName)
+			assert.Nil(t, shoot.Spec.CloudProfileName)
+			assert.Equal(t, testCase.expectedProfile, shoot.Spec.CloudProfile)
 		})
 	}
 

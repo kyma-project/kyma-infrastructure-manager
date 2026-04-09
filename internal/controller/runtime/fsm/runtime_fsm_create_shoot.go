@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/go-logr/logr"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -17,9 +19,8 @@ import (
 )
 
 const (
-	msgFailedToConfigureAuditlogs     = "Failed to configure audit logs"
-	msgFailedStructuredConfigMap      = "Failed to create structured authentication config map"
-	msgFailedToConfigureRegistryCache = "Failed to configure registry cache"
+	msgFailedToConfigureAuditlogs = "Failed to configure audit logs"
+	msgFailedStructuredConfigMap  = "Failed to create structured authentication config map"
 )
 
 func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
@@ -31,7 +32,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 			s.instance.UpdateStatePending(
 				imv1.ConditionTypeRuntimeProvisioned,
 				imv1.ConditionReasonGardenerError,
-				"False",
+				metav1.ConditionFalse,
 				msg,
 			)
 			return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
@@ -41,7 +42,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 			msg := fmt.Sprintf("Cannot find available seed for the region %s. The followig regions have seeds ready: %v.", s.instance.Spec.Shoot.Region, regionsWithSeeds)
 			m.log.Error(nil, msg)
 			m.Metrics.IncRuntimeFSMStopCounter()
-			return updateStatePendingWithErrorAndStop(
+			return updateStateFailedWithErrorAndStop(
 				&s.instance,
 				imv1.ConditionTypeRuntimeProvisioned,
 				imv1.ConditionReasonSeedNotFound,
@@ -57,7 +58,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		m.log.Error(err, "Failed to create structured authentication config map")
 
 		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(
+		return updateStateFailedWithErrorAndStop(
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonOidcError,
@@ -74,7 +75,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 
 	if err != nil && m.AuditLogMandatory {
 		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(
+		return updateStateFailedWithErrorAndStop(
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonAuditLogError,
@@ -84,15 +85,17 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	timeBoundaries, _ := token.ValidateTokenExpirationTime(m.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
 	logTokenExpirationInfo(m.log, timeBoundaries)
 
-	shoot, err := convertCreate(&s.instance, gardener_shoot.CreateOpts{
+	shoot, err := convertCreate(ctx, &s.instance, gardener_shoot.CreateOpts{
+		KcpClient:             m.KcpClient,
 		ConverterConfig:       m.ConverterConfig,
 		AuditLogData:          data,
 		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
+		ApiServerAclEnabled:   m.ApiServerAclEnabled,
 	})
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object")
 		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStatePendingWithErrorAndStop(
+		return updateStateFailedWithErrorAndStop(
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonConversionError,
@@ -105,7 +108,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonGardenerError,
-			"False",
+			metav1.ConditionFalse,
 			fmt.Sprintf("Gardener API create error: %v", err),
 		)
 		return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
@@ -120,19 +123,19 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	s.instance.UpdateStatePending(
 		imv1.ConditionTypeRuntimeProvisioned,
 		imv1.ConditionReasonShootCreationPending,
-		"Unknown",
+		metav1.ConditionUnknown,
 		"Shoot is pending",
 	)
 
 	return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
 }
 
-func convertCreate(instance *imv1.Runtime, opts gardener_shoot.CreateOpts) (gardener.Shoot, error) {
+func convertCreate(ctx context.Context, instance *imv1.Runtime, opts gardener_shoot.CreateOpts) (gardener.Shoot, error) {
 	if err := instance.ValidateRequiredLabels(); err != nil {
 		return gardener.Shoot{}, err
 	}
 
-	converter := gardener_shoot.NewConverterCreate(opts)
+	converter := gardener_shoot.NewConverterCreate(ctx, opts)
 	newShoot, err := converter.ToShoot(*instance)
 	if err != nil {
 		return newShoot, err

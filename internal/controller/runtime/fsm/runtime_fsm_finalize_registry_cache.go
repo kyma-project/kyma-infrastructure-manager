@@ -7,6 +7,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -21,7 +22,7 @@ func sFnFinalizeRegistryCache(ctx context.Context, m *fsm, s *systemState) (stat
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRegistryCacheConfigured,
 			imv1.ConditionReasonRegistryCacheGardenClusterConfigurationFailed,
-			"False",
+			metav1.ConditionFalse,
 			err.Error(),
 		)
 		m.log.Error(err, "Failed to get runtime client")
@@ -37,7 +38,7 @@ func sFnFinalizeRegistryCache(ctx context.Context, m *fsm, s *systemState) (stat
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRegistryCacheConfigured,
 			imv1.ConditionReasonRegistryCacheGardenClusterCleanupFailed,
-			"False",
+			metav1.ConditionFalse,
 			err.Error(),
 		)
 		m.log.Error(err, "Failed to delete not used registry cache secrets")

@@ -61,12 +61,14 @@ const (
 type RuntimeConditionType string
 
 const (
-	ConditionTypeRuntimeProvisioned      RuntimeConditionType = "Provisioned"
-	ConditionTypeRuntimeKubeconfigReady  RuntimeConditionType = "KubeconfigReady"
-	ConditionTypeOidcAndCMsConfigured    RuntimeConditionType = "OidcAndConfigMapConfigured"
-	ConditionTypeRuntimeConfigured       RuntimeConditionType = "Configured"
-	ConditionTypeRuntimeDeprovisioned    RuntimeConditionType = "Deprovisioned"
-	ConditionTypeRegistryCacheConfigured RuntimeConditionType = "RegistryCacheConfigured"
+	ConditionTypeRuntimeProvisioned       RuntimeConditionType = "Provisioned"
+	ConditionTypeRuntimeKubeconfigReady   RuntimeConditionType = "KubeconfigReady"
+	ConditionTypeOidcAndCMsConfigured     RuntimeConditionType = "OidcAndConfigMapConfigured"
+	ConditionTypeKymaSystemCreated        RuntimeConditionType = "KymaSystemNSCreated"
+	ConditionTypeRuntimeConfigured        RuntimeConditionType = "Configured"
+	ConditionTypeRuntimeDeprovisioned     RuntimeConditionType = "Deprovisioned"
+	ConditionTypeRegistryCacheConfigured  RuntimeConditionType = "RegistryCacheConfigured"
+	ConditionTypeRuntimeBootstrapperReady RuntimeConditionType = "RuntimeBootstrapperReady"
 )
 
 type RuntimeConditionReason string
@@ -97,7 +99,9 @@ const (
 	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
 	ConditionReasonOidcAndCMsConfigured     = RuntimeConditionReason("OidcAndConfigMapsConfigured")
 	ConditionReasonOidcError                = RuntimeConditionReason("OidcConfigurationErr")
+	ConditionReasonCMError                  = RuntimeConditionReason("ConfigMapErr")
 	ConditionReasonKymaSystemNSError        = RuntimeConditionReason("KymaSystemNSError")
+	ConditionReasonKymaSystemNSReady        = RuntimeConditionReason("KymaSystemNSReady")
 	ConditionReasonSeedNotFound             = RuntimeConditionReason("SeedNotFound")
 
 	ConditionReasonRegistryCacheConfigured = RuntimeConditionReason("RegistryCacheConfigured")
@@ -105,6 +109,14 @@ const (
 	ConditionReasonRegistryCacheError                            = RuntimeConditionReason("RegistryCacheError")
 	ConditionReasonRegistryCacheGardenClusterConfigurationFailed = RuntimeConditionReason("RegistryCacheGardenClusterConfigurationFailed")
 	ConditionReasonRegistryCacheGardenClusterCleanupFailed       = RuntimeConditionReason("RegistryCacheGardenClusterCleanupFailed")
+
+	ConditionReasonRuntimeBootstrapperStatusUnknown          = RuntimeConditionReason("RuntimeBootstrapperStatusUnknown")
+	ConditionReasonRuntimeBootstrapperInstallationFailed     = RuntimeConditionReason("RuntimeBootstrapperInstallationFailed")
+	ConditionReasonRuntimeBootstrapperInstallationInProgress = RuntimeConditionReason("RuntimeBootstrapperInstallationInProgress")
+	ConditionReasonRuntimeBootstrapperConfigured             = RuntimeConditionReason("RuntimeBootstrapperConfigured")
+	ConditionReasonRuntimeBootstrapperUpgradeFailed          = RuntimeConditionReason("RuntimeBootstrapperUpgradeFailed")
+	ConditionReasonRuntimeBootstrapperUpgradeInProgress      = RuntimeConditionReason("RuntimeBootstrapperUpgradeInProgress")
+	ConditionReasonRuntimeBootstrapperConfigurationFailed    = RuntimeConditionReason("RuntimeBootstrapperConfigurationFailed")
 )
 
 //+kubebuilder:object:root=true
@@ -196,8 +208,11 @@ type OIDCConfig struct {
 type APIServer struct {
 	OidcConfig           gardener.OIDCConfig `json:"oidcConfig,omitempty"`
 	AdditionalOidcConfig *[]OIDCConfig       `json:"additionalOidcConfig,omitempty"`
+	ACL                  *ACL                `json:"acl,omitempty"`
 }
-
+type ACL struct {
+	AllowedCIDRs []string `json:"allowedCIDRs,omitempty"`
+}
 type Provider struct {
 	//+kubebuilder:validation:Enum=aws;azure;gcp;openstack;alicloud
 	Type                 string                `json:"type"`
@@ -208,13 +223,13 @@ type Provider struct {
 }
 
 type Networking struct {
-	Type      *string `json:"type,omitempty"`
-	Pods      string  `json:"pods"`
-	Nodes     string  `json:"nodes"`
-	Services  string  `json:"services"`
-	DualStack *bool   `json:"dualStack,omitempty"`
+	Type       *string `json:"type,omitempty"`
+	Pods       string  `json:"pods"`
+	Nodes      string  `json:"nodes"`
+	Services   string  `json:"services"`
+	DualStack  *bool   `json:"dualStack,omitempty"`
+	VPCNetwork *string `json:"vpcNetwork,omitempty"`
 }
-
 type Security struct {
 	Administrators []string           `json:"administrators"`
 	Networking     NetworkingSecurity `json:"networking"`
@@ -257,16 +272,12 @@ func (k *Runtime) UpdateStateReady(c RuntimeConditionType, r RuntimeConditionRea
 	meta.SetStatusCondition(&k.Status.Conditions, condition)
 }
 
-func (k *Runtime) UpdateStateDeletion(c RuntimeConditionType, r RuntimeConditionReason, status, msg string) {
-	if status != "False" {
-		k.Status.State = RuntimeStateTerminating
-	} else {
-		k.Status.State = RuntimeStateFailed
-	}
+func (k *Runtime) UpdateStateDeletion(c RuntimeConditionType, r RuntimeConditionReason, status metav1.ConditionStatus, msg string) {
+	k.Status.State = RuntimeStateTerminating
 
 	condition := metav1.Condition{
 		Type:               string(c),
-		Status:             metav1.ConditionStatus(status),
+		Status:             status,
 		LastTransitionTime: metav1.Now(),
 		Reason:             string(r),
 		Message:            msg,
@@ -274,16 +285,24 @@ func (k *Runtime) UpdateStateDeletion(c RuntimeConditionType, r RuntimeCondition
 	meta.SetStatusCondition(&k.Status.Conditions, condition)
 }
 
-func (k *Runtime) UpdateStatePending(c RuntimeConditionType, r RuntimeConditionReason, status, msg string) {
-	if status == "False" {
-		k.Status.State = RuntimeStateFailed
-	} else {
-		k.Status.State = RuntimeStatePending
+func (k *Runtime) UpdateStateFailed(c RuntimeConditionType, r RuntimeConditionReason, msg string) {
+	k.Status.State = RuntimeStateFailed
+	condition := metav1.Condition{
+		Type:               string(c),
+		Status:             metav1.ConditionFalse,
+		LastTransitionTime: metav1.Now(),
+		Reason:             string(r),
+		Message:            msg,
 	}
+	meta.SetStatusCondition(&k.Status.Conditions, condition)
+}
+
+func (k *Runtime) UpdateStatePending(c RuntimeConditionType, r RuntimeConditionReason, status metav1.ConditionStatus, msg string) {
+	k.Status.State = RuntimeStatePending
 
 	condition := metav1.Condition{
 		Type:               string(c),
-		Status:             metav1.ConditionStatus(status),
+		Status:             status,
 		LastTransitionTime: metav1.Now(),
 		Reason:             string(r),
 		Message:            msg,

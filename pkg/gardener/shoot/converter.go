@@ -1,14 +1,8 @@
 package shoot
 
 import (
+	"context"
 	"fmt"
-
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/networking"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/restrictions"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -16,12 +10,19 @@ import (
 	extender2 "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/networking"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/provider"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/restrictions"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Extend func(imv1.Runtime, *gardener.Shoot) error
 
-func baseExtenders() []Extend {
+func baseExtenders(converterConfig config.ConverterConfig) []Extend {
 
 	return []Extend{
 		extender2.ExtendWithAnnotations,
@@ -31,6 +32,8 @@ func baseExtenders() []Extend {
 		extender2.ExtendWithCloudProfile,
 		extender2.ExtendWithExposureClassName,
 		restrictions.ExtendWithAccessRestriction(),
+		extender2.NewFeatureGatesExtender(converterConfig.Kubernetes.KubeApiServer.FeatureGates, converterConfig.Kubernetes.Kubelet.FeatureGates),
+		extender2.NewKubernetesRuntimeConfigExtender(converterConfig.Kubernetes.KubeApiServer.RuntimeConfig),
 	}
 }
 
@@ -50,27 +53,26 @@ type CreateOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
-}
-
-type WorkerZones struct {
-	Zones      []string
-	WorkerName string
+	KcpClient           client.Client
+	ApiServerAclEnabled bool
 }
 
 type PatchOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
+	KcpClient            client.Client
 	ShootK8SVersion      string
 	Workers              []gardener.Worker
 	Extensions           []gardener.Extension
 	Resources            []gardener.NamedResourceReference
 	InfrastructureConfig *runtime.RawExtension
 	ControlPlaneConfig   *runtime.RawExtension
+	ApiServerAclEnabled  bool
 }
 
-func NewConverterCreate(opts CreateOpts) Converter {
-	extendersForCreate := baseExtenders()
+func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
+	extendersForCreate := baseExtenders(opts.ConverterConfig)
 
 	extendersForCreate = append(extendersForCreate,
 		provider.NewProviderExtenderForCreateOperation(
@@ -79,13 +81,14 @@ func NewConverterCreate(opts CreateOpts) Converter {
 			opts.MachineImage.DefaultName,
 			opts.MachineImage.DefaultVersion,
 		),
+		extender2.ExtendWithGVisorNetRawDefault,
 		extender2.NewTolerationsExtender(opts.Tolerations),
 	)
 
 	if !opts.DNS.IsGardenerInternal() {
 		extendersForCreate = append(extendersForCreate, extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType))
 	}
-	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(opts.ConverterConfig, opts.AuditLogData, nil))
+	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(ctx, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, nil, opts.ApiServerAclEnabled))
 	extendersForCreate = append(extendersForCreate,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
 
@@ -99,14 +102,13 @@ func NewConverterCreate(opts CreateOpts) Converter {
 	}
 
 	extendersForCreate = append(extendersForCreate, token.NewExpirationTimeExtender(opts.Kubernetes.KubeApiServer.MaxTokenExpiration))
-
 	extendersForCreate = append(extendersForCreate, networking.ExtendWithNetworking(opts.Networking.EnableDualStackIP))
-
+	extendersForCreate = append(extendersForCreate, extender2.ExtendWithCredentialsBinding(opts.Gardener.EnableCredentialBinding))
 	return newConverter(opts.ConverterConfig, extendersForCreate...)
 }
 
-func NewConverterPatch(opts PatchOpts) Converter {
-	extendersForPatch := baseExtenders()
+func NewConverterPatch(ctx context.Context, opts PatchOpts) Converter {
+	extendersForPatch := baseExtenders(opts.ConverterConfig)
 
 	extendersForPatch = append(extendersForPatch,
 		provider.NewProviderExtenderPatchOperation(
@@ -116,14 +118,15 @@ func NewConverterPatch(opts PatchOpts) Converter {
 			opts.Workers,
 			opts.InfrastructureConfig,
 			opts.ControlPlaneConfig))
+	extendersForPatch = append(extendersForPatch, extender2.ExtendWithGVisorNetRawDefault)
 
 	extendersForPatch = append(extendersForPatch,
 		extender2.NewResourcesExtenderForPatch(opts.Resources),
-		extensions.NewExtensionsExtenderForPatch(opts.AuditLogData, opts.Extensions))
+		extensions.NewExtensionsExtenderForPatch(ctx, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, opts.Extensions, opts.ApiServerAclEnabled))
 
 	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
-
 	extendersForPatch = append(extendersForPatch, maintenance.NewMaintenanceExtender(opts.Kubernetes.EnableKubernetesVersionAutoUpdate, opts.Kubernetes.EnableMachineImageVersionAutoUpdate, opts.MaintenanceTimeWindow))
+	extendersForPatch = append(extendersForPatch, extender2.ExtendWithCredentialsBinding(opts.Gardener.EnableCredentialBinding))
 
 	if opts.AuditLogData != (auditlogs.AuditLogData{}) {
 		extendersForPatch = append(extendersForPatch,
@@ -150,9 +153,8 @@ func (c Converter) ToShoot(runtime imv1.Runtime) (gardener.Shoot, error) {
 			Namespace: fmt.Sprintf("garden-%s", c.config.Gardener.ProjectName),
 		},
 		Spec: gardener.ShootSpec{
-			Purpose:                &runtime.Spec.Shoot.Purpose,
-			Region:                 runtime.Spec.Shoot.Region,
-			SecretBindingName: &runtime.Spec.Shoot.SecretBindingName,
+			Purpose: &runtime.Spec.Shoot.Purpose,
+			Region:  runtime.Spec.Shoot.Region,
 			Networking: &gardener.Networking{
 				Type:     runtime.Spec.Shoot.Networking.Type,
 				Nodes:    &runtime.Spec.Shoot.Networking.Nodes,

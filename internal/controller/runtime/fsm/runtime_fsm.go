@@ -33,9 +33,12 @@ type RCCfg struct {
 	Finalizer                            string
 	ShootNamesapace                      string
 	AuditLogMandatory                    bool
+	ApiServerAclEnabled                  bool
 	Metrics                              metrics.Metrics
 	AuditLogging                         auditlogs.Configuration
 	RegistryCacheConfigControllerEnabled bool
+	RuntimeBootstrapperEnabled           bool
+	RuntimeBootstrapperInstaller         RuntimeBootstrapperInstaller
 	config.Config
 }
 
@@ -57,6 +60,7 @@ type K8s struct {
 	RuntimeClientGetter RuntimeClientGetter
 }
 
+//mockery:generate: false
 type Fsm interface {
 	Run(ctx context.Context, v imv1.Runtime) (ctrl.Result, error)
 }

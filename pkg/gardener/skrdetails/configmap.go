@@ -10,11 +10,13 @@ import (
 )
 
 type KymaProvisioningInfo struct {
-	WorkerPools          WorkerPools          `json:"workerPools"`
-	GlobalAccountID      string               `json:"globalAccountID,omitzero"`
-	SubaccountID         string               `json:"subaccountID,omitzero"`
-	InfrastructureConfig runtime.RawExtension `json:"infrastructureConfig,omitzero"`
-	NetworkDetails       NetworkDetails       `json:"networkDetails"`
+	WorkerPools           WorkerPools          `json:"workerPools"`
+	GlobalAccountID       string               `json:"globalAccountID,omitzero"`
+	SubaccountID          string               `json:"subaccountID,omitzero"`
+	EnvironmentInstanceID string               `json:"environmentInstanceID,omitzero"`
+	InstanceName          string               `json:"instanceName,omitzero"`
+	InfrastructureConfig  runtime.RawExtension `json:"infrastructureConfig,omitzero"`
+	NetworkDetails        NetworkDetails       `json:"networkDetails"`
 }
 
 type WorkerPools struct {
@@ -30,7 +32,12 @@ type WorkerPool struct {
 }
 
 type NetworkDetails struct {
-	DualStackIPEnabled bool `json:"dualStackIPEnabled"`
+	DualStackIPEnabled bool          `json:"dualStackIPEnabled"`
+	KubeAPIServer      KubeAPIServer `json:"kubeAPIServer,omitzero"`
+}
+
+type KubeAPIServer struct {
+	ACL []string `json:"acl,omitzero"`
 }
 
 func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaProvisioningInfo {
@@ -64,16 +71,24 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 		}
 	}
 
+	var kubeAPIServer KubeAPIServer
+	if acl := AppliedACL(runtime); len(acl) > 0 {
+		kubeAPIServer = KubeAPIServer{ACL: acl}
+	}
+
 	return KymaProvisioningInfo{
 		WorkerPools: WorkerPools{
 			Kyma:   kymaWorkerPool,
 			Custom: customWorkerPools,
 		},
-		GlobalAccountID:      runtime.Labels["kyma-project.io/global-account-id"],
-		SubaccountID:         runtime.Labels["kyma-project.io/subaccount-id"],
-		InfrastructureConfig: *shoot.Spec.Provider.InfrastructureConfig,
+		GlobalAccountID:       runtime.Labels[imv1.LabelKymaGlobalAccountID],
+		SubaccountID:          runtime.Labels[imv1.LabelKymaSubaccountID],
+		EnvironmentInstanceID: runtime.Labels[imv1.LabelKymaInstanceID],
+		InstanceName:          runtime.Labels[imv1.LabelKymaName],
+		InfrastructureConfig:  *shoot.Spec.Provider.InfrastructureConfig,
 		NetworkDetails: NetworkDetails{
 			DualStackIPEnabled: IsDualStackEnabled(shoot),
+			KubeAPIServer:      kubeAPIServer,
 		},
 	}
 }

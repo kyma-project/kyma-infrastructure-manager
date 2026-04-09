@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	fsm_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"github.com/stretchr/testify/mock"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -282,6 +283,8 @@ func TestSkrConfigState(t *testing.T) {
 		ctx := context.Background()
 
 		runtime := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
+		runtime.Spec.Shoot.Provider.Type = hyperscaler.TypeAWS
+		runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL = &imv1.ACL{AllowedCIDRs: []string{"1.2.3.4/32", "5.6.7.8/16"}}
 		shootStub := fsm_testing.TestShootForPatch()
 		oidcService := gardener.Extension{
 			Type:     "shoot-oidc-service",
@@ -301,24 +304,17 @@ func TestSkrConfigState(t *testing.T) {
 		assert.NoError(t, fsmErr)
 
 		// then
-		var kymaSystemNs core_v1.Namespace
-		nsKey := client.ObjectKey{
-			Name:      "kyma-system",
-			Namespace: "",
-		}
-		err := fakeClient.Get(ctx, nsKey, &kymaSystemNs)
-		assert.NoError(t, err)
 
 		var detailsCM core_v1.ConfigMap
 		cmKey := client.ObjectKey{
 			Name:      "kyma-provisioning-info",
 			Namespace: "kyma-system",
 		}
-		err = fakeClient.Get(ctx, cmKey, &detailsCM)
+		err := fakeClient.Get(ctx, cmKey, &detailsCM)
 		assert.NoError(t, err)
 		assert.NotNil(t, detailsCM.Data)
 		assert.NotNil(t, detailsCM.Data["details"])
-		assert.Equal(t, detailsCM.Data["details"], "globalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\nnetworkDetails:\n  dualStackIPEnabled: false\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
+		assert.Equal(t, detailsCM.Data["details"], "environmentInstanceID: instance-id\nglobalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\ninstanceName: kyma-name\nnetworkDetails:\n  dualStackIPEnabled: false\n  kubeAPIServer:\n    acl:\n    - 1.2.3.4/32\n    - 5.6.7.8/16\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
 		assert.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
 		assertSuccesfullStatusConditions(t, systemState)
 	})
@@ -384,7 +380,7 @@ func TestSkrConfigState(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, detailsCM.Data)
 		assert.NotNil(t, detailsCM.Data["details"])
-		assert.Equal(t, detailsCM.Data["details"], "globalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\nnetworkDetails:\n  dualStackIPEnabled: false\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
+		assert.Equal(t, detailsCM.Data["details"], "environmentInstanceID: instance-id\nglobalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\ninstanceName: kyma-name\nnetworkDetails:\n  dualStackIPEnabled: false\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
 		assert.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
 		assertSuccesfullStatusConditions(t, systemState)
 	})
@@ -431,19 +427,11 @@ func TestSkrConfigState(t *testing.T) {
 			shoot:    shootStub,
 		}
 
-		var kymaSystemNs core_v1.Namespace
-
 		// when
 		stateFn, _, fsmErr := sFnConfigureSKR(ctx, testFsm, systemState)
 		assert.NoError(t, fsmErr)
 
 		// then
-		nsKey := client.ObjectKey{
-			Name:      "kyma-system",
-			Namespace: "",
-		}
-		err := fakeClient.Get(ctx, nsKey, &kymaSystemNs)
-		assert.True(t, errors.IsNotFound(err))
 
 		var detailsCM core_v1.ConfigMap
 		cmKey := client.ObjectKey{
@@ -457,9 +445,9 @@ func TestSkrConfigState(t *testing.T) {
 		expectedRuntimeConditions := []metav1.Condition{
 			{
 				Type:    string(imv1.ConditionTypeOidcAndCMsConfigured),
-				Reason:  string(imv1.ConditionReasonKymaSystemNSError),
+				Reason:  string(imv1.ConditionReasonCMError),
 				Status:  "Unknown",
-				Message: "Failed to create kyma-system namespace. Scheduling for retry",
+				Message: "Failed to apply kyma-provisioning-info config map, scheduling for retry - simulated error to for tests that expect an error when applying a configmap",
 			},
 		}
 		assertEqualConditions(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)

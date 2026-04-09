@@ -35,7 +35,9 @@ func TestProviderExtenderForCreateOpenstack(t *testing.T) {
 							{"main-worker", "openstack.large", "gardenlinux", "1310.4.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -57,7 +59,9 @@ func TestProviderExtenderForCreateOpenstack(t *testing.T) {
 							{"another", "openstack.large", "gardenlinux", "1312.2.0", 3, 5, []string{"eu-de-1c"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -109,7 +113,9 @@ func TestProviderExtenderForPatchWorkersUpdateOpenstack(t *testing.T) {
 							{"next-worker", "openstack.big", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -133,7 +139,9 @@ func TestProviderExtenderForPatchWorkersUpdateOpenstack(t *testing.T) {
 							{"next-worker", "openstack.big", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1d"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -157,7 +165,9 @@ func TestProviderExtenderForPatchWorkersUpdateOpenstack(t *testing.T) {
 							{"additional", "openstack.big", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -183,7 +193,9 @@ func TestProviderExtenderForPatchWorkersUpdateOpenstack(t *testing.T) {
 							{"additional", "openstack.big", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1d"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -207,7 +219,9 @@ func TestProviderExtenderForPatchWorkersUpdateOpenstack(t *testing.T) {
 						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeOpenStack, fixMultipleWorkers([]workerConfig{
 							{"main-worker", "openstack.small", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}}})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -232,7 +246,9 @@ func TestProviderExtenderForPatchWorkersUpdateOpenstack(t *testing.T) {
 							{"next-worker", "openstack.large", "gardenlinux", "1313.2.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -257,7 +273,9 @@ func TestProviderExtenderForPatchWorkersUpdateOpenstack(t *testing.T) {
 							{"main-worker", "openstack.small", "gardenlinux", "1313.4.0", 1, 3, []string{"eu-de-1a"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},

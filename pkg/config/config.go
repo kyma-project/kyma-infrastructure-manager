@@ -32,6 +32,7 @@ type DNSConfig struct {
 
 type KubernetesConfig struct {
 	KubeApiServer                       KubeApiServer `json:"kubeApiServer"`
+	Kubelet                             Kubelet       `json:"kubelet"`
 	DefaultVersion                      string        `json:"defaultVersion" validate:"required"`
 	EnableKubernetesVersionAutoUpdate   bool          `json:"enableKubernetesVersionAutoUpdate"`
 	EnableMachineImageVersionAutoUpdate bool          `json:"enableMachineImageVersionAutoUpdate"`
@@ -68,16 +69,27 @@ type MaintenanceWindowConfig struct {
 }
 
 type GardenerConfig struct {
-	ProjectName string `json:"projectName" validate:"required"`
+	ProjectName             string `json:"projectName" validate:"required"`
+	EnableCredentialBinding bool   `json:"enableCredentialBinding"`
 }
 
 type MachineImageConfig struct {
 	DefaultName    string `json:"defaultName" validate:"required"`
 	DefaultVersion string `json:"defaultVersion" validate:"required"`
 }
+type ACL struct {
+	ConfigMapName string `json:"configMapName"`
+}
 
 type KubeApiServer struct {
-	MaxTokenExpiration string `json:"maxTokenExpiration"`
+	ACL                ACL             `json:"acl"`
+	MaxTokenExpiration string          `json:"maxTokenExpiration"`
+	RuntimeConfig      map[string]bool `json:"runtimeConfig"`
+	FeatureGates       map[string]bool `json:"featureGates"`
+}
+
+type Kubelet struct {
+	FeatureGates map[string]bool `json:"featureGates"`
 }
 
 type TolerationsConfig map[string][]gardener.Toleration
