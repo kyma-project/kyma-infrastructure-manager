@@ -22,6 +22,7 @@ import (
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -41,11 +42,12 @@ type RuntimePredicate func(configObject types.NamespacedName, runtime imv1.Runti
 
 // ConfigReloadWatcher reconciles a Secret object
 type ConfigReloadWatcher struct {
-	KcpClient           client.Client
-	Namespace           string
-	ConfigMapPredicates []ObjectUpdatedPredicate
-	SecretPredicates    []ObjectUpdatedPredicate
-	RuntimePredicate    RuntimePredicate
+	KcpClient                   client.Client
+	Namespace                   string
+	ConfigMapPredicates         []ObjectUpdatedPredicate
+	SecretPredicates            []ObjectUpdatedPredicate
+	ClusterTrustBundlePredicate *ObjectUpdatedPredicate
+	RuntimePredicate            RuntimePredicate
 }
 
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=watch;list,namespace=kcp-system
@@ -121,6 +123,12 @@ func (r *ConfigReloadWatcher) SetupWithManager(mgr ctrl.Manager) error {
 		controller = controller.Watches(&corev1.Secret{},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(p))
+	}
+
+	if r.ClusterTrustBundlePredicate != nil {
+		controller = controller.Watches(&certificatesv1beta1.ClusterTrustBundle{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(*r.ClusterTrustBundlePredicate))
 	}
 
 	return controller.Complete(r)

@@ -281,6 +281,7 @@ func main() {
 	if apiServerAclEnabled || runtimeBootstrapperEnabled {
 		var secretPredicates []configctrl.ObjectUpdatedPredicate
 		var configMapPredicates []configctrl.ObjectUpdatedPredicate
+		var clusterTrustBundlePredicate *configctrl.ObjectUpdatedPredicate
 		var kcpClient client.Client
 
 		kcpClient, err = client.New(restConfig, client.Options{Scheme: scheme})
@@ -335,10 +336,8 @@ func main() {
 			)
 
 			if runtimeBootstrapperKCPClusterTrustBundle != "" {
-				configMapPredicates = append(configMapPredicates,
-					configctrl.ObjectUpdatedPredicate{NamespacedName: types.NamespacedName{
-						Name: runtimeBootstrapperKCPClusterTrustBundle,
-					}})
+				clusterTrustBundlePredicate = &configctrl.ObjectUpdatedPredicate{NamespacedName: types.NamespacedName{
+					Name: runtimeBootstrapperKCPClusterTrustBundle}}
 			}
 
 			if runtimeBootstrapperKCPPullSecretName != "" {
@@ -357,10 +356,11 @@ func main() {
 		}
 
 		if err = (&configctrl.ConfigReloadWatcher{
-			KcpClient:           kcpClient,
-			Namespace:           "kcp-system",
-			ConfigMapPredicates: configMapPredicates,
-			SecretPredicates:    secretPredicates,
+			KcpClient:                   kcpClient,
+			Namespace:                   "kcp-system",
+			ConfigMapPredicates:         configMapPredicates,
+			SecretPredicates:            secretPredicates,
+			ClusterTrustBundlePredicate: clusterTrustBundlePredicate,
 			RuntimePredicate: func(configObject types.NamespacedName, runtime infrastructuremanagerv1.Runtime) bool {
 				if configObject.Name == config.ConverterConfig.Kubernetes.KubeApiServer.ACL.ConfigMapName {
 					return extensions.AclNeedsToBeEnabled(apiServerAclEnabled, runtime)
