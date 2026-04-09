@@ -52,6 +52,15 @@ spec:
           spec:
             description: RuntimeSpec defines the desired state of Runtime
             properties:
+              extensions:
+                description: Extensions defines optional Gardener extensions that
+                  can be enabled
+                properties:
+                  nvidiaOpenshell:
+                    description: NvidiaOpenshell enables the shoot-nvidia-openshell
+                      extension
+                    type: boolean
+                type: object
               imageRegistryCache:
                 items:
                   properties:

@@ -146,9 +146,10 @@ type RuntimeList struct {
 
 // RuntimeSpec defines the desired state of Runtime
 type RuntimeSpec struct {
-	Shoot    RuntimeShoot         `json:"shoot"`
-	Security Security             `json:"security"`
-	Caching  []ImageRegistryCache `json:"imageRegistryCache,omitempty"`
+	Shoot      RuntimeShoot         `json:"shoot"`
+	Security   Security             `json:"security"`
+	Caching    []ImageRegistryCache `json:"imageRegistryCache,omitempty"`
+	Extensions Extensions           `json:"extensions,omitempty"`
 }
 
 type ImageRegistryCache struct {
@@ -254,6 +255,12 @@ type Ingress struct {
 // Egress filtering is a default filtering mode for `shoot-networking-fitler` extension.
 type Egress struct {
 	Enabled bool `json:"enabled"`
+}
+
+// Extensions defines optional Gardener extensions that can be enabled
+type Extensions struct {
+	// NvidiaOpenshell enables the shoot-nvidia-openshell extension
+	NvidiaOpenshell *bool `json:"nvidiaOpenshell,omitempty"`
 }
 
 func init() {

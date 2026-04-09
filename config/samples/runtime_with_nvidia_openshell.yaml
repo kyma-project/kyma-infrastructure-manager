@@ -1,0 +1,71 @@
+apiVersion: infrastructuremanager.kyma-project.io/v1
+kind: Runtime
+metadata:
+  labels:
+    kyma-project.io/instance-id: instance-id
+    kyma-project.io/runtime-id: runtime-id
+    kyma-project.io/broker-plan-id: plan-id
+    kyma-project.io/broker-plan-name: plan-name
+    kyma-project.io/global-account-id: global-account-id
+    kyma-project.io/subaccount-id: subAccount-id
+    kyma-project.io/shoot-name: shoot-name-nvidia
+    kyma-project.io/region: region
+    operator.kyma-project.io/kyma-name: kymaName
+  name: runtime-nvidia-example
+  namespace: kcp-system
+spec:
+  shoot:
+    name: shoot-name-nvidia
+    purpose: production
+    region: eu-central-1
+    platformRegion: "cd-eu11"
+    secretBindingName: "hyperscaler secret"
+    enforceSeedLocation: true
+    kubernetes:
+      version: "1.28.7"
+      kubeAPIServer:
+        oidcConfig:
+          clientID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+          groupsClaim: groups
+          issuerURL: https://my.cool.tokens.com
+          signingAlgs:
+            - RS256
+          usernameClaim: sub
+    provider:
+      type: aws
+      workers:
+        - machine:
+            type: m6i.large
+            image:
+              name: gardenlinux
+              version: 1312.3.0
+          volume:
+            type: gp2
+            size: 50Gi
+          zones:
+            - eu-central-1a
+            - eu-central-1b
+            - eu-central-1c
+          name: cpu-worker-0
+          minimum: 3
+          maximum: 20
+          maxSurge: 3
+          maxUnavailable: 0
+    networking:
+      pods: 100.64.0.0/12
+      nodes: 10.250.0.0/16
+      services: 100.104.0.0/13
+    controlPlane:
+      highAvailability:
+        failureTolerance:
+          type: zone
+  security:
+    networking:
+      filter:
+        egress:
+          enabled: false
+    administrators:
+      - admin@myorg.com
+  # Enable NVIDIA OpenShell extension
+  extensions:
+    nvidiaOpenshell: true

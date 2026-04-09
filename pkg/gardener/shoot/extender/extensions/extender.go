@@ -82,6 +82,16 @@ func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client
 				return NewApiServerACLExtension(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs, operatorIPs, kcpIPs)
 			},
 		},
+		{
+			Type: NvidiaOpenshellExtensionType,
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+				if runtime.Spec.Extensions.NvidiaOpenshell == nil || !*runtime.Spec.Extensions.NvidiaOpenshell {
+					return nil, nil
+				}
+
+				return NewNvidiaOpenshellExtension()
+			},
+		},
 	}, nil)
 }
 
@@ -152,6 +162,16 @@ func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client,
 				}
 
 				return NewApiServerACLExtension(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs, operatorIPs, kcpIPs)
+			},
+		},
+		{
+			Type: NvidiaOpenshellExtensionType,
+			Create: func(runtime imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
+				if runtime.Spec.Extensions.NvidiaOpenshell == nil || !*runtime.Spec.Extensions.NvidiaOpenshell {
+					return nil, nil
+				}
+
+				return NewNvidiaOpenshellExtension()
 			},
 		},
 	}, extensionsOnTheShoot)
