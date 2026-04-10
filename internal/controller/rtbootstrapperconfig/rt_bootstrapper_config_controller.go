@@ -85,6 +85,7 @@ func (r *RuntimeBootstrapperConfigWatcher) Reconcile(ctx context.Context, _ ctrl
 		newItem.Annotations[reconciler.ForceReconcileAnnotation] = "true"
 		newItem.ManagedFields = nil
 
+		//nolint:staticcheck // SA1019: client.Apply is used with Patch, which is the correct API for this version
 		if err := r.Kcp.Patch(ctx, newItem, client.Apply, &client.PatchOptions{
 			FieldManager: fieldManager,
 			Force:        ptr.To(true),
