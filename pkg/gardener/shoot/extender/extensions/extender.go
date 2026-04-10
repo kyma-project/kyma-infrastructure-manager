@@ -85,7 +85,7 @@ func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client
 		{
 			Type: NvidiaOpenshellExtensionType,
 			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-				if runtime.Spec.Extensions.NvidiaOpenshell == nil || !*runtime.Spec.Extensions.NvidiaOpenshell {
+				if runtime.Spec.Shoot.EnableNvidiaOpenshell == nil || !*runtime.Spec.Shoot.EnableNvidiaOpenshell {
 					return nil, nil
 				}
 
@@ -167,7 +167,7 @@ func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client,
 		{
 			Type: NvidiaOpenshellExtensionType,
 			Create: func(runtime imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
-				if runtime.Spec.Extensions.NvidiaOpenshell == nil || !*runtime.Spec.Extensions.NvidiaOpenshell {
+				if runtime.Spec.Shoot.EnableNvidiaOpenshell == nil || !*runtime.Spec.Shoot.EnableNvidiaOpenshell {
 					return nil, nil
 				}
 

@@ -8,7 +8,7 @@ The `shoot-nvidia-openshell` extension is a Gardener extension that provides NVI
 
 ## Enabling the Extension
 
-To enable the NVIDIA OpenShell extension, add the `extensions` field to your Runtime custom resource specification:
+To enable the NVIDIA OpenShell extension, add the `enableNvidiaOpenshell` field to your Runtime shoot specification:
 
 ```yaml
 apiVersion: infrastructuremanager.kyma-project.io/v1
@@ -17,15 +17,19 @@ metadata:
   name: my-runtime
   namespace: kcp-system
 spec:
+  shoot:
+    name: my-shoot
+    # ... other shoot fields ...
+    enableNvidiaOpenshell: true
   # ... other spec fields ...
-  extensions:
-    nvidiaOpenshell: true
 ```
 
 ## Example
 
-A complete example Runtime CR with NVIDIA OpenShell extension enabled can be found in:
-`config/samples/runtime_with_nvidia_openshell.yaml`
+An example showing the `enableNvidiaOpenshell` field can be found in the main Runtime sample:
+`config/samples/infrastructuremanager_v1_runtime.yaml`
+
+The field is commented out by default and can be uncommented and set to `true` to enable the extension.
 
 ## Implementation Details
 
@@ -40,11 +44,11 @@ When enabled, the extension is added to the Gardener Shoot specification with:
 
 ## Default Behavior
 
-By default, the NVIDIA OpenShell extension is **not enabled**. It must be explicitly set to `true` in the Runtime specification to be activated.
+By default, the NVIDIA OpenShell extension is **not enabled**. It must be explicitly set to `true` in the Runtime shoot specification to be activated.
 
 To disable the extension after it has been enabled, either:
-1. Set `nvidiaOpenshell: false` in the Runtime specification, or
-2. Remove the `extensions` field entirely
+1. Set `enableNvidiaOpenshell: false` in the shoot specification, or
+2. Remove the `enableNvidiaOpenshell` field entirely
 
 ## Prerequisites
 

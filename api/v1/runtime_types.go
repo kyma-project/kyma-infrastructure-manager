@@ -146,10 +146,9 @@ type RuntimeList struct {
 
 // RuntimeSpec defines the desired state of Runtime
 type RuntimeSpec struct {
-	Shoot      RuntimeShoot         `json:"shoot"`
-	Security   Security             `json:"security"`
-	Caching    []ImageRegistryCache `json:"imageRegistryCache,omitempty"`
-	Extensions Extensions           `json:"extensions,omitempty"`
+	Shoot    RuntimeShoot         `json:"shoot"`
+	Security Security             `json:"security"`
+	Caching  []ImageRegistryCache `json:"imageRegistryCache,omitempty"`
 }
 
 type ImageRegistryCache struct {
@@ -181,17 +180,18 @@ type RuntimeStatus struct {
 }
 
 type RuntimeShoot struct {
-	Name                string                 `json:"name"`
-	Purpose             gardener.ShootPurpose  `json:"purpose"`
-	PlatformRegion      string                 `json:"platformRegion"`
-	Region              string                 `json:"region"`
-	LicenceType         *string                `json:"licenceType,omitempty"`
-	SecretBindingName   string                 `json:"secretBindingName"`
-	EnforceSeedLocation *bool                  `json:"enforceSeedLocation,omitempty"`
-	Kubernetes          Kubernetes             `json:"kubernetes,omitempty"`
-	Provider            Provider               `json:"provider"`
-	Networking          Networking             `json:"networking"`
-	ControlPlane        *gardener.ControlPlane `json:"controlPlane,omitempty"`
+	Name                   string                 `json:"name"`
+	Purpose                gardener.ShootPurpose  `json:"purpose"`
+	PlatformRegion         string                 `json:"platformRegion"`
+	Region                 string                 `json:"region"`
+	LicenceType            *string                `json:"licenceType,omitempty"`
+	SecretBindingName      string                 `json:"secretBindingName"`
+	EnforceSeedLocation    *bool                  `json:"enforceSeedLocation,omitempty"`
+	EnableNvidiaOpenshell  *bool                  `json:"enableNvidiaOpenshell,omitempty"`
+	Kubernetes             Kubernetes             `json:"kubernetes,omitempty"`
+	Provider               Provider               `json:"provider"`
+	Networking             Networking             `json:"networking"`
+	ControlPlane           *gardener.ControlPlane `json:"controlPlane,omitempty"`
 }
 
 type Kubernetes struct {
@@ -255,12 +255,6 @@ type Ingress struct {
 // Egress filtering is a default filtering mode for `shoot-networking-fitler` extension.
 type Egress struct {
 	Enabled bool `json:"enabled"`
-}
-
-// Extensions defines optional Gardener extensions that can be enabled
-type Extensions struct {
-	// NvidiaOpenshell enables the shoot-nvidia-openshell extension
-	NvidiaOpenshell *bool `json:"nvidiaOpenshell,omitempty"`
 }
 
 func init() {
