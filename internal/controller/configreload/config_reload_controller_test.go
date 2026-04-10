@@ -105,27 +105,17 @@ var _ = Describe("ConfigReloadWatcher", func() {
 	}
 
 	Context("ACL ConfigMap", func() {
-		var (
-			rt1 *imv1.Runtime
-			rt2 *imv1.Runtime
-			cm  *corev1.ConfigMap
-		)
-
-		BeforeEach(func() {
-			rt1 = createRuntime("runtime-acl-1")
-			rt2 = createRuntime("runtime-acl-2")
-			cm = createConfigMap(aclConfigMapName)
-		})
-
 		It("Should trigger reconcile on all matching Runtimes when ACL ConfigMap is updated", func() {
+			rt1 := createRuntime("runtime-acl-1")
+			rt2 := createRuntime("runtime-acl-2")
+			cm := createConfigMap(aclConfigMapName)
+
 			updateConfigMap(cm, "updated-acl")
 
 			Eventually(hasForceReconcileAnnotation(rt1.Name), timeout, interval).Should(BeTrue())
 			Eventually(hasForceReconcileAnnotation(rt2.Name), timeout, interval).Should(BeTrue())
 		})
-	})
 
-	Context("ACL ConfigMap with RuntimePredicate", func() {
 		It("Should not annotate excluded Runtimes", func() {
 			createRuntime("runtime-excluded")
 			included := createRuntime("runtime-acl-pred")
