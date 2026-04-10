@@ -424,10 +424,17 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 				},
 			}
 
+			// Create a shoot representing the current state with previous extensions
+			prevShoot := gardener.Shoot{
+				Spec: gardener.ShootSpec{
+					Extensions: testCase.previousExtensions,
+				},
+			}
+
 			auditLogDataProvided := testCase.inputAuditLogData != (auditlogs.AuditLogData{})
 			registryCacheDataProvided := len(testCase.registryCaches) != 0
 			kubeApiServerACLEnabled := aclNeedsToBeEnabled(testCase.apiServerACLEnabled, testRuntime)
-			nvidiaOpenshellExistsInOutput := isNvidiaOpenshellEnabled(testRuntime) || existingExtension(NvidiaOpenshellExtensionType, *shoot) != nil
+			nvidiaOpenshellExistsInOutput := isNvidiaOpenshellEnabled(testRuntime) || existingExtension(NvidiaOpenshellExtensionType, prevShoot) != nil
 
 			extender := NewExtensionsExtenderForPatch(context.Background(), fakeClient, config, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled)
 			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided, kubeApiServerACLEnabled, nvidiaOpenshellExistsInOutput)
