@@ -2,8 +2,8 @@ package fsm
 
 import (
 	"context"
-	gardener_types "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	gardener_types "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"slices"
 )
@@ -38,7 +38,8 @@ func verifySeedReadiness(seed *gardener_types.Seed) bool {
 		return false
 	}
 
-	if cond := v1beta1helper.GetCondition(seed.Status.Conditions, gardener_types.SeedGardenletReady); cond == nil || cond.Status != gardener_types.ConditionTrue {
+	// Check that extensions are ready (replaces SeedGardenletReady from earlier versions)
+	if cond := v1beta1helper.GetCondition(seed.Status.Conditions, gardener_types.SeedExtensionsReady); cond == nil || cond.Status != gardener_types.ConditionTrue {
 		return false
 	}
 
