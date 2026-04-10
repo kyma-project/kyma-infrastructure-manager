@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenerhelper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 type ErrReason string

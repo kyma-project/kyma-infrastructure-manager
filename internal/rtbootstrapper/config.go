@@ -136,6 +136,7 @@ func (c *Configurator) applyConfigMap(ctx context.Context, runtimeClient client.
 			},
 			Data: configMap.Data,
 		}
+		//nolint:staticcheck // SA1019: client.Apply is used with Patch, which is the correct API for this version
 		if err := runtimeClient.Patch(ctx, runtimeConfigMap, client.Apply, &client.PatchOptions{
 			Force:        ptr.To(true),
 			FieldManager: fieldManagerName,

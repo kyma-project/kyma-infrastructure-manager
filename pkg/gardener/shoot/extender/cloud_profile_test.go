@@ -62,6 +62,8 @@ func TestExtendWithCloudProfile(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
+			// CloudProfileName is deprecated field, we verify it's nil to ensure we use CloudProfile instead
+			//nolint:staticcheck // SA1019: CloudProfileName is deprecated, but we verify it's not set
 			assert.Nil(t, shoot.Spec.CloudProfileName)
 			assert.Equal(t, testCase.expectedProfile, shoot.Spec.CloudProfile)
 		})

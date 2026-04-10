@@ -124,6 +124,7 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 	r.Log.Info(fmt.Sprintf("Updating runtime %s with registry cache config", runtime.Name))
 	runtime.Spec.Caching = caches
 	runtime.ManagedFields = nil
+	//nolint:staticcheck // SA1019: client.Apply is used with Patch, which is the correct API for this version
 	err := r.KcpClient.Patch(ctx, &runtime, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),

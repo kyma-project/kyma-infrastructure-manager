@@ -209,6 +209,7 @@ func applyKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) er
 		return runtimeClientError
 	}
 
+	//nolint:staticcheck // SA1019: k8s_client.Apply is used with Patch, which is the correct API for this version
 	errResourceCreation := runtimeClient.Patch(ctx, &configMap, k8s_client.Apply, &k8s_client.PatchOptions{
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
