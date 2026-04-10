@@ -3,7 +3,7 @@ package fsm
 import (
 	"context"
 	gardener_types "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"slices"
 )
