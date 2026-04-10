@@ -89,7 +89,7 @@ func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client
 					return nil, nil
 				}
 
-				return NewNvidiaOpenshellExtension()
+				return EnableNvidiaOpenshellExtension()
 			},
 		},
 	}, nil)
@@ -175,7 +175,7 @@ func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client,
 					return DisableNvidiaOpenshellExtension()
 				}
 
-				return NewNvidiaOpenshellExtension()
+				return EnableNvidiaOpenshellExtension()
 			},
 		},
 	}, extensionsOnTheShoot)

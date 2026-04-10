@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewNvidiaOpenshellExtension(t *testing.T) {
-	t.Run("Should create NVIDIA OpenShell extension", func(t *testing.T) {
-		ext, err := NewNvidiaOpenshellExtension()
+func TestEnableNvidiaOpenshellExtension(t *testing.T) {
+	t.Run("Should create enabled NVIDIA OpenShell extension", func(t *testing.T) {
+		ext, err := EnableNvidiaOpenshellExtension()
 
 		require.NoError(t, err)
 		require.NotNil(t, ext)

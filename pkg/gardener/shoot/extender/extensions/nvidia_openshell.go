@@ -9,7 +9,7 @@ const (
 	NvidiaOpenshellExtensionType = "shoot-nvidia-openshell"
 )
 
-func NewNvidiaOpenshellExtension() (*gardener.Extension, error) {
+func EnableNvidiaOpenshellExtension() (*gardener.Extension, error) {
 	return &gardener.Extension{
 		Type:     NvidiaOpenshellExtensionType,
 		Disabled: ptr.To(false),
