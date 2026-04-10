@@ -173,6 +173,7 @@ func (c *Configurator) applySecret(ctx context.Context, runtimeClient client.Cli
 			Data: secret.Data,
 			Type: secret.Type,
 		}
+		//nolint:staticcheck // SA1019: client.Apply is used with Patch, which is the correct API for this version
 		if err := runtimeClient.Patch(ctx, secretToApply, client.Apply, &client.PatchOptions{
 			Force:        ptr.To(true),
 			FieldManager: fieldManagerName,
@@ -207,6 +208,7 @@ func (c *Configurator) applyClusterTrustBundle(ctx context.Context, runtimeClien
 			},
 			Spec: clusterTrustBundle.Spec,
 		}
+		//nolint:staticcheck // SA1019: client.Apply is used with Patch, which is the correct API for this version
 		if err := runtimeClient.Patch(ctx, ctbToApply, client.Apply, &client.PatchOptions{
 			Force:        ptr.To(true),
 			FieldManager: fieldManagerName,
