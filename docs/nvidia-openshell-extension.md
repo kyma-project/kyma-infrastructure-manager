@@ -56,12 +56,3 @@ Before enabling this extension, ensure that:
 1. Your Gardener landscape has the `shoot-nvidia-openshell` extension registered and available
 2. Your worker nodes support NVIDIA GPUs (appropriate machine types selected)
 3. The necessary NVIDIA GPU drivers are available in your chosen machine image
-
-## Related Extensions
-
-This extension works alongside other Gardener extensions configured in Infrastructure Manager:
-- `shoot-networking-filter` - Network filtering
-- `shoot-cert-service` - Certificate management
-- `shoot-dns-service` - DNS management
-- `shoot-oidc-service` - OIDC authentication
-- `registry-cache` - Container registry caching
