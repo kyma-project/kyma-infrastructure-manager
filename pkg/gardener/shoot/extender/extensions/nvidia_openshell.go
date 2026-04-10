@@ -15,3 +15,10 @@ func NewNvidiaOpenshellExtension() (*gardener.Extension, error) {
 		Disabled: ptr.To(false),
 	}, nil
 }
+
+func DisableNvidiaOpenshellExtension() (*gardener.Extension, error) {
+	return &gardener.Extension{
+		Type:     NvidiaOpenshellExtensionType,
+		Disabled: ptr.To(true),
+	}, nil
+}

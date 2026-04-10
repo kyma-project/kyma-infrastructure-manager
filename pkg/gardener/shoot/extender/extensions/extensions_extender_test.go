@@ -249,6 +249,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		enableNetworkFilter  bool
 		apiServerACL         []string
 		apiServerACLEnabled  bool
+		enableNvidiaOpenshell *bool
 		providerType         string
 	}{
 		{
@@ -388,9 +389,31 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			apiServerACLEnabled:  false,
 			providerType:         hyperscaler.TypeAWS,
 		},
+		{
+			name:                 "Should disable NvidiaOpenshell extension when it was enabled but is now disabled on Runtime CR",
+			previousExtensions:   append(fixAllExtensionsOnTheShoot(true), fixNvidiaOpenshellExtensionEnabled()),
+			inputAuditLogData:    oldAuditLogData,
+			expectedAuditLogData: oldAuditLogData,
+			registryCaches:       oldCaches,
+			enableNetworkFilter:  false,
+			apiServerACLEnabled:  false,
+			enableNvidiaOpenshell: ptr.To(false),
+			providerType:         hyperscaler.TypeAWS,
+		},
+		{
+			name:                 "Should add NvidiaOpenshell extension when enabled on Runtime CR",
+			previousExtensions:   fixAllExtensionsOnTheShoot(true),
+			inputAuditLogData:    oldAuditLogData,
+			expectedAuditLogData: oldAuditLogData,
+			registryCaches:       oldCaches,
+			enableNetworkFilter:  false,
+			apiServerACLEnabled:  false,
+			enableNvidiaOpenshell: ptr.To(true),
+			providerType:         hyperscaler.TypeAWS,
+		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			testRuntime := fixRuntimeCRForExtensionExtenderTests(testCase.enableNetworkFilter, testCase.registryCaches, testCase.apiServerACL, testCase.providerType, nil)
+			testRuntime := fixRuntimeCRForExtensionExtenderTests(testCase.enableNetworkFilter, testCase.registryCaches, testCase.apiServerACL, testCase.providerType, testCase.enableNvidiaOpenshell)
 
 			configMapGetCalled := false
 			fakeClient := buildFakeClientWithACLConfigMap(t, &configMapGetCalled)
@@ -404,9 +427,10 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			auditLogDataProvided := testCase.inputAuditLogData != (auditlogs.AuditLogData{})
 			registryCacheDataProvided := len(testCase.registryCaches) != 0
 			kubeApiServerACLEnabled := aclNeedsToBeEnabled(testCase.apiServerACLEnabled, testRuntime)
+			nvidiaOpenshellEnabled := isNvidiaOpenshellEnabled(testRuntime)
 
 			extender := NewExtensionsExtenderForPatch(context.Background(), fakeClient, config, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled)
-			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided, kubeApiServerACLEnabled)
+			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided, kubeApiServerACLEnabled, nvidiaOpenshellEnabled)
 
 			err := extender(testRuntime, shoot)
 			assert.NoError(t, err)
@@ -445,6 +469,9 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 					}
 
 					verifyACLExtension(t, &ext, mergedACL)
+
+				case NvidiaOpenshellExtensionType:
+					verifyNvidiaOpenshellExtensionInPatch(t, ext, nvidiaOpenshellEnabled)
 
 				}
 			}
@@ -530,7 +557,14 @@ func fixKubeApiServerACLExtension() gardener.Extension {
 	}
 }
 
-func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extension, networkExtAdded bool, auditLogExtAdded bool, registryCacheExtAdded bool, kubeApiServerACLEnabled bool) map[string]int {
+func fixNvidiaOpenshellExtensionEnabled() gardener.Extension {
+	return gardener.Extension{
+		Type:     NvidiaOpenshellExtensionType,
+		Disabled: ptr.To(false),
+	}
+}
+
+func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extension, networkExtAdded bool, auditLogExtAdded bool, registryCacheExtAdded bool, kubeApiServerACLEnabled bool, nvidiaOpenshellEnabled bool) map[string]int {
 	extensionOrderMap := make(map[string]int)
 
 	for idx, ext := range previousExtensions {
@@ -564,6 +598,13 @@ func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extensi
 		_, found := extensionOrderMap[ApiServerACLExtensionType]
 		if !found {
 			extensionOrderMap[ApiServerACLExtensionType] = len(extensionOrderMap)
+		}
+	}
+
+	if nvidiaOpenshellEnabled {
+		_, found := extensionOrderMap[NvidiaOpenshellExtensionType]
+		if !found {
+			extensionOrderMap[NvidiaOpenshellExtensionType] = len(extensionOrderMap)
 		}
 	}
 
@@ -717,6 +758,12 @@ func verifyNvidiaOpenshellExtension(t *testing.T, ext gardener.Extension) {
 	require.NotNil(t, ext.Disabled)
 	assert.Equal(t, false, *ext.Disabled)
 	assert.Nil(t, ext.ProviderConfig)
+}
+
+func verifyNvidiaOpenshellExtensionInPatch(t *testing.T, ext gardener.Extension, enabled bool) {
+	assert.Equal(t, NvidiaOpenshellExtensionType, ext.Type)
+	require.NotNil(t, ext.Disabled)
+	assert.Equal(t, !enabled, *ext.Disabled)
 }
 
 // returns a map with the expected index order of extensions for ExtenderForCreate including NvidiaOpenshell

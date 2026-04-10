@@ -166,9 +166,13 @@ func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client,
 		},
 		{
 			Type: NvidiaOpenshellExtensionType,
-			Create: func(runtime imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
 				if !isNvidiaOpenshellEnabled(runtime) {
-					return nil, nil
+					if existingExtension(NvidiaOpenshellExtensionType, shoot) == nil {
+						return nil, nil
+					}
+
+					return DisableNvidiaOpenshellExtension()
 				}
 
 				return NewNvidiaOpenshellExtension()
