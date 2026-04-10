@@ -82,6 +82,16 @@ func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client
 				return NewApiServerACLExtension(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs, operatorIPs, kcpIPs)
 			},
 		},
+		{
+			Type: NvidiaOpenshellExtensionType,
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+				if !isNvidiaOpenshellEnabled(runtime) {
+					return nil, nil
+				}
+
+				return EnableNvidiaOpenshellExtension()
+			},
+		},
 	}, nil)
 }
 
@@ -154,6 +164,20 @@ func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client,
 				return NewApiServerACLExtension(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs, operatorIPs, kcpIPs)
 			},
 		},
+		{
+			Type: NvidiaOpenshellExtensionType,
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+				if isNvidiaOpenshellEnabled(runtime) {
+					return EnableNvidiaOpenshellExtension()
+				}
+
+				if existingExtension(NvidiaOpenshellExtensionType, shoot) == nil {
+					return nil, nil
+				}
+
+				return DisableNvidiaOpenshellExtension()
+			},
+		},
 	}, extensionsOnTheShoot)
 }
 
@@ -197,4 +221,8 @@ func existingExtension(extensionType string, shoot gardener.Shoot) *gardener.Ext
 		}
 	}
 	return nil
+}
+
+func isNvidiaOpenshellEnabled(runtime imv1.Runtime) bool {
+	return runtime.Spec.Shoot.EnableNvidiaOpenshell != nil && *runtime.Spec.Shoot.EnableNvidiaOpenshell
 }

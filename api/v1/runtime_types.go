@@ -180,17 +180,18 @@ type RuntimeStatus struct {
 }
 
 type RuntimeShoot struct {
-	Name                string                 `json:"name"`
-	Purpose             gardener.ShootPurpose  `json:"purpose"`
-	PlatformRegion      string                 `json:"platformRegion"`
-	Region              string                 `json:"region"`
-	LicenceType         *string                `json:"licenceType,omitempty"`
-	SecretBindingName   string                 `json:"secretBindingName"`
-	EnforceSeedLocation *bool                  `json:"enforceSeedLocation,omitempty"`
-	Kubernetes          Kubernetes             `json:"kubernetes,omitempty"`
-	Provider            Provider               `json:"provider"`
-	Networking          Networking             `json:"networking"`
-	ControlPlane        *gardener.ControlPlane `json:"controlPlane,omitempty"`
+	Name                  string                 `json:"name"`
+	Purpose               gardener.ShootPurpose  `json:"purpose"`
+	PlatformRegion        string                 `json:"platformRegion"`
+	Region                string                 `json:"region"`
+	LicenceType           *string                `json:"licenceType,omitempty"`
+	SecretBindingName     string                 `json:"secretBindingName"`
+	EnforceSeedLocation   *bool                  `json:"enforceSeedLocation,omitempty"`
+	EnableNvidiaOpenshell *bool                  `json:"enableNvidiaOpenshell,omitempty"`
+	Kubernetes            Kubernetes             `json:"kubernetes,omitempty"`
+	Provider              Provider               `json:"provider"`
+	Networking            Networking             `json:"networking"`
+	ControlPlane          *gardener.ControlPlane `json:"controlPlane,omitempty"`
 }
 
 type Kubernetes struct {

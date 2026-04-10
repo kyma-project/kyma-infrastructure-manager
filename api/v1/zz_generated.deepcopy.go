@@ -462,6 +462,11 @@ func (in *RuntimeShoot) DeepCopyInto(out *RuntimeShoot) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.EnableNvidiaOpenshell != nil {
+		in, out := &in.EnableNvidiaOpenshell, &out.EnableNvidiaOpenshell
+		*out = new(bool)
+		**out = **in
+	}
 	in.Kubernetes.DeepCopyInto(&out.Kubernetes)
 	in.Provider.DeepCopyInto(&out.Provider)
 	in.Networking.DeepCopyInto(&out.Networking)
