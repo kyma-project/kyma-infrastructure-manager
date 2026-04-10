@@ -48,8 +48,11 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
-		ErrorIfCRDPathMissing: true,
+		CRDDirectoryPaths:           []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
+		ErrorIfCRDPathMissing:       true,
+		BinaryAssetsDirectory:       filepath.Join("..", "..", "..", "bin", "k8s"),
+		DownloadBinaryAssets:        true,
+		DownloadBinaryAssetsVersion: "1.35.0",
 	}
 
 	testEnv.ControlPlane.GetAPIServer().Configure().
