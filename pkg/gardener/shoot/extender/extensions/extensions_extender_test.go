@@ -719,13 +719,6 @@ func verifyNvidiaOpenshellExtension(t *testing.T, ext gardener.Extension) {
 	assert.Nil(t, ext.ProviderConfig)
 }
 
-func fixNvidiaOpenshellExtension() gardener.Extension {
-	return gardener.Extension{
-		Type:     NvidiaOpenshellExtensionType,
-		Disabled: ptr.To(false),
-	}
-}
-
 // returns a map with the expected index order of extensions for ExtenderForCreate including NvidiaOpenshell
 func getExpectedExtensionsOrderMapForCreateWithNvidiaOpenshell() map[string]int {
 	extensionOrderMap := make(map[string]int)
