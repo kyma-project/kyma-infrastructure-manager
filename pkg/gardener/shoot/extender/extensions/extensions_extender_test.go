@@ -427,10 +427,10 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			auditLogDataProvided := testCase.inputAuditLogData != (auditlogs.AuditLogData{})
 			registryCacheDataProvided := len(testCase.registryCaches) != 0
 			kubeApiServerACLEnabled := aclNeedsToBeEnabled(testCase.apiServerACLEnabled, testRuntime)
-			nvidiaOpenshellEnabled := isNvidiaOpenshellEnabled(testRuntime)
+			nvidiaOpenshellExistsInOutput := isNvidiaOpenshellEnabled(testRuntime) || existingExtension(NvidiaOpenshellExtensionType, *shoot) != nil
 
 			extender := NewExtensionsExtenderForPatch(context.Background(), fakeClient, config, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled)
-			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided, kubeApiServerACLEnabled, nvidiaOpenshellEnabled)
+			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided, kubeApiServerACLEnabled, nvidiaOpenshellExistsInOutput)
 
 			err := extender(testRuntime, shoot)
 			assert.NoError(t, err)
@@ -471,7 +471,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 					verifyACLExtension(t, &ext, mergedACL)
 
 				case NvidiaOpenshellExtensionType:
-					verifyNvidiaOpenshellExtensionInPatch(t, ext, nvidiaOpenshellEnabled)
+					verifyNvidiaOpenshellExtensionInPatch(t, ext, isNvidiaOpenshellEnabled(testRuntime))
 
 				}
 			}
@@ -564,7 +564,7 @@ func fixNvidiaOpenshellExtensionEnabled() gardener.Extension {
 	}
 }
 
-func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extension, networkExtAdded bool, auditLogExtAdded bool, registryCacheExtAdded bool, kubeApiServerACLEnabled bool, nvidiaOpenshellEnabled bool) map[string]int {
+func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extension, networkExtAdded bool, auditLogExtAdded bool, registryCacheExtAdded bool, kubeApiServerACLEnabled bool, nvidiaOpenshellInOutput bool) map[string]int {
 	extensionOrderMap := make(map[string]int)
 
 	for idx, ext := range previousExtensions {
@@ -601,7 +601,7 @@ func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extensi
 		}
 	}
 
-	if nvidiaOpenshellEnabled {
+	if nvidiaOpenshellInOutput {
 		_, found := extensionOrderMap[NvidiaOpenshellExtensionType]
 		if !found {
 			extensionOrderMap[NvidiaOpenshellExtensionType] = len(extensionOrderMap)
