@@ -1,0 +1,32 @@
+package extensions
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestEnableNvidiaOpenshellExtension(t *testing.T) {
+	t.Run("Should create enabled NVIDIA OpenShell extension", func(t *testing.T) {
+		ext, err := EnableNvidiaOpenshellExtension()
+
+		require.NoError(t, err)
+		require.NotNil(t, ext)
+		assert.Equal(t, NvidiaOpenshellExtensionType, ext.Type)
+		require.NotNil(t, ext.Disabled)
+		assert.Equal(t, false, *ext.Disabled)
+		assert.Nil(t, ext.ProviderConfig)
+	})
+
+	t.Run("Should create disabled NVIDIA OpenShell extension", func(t *testing.T) {
+		ext, err := DisableNvidiaOpenshellExtension()
+
+		require.NoError(t, err)
+		require.NotNil(t, ext)
+		assert.Equal(t, NvidiaOpenshellExtensionType, ext.Type)
+		require.NotNil(t, ext.Disabled)
+		assert.Equal(t, true, *ext.Disabled)
+		assert.Nil(t, ext.ProviderConfig)
+	})
+}

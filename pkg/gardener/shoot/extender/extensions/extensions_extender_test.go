@@ -60,70 +60,93 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 	}
 
 	for _, testcase := range []struct {
-		name                string
-		inputAuditLogData   auditlogs.AuditLogData
-		enableNetworkFilter bool
-		registryCache       []imv1.ImageRegistryCache
-		apiServerACL        []string
-		apiServerACLEnabled bool
-		extensionOrderMap   map[string]int
-		providerType        string
+		name                     string
+		inputAuditLogData        auditlogs.AuditLogData
+		enableNetworkFilter      bool
+		registryCache            []imv1.ImageRegistryCache
+		apiServerACL             []string
+		apiServerACLEnabled      bool
+		enableNvidiaOpenshell    *bool
+		extensionOrderMap        map[string]int
+		providerType             string
 	}{
 		{
-			name:                "Should create all extensions for new Shoot in the right order, network filter is enabled",
-			inputAuditLogData:   newAuditLogData,
-			enableNetworkFilter: true,
-			registryCache:       registryCache,
-			apiServerACL:        []string{"1.1.1.1/32", "2.2.2.2/32"},
-			apiServerACLEnabled: true,
-			extensionOrderMap:   getExpectedExtensionsOrderMapForCreate(),
-			providerType:        hyperscaler.TypeAWS,
+			name:                     "Should create all extensions for new Shoot in the right order, network filter is enabled",
+			inputAuditLogData:        newAuditLogData,
+			enableNetworkFilter:      true,
+			registryCache:            registryCache,
+			apiServerACL:             []string{"1.1.1.1/32", "2.2.2.2/32"},
+			apiServerACLEnabled:      true,
+			enableNvidiaOpenshell:    nil,
+			extensionOrderMap:        getExpectedExtensionsOrderMapForCreate(),
+			providerType:             hyperscaler.TypeAWS,
 		},
 		{
-			name:                "Should create all extensions for new Shoot in the right order, network filter is disabled",
-			inputAuditLogData:   newAuditLogData,
-			enableNetworkFilter: false,
-			registryCache:       registryCache,
-			apiServerACL:        []string{"1.1.1.1/32", "2.2.2.2/32"},
-			apiServerACLEnabled: true,
-			extensionOrderMap:   getExpectedExtensionsOrderMapForCreate(),
-			providerType:        hyperscaler.TypeAzure,
+			name:                     "Should create all extensions for new Shoot in the right order, network filter is disabled",
+			inputAuditLogData:        newAuditLogData,
+			enableNetworkFilter:      false,
+			registryCache:            registryCache,
+			apiServerACL:             []string{"1.1.1.1/32", "2.2.2.2/32"},
+			apiServerACLEnabled:      true,
+			enableNvidiaOpenshell:    nil,
+			extensionOrderMap:        getExpectedExtensionsOrderMapForCreate(),
+			providerType:             hyperscaler.TypeAzure,
 		},
 		{
-			name:                "Should not include AuditLog extension for new Shoot when input auditLogData is empty",
-			inputAuditLogData:   auditlogs.AuditLogData{},
-			extensionOrderMap:   getExpectedExtensionsOrderMapForCreateWithoutOptional(),
-			providerType:        hyperscaler.TypeAWS,
-			apiServerACLEnabled: false,
+			name:                  "Should not include AuditLog extension for new Shoot when input auditLogData is empty",
+			inputAuditLogData:     auditlogs.AuditLogData{},
+			enableNvidiaOpenshell: nil,
+			extensionOrderMap:     getExpectedExtensionsOrderMapForCreateWithoutOptional(),
+			providerType:          hyperscaler.TypeAWS,
+			apiServerACLEnabled:   false,
 		},
 		{
-			name:                "Should not include ACL extension for new Shoot when feature flag in disabled",
-			inputAuditLogData:   auditlogs.AuditLogData{},
-			apiServerACL:        []string{"1.1.1.1/32", "2.2.2.2/32"},
-			apiServerACLEnabled: false,
-			extensionOrderMap:   getExpectedExtensionsOrderMapForCreateWithoutOptional(),
-			providerType:        hyperscaler.TypeAWS,
+			name:                  "Should not include ACL extension for new Shoot when feature flag in disabled",
+			inputAuditLogData:     auditlogs.AuditLogData{},
+			apiServerACL:          []string{"1.1.1.1/32", "2.2.2.2/32"},
+			apiServerACLEnabled:   false,
+			enableNvidiaOpenshell: nil,
+			extensionOrderMap:     getExpectedExtensionsOrderMapForCreateWithoutOptional(),
+			providerType:          hyperscaler.TypeAWS,
 		},
 		{
-			name:                "Should not include ACL extension for new Shoot when ACL is empty on Runtime CR",
-			inputAuditLogData:   auditlogs.AuditLogData{},
-			apiServerACL:        []string{},
-			apiServerACLEnabled: true,
-			extensionOrderMap:   getExpectedExtensionsOrderMapForCreateWithoutOptional(),
-			providerType:        hyperscaler.TypeAWS,
+			name:                  "Should not include ACL extension for new Shoot when ACL is empty on Runtime CR",
+			inputAuditLogData:     auditlogs.AuditLogData{},
+			apiServerACL:          []string{},
+			apiServerACLEnabled:   true,
+			enableNvidiaOpenshell: nil,
+			extensionOrderMap:     getExpectedExtensionsOrderMapForCreateWithoutOptional(),
+			providerType:          hyperscaler.TypeAWS,
 		},
 		{
-			name:                "Should not include ACL extension for new Shoot when hyperscaler type is not supported",
-			inputAuditLogData:   auditlogs.AuditLogData{},
-			apiServerACL:        []string{"1.1.1.1/32", "2.2.2.2/32"},
-			apiServerACLEnabled: true,
-			extensionOrderMap:   getExpectedExtensionsOrderMapForCreateWithoutOptional(),
-			providerType:        hyperscaler.TypeGCP,
+			name:                  "Should not include ACL extension for new Shoot when hyperscaler type is not supported",
+			inputAuditLogData:     auditlogs.AuditLogData{},
+			apiServerACL:          []string{"1.1.1.1/32", "2.2.2.2/32"},
+			apiServerACLEnabled:   true,
+			enableNvidiaOpenshell: nil,
+			extensionOrderMap:     getExpectedExtensionsOrderMapForCreateWithoutOptional(),
+			providerType:          hyperscaler.TypeGCP,
+		},
+		{
+			name:                  "Should include NvidiaOpenshell extension when enabled",
+			inputAuditLogData:     auditlogs.AuditLogData{},
+			enableNvidiaOpenshell: ptr.To(true),
+			extensionOrderMap:     getExpectedExtensionsOrderMapForCreateWithNvidiaOpenshell(),
+			providerType:          hyperscaler.TypeAWS,
+			apiServerACLEnabled:   false,
+		},
+		{
+			name:                  "Should not include NvidiaOpenshell extension when disabled",
+			inputAuditLogData:     auditlogs.AuditLogData{},
+			enableNvidiaOpenshell: ptr.To(false),
+			extensionOrderMap:     getExpectedExtensionsOrderMapForCreateWithoutOptional(),
+			providerType:          hyperscaler.TypeAWS,
+			apiServerACLEnabled:   false,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			providerType := testcase.providerType
-			testRuntime := fixRuntimeCRForExtensionExtenderTests(testcase.enableNetworkFilter, testcase.registryCache, testcase.apiServerACL, providerType)
+			testRuntime := fixRuntimeCRForExtensionExtenderTests(testcase.enableNetworkFilter, testcase.registryCache, testcase.apiServerACL, providerType, testcase.enableNvidiaOpenshell)
 
 			configMapGetCalled := false
 			fakeClient := buildFakeClientWithACLConfigMap(t, &configMapGetCalled)
@@ -169,6 +192,8 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 					mergedACL = append(mergedACL, "1.1.1.1/32")
 
 					verifyACLExtension(t, &ext, mergedACL)
+				case NvidiaOpenshellExtensionType:
+					verifyNvidiaOpenshellExtension(t, ext)
 				}
 			}
 		})
@@ -224,6 +249,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		enableNetworkFilter  bool
 		apiServerACL         []string
 		apiServerACLEnabled  bool
+		enableNvidiaOpenshell *bool
 		providerType         string
 	}{
 		{
@@ -363,9 +389,31 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			apiServerACLEnabled:  false,
 			providerType:         hyperscaler.TypeAWS,
 		},
+		{
+			name:                 "Should disable NvidiaOpenshell extension when it was enabled but is now disabled on Runtime CR",
+			previousExtensions:   append(fixAllExtensionsOnTheShoot(true), fixNvidiaOpenshellExtensionEnabled()),
+			inputAuditLogData:    oldAuditLogData,
+			expectedAuditLogData: oldAuditLogData,
+			registryCaches:       oldCaches,
+			enableNetworkFilter:  false,
+			apiServerACLEnabled:  false,
+			enableNvidiaOpenshell: ptr.To(false),
+			providerType:         hyperscaler.TypeAWS,
+		},
+		{
+			name:                 "Should add NvidiaOpenshell extension when enabled on Runtime CR",
+			previousExtensions:   fixAllExtensionsOnTheShoot(true),
+			inputAuditLogData:    oldAuditLogData,
+			expectedAuditLogData: oldAuditLogData,
+			registryCaches:       oldCaches,
+			enableNetworkFilter:  false,
+			apiServerACLEnabled:  false,
+			enableNvidiaOpenshell: ptr.To(true),
+			providerType:         hyperscaler.TypeAWS,
+		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			testRuntime := fixRuntimeCRForExtensionExtenderTests(testCase.enableNetworkFilter, testCase.registryCaches, testCase.apiServerACL, testCase.providerType)
+			testRuntime := fixRuntimeCRForExtensionExtenderTests(testCase.enableNetworkFilter, testCase.registryCaches, testCase.apiServerACL, testCase.providerType, testCase.enableNvidiaOpenshell)
 
 			configMapGetCalled := false
 			fakeClient := buildFakeClientWithACLConfigMap(t, &configMapGetCalled)
@@ -376,12 +424,20 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 				},
 			}
 
+			// Create a shoot representing the current state with previous extensions
+			prevShoot := gardener.Shoot{
+				Spec: gardener.ShootSpec{
+					Extensions: testCase.previousExtensions,
+				},
+			}
+
 			auditLogDataProvided := testCase.inputAuditLogData != (auditlogs.AuditLogData{})
 			registryCacheDataProvided := len(testCase.registryCaches) != 0
 			kubeApiServerACLEnabled := aclNeedsToBeEnabled(testCase.apiServerACLEnabled, testRuntime)
+			nvidiaOpenshellExistsInOutput := isNvidiaOpenshellEnabled(testRuntime) || existingExtension(NvidiaOpenshellExtensionType, prevShoot) != nil
 
 			extender := NewExtensionsExtenderForPatch(context.Background(), fakeClient, config, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled)
-			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided, kubeApiServerACLEnabled)
+			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided, kubeApiServerACLEnabled, nvidiaOpenshellExistsInOutput)
 
 			err := extender(testRuntime, shoot)
 			assert.NoError(t, err)
@@ -420,6 +476,9 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 					}
 
 					verifyACLExtension(t, &ext, mergedACL)
+
+				case NvidiaOpenshellExtensionType:
+					verifyNvidiaOpenshellExtensionInPatch(t, ext, isNvidiaOpenshellEnabled(testRuntime))
 
 				}
 			}
@@ -505,7 +564,14 @@ func fixKubeApiServerACLExtension() gardener.Extension {
 	}
 }
 
-func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extension, networkExtAdded bool, auditLogExtAdded bool, registryCacheExtAdded bool, kubeApiServerACLEnabled bool) map[string]int {
+func fixNvidiaOpenshellExtensionEnabled() gardener.Extension {
+	return gardener.Extension{
+		Type:     NvidiaOpenshellExtensionType,
+		Disabled: ptr.To(false),
+	}
+}
+
+func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extension, networkExtAdded bool, auditLogExtAdded bool, registryCacheExtAdded bool, kubeApiServerACLEnabled bool, nvidiaOpenshellInOutput bool) map[string]int {
 	extensionOrderMap := make(map[string]int)
 
 	for idx, ext := range previousExtensions {
@@ -539,6 +605,13 @@ func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extensi
 		_, found := extensionOrderMap[ApiServerACLExtensionType]
 		if !found {
 			extensionOrderMap[ApiServerACLExtensionType] = len(extensionOrderMap)
+		}
+	}
+
+	if nvidiaOpenshellInOutput {
+		_, found := extensionOrderMap[NvidiaOpenshellExtensionType]
+		if !found {
+			extensionOrderMap[NvidiaOpenshellExtensionType] = len(extensionOrderMap)
 		}
 	}
 
@@ -687,6 +760,32 @@ func verifyACLExtension(t *testing.T, ext *gardener.Extension, acl []string) {
 	assert.Equal(t, acl, aclConfig.Rule.Cidrs)
 }
 
+func verifyNvidiaOpenshellExtension(t *testing.T, ext gardener.Extension) {
+	assert.Equal(t, NvidiaOpenshellExtensionType, ext.Type)
+	require.NotNil(t, ext.Disabled)
+	assert.Equal(t, false, *ext.Disabled)
+	assert.Nil(t, ext.ProviderConfig)
+}
+
+func verifyNvidiaOpenshellExtensionInPatch(t *testing.T, ext gardener.Extension, enabled bool) {
+	assert.Equal(t, NvidiaOpenshellExtensionType, ext.Type)
+	require.NotNil(t, ext.Disabled)
+	assert.Equal(t, !enabled, *ext.Disabled)
+}
+
+// returns a map with the expected index order of extensions for ExtenderForCreate including NvidiaOpenshell
+func getExpectedExtensionsOrderMapForCreateWithNvidiaOpenshell() map[string]int {
+	extensionOrderMap := make(map[string]int)
+
+	extensionOrderMap[NetworkFilterType] = 0
+	extensionOrderMap[CertExtensionType] = 1
+	extensionOrderMap[DNSExtensionType] = 2
+	extensionOrderMap[OidcExtensionType] = 3
+	extensionOrderMap[NvidiaOpenshellExtensionType] = 4
+
+	return extensionOrderMap
+}
+
 func buildFakeClientWithACLConfigMap(t *testing.T, configMapGetCalled *bool) client.Client {
 	ipData, err := os.ReadFile("testdata/config-map-ips.yaml")
 	require.NoError(t, err)
@@ -710,7 +809,7 @@ func buildFakeClientWithACLConfigMap(t *testing.T, configMapGetCalled *bool) cli
 		}).Build()
 }
 
-func fixRuntimeCRForExtensionExtenderTests(networkFilterEnabled bool, registryCache []imv1.ImageRegistryCache, apiServerACL []string, providerType string) imv1.Runtime {
+func fixRuntimeCRForExtensionExtenderTests(networkFilterEnabled bool, registryCache []imv1.ImageRegistryCache, apiServerACL []string, providerType string, enableNvidiaOpenshell *bool) imv1.Runtime {
 	runtime := imv1.Runtime{
 		Spec: imv1.RuntimeSpec{
 			Shoot: imv1.RuntimeShoot{
@@ -725,6 +824,7 @@ func fixRuntimeCRForExtensionExtenderTests(networkFilterEnabled bool, registryCa
 						},
 					},
 				},
+				EnableNvidiaOpenshell: enableNvidiaOpenshell,
 			},
 			Caching: registryCache,
 			Security: imv1.Security{

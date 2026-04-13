@@ -27,6 +27,8 @@ spec:
     secretBindingName: "hyperscaler secret"
     # spec.shoot.enforceSeedLocation is optional ; it allows to make sure the seed cluster will be located in the same region as the runtime
     enforceSeedLocation: true
+    # spec.shoot.enableNvidiaOpenshell is optional ; when set to true, enables the shoot-nvidia-openshell Gardener extension for GPU support
+    # enableNvidiaOpenshell: true
     kubernetes:
       # spec.shoot.kubernetes.version is optional, when not provided default will be used
       # Will be modified by the SRE
