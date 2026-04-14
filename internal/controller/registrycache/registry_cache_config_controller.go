@@ -192,8 +192,9 @@ type RuntimeClientGetter func(secret corev1.Secret) (client.Client, error)
 
 func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, runtimeClientGetter RuntimeClientGetter) *RegistryCacheConfigReconciler {
 	return &RegistryCacheConfigReconciler{
-		KcpClient:           mgr.GetClient(),
-		Scheme:              mgr.GetScheme(),
+		KcpClient:     mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		//nolint:staticcheck // SA1019: GetEventRecorderFor is used, which is the correct API for this version
 		EventRecorder:       mgr.GetEventRecorderFor("runtime-controller"),
 		Log:                 logger,
 		RuntimeClientGetter: runtimeClientGetter,
