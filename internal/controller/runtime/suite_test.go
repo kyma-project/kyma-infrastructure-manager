@@ -300,7 +300,7 @@ func getSeedForRegion(providerType, region string) gardener_api.Seed {
 			LastOperation: &gardener_api.LastOperation{},
 			Conditions: []gardener_api.Condition{
 				{
-					Type:   gardener_api.SeedExtensionsReady,
+					Type:   gardener_api.GardenletReady,
 					Status: gardener_api.ConditionTrue,
 				},
 				{

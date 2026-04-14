@@ -38,8 +38,8 @@ func verifySeedReadiness(seed *gardener_types.Seed) bool {
 		return false
 	}
 
-	// Check that extensions are ready (replaces SeedGardenletReady from earlier versions)
-	if cond := v1beta1helper.GetCondition(seed.Status.Conditions, gardener_types.SeedExtensionsReady); cond == nil || cond.Status != gardener_types.ConditionTrue {
+	// Check that Gardenlet is ready
+	if cond := v1beta1helper.GetCondition(seed.Status.Conditions, gardener_types.GardenletReady); cond == nil || cond.Status != gardener_types.ConditionTrue {
 		return false
 	}
 
