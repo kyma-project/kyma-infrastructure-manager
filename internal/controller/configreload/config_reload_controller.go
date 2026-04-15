@@ -40,7 +40,8 @@ var (
 
 type RuntimePredicate func(configObject types.NamespacedName, runtime imv1.Runtime) bool
 
-// ConfigReloadWatcher reconciles a Secret object
+// ConfigReloadWatcher forces re-reconciliation of Runtime CRs when watched
+// ConfigMaps, Secrets, or ClusterTrustBundles are updated.
 type ConfigReloadWatcher struct {
 	KcpClient                   client.Client
 	Namespace                   string

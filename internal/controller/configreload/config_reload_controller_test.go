@@ -119,7 +119,6 @@ var _ = Describe("ConfigReloadWatcher", func() {
 		It("Should not annotate excluded Runtimes", func() {
 			createRuntime("runtime-excluded")
 			included := createRuntime("runtime-acl-pred")
-			cm := createConfigMap(aclConfigMapName + "-pred")
 
 			var existing corev1.ConfigMap
 			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: aclConfigMapName, Namespace: suiteNamespace}, &existing)).To(Succeed())
@@ -129,8 +128,6 @@ var _ = Describe("ConfigReloadWatcher", func() {
 
 			Eventually(hasForceReconcileAnnotation(included.Name), timeout, interval).Should(BeTrue())
 			Consistently(hasForceReconcileAnnotation("runtime-excluded"), 5*time.Second, interval).Should(BeFalse())
-
-			_ = cm
 		})
 	})
 

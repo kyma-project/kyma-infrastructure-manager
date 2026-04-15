@@ -50,7 +50,6 @@ var _ = BeforeSuite(func() {
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:           []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing:       true,
-		BinaryAssetsDirectory:       filepath.Join("..", "..", "..", "bin", "k8s"),
 		DownloadBinaryAssets:        true,
 		DownloadBinaryAssetsVersion: "1.35.0",
 	}

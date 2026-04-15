@@ -26,8 +26,7 @@ func (p ObjectUpdatedPredicate) match(e event.TypedUpdateEvent[client.Object]) b
 	return p.Name == e.ObjectNew.GetName() && p.Namespace == e.ObjectNew.GetNamespace()
 }
 
-// Create - handles the case of namespace creation (omits events comming from
-// the master secret namespace)
+// Create - always ignored; only Update events trigger reconciliation.
 func (p ObjectUpdatedPredicate) Create(e event.TypedCreateEvent[client.Object]) bool {
 	return false
 }
