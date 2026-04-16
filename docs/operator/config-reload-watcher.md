@@ -45,21 +45,21 @@ When a watched resource is updated, the following steps occur:
 3. The `ConfigReloadWatcher.Reconcile` method is called. It lists all Runtime CRs in the `kcp-system` namespace.
 4. For each Runtime CR, two checks are applied:
    - The `RuntimePredicate` determines if this Runtime CR needs to be patched (see [Runtime Predicate](#runtime-predicate)).
-   - If the Runtime CR already has the `force-patch-reconciliation` annotation, it is skipped.
+   - If Runtime CRs already have the `force-patch-reconciliation` annotation, they are skipped to avoid redundant patching.
 5. Eligible Runtime CRs are patched through server-side apply with the annotation `operator.kyma-project.io/force-patch-reconciliation=true`.
-6. The Runtime Controller detects the annotated CR and triggers a full cluster reconciliation.
+6. The Runtime CR controller detects the annotated CR and triggers a full cluster reconciliation.
 
 ## Runtime Predicate
 
-Not all Runtimes need to react to every configuration change. The `RuntimePredicate` function determines whether a specific Runtime should be re-reconciled for a given configuration change:
+Not all Runtime CRs need to be reconciled for every configuration change. The `RuntimePredicate` function determines whether a specific Runtime CR should be re-reconciled for a given configuration change:
 
 - If the triggering resource is the ACL ConfigMap, the predicate calls `AclNeedsToBeEnabled`, which returns `true` only when all the following conditions are met:
   - `--api-server-acl-enabled` is `true`
-  - The Runtime's provider type is AWS or Azure
-  - The Runtime has a non-empty ACL AllowedCIDRs list
+  - The Runtime CR provider type is AWS or Azure
+  - The Runtime CR has a non-empty ACL AllowedCIDRs list
 
-- For all other resources (Runtime Bootstrapper ConfigMaps, Secrets, ClusterTrustBundles), the predicate returns `true` - all Runtimes are re-reconciled.
+- For all other resources (Runtime Bootstrapper ConfigMaps, Secrets, ClusterTrustBundles), the predicate returns `true` - all Runtime CRs are reconciled.
 
 ## Event Filtering
 
-The controller uses `ObjectUpdatedPredicate` to filter Kubernetes watch events. Only **Update** events are processed. The **Create**, ** Delete **, and ** Generic ** events are ignored.
+The controller uses `ObjectUpdatedPredicate` to filter Kubernetes **Watch** events. Only **Update** events are processed. The **Create**, **Delete**, and **Generic** events are ignored.
