@@ -19,22 +19,22 @@ If neither flag is set, the controller is not created and no watches are registe
 
 The resources watched depend on the enabled feature.
 
-### When `--runtime-bootstrapper-enabled` is set
+- For `--runtime-bootstrapper-enabled`, the controller watches the following resources:
 
-| Resource Type | Name Source | Namespace |
-|:---|:---|:---|
-| ConfigMap | `--runtime-bootstrapper-kcp-config-name` | `kcp-system` |
-| ConfigMap | `--runtime-bootstrapper-manifests-config-map-name` | `kcp-system` |
-| ClusterTrustBundle | `--runtime-bootstrapper-kcp-cluster-trust-bundle` (optional) | cluster-scoped |
-| Secret | `--runtime-bootstrapper-kcp-pull-secret-name` (optional) | `kcp-system` |
+  | Resource Type | Name Source | Namespace |
+  |:---|:---|:---|
+  | ConfigMap | `--runtime-bootstrapper-kcp-config-name` | `kcp-system` |
+  | ConfigMap | `--runtime-bootstrapper-manifests-config-map-name` | `kcp-system` |
+  | ClusterTrustBundle | `--runtime-bootstrapper-kcp-cluster-trust-bundle` (optional) | cluster-scoped |
+  | Secret | `--runtime-bootstrapper-kcp-pull-secret-name` (optional) | `kcp-system` |
 
-The ClusterTrustBundle and pull Secret watches are only registered when the corresponding flag value is non-empty.
+  The ClusterTrustBundle and pull Secret watches are only registered when the corresponding flag value is non-empty.
 
-### When `--api-server-acl-enabled` is set
+- For `--api-server-acl-enabled`, the controller watches the following resource:
 
-| Resource Type | Name Source | Namespace |
-|:---|:---|:---|
-| ConfigMap | `converterConfig.kubernetes.kubeApiServer.acl.configMapName` | `kcp-system` |
+  | Resource Type | Name Source | Namespace |
+  |:---|:---|:---|
+  | ConfigMap | `converterConfig.kubernetes.kubeApiServer.acl.configMapName` | `kcp-system` |
 
 ## Reconciliation Flow
 
@@ -43,17 +43,17 @@ When a watched resource is updated, the following steps occur:
 1. A watched resource (ConfigMap, Secret, or ClusterTrustBundle) is updated.
 2. The `ObjectUpdatedPredicate` filters the event - only **Update** events with a matching name and namespace pass through.
 3. The `ConfigReloadWatcher.Reconcile` method is called. It lists all Runtime CRs in the `kcp-system` namespace.
-4. For each Runtime, two checks are applied:
-   - The `RuntimePredicate` determines if this Runtime should react to the specific config change (see [Runtime Predicate](#runtime-predicate)).
-   - If the Runtime already has the `force-patch-reconciliation` annotation, it is skipped.
-5. Eligible Runtimes are patched through server-side apply with the annotation `operator.kyma-project.io/force-patch-reconciliation=true`.
-6. The Runtime Controller detects the annotated CR and triggers a full re-reconciliation.
+4. For each Runtime CR, two checks are applied:
+   - The `RuntimePredicate` determines if this Runtime CR needs to be patched (see [Runtime Predicate](#runtime-predicate)).
+   - If the Runtime CR already has the `force-patch-reconciliation` annotation, it is skipped.
+5. Eligible Runtime CRs are patched through server-side apply with the annotation `operator.kyma-project.io/force-patch-reconciliation=true`.
+6. The Runtime Controller detects the annotated CR and triggers a full cluster reconciliation.
 
 ## Runtime Predicate
 
 Not all Runtimes need to react to every configuration change. The `RuntimePredicate` function determines whether a specific Runtime should be re-reconciled for a given configuration change:
 
-- If the triggering resource is the ACL ConfigMap, the predicate calls `AclNeedsToBeEnabled`, which returns `true` only when the following conditions are met:
+- If the triggering resource is the ACL ConfigMap, the predicate calls `AclNeedsToBeEnabled`, which returns `true` only when all the following conditions are met:
   - `--api-server-acl-enabled` is `true`
   - The Runtime's provider type is AWS or Azure
   - The Runtime has a non-empty ACL AllowedCIDRs list
