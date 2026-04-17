@@ -108,8 +108,8 @@ github.com/gardener/gardener-extension-registry-cache v0.21.0 h1:AlY0TZhCBtLf65y
 github.com/gardener/gardener-extension-registry-cache v0.21.0/go.mod h1:KwL8f9Aqb+N6ofuCdkdqWW/F+z9nT+R/nba15UIKD8Q=
 github.com/gardener/gardener-extension-runtime-gvisor v0.33.0 h1:OaVnOFe6PcmrjNp+rIpZn40OeHBgzqB7QWSXg0zTFx0=
 github.com/gardener/gardener-extension-runtime-gvisor v0.33.0/go.mod h1:Fg8isPv6/0C9NOUuMAD6SO6Xxvt96OfxJmZoWNFkXhI=
-github.com/gardener/gardener/pkg/apis v1.139.1 h1:yxHSs1y393/FesGAVBORnDbc7isi3cLMLMIJmCzmZhk=
-github.com/gardener/gardener/pkg/apis v1.139.1/go.mod h1:3Tbqw9dx7KaJ7Fikkna+WVGjRCyTTdlZEAy0GV6u4Gc=
+github.com/gardener/gardener/pkg/apis v1.140.1 h1:5YoYoZmbvrg11/rA/rM9z+sI38SU/xB+QhLkmmY1zGQ=
+github.com/gardener/gardener/pkg/apis v1.140.1/go.mod h1:3Tbqw9dx7KaJ7Fikkna+WVGjRCyTTdlZEAy0GV6u4Gc=
 github.com/gardener/machine-controller-manager v0.61.3 h1:w0JuHCKLmcK7B8E7mx3TvE3e0hSYwikchsMSiMhocqw=
 github.com/gardener/machine-controller-manager v0.61.3/go.mod h1:8eE1qLztrWIbOM71mHSQGaC6Q+pl5lvOyN08qP39D7o=
 github.com/gardener/oidc-webhook-authenticator v0.42.0 h1:kd0Mgpt+Z8QKObJ8t47xNwvAsgs62mkHJpJ28Zo9dU8=
