@@ -162,7 +162,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 			err := extender(testRuntime, shoot)
 			assert.NoError(t, err)
 			assert.NotNil(t, shoot.Spec.Extensions)
-			assert.Equal(t, aclNeedsToBeEnabled(testcase.apiServerACLEnabled, testRuntime), configMapGetCalled)
+			assert.Equal(t, AclNeedsToBeEnabled(testcase.apiServerACLEnabled, testRuntime), configMapGetCalled)
 
 			orderMap := testcase.extensionOrderMap
 			require.Len(t, shoot.Spec.Extensions, len(orderMap))
@@ -433,7 +433,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 
 			auditLogDataProvided := testCase.inputAuditLogData != (auditlogs.AuditLogData{})
 			registryCacheDataProvided := len(testCase.registryCaches) != 0
-			kubeApiServerACLEnabled := aclNeedsToBeEnabled(testCase.apiServerACLEnabled, testRuntime)
+			kubeApiServerACLEnabled := AclNeedsToBeEnabled(testCase.apiServerACLEnabled, testRuntime)
 			nvidiaOpenshellExistsInOutput := isNvidiaOpenshellEnabled(testRuntime) || existingExtension(NvidiaOpenshellExtensionType, prevShoot) != nil
 
 			extender := NewExtensionsExtenderForPatch(context.Background(), fakeClient, config, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled)

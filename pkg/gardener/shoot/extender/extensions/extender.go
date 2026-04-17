@@ -71,7 +71,7 @@ func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client
 		{
 			Type: ApiServerACLExtensionType,
 			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-				if !aclNeedsToBeEnabled(apiServerAclEnabled, runtime) {
+				if !AclNeedsToBeEnabled(apiServerAclEnabled, runtime) {
 					return nil, nil
 				}
 
@@ -148,7 +148,7 @@ func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client,
 		{
 			Type: ApiServerACLExtensionType,
 			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-				if !aclNeedsToBeEnabled(apiServerAclEnabled, runtime) {
+				if !AclNeedsToBeEnabled(apiServerAclEnabled, runtime) {
 					if existingExtension(ApiServerACLExtensionType, shoot) == nil {
 						return nil, nil
 					}
