@@ -25,13 +25,13 @@ import (
 	"os"
 	"time"
 
-	configctrl "github.com/kyma-project/infrastructure-manager/internal/controller/rtbootstrapperconfig"
-	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
-
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenerapis "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	"github.com/go-logr/logr"
 	validator "github.com/go-playground/validator/v10"
+	configctrl "github.com/kyma-project/infrastructure-manager/internal/controller/configreload"
+	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -278,78 +278,97 @@ func main() {
 
 	var runtimeBootstrapperInstaller *rtbootstrapper.Installer
 
-	if runtimeBootstrapperEnabled {
-		if runtimeBootstrapperKCPClusterTrustBundle != "" {
-			// ClusterTrustBundle is a beta feature and needs to be explicitly enabled in the converter config
-			// When the feature is generally available, this code can be removed
-			// As of the time of writing (December 2025) there is no GA release date announced
-			// Details: https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#cluster-trust-bundles
-			enableClusterTrustBundleFeatureForSKR(&config.ConverterConfig)
-		}
+	if apiServerAclEnabled || runtimeBootstrapperEnabled {
+		var secretPredicates []configctrl.ObjectUpdatedPredicate
+		var configMapPredicates []configctrl.ObjectUpdatedPredicate
+		var clusterTrustBundlePredicate *configctrl.ObjectUpdatedPredicate
+		var kcpClient client.Client
 
-		rtbConfig := rtbootstrapper.Config{
-			KCPConfig: rtbootstrapper.KCPConfig{
-				PullSecretName:         runtimeBootstrapperKCPPullSecretName,
-				ClusterTrustBundleName: runtimeBootstrapperKCPClusterTrustBundle,
-				ConfigName:             runtimeBootstrapperKCPConfigName,
-				ManifestsConfigMapName: runtimeBootstrapperManifestsConfigMapName,
-			},
-			SKRConfig: rtbootstrapper.SKRConfig{
-				Namespace:              runtimeBootstrapperSKRNamespace,
-				PullSecretName:         runtimeBootstrapperSKRPullSecretName,
-				ClusterTrustBundleName: runtimeBootstrapperSKRClusterTrustBundle,
-				ConfigName:             runtimeBootstrapperSKRConfigName,
-				DeploymentName:         runtimeBootstrapperSKRDeploymentName,
-			},
-		}
-
-		cfg, err := ctrl.GetConfig()
-		if err != nil {
-			setupLog.Error(err, "unable to get rest config")
-			os.Exit(1)
-		}
-		kcpClient, err := client.New(cfg, client.Options{Scheme: scheme})
+		kcpClient, err = client.New(restConfig, client.Options{Scheme: scheme})
 		if err != nil {
 			setupLog.Error(err, "unable to create client")
 			os.Exit(1)
 		}
 
-		runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(rtbConfig, runtimeClientGetter, kcpClient)
-		if err != nil {
-			setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
-			os.Exit(1)
-		}
+		if runtimeBootstrapperEnabled {
+			if runtimeBootstrapperKCPClusterTrustBundle != "" {
+				// ClusterTrustBundle is a beta feature and needs to be explicitly enabled in the converter config
+				// When the feature is generally available, this code can be removed
+				// As of the time of writing (December 2025) there is no GA release date announced
+				// Details: https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#cluster-trust-bundles
+				enableClusterTrustBundleFeatureForSKR(&config.ConverterConfig)
+			}
 
-		watcherConfig := configctrl.Cfg{
-			Client:    kcpClient,
-			Namespace: "kcp-system",
-			RtBootstrapperCfg: types.NamespacedName{
+			rtbConfig := rtbootstrapper.Config{
+				KCPConfig: rtbootstrapper.KCPConfig{
+					PullSecretName:         runtimeBootstrapperKCPPullSecretName,
+					ClusterTrustBundleName: runtimeBootstrapperKCPClusterTrustBundle,
+					ConfigName:             runtimeBootstrapperKCPConfigName,
+					ManifestsConfigMapName: runtimeBootstrapperManifestsConfigMapName,
+				},
+				SKRConfig: rtbootstrapper.SKRConfig{
+					Namespace:              runtimeBootstrapperSKRNamespace,
+					PullSecretName:         runtimeBootstrapperSKRPullSecretName,
+					ClusterTrustBundleName: runtimeBootstrapperSKRClusterTrustBundle,
+					ConfigName:             runtimeBootstrapperSKRConfigName,
+					DeploymentName:         runtimeBootstrapperSKRDeploymentName,
+				},
+			}
+
+			runtimeBootstrapperInstaller, err = configureRuntimeBootstrapper(rtbConfig, runtimeClientGetter, kcpClient)
+			if err != nil {
+				setupLog.Error(err, "unable to initialize runtime bootstrapper installer")
+				os.Exit(1)
+			}
+
+			rtBootstrapperCfgNN := types.NamespacedName{
 				Name:      runtimeBootstrapperKCPConfigName,
 				Namespace: "kcp-system",
-			},
-			RtBootstrapperManifests: types.NamespacedName{
+			}
+			rtBootstrapperManifestsNN := types.NamespacedName{
 				Name:      runtimeBootstrapperManifestsConfigMapName,
 				Namespace: "kcp-system",
-			},
+			}
+
+			configMapPredicates = append(configMapPredicates,
+				configctrl.ObjectUpdatedPredicate{NamespacedName: rtBootstrapperCfgNN},
+				configctrl.ObjectUpdatedPredicate{NamespacedName: rtBootstrapperManifestsNN},
+			)
+
+			if runtimeBootstrapperKCPClusterTrustBundle != "" {
+				clusterTrustBundlePredicate = &configctrl.ObjectUpdatedPredicate{NamespacedName: types.NamespacedName{
+					Name: runtimeBootstrapperKCPClusterTrustBundle}}
+			}
+
+			if runtimeBootstrapperKCPPullSecretName != "" {
+				secretPredicates = append(secretPredicates, configctrl.ObjectUpdatedPredicate{NamespacedName: types.NamespacedName{
+					Name:      runtimeBootstrapperKCPPullSecretName,
+					Namespace: "kcp-system",
+				}})
+			}
 		}
 
-		if runtimeBootstrapperKCPPullSecretName != "" {
-			watcherConfig.ImagePullSecret = types.NamespacedName{
-				Name:      runtimeBootstrapperKCPPullSecretName,
+		if apiServerAclEnabled {
+			configMapPredicates = append(configMapPredicates, configctrl.ObjectUpdatedPredicate{NamespacedName: types.NamespacedName{
+				Name:      config.ConverterConfig.Kubernetes.KubeApiServer.ACL.ConfigMapName,
 				Namespace: "kcp-system",
-			}
+			}})
 		}
 
-		if runtimeBootstrapperKCPClusterTrustBundle != "" {
-			watcherConfig.ClusterTrustBundle = types.NamespacedName{
-				Name: runtimeBootstrapperKCPClusterTrustBundle,
-			}
-		}
-
-		if err := (&configctrl.RuntimeBootstrapperConfigWatcher{
-			Kcp: watcherConfig,
+		if err = (&configctrl.ConfigReloadWatcher{
+			KcpClient:                   kcpClient,
+			Namespace:                   "kcp-system",
+			ConfigMapPredicates:         configMapPredicates,
+			SecretPredicates:            secretPredicates,
+			ClusterTrustBundlePredicate: clusterTrustBundlePredicate,
+			RuntimePredicate: func(configObject types.NamespacedName, runtime infrastructuremanagerv1.Runtime) bool {
+				if configObject.Name == config.ConverterConfig.Kubernetes.KubeApiServer.ACL.ConfigMapName {
+					return extensions.AclNeedsToBeEnabled(apiServerAclEnabled, runtime)
+				}
+				return true
+			},
 		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Secret")
+			setupLog.Error(err, "unable to create controller", "controller", "ConfigReloadWatcher")
 			os.Exit(1)
 		}
 	}
