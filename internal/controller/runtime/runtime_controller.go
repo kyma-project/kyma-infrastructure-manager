@@ -85,9 +85,10 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 
 func NewRuntimeReconciler(mgr ctrl.Manager, gardenClient client.Client, runtimeClientGetter fsm.RuntimeClientGetter, RuntimeBootstrapperInstaller *rtbootstrapper.Installer, logger logr.Logger, cfg fsm.RCCfg) *RuntimeReconciler {
 	return &RuntimeReconciler{
-		KcpClient:                    mgr.GetClient(),
-		Scheme:                       mgr.GetScheme(),
-		GardenClient:                 gardenClient,
+		KcpClient:    mgr.GetClient(),
+		Scheme:       mgr.GetScheme(),
+		GardenClient: gardenClient,
+		//nolint:staticcheck // SA1019: GetEventRecorderFor is used, which is the correct API for this version
 		EventRecorder:                mgr.GetEventRecorderFor("runtime-controller"),
 		Log:                          logger,
 		Cfg:                          cfg,
