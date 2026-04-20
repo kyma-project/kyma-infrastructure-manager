@@ -4,14 +4,14 @@ go 1.26.2
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/gardener/gardener v1.139.1
+	github.com/gardener/gardener v1.140.1
 	github.com/gardener/gardener-extension-provider-alicloud v1.69.0
 	github.com/gardener/gardener-extension-provider-aws v1.68.3
 	github.com/gardener/gardener-extension-provider-gcp v1.50.0
 	github.com/gardener/gardener-extension-provider-openstack v1.53.1
 	github.com/gardener/gardener-extension-registry-cache v0.21.0
-	github.com/gardener/gardener-extension-runtime-gvisor v0.31.0
-	github.com/gardener/gardener/pkg/apis v1.139.0
+	github.com/gardener/gardener-extension-runtime-gvisor v0.33.0
+	github.com/gardener/gardener/pkg/apis v1.140.1
 	github.com/gardener/oidc-webhook-authenticator v0.42.0
 	github.com/go-logr/logr v1.4.3
 	github.com/go-playground/validator/v10 v10.30.2
