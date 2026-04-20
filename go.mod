@@ -16,7 +16,7 @@ require (
 	github.com/go-logr/logr v1.4.3
 	github.com/go-playground/validator/v10 v10.30.2
 	github.com/kyma-project/lifecycle-manager/api v0.0.0-20250415061517-3922bac13370
-	github.com/kyma-project/registry-cache v0.0.0-20251023124504-71bc19cf102a
+	github.com/kyma-project/registry-cache v0.0.0-20260417061818-49477c97b69a
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
 	github.com/pkg/errors v0.9.1
