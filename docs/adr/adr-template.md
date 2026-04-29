@@ -32,4 +32,6 @@ For example, `The decision is to...`. If it is necessary to indicate the subject
 
 <!-- Briefly explain the consequences of this decision for the Kyma project.
 Include both the advantages and disadvantages of the discussed solution.
+<!-- Briefly explain the consequences of this decision for the Kyma project.
+Include both the advantages and disadvantages of the discussed solution.
 -->
