@@ -110,10 +110,10 @@ func (h *RuntimeDeletionWebhook) Handle(ctx context.Context, req admission.Reque
         return admission.Errored(http.StatusBadRequest, err)
     }
 
-    if runtime.Annotations[AnnotationDeletionConfirmed] != "true" {
+    if runtime.Annotations[AnnotationRuntimeDeletionConfirmed] != "true" {
         return admission.Denied(
             "Runtime deletion requires the annotation " +
-            AnnotationDeletionConfirmed + "=true to be set before deleting the CR. " +
+            AnnotationRuntimeDeletionConfirmed + "=true to be set before deleting the CR. " +
             "Apply the annotation first, then retry the deletion.",
         )
     }
@@ -125,7 +125,11 @@ func (h *RuntimeDeletionWebhook) Handle(ctx context.Context, req admission.Reque
 **Annotation constant** (`api/v1/runtime_types.go`):
 
 ```go
-const AnnotationDeletionConfirmed = "operator.kyma-project.io/deletion-confirmed"
+// AnnotationRuntimeDeletionConfirmed is distinct from the existing
+// AnnotationGardenerCloudDelConfirmation ("confirmation.gardener.cloud/deletion"),
+// which gates Gardener Shoot deletion. This constant gates Runtime CR deletion at
+// the KIM webhook layer.
+const AnnotationRuntimeDeletionConfirmed = "operator.kyma-project.io/deletion-confirmed"
 ```
 
 **Registration** in `cmd/main.go`:
