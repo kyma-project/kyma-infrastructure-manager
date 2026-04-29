@@ -53,22 +53,25 @@ The Runtime Controller already manages a finalizer (`runtime-controller.infrastr
 A Kubernetes `ValidatingWebhookConfiguration` intercepts every `DELETE` request for `Runtime` objects before it is persisted. The webhook rejects the request with HTTP 403 and a human-readable message unless the Runtime CR carries a specific annotation added as a separate, prior action.
 
 Proposed two-step protocol:
-1. **Step 1 — annotate:** The caller (human or KEB) adds the annotation `operator.kyma-project.io/deletion-confirmed: "true"` to the Runtime CR using a `kubectl annotate` or PATCH request.
-2. **Step 2 — delete:** The caller issues the `kubectl delete runtime <name>` command. The webhook reads the annotation from the persisted object and allows the deletion.
+1. **Step 1 — annotate:** The caller (human or KEB) sets the annotation `operator.kyma-project.io/deletion-confirmed` on the Runtime CR to the current UTC timestamp in RFC 3339 format (e.g. `2026-04-29T14:00:00Z`) using a `kubectl annotate` or PATCH request.
+2. **Step 2 — delete:** The caller issues the `kubectl delete runtime <name>` command within a short time window (default: 2 minutes) after setting the annotation. The webhook validates that the timestamp is not in the future, and that the current time falls within the configured acceptance window. Requests outside the window are rejected.
 
 The webhook is the enforcement point; it runs in a separate process (or as a sub-handler in the KIM manager process) and has no dependency on the reconciliation loop.
 
 **Pros:**
 - Satisfies requirement 2: the API server rejects the deletion before it reaches etcd or any controller.
 - Satisfies requirement 1: annotation and deletion are two distinct API calls; a single erroneous command cannot satisfy both.
+- The time-window constraint makes the annotation self-expiring: once the window elapses the annotation is stale and a fresh annotation is required, which eliminates the retry-gap problem (a transient rejection does not leave a permanently valid annotation on the object).
+- Future timestamps are rejected, preventing pre-staging of the annotation.
 - Works regardless of the state of the KIM reconciler (e.g., even if the controller is temporarily down, the webhook still rejects unannotated deletions provided the webhook is reachable).
-- Audit trail: every rejected deletion appears as a `403 Forbidden` response in the Kubernetes audit log; every accepted deletion carries the annotation in the audit record.
+- Audit trail: every rejected deletion appears as a `403 Forbidden` response in the Kubernetes audit log; every accepted deletion carries the timestamp annotation in the audit record, making the confirmation time recoverable during post-mortems.
 - Automatable: KEB can perform both steps programmatically with no user interaction.
 
 **Cons:**
 - Adds an operational dependency: if the webhook pod is unavailable and the `failurePolicy` is `Fail`, all Runtime deletions (including legitimate ones) are blocked. If `failurePolicy` is `Ignore`, the protection is bypassed during outages.
 - Requires a TLS-secured HTTPS server, a `ValidatingWebhookConfiguration` resource, and a CA bundle rotation mechanism.
 - Needs careful RBAC design to prevent the annotation from being added by any service account that also has delete permission (which would reduce the two-step requirement to a single automated step).
+- The caller and the webhook server must have sufficiently synchronised clocks. A clock skew larger than the acceptance window would either block valid deletions or extend the window unintentionally. Mitigation: rely on NTP synchronisation, which is standard for Kubernetes nodes.
 
 #### Option 3: OPA / Kyverno policy
 
@@ -90,16 +93,24 @@ The decision is to implement **Option 2: a Kubernetes validating admission webho
 The webhook intercepts `DELETE` operations on `Runtime` objects (group `infrastructuremanager.kyma-project.io`, version `v1`, resource `runtimes`) and rejects them unless the Runtime CR carries the annotation:
 
 ```
-operator.kyma-project.io/deletion-confirmed: "true"
+operator.kyma-project.io/deletion-confirmed: "<RFC 3339 UTC timestamp>"
 ```
 
-The annotation must have been applied in a separate API call prior to the delete request. After a successful deletion the annotation is irrelevant (the object is gone); if the deletion is retried after the object is restored, the annotation must be re-applied.
+The annotation value must be a valid RFC 3339 UTC timestamp that:
+1. Is **not in the future** (prevents pre-staging of the confirmation).
+2. Falls **within the acceptance window** counted from the annotation timestamp to the moment the DELETE request arrives at the webhook (default: 2 minutes, configurable via a KIM manager flag).
+
+If either condition is not met the webhook rejects the request with HTTP 403 and a message stating the reason (missing annotation, future timestamp, or expired window). The caller must re-annotate with the current time and retry.
+
+This design inherently resolves the annotation-persistence-after-retry problem: an annotation set at time T is only valid until T + window. A transient rejection (e.g. webhook timeout) does not leave a permanently valid annotation; once the window elapses the annotation is stale and a fresh annotation is required.
 
 ### Implementation sketch
 
 **Webhook handler** (`internal/webhook/runtime_deletion_webhook.go`):
 
 ```go
+const DeletionConfirmedWindow = 2 * time.Minute
+
 func (h *RuntimeDeletionWebhook) Handle(ctx context.Context, req admission.Request) admission.Response {
     if req.Operation != admissionv1.Delete {
         return admission.Allowed("")
@@ -110,12 +121,31 @@ func (h *RuntimeDeletionWebhook) Handle(ctx context.Context, req admission.Reque
         return admission.Errored(http.StatusBadRequest, err)
     }
 
-    if runtime.Annotations[AnnotationRuntimeDeletionConfirmed] != "true" {
+    raw, ok := runtime.Annotations[AnnotationRuntimeDeletionConfirmed]
+    if !ok || raw == "" {
         return admission.Denied(
             "Runtime deletion requires the annotation " +
-            AnnotationRuntimeDeletionConfirmed + "=true to be set before deleting the CR. " +
-            "Apply the annotation first, then retry the deletion.",
+            AnnotationRuntimeDeletionConfirmed + " to be set to a UTC RFC 3339 timestamp " +
+            "no more than " + DeletionConfirmedWindow.String() + " in the past.",
         )
+    }
+
+    ts, err := time.Parse(time.RFC3339, raw)
+    if err != nil {
+        return admission.Denied("annotation " + AnnotationRuntimeDeletionConfirmed +
+            " is not a valid RFC 3339 timestamp: " + err.Error())
+    }
+
+    now := time.Now().UTC()
+    if ts.After(now) {
+        return admission.Denied("annotation " + AnnotationRuntimeDeletionConfirmed +
+            " must not be a future timestamp")
+    }
+
+    if now.Sub(ts) > h.window {
+        return admission.Denied("annotation " + AnnotationRuntimeDeletionConfirmed +
+            " has expired (set at " + raw + ", window is " + h.window.String() + ")" +
+            " — re-annotate with the current timestamp and retry")
     }
 
     return admission.Allowed("")
@@ -125,10 +155,13 @@ func (h *RuntimeDeletionWebhook) Handle(ctx context.Context, req admission.Reque
 **Annotation constant** (`api/v1/runtime_types.go`):
 
 ```go
-// AnnotationRuntimeDeletionConfirmed is distinct from the existing
-// AnnotationGardenerCloudDelConfirmation ("confirmation.gardener.cloud/deletion"),
-// which gates Gardener Shoot deletion. This constant gates Runtime CR deletion at
-// the KIM webhook layer.
+// AnnotationRuntimeDeletionConfirmed gates Runtime CR deletion at the KIM webhook layer.
+// Its value must be a UTC RFC 3339 timestamp set immediately before the DELETE request.
+// The webhook rejects the deletion if the timestamp is in the future or older than the
+// configured acceptance window (default 2 minutes).
+//
+// This constant is distinct from AnnotationGardenerCloudDelConfirmation
+// ("confirmation.gardener.cloud/deletion"), which gates Gardener Shoot deletion.
 const AnnotationRuntimeDeletionConfirmed = "operator.kyma-project.io/deletion-confirmed"
 ```
 
@@ -148,6 +181,8 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: infrastructure-manager-validating-webhook
+  annotations:
+    cert-manager.io/inject-ca-from: kcp-system/infrastructure-manager-webhook-cert
 webhooks:
   - name: vruntime.kb.io
     rules:
@@ -161,6 +196,7 @@ webhooks:
         name: infrastructure-manager-webhook-service
         namespace: kcp-system
         path: /validate-infrastructuremanager-kyma-project-io-v1-runtime
+      caBundle: "" # populated automatically by cert-manager ca-injector
     admissionReviewVersions: ["v1"]
     sideEffects: None
     failurePolicy: Fail
@@ -170,10 +206,10 @@ webhooks:
 
 ### RBAC considerations
 
-The `deletion-confirmed` annotation must not be settable by any service account that also holds the `delete` verb on `runtimes`. Otherwise, a single compromised or buggy service account could annotate and delete in one automated flow, bypassing the two-step intent. The following rule applies:
+The `deletion-confirmed` annotation must not be freely settable by any service account that also holds the `delete` verb on `runtimes`. Otherwise, a single compromised or buggy service account could annotate and delete in one automated flow, reducing the two-step protocol to a single step.
 
-- KEB's service account has `patch`/`update` permission on `runtimes` (to apply the annotation) **and** `delete` permission. This is unavoidable for programmatic deletions. The two-step requirement is enforced procedurally for KEB (annotation must precede delete in its workflow) and technically for ad-hoc human access (SRE roles must not have both permissions simultaneously).
-- SRE break-glass roles should have `delete` permission but not `patch`/`update` on `runtimes` in STAGE/PROD landscapes, so that a human deletion always requires a second person with annotation rights to act first.
+- **KEB's service account** holds `patch`/`update` on `runtimes` (to apply the annotation) **and** `delete` permission. This is unavoidable for programmatic deletions. **Known limitation:** for the KEB path the two-step requirement is enforced procedurally (annotation must precede delete in KEB's workflow), not technically. The timestamp window mitigates the risk of annotation pre-staging (an annotation set long in advance will have expired by the time the delete is issued) but a bug or compromise in KEB that sets the annotation and immediately deletes within the window would bypass the intent of the two-step protocol. This limitation is accepted for the KEB path; future work may introduce a separate, annotation-only service account for KEB distinct from its delete credential.
+- **SRE break-glass roles** should have `delete` permission but not `patch`/`update` on `runtimes` in STAGE/PROD landscapes, so that a human deletion always requires a second person with annotation rights to act first. This enforces the two-step protocol technically for the human access path.
 
 ## Consequences
 
@@ -181,10 +217,12 @@ The `deletion-confirmed` annotation must not be settable by any service account 
 - Accidental single-command deletions by humans or software are rejected before any deprovisioning begins.
 - The protection is enforced at the Kubernetes API layer, independently of the KIM controller process; a bug in the KIM reconciler cannot bypass it.
 - The mechanism is self-contained within KIM's deployment (no external policy engine dependency).
-- Every rejected deletion is recorded in the Kubernetes API audit log, supporting incident post-mortems.
+- Every rejected deletion is recorded in the Kubernetes API audit log, supporting incident post-mortems; the timestamp annotation makes the confirmation time recoverable.
+- The time-window approach eliminates the annotation-persistence-after-retry problem: a stale annotation (outside the window) is rejected, forcing re-confirmation regardless of whether a previous deletion attempt succeeded or failed transiently.
+- Future timestamps are rejected, preventing pre-staging of the annotation.
 
 **Disadvantages and mitigations:**
 - The KIM webhook server becomes a critical component on KCP: if it is unavailable (with `failurePolicy: Fail`), Runtime deletions are blocked. Mitigation: the webhook server runs inside the same manager process as the controllers, benefits from the same HA/leader-election setup, and should be included in KCP readiness checks.
-- TLS certificate management is required for the webhook endpoint. Mitigation: use `cert-manager` (already used in the Kyma ecosystem) to issue and rotate the webhook server certificate automatically.
-- The two-step requirement adds friction for legitimate deletions. Mitigation: KEB automates both steps; human operators follow a runbook that makes the annotation step explicit and deliberate.
-- Protecting a restored Runtime CR after accidental re-creation requires re-applying the annotation. Mitigation: document this in the operator runbook.
+- The time-window adds a deadline for the caller: the DELETE must follow the annotation within 2 minutes (configurable). Mitigation: the window is configurable; KEB automates both steps back-to-back; human operators follow a runbook that keeps the steps close together.
+- Clock skew between the caller and the webhook server could cause spurious rejections if skew exceeds the window. Mitigation: rely on NTP synchronisation, which is standard for Kubernetes nodes; skew is expected to be well under one second.
+- The two-step requirement for KEB is enforced only procedurally, not technically (KEB holds both annotation and delete permissions). Mitigation: the timestamp window limits the exposure period; future work may separate KEB's annotation credential from its delete credential.
