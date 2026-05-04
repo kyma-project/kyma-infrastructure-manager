@@ -99,7 +99,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/component-base v0.35.3 // indirect
-	k8s.io/klog/v2 v2.130.1 // indirect
+	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260127142750-a19766b6e2d4 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
@@ -107,9 +107,9 @@ require (
 )
 
 replace (
-	golang.org/x/crypto => golang.org/x/crypto v0.49.0
+	golang.org/x/crypto => golang.org/x/crypto v0.50.0
 	golang.org/x/net => golang.org/x/net v0.53.0
-	golang.org/x/sys => golang.org/x/sys v0.42.0
+	golang.org/x/sys => golang.org/x/sys v0.43.0
 	golang.org/x/text => golang.org/x/text v0.36.0
 	golang.org/x/tools => golang.org/x/tools v0.44.0
 )
