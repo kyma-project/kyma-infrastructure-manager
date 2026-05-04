@@ -107,7 +107,7 @@ type Networking struct {
 type ConverterConfig struct {
 	Kubernetes        KubernetesConfig        `json:"kubernetes" validate:"required"`
 	DNS               DNSConfig               `json:"dns"`
-	Provider          ProviderConfig          `json:"provider" validate:"required"`
+	Provider          ProviderConfig          `json:"provider"`
 	MachineImage      MachineImageConfig      `json:"machineImage" validate:"required"`
 	Gardener          GardenerConfig          `json:"gardener" validate:"required"`
 	AuditLog          AuditLogConfig          `json:"auditLogging" validate:"required"`
