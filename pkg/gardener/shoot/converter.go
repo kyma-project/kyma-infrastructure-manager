@@ -78,8 +78,8 @@ func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
 		provider.NewProviderExtenderForCreateOperation(
 			opts.Networking.EnableDualStackIP,
 			opts.Provider.AWS.EnableIMDSv2,
-			opts.MachineImage.DefaultName,
-			opts.MachineImage.DefaultVersion,
+			opts.MachineImage,
+			opts.Provider.Worker,
 		),
 		extender2.ExtendWithGVisorNetRawDefault,
 		extender2.NewTolerationsExtender(opts.Tolerations),
@@ -113,9 +113,9 @@ func NewConverterPatch(ctx context.Context, opts PatchOpts) Converter {
 	extendersForPatch = append(extendersForPatch,
 		provider.NewProviderExtenderPatchOperation(
 			opts.Provider.AWS.EnableIMDSv2,
-			opts.MachineImage.DefaultName,
-			opts.MachineImage.DefaultVersion,
 			opts.Workers,
+			opts.MachineImage,
+			opts.Provider.Worker,
 			opts.InfrastructureConfig,
 			opts.ControlPlaneConfig))
 	extendersForPatch = append(extendersForPatch, extender2.ExtendWithGVisorNetRawDefault)

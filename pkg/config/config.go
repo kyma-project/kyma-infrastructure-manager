@@ -17,7 +17,13 @@ type ClusterConfig struct {
 }
 
 type ProviderConfig struct {
-	AWS AWSConfig `json:"aws"`
+	AWS    AWSConfig    `json:"aws"`
+	Worker WorkerConfig `json:"worker" validate:"required"`
+}
+
+type WorkerConfig struct {
+	DefaultMaxEvictRetries     string `json:"defaultMaxEvictRetries" validate:"required"`
+	DefaultMachineDrainTimeout string `json:"defaultMachineDrainTimeout" validate:"required"`
 }
 
 type AWSConfig struct {
@@ -101,7 +107,7 @@ type Networking struct {
 type ConverterConfig struct {
 	Kubernetes        KubernetesConfig        `json:"kubernetes" validate:"required"`
 	DNS               DNSConfig               `json:"dns"`
-	Provider          ProviderConfig          `json:"provider"`
+	Provider          ProviderConfig          `json:"provider" validate:"required"`
 	MachineImage      MachineImageConfig      `json:"machineImage" validate:"required"`
 	Gardener          GardenerConfig          `json:"gardener" validate:"required"`
 	AuditLog          AuditLogConfig          `json:"auditLogging" validate:"required"`

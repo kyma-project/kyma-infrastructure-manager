@@ -9,6 +9,7 @@ import (
 	metrics_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
 	fsm_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
@@ -243,11 +244,25 @@ var (
 			return nil
 		}
 	}
+
+	withDefaultWorkerConfig = func() fakeFSMOpt {
+		return func(fsm *fsm) error {
+			fsm.Config.ConverterConfig.Provider.Worker = config.WorkerConfig{
+				DefaultMaxEvictRetries:     "2",
+				DefaultMachineDrainTimeout: "15m",
+			}
+			return nil
+		}
+	}
 )
 
 func newFakeFSM(opts ...fakeFSMOpt) (*fsm, error) {
 	fsm := fsm{
 		log: zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)),
+	}
+	fsm.Config.ConverterConfig.Provider.Worker = config.WorkerConfig{
+		DefaultMaxEvictRetries:     "2",
+		DefaultMachineDrainTimeout: "15m",
 	}
 	// apply opts
 	for _, opt := range opts {
