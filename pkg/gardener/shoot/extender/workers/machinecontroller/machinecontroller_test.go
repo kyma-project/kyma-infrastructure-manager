@@ -136,14 +136,18 @@ func TestApplyMachineControllerManagerConfig(t *testing.T) {
 			expectedErrorContain: "cannot parse the value for evict retries",
 		},
 		{
-			name: "empty evict retries returns error",
+			name: "empty evict retries uses code default",
 			workers: []gardener.Worker{
 				{MachineControllerManagerSettings: nil},
 			},
-			defaultDrainTimeout:  "15m",
-			defaultEvictRetries:  "",
-			expectError:          true,
-			expectedErrorContain: "cannot parse the value for evict retries",
+			defaultDrainTimeout: "15m",
+			defaultEvictRetries: "",
+			expectedSettings: []*gardener.MachineControllerManagerSettings{
+				{
+					MaxEvictRetries:     ptr.To(int32(2)),
+					MachineDrainTimeout: &v1.Duration{Duration: 15 * time.Minute},
+				},
+			},
 		},
 		{
 			name: "invalid drain timeout returns error",
@@ -156,14 +160,18 @@ func TestApplyMachineControllerManagerConfig(t *testing.T) {
 			expectedErrorContain: "cannot parse drain timeout",
 		},
 		{
-			name: "empty drain timeout returns error",
+			name: "empty drain timeout uses code default",
 			workers: []gardener.Worker{
 				{MachineControllerManagerSettings: nil},
 			},
-			defaultDrainTimeout:  "",
-			defaultEvictRetries:  "2",
-			expectError:          true,
-			expectedErrorContain: "cannot parse drain timeout",
+			defaultDrainTimeout: "",
+			defaultEvictRetries: "2",
+			expectedSettings: []*gardener.MachineControllerManagerSettings{
+				{
+					MaxEvictRetries:     ptr.To(int32(2)),
+					MachineDrainTimeout: &v1.Duration{Duration: 15 * time.Minute},
+				},
+			},
 		},
 	}
 

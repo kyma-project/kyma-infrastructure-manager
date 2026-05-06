@@ -18,12 +18,12 @@ type ClusterConfig struct {
 
 type ProviderConfig struct {
 	AWS    AWSConfig    `json:"aws"`
-	Worker WorkerConfig `json:"worker" validate:"required"`
+	Worker WorkerConfig `json:"worker"`
 }
 
 type WorkerConfig struct {
-	DefaultMaxEvictRetries     string `json:"defaultMaxEvictRetries" validate:"required"`
-	DefaultMachineDrainTimeout string `json:"defaultMachineDrainTimeout" validate:"required"`
+	DefaultMaxEvictRetries     string `json:"defaultMaxEvictRetries"`
+	DefaultMachineDrainTimeout string `json:"defaultMachineDrainTimeout"`
 }
 
 type AWSConfig struct {

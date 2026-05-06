@@ -10,26 +10,41 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-func ApplyMachineControllerManagerConfig(workers []gardener.Worker, defaultDrainTimeout, defaultEvictRetries string) error {
-	evictRetries, err := strconv.ParseInt(defaultEvictRetries, 10, 32)
+const (
+	defaultDrainTimeout = "15m"
+	defaultEvictRetries = "2"
+)
+
+func ApplyMachineControllerManagerConfig(workers []gardener.Worker, drainTimeout, evictRetries string) error {
+	if drainTimeout == "" {
+		drainTimeout = defaultDrainTimeout
+	}
+
+	if evictRetries == "" {
+		evictRetries = defaultEvictRetries
+	}
+
+	retries, err := strconv.ParseInt(evictRetries, 10, 32)
 	if err != nil {
 		return fmt.Errorf("cannot parse the value for evict retries: %w", err)
 	}
 
-	drainTimeout, err := time.ParseDuration(defaultDrainTimeout)
+	timeout, err := time.ParseDuration(drainTimeout)
 	if err != nil {
 		return fmt.Errorf("cannot parse drain timeout: %w", err)
 	}
 
 	for i := range workers {
-		if workers[i].MachineControllerManagerSettings == nil {
-			workers[i].MachineControllerManagerSettings = &gardener.MachineControllerManagerSettings{}
+		machineSettings := workers[i].MachineControllerManagerSettings
+		if machineSettings == nil {
+			machineSettings = &gardener.MachineControllerManagerSettings{}
+			workers[i].MachineControllerManagerSettings = machineSettings
 		}
-		if workers[i].MachineControllerManagerSettings.MaxEvictRetries == nil {
-			workers[i].MachineControllerManagerSettings.MaxEvictRetries = ptr.To(int32(evictRetries))
+		if machineSettings.MaxEvictRetries == nil {
+			machineSettings.MaxEvictRetries = ptr.To(int32(retries))
 		}
-		if workers[i].MachineControllerManagerSettings.MachineDrainTimeout == nil {
-			workers[i].MachineControllerManagerSettings.MachineDrainTimeout = &v1.Duration{Duration: drainTimeout}
+		if machineSettings.MachineDrainTimeout == nil {
+			machineSettings.MachineDrainTimeout = &v1.Duration{Duration: timeout}
 		}
 	}
 
