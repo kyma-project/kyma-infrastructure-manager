@@ -2,6 +2,7 @@ package fsm
 
 import (
 	"context"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
@@ -33,7 +34,7 @@ var _ = Describe("KIM sFnCreateShoot", func() {
 				GardenClient: fakeClient,
 				KcpClient:    fakeClient,
 			}}
-			testFsm.Config.ConverterConfig.Provider.Worker = config.WorkerConfig{
+			testFsm.ConverterConfig.Provider.Worker = config.WorkerConfig{
 				DefaultMaxEvictRetries:     "2",
 				DefaultMachineDrainTimeout: "15m",
 			}

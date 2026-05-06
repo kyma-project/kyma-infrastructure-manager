@@ -3,6 +3,8 @@ package fsm
 import (
 	"context"
 	"fmt"
+	"time"
+
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
@@ -24,7 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"time"
 )
 
 type fakeFSMOpt func(*fsm) error
@@ -244,23 +245,13 @@ var (
 			return nil
 		}
 	}
-
-	withDefaultWorkerConfig = func() fakeFSMOpt {
-		return func(fsm *fsm) error {
-			fsm.Config.ConverterConfig.Provider.Worker = config.WorkerConfig{
-				DefaultMaxEvictRetries:     "2",
-				DefaultMachineDrainTimeout: "15m",
-			}
-			return nil
-		}
-	}
 )
 
 func newFakeFSM(opts ...fakeFSMOpt) (*fsm, error) {
 	fsm := fsm{
 		log: zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)),
 	}
-	fsm.Config.ConverterConfig.Provider.Worker = config.WorkerConfig{
+	fsm.ConverterConfig.Provider.Worker = config.WorkerConfig{
 		DefaultMaxEvictRetries:     "2",
 		DefaultMachineDrainTimeout: "15m",
 	}
