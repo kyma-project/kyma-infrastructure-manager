@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-logr/logr"
 	watchertypes "github.com/kyma-project/runtime-watcher/listener/pkg/v2/types"
 )
-
-const defaultPort = 8082
 
 type RegistryCacheConfigListener struct {
 	Addr          string
@@ -27,18 +26,12 @@ func NewRegistryCacheConfigListener(addr string, componentName string, logger lo
 	}
 }
 
-}
-
 func (l *RegistryCacheConfigListener) Start(ctx context.Context) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc(fmt.Sprintf("/v2/%s/event", l.ComponentName), l.handleEvent)
 
 	server := &http.Server{
-	server := &http.Server{
 		Addr:    l.Addr,
-		Handler: mux,
-	}
-
 		Handler: mux,
 	}
 
@@ -54,9 +47,6 @@ func (l *RegistryCacheConfigListener) Start(ctx context.Context) error {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		l.Logger.Error(err, "failed to shut down listener HTTP server")
-	}
-
 		l.Logger.Error(err, "failed to shut down listener HTTP server")
 	}
 
