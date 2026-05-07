@@ -34,7 +34,11 @@ func (l *RegistryCacheConfigListener) Start(ctx context.Context) error {
 	mux.HandleFunc(fmt.Sprintf("/v2/%s/event", l.ComponentName), l.handleEvent)
 
 	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", defaultPort),
+	server := &http.Server{
+		Addr:    l.Addr,
+		Handler: mux,
+	}
+
 		Handler: mux,
 	}
 
