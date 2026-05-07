@@ -23,6 +23,7 @@ func NewRegistryCacheConfigListener(addr string, componentName string, logger lo
 		Addr:          addr,
 		ComponentName: componentName,
 		Logger:        logger,
+		events:        make(chan watchertypes.GenericEvent),
 	}
 }
 
