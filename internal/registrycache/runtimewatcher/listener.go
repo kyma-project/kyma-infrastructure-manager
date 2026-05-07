@@ -19,11 +19,14 @@ type RegistryCacheConfigListener struct {
 	events        chan watchertypes.GenericEvent
 }
 
-func NewRegistryCacheConfigListener(addr string, componentName string) *RegistryCacheConfigListener {
+func NewRegistryCacheConfigListener(addr string, componentName string, logger logr.Logger) *RegistryCacheConfigListener {
 	return &RegistryCacheConfigListener{
 		Addr:          addr,
 		ComponentName: componentName,
+		Logger:        logger,
 	}
+}
+
 }
 
 func (l *RegistryCacheConfigListener) Start(ctx context.Context) error {
