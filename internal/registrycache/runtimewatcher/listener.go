@@ -51,7 +51,12 @@ func (l *RegistryCacheConfigListener) Start(ctx context.Context) error {
 
 	<-ctx.Done()
 	l.Logger.Info("Shutting down registry cache config listener", "component", l.ComponentName)
-	if err := server.Shutdown(context.Background()); err != nil {
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		l.Logger.Error(err, "failed to shut down listener HTTP server")
+	}
+
 		l.Logger.Error(err, "failed to shut down listener HTTP server")
 	}
 
