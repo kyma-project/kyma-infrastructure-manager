@@ -16,24 +16,22 @@ const (
 )
 
 func ApplyMachineControllerManagerConfig(workers []gardener.Worker, drainTimeout, evictRetries string) error {
-	if drainTimeout == "" {
-		drainTimeout = defaultDrainTimeout
-	}
-
-	if evictRetries == "" {
-		evictRetries = defaultEvictRetries
-	}
-
-	retries, err := strconv.ParseInt(evictRetries, 10, 32)
-	if err != nil {
-		return fmt.Errorf("cannot parse the value for evict retries: %w", err)
-	}
-
-	timeout, err := time.ParseDuration(drainTimeout)
+	timeout, err := parseDrainTimeoutOrDefault(drainTimeout)
 	if err != nil {
 		return fmt.Errorf("cannot parse drain timeout: %w", err)
 	}
 
+	retries, err := parseEvictRetriesOrDefault(evictRetries)
+	if err != nil {
+		return fmt.Errorf("cannot parse the value for evict retries: %w", err)
+	}
+
+	setMachineControllerManagerConfig(workers, timeout, retries)
+
+	return nil
+}
+
+func setMachineControllerManagerConfig(workers []gardener.Worker, drainTimeout time.Duration, evictRetries int64) {
 	for i := range workers {
 		machineSettings := workers[i].MachineControllerManagerSettings
 		if machineSettings == nil {
@@ -41,12 +39,24 @@ func ApplyMachineControllerManagerConfig(workers []gardener.Worker, drainTimeout
 			workers[i].MachineControllerManagerSettings = machineSettings
 		}
 		if machineSettings.MaxEvictRetries == nil {
-			machineSettings.MaxEvictRetries = ptr.To(int32(retries))
+			machineSettings.MaxEvictRetries = ptr.To(int32(evictRetries))
 		}
 		if machineSettings.MachineDrainTimeout == nil {
-			machineSettings.MachineDrainTimeout = &v1.Duration{Duration: timeout}
+			machineSettings.MachineDrainTimeout = &v1.Duration{Duration: drainTimeout}
 		}
 	}
+}
 
-	return nil
+func parseDrainTimeoutOrDefault(drainTimeout string) (time.Duration, error) {
+	if drainTimeout == "" {
+		drainTimeout = defaultDrainTimeout
+	}
+	return time.ParseDuration(drainTimeout)
+}
+
+func parseEvictRetriesOrDefault(evictRetries string) (int64, error) {
+	if evictRetries == "" {
+		evictRetries = defaultEvictRetries
+	}
+	return strconv.ParseInt(evictRetries, 10, 32)
 }
