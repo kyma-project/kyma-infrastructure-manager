@@ -4,8 +4,10 @@ import (
 	"slices"
 	"sort"
 
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maxpods"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/workers/machinecontroller"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/workers/maxpods"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -20,7 +22,7 @@ import (
 )
 
 // InfrastructureConfig and ControlPlaneConfig are generated unless they are specified in the RuntimeCR
-func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIMDSv2 bool, defMachineImgName, defMachineImgVer string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIMDSv2 bool, machineImageCfg config.MachineImageConfig, workerMachineCfg config.WorkerConfig) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
 		provider.Type = rt.Spec.Shoot.Provider.Type
@@ -47,11 +49,15 @@ func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIM
 		provider.ControlPlaneConfig = controlPlaneConf
 		provider.InfrastructureConfig = infraConfig
 
-		setMachineImage(provider, defMachineImgName, defMachineImgVer)
+		setMachineImage(provider, machineImageCfg.DefaultName, machineImageCfg.DefaultVersion)
 		if err = setWorkerConfig(provider, provider.Type, enableIMDSv2); err != nil {
 			return err
 		}
 		if err = setWorkerSettings(provider, rt.Spec.Shoot.Networking.Pods); err != nil {
+			return err
+		}
+
+		if err = setWorkerMachineControllerManager(provider.Workers, workerMachineCfg.DefaultMachineDrainTimeout, workerMachineCfg.DefaultMaxEvictRetries); err != nil {
 			return err
 		}
 
@@ -60,7 +66,7 @@ func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIM
 }
 
 // Zones for patching workes are taken from existing shoot workers
-func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, defMachineImgVer string, shootWorkers []gardener.Worker, existingInfraConfig, existingControlPlaneConfig *runtime.RawExtension) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtenderPatchOperation(enableIMDSv2 bool, shootWorkers []gardener.Worker, machineImageCfg config.MachineImageConfig, workerMachineCfg config.WorkerConfig, existingInfraConfig, existingControlPlaneConfig *runtime.RawExtension) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
 		provider.Type = rt.Spec.Shoot.Provider.Type
@@ -108,7 +114,7 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 			provider.InfrastructureConfig = infraConfig
 		}
 
-		setMachineImage(provider, defMachineImgName, defMachineImgVer)
+		setMachineImage(provider, machineImageCfg.DefaultName, machineImageCfg.DefaultVersion)
 
 		if err := setWorkerConfig(provider, provider.Type, enableIMDSv2); err != nil {
 			return err
@@ -118,12 +124,20 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 			return err
 		}
 
+		if err = setWorkerMachineControllerManager(provider.Workers, workerMachineCfg.DefaultMachineDrainTimeout, workerMachineCfg.DefaultMaxEvictRetries); err != nil {
+			return err
+		}
+
 		// alignWorkersWithGardener runs after maxPods clamping. It only aligns zones, machine image, and
 		// update strategy from existing Shoot workers; it does not touch maxPods, so clamped values are preserved.
 		alignWorkersWithGardener(provider, shootWorkers)
 
 		return nil
 	}
+}
+
+func setWorkerMachineControllerManager(workers []gardener.Worker, defaultDrainTimeout, defaultEvictRetries string) error {
+	return machinecontroller.ApplyMachineControllerManagerConfig(workers, defaultDrainTimeout, defaultEvictRetries)
 }
 
 func isAzureLiteSetup(providerType string, infraConfigBytes []byte) (bool, error) {

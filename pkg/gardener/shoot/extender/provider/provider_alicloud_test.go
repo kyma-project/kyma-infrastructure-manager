@@ -7,6 +7,7 @@ import (
 	alicloudext "github.com/gardener/gardener-extension-provider-alicloud/pkg/apis/alicloud/v1alpha1"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/alicloud"
@@ -105,7 +106,7 @@ func TestProviderExtenderForCreateAlicloud(t *testing.T) {
 
 			// when
 
-			extender := NewProviderExtenderForCreateOperation(false, false, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
+			extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
 			err := extender(tc.Runtime, &shoot)
 
 			// then
@@ -299,7 +300,7 @@ func TestProviderExtenderForPatchSingleWorkerAlicloud(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderPatchOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion, tc.CurrentShootWorkers, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig)
+			extender := NewProviderExtenderPatchOperation(tc.EnableIMDSv2, tc.CurrentShootWorkers, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig)
 			err := extender(tc.Runtime, &shoot)
 
 			// then

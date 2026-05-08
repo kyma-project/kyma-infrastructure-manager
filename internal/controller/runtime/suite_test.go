@@ -408,6 +408,10 @@ func fixConverterConfigForTests() config.Config {
 				AWS: config.AWSConfig{
 					EnableIMDSv2: true,
 				},
+				Worker: config.WorkerConfig{
+					DefaultMaxEvictRetries:     "10",
+					DefaultMachineDrainTimeout: "15m",
+				},
 			},
 			Gardener: config.GardenerConfig{
 				ProjectName: "kyma-dev",
