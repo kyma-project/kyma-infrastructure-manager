@@ -2,11 +2,13 @@ package provider
 
 import (
 	"testing"
+	"time"
 
 	awsinfra "github.com/gardener/gardener-extension-provider-aws/pkg/apis/aws/v1alpha1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
@@ -799,11 +801,19 @@ func fixProvider(providerType string, machineImageName, machineImageVersion stri
 					Type:  "m6i.large",
 					Image: fixMachineImage(machineImageName, machineImageVersion),
 				},
-				Minimum: 1,
-				Maximum: 3,
-				Zones:   zones,
+				Minimum:                          1,
+				Maximum:                          3,
+				Zones:                            zones,
+				MachineControllerManagerSettings: fixMachineControllerManagerSettings(),
 			},
 		},
+	}
+}
+
+func fixMachineControllerManagerSettings() *gardener.MachineControllerManagerSettings {
+	return &gardener.MachineControllerManagerSettings{
+		MachineDrainTimeout: &metav1.Duration{Duration: 15 * time.Minute},
+		MaxEvictRetries:     ptr.To(int32(2)),
 	}
 }
 
