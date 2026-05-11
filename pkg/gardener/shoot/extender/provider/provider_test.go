@@ -2,10 +2,13 @@ package provider
 
 import (
 	"testing"
+	"time"
 
 	awsinfra "github.com/gardener/gardener-extension-provider-aws/pkg/apis/aws/v1alpha1"
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
@@ -39,7 +42,7 @@ func TestMaxPodsClamping(t *testing.T) {
 		}
 
 		// when
-		extender := NewProviderExtenderForCreateOperation(false, false, "gardenlinux", "1312.3.0")
+		extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: "gardenlinux", DefaultVersion: "1312.3.0"}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
 		err := extender(rt, &shoot)
 
 		// then
@@ -70,7 +73,7 @@ func TestMaxPodsClamping(t *testing.T) {
 		}
 
 		// when
-		extender := NewProviderExtenderForCreateOperation(false, false, "gardenlinux", "1312.3.0")
+		extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: "gardenlinux", DefaultVersion: "1312.3.0"}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
 		err := extender(rt, &shoot)
 
 		// then
@@ -92,7 +95,7 @@ func TestMaxPodsClamping(t *testing.T) {
 			},
 		}
 
-		extender := NewProviderExtenderForCreateOperation(false, false, "gardenlinux", "1312.3.0")
+		extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: "gardenlinux", DefaultVersion: "1312.3.0"}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
 		err := extender(rt, &shoot)
 
 		require.Error(t, err)
@@ -117,7 +120,7 @@ func TestMaxPodsClamping(t *testing.T) {
 			},
 		}
 
-		extender := NewProviderExtenderForCreateOperation(false, false, "gardenlinux", "1312.3.0")
+		extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: "gardenlinux", DefaultVersion: "1312.3.0"}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
 		err := extender(rt, &shoot)
 
 		require.Error(t, err)
@@ -144,7 +147,7 @@ func TestMaxPodsClamping(t *testing.T) {
 		}
 
 		// when
-		extender := NewProviderExtenderForCreateOperation(false, false, "gardenlinux", "1312.3.0")
+		extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: "gardenlinux", DefaultVersion: "1312.3.0"}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
 		err := extender(rt, &shoot)
 
 		// then: no error, maxPods clamped to /24 ceiling (254)
@@ -174,7 +177,7 @@ func TestMaxPodsClamping(t *testing.T) {
 		}
 
 		// when
-		extender := NewProviderExtenderForCreateOperation(false, false, "gardenlinux", "1312.3.0")
+		extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: "gardenlinux", DefaultVersion: "1312.3.0"}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
 		err := extender(rt, &shoot)
 
 		// then: worker1 unchanged (100), worker2 aggregate-clamped (254 -> 154)
@@ -199,7 +202,7 @@ func TestValidations(t *testing.T) {
 		}
 
 		// when
-		extender := NewProviderExtenderForCreateOperation(false, false, "", "")
+		extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
 		err := extender(rt, &shoot)
 
 		// then
@@ -234,7 +237,7 @@ func TestFixAlignWorkerZonesWithGardener(t *testing.T) {
 		})
 
 		// when
-		extender := NewProviderExtenderPatchOperation(false, "gardenlinux", "1311.2.0", currentWorkers, fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}), fixAWSControlPlaneConfig())
+		extender := NewProviderExtenderPatchOperation(false, currentWorkers, config.MachineImageConfig{DefaultName: "gardenlinux", DefaultVersion: "1311.2.0"}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}), fixAWSControlPlaneConfig())
 		err := extender(runtime, &shoot)
 
 		// then
@@ -380,7 +383,7 @@ func TestProviderExtenderForCreateMultipleWorkersAWS(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderForCreateOperation(tc.EnableDualStackIP, tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
+			extender := NewProviderExtenderForCreateOperation(tc.EnableDualStackIP, tc.EnableIMDSv2, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
 			err := extender(tc.Runtime, &shoot)
 
 			// then
@@ -692,7 +695,7 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderPatchOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion, tc.CurrentShootWorkers, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig)
+			extender := NewProviderExtenderPatchOperation(tc.EnableIMDSv2, tc.CurrentShootWorkers, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig)
 			err := extender(tc.Runtime, &shoot)
 
 			// then
@@ -758,7 +761,7 @@ func TestProviderExtenderForPatchWorkersUpdateErrors(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderPatchOperation(false, "", "", tc.CurrentShootWorkers, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig)
+			extender := NewProviderExtenderPatchOperation(false, tc.CurrentShootWorkers, config.MachineImageConfig{}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig)
 			err := extender(tc.Runtime, &shoot)
 
 			// then
@@ -798,11 +801,19 @@ func fixProvider(providerType string, machineImageName, machineImageVersion stri
 					Type:  "m6i.large",
 					Image: fixMachineImage(machineImageName, machineImageVersion),
 				},
-				Minimum: 1,
-				Maximum: 3,
-				Zones:   zones,
+				Minimum:                          1,
+				Maximum:                          3,
+				Zones:                            zones,
+				MachineControllerManagerSettings: fixMachineControllerManagerSettings(),
 			},
 		},
+	}
+}
+
+func fixMachineControllerManagerSettings() *gardener.MachineControllerManagerSettings {
+	return &gardener.MachineControllerManagerSettings{
+		MachineDrainTimeout: &metav1.Duration{Duration: 15 * time.Minute},
+		MaxEvictRetries:     ptr.To(int32(2)),
 	}
 }
 
@@ -913,6 +924,7 @@ func assertProvider(t *testing.T, runtimeShoot imv1.RuntimeShoot, shoot gardener
 		}
 		assert.Equal(t, expectedMachineImageVersion, *worker.Machine.Image.Version)
 		assert.Equal(t, expectedMachineImageName, worker.Machine.Image.Name)
+		assert.NotNil(t, worker.MachineControllerManagerSettings)
 	}
 }
 

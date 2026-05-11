@@ -17,7 +17,13 @@ type ClusterConfig struct {
 }
 
 type ProviderConfig struct {
-	AWS AWSConfig `json:"aws"`
+	AWS    AWSConfig    `json:"aws"`
+	Worker WorkerConfig `json:"worker"`
+}
+
+type WorkerConfig struct {
+	DefaultMaxEvictRetries     string `json:"defaultMaxEvictRetries"`
+	DefaultMachineDrainTimeout string `json:"defaultMachineDrainTimeout"`
 }
 
 type AWSConfig struct {
