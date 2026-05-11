@@ -38,6 +38,9 @@ jobs:
       tag: ${{ steps.tag.outputs.tag }}
       latest: ${{ steps.latest.outputs.latest || '' }}
     steps:
+      - shell: bash
+        run: |
+          echo "HELLO THERE!!"
       - name: Checkout code
         uses: actions/checkout@v5
         with:
