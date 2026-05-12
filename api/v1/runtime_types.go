@@ -149,6 +149,8 @@ type RuntimeSpec struct {
 	Shoot                 RuntimeShoot         `json:"shoot"`
 	Security              Security             `json:"security"`
 	Caching               []ImageRegistryCache `json:"imageRegistryCache,omitempty"`
+
+	// AuditLogAccessEnabled indicates whether the client requires access to their audit log data
 	AuditLogAccessEnabled *bool                `json:"auditLogAccessEnabled,omitempty"`
 }
 
