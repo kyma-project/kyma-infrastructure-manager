@@ -179,7 +179,7 @@ type RuntimeStatus struct {
 	// LastError indicates the last occurred error for an operation on a Gardener's `shoot` resource.
 	ShootLastErrors []gardener.LastError `json:"shootLastErrors,omitempty" protobuf:"bytes,6,rep,name=lastErrors"`
 
-	// AuditLogCR holds the name of the AuditLog CR chosen for this Runtime
+	// AuditLogCR holds the name of the AuditLog custom resource chosen for this Runtime
 	AuditLogCR string `json:"auditLogCR,omitempty"`
 }
 

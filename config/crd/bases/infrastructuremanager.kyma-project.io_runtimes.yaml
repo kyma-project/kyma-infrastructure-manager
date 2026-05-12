@@ -52,6 +52,10 @@ spec:
           spec:
             description: RuntimeSpec defines the desired state of Runtime
             properties:
+              auditLogAccessEnabled:
+                description: |-
+                  AuditLogAccessEnabled indicates whether the client requires access to their audit log data
+                type: boolean
               imageRegistryCache:
                 items:
                   properties:
@@ -2038,6 +2042,10 @@ spec:
           status:
             description: RuntimeStatus defines the observed state of Runtime
             properties:
+              auditLogCR:
+                description: AuditLogCR holds the name of the AuditLog custom resource chosen for
+                  this Runtime
+                type: string
               conditions:
                 description: List of status conditions to indicate the status of a
                   ServiceInstance.
