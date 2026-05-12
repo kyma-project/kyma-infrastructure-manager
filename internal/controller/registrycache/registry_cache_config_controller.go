@@ -3,12 +3,17 @@ package registrycache
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
+	"time"
+
 	"github.com/go-logr/logr"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
+	"github.com/kyma-project/infrastructure-manager/internal/registrycache/runtimewatcher"
 	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	registrycache "github.com/kyma-project/registry-cache/api/v1beta1"
+	watcherevent "github.com/kyma-project/runtime-watcher/listener/pkg/v2/event"
 	corev1 "k8s.io/api/core/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -20,8 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sync/atomic"
-	"time"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // RegistryCacheConfigReconciler reconciles a secret object
@@ -192,8 +196,8 @@ type RuntimeClientGetter func(secret corev1.Secret) (client.Client, error)
 
 func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, runtimeClientGetter RuntimeClientGetter) *RegistryCacheConfigReconciler {
 	return &RegistryCacheConfigReconciler{
-		KcpClient:     mgr.GetClient(),
-		Scheme:        mgr.GetScheme(),
+		KcpClient: mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
 		//nolint:staticcheck // SA1019: GetEventRecorderFor is used, which is the correct API for this version
 		EventRecorder:       mgr.GetEventRecorderFor("runtime-controller"),
 		Log:                 logger,
@@ -202,7 +206,16 @@ func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, runt
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *RegistryCacheConfigReconciler) SetupWithManager(mgr ctrl.Manager, numberOfWorkers int) error {
+func (r *RegistryCacheConfigReconciler) SetupWithManager(mgr ctrl.Manager, numberOfWorkers int, regsitryCacheListenerPort, registryCacheListenerComponentName string) error {
+	runnableListener := watcherevent.NewSKREventListener(
+		regsitryCacheListenerPort,
+		registryCacheListenerComponentName,
+	)
+
+	if err := mgr.Add(runnableListener); err != nil {
+		return fmt.Errorf("RegistryCacheReconciler %w", err)
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Secret{}).
 		WithOptions(controller.Options{MaxConcurrentReconciles: numberOfWorkers}).
@@ -211,6 +224,7 @@ func (r *RegistryCacheConfigReconciler) SetupWithManager(mgr ctrl.Manager, numbe
 			predicate.LabelChangedPredicate{},
 			predicate.AnnotationChangedPredicate{},
 		)).
+		WatchesRawSource(source.Channel(runtimewatcher.AdaptEvents(runnableListener.ReceivedEvents), runtimewatcher.CreateSkrEventHandler())).
 		Named("registry-config-controller").
 		Complete(r)
 }
