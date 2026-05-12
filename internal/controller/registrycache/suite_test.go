@@ -66,7 +66,7 @@ var _ = BeforeSuite(func() {
 
 	reconciler = NewRegistryCacheConfigReconciler(mgr, logger, fixRuntimeClientGetter(fixRuntimeClients()))
 	Expect(reconciler).NotTo(BeNil())
-	err = reconciler.SetupWithManager(mgr, 1)
+	err = reconciler.SetupWithManager(mgr, 1, ":8082", "infrastructure-manager-registry-cache")
 	Expect(err).To(BeNil())
 
 	go func() {
