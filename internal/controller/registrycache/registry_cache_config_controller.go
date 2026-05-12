@@ -211,6 +211,7 @@ func (r *RegistryCacheConfigReconciler) SetupWithManager(mgr ctrl.Manager, numbe
 		regsitryCacheListenerPort,
 		registryCacheListenerComponentName,
 	)
+	runnableListener.Logger = r.Log
 
 	if err := mgr.Add(runnableListener); err != nil {
 		return fmt.Errorf("RegistryCacheReconciler %w", err)
