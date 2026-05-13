@@ -114,7 +114,7 @@ func main() {
 	var converterConfigFilepath string
 	var auditLogMandatory bool
 	var registryCacheConfigControllerEnabled bool
-	var regsitryCacheListenerPort string
+	var registryCacheListenerPort string
 	var apiServerAclEnabled bool
 	var runtimeBootstrapperEnabled bool
 	var runtimeBootstrapperKCPConfigName string
@@ -153,7 +153,7 @@ func main() {
 	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "File path to the gardener shoot converter configuration.")
 
 	// Registry cache specific parameters:
-	flag.StringVar(&regsitryCacheListenerPort, "registry-cache-listener-port", ":8082", "Port for the registry cache listener to listen on")
+	flag.StringVar(&registryCacheListenerPort, "registry-cache-listener-port", ":8082", "Port for the registry cache listener to listen on")
 
 	//Feature flags:
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration. When enabled this feature, a Shoot cluster will only be created when an auditlog tenant exists (this is defined in the auditlog mapping configuration file)")
@@ -430,7 +430,7 @@ func main() {
 		}
 
 		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, runtimeClientClosure)
-		if err = registryCacheConfigReconciler.SetupWithManager(mgr, 1, regsitryCacheListenerPort, defaultRegistryCacheListenerComponentName); err != nil {
+		if err = registryCacheConfigReconciler.SetupWithManager(mgr, 1, registryCacheListenerPort, defaultRegistryCacheListenerComponentName); err != nil {
 			setupLog.Error(err, "unable to setup registry cache config controller with Manager", "controller", "Runtime")
 			os.Exit(1)
 		}

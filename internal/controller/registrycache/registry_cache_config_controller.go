@@ -206,9 +206,9 @@ func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, runt
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *RegistryCacheConfigReconciler) SetupWithManager(mgr ctrl.Manager, numberOfWorkers int, regsitryCacheListenerPort, registryCacheListenerComponentName string) error {
+func (r *RegistryCacheConfigReconciler) SetupWithManager(mgr ctrl.Manager, numberOfWorkers int, registryCacheListenerPort, registryCacheListenerComponentName string) error {
 	runnableListener := watcherevent.NewSKREventListener(
-		regsitryCacheListenerPort,
+		registryCacheListenerPort,
 		registryCacheListenerComponentName,
 	)
 	runnableListener.Logger = r.Log
