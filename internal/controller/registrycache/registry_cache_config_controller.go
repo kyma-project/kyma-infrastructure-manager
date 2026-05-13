@@ -225,7 +225,7 @@ func (r *RegistryCacheConfigReconciler) SetupWithManager(mgr ctrl.Manager, numbe
 			predicate.LabelChangedPredicate{},
 			predicate.AnnotationChangedPredicate{},
 		)).
-		WatchesRawSource(source.Channel(runtimewatcher.AdaptEvents(runnableListener.ReceivedEvents), runtimewatcher.CreateSkrEventHandler())).
+		WatchesRawSource(source.Channel(runtimewatcher.AdaptEvents(runnableListener.ReceivedEvents), runtimewatcher.CreateSkrEventHandler(r.Log))).
 		Named("registry-config-controller").
 		Complete(r)
 }
