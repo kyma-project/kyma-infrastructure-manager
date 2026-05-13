@@ -429,13 +429,6 @@ func main() {
 			return gardener.GetRuntimeClientWithScheme(secret, prebuiltRuntimeScheme)
 		}
 
-		//registryCacheConfigListener := runtimewatcher.NewRegistryCacheConfigListener(regsitryCacheListenerPort, defaultRegistryCacheListenerComponentName, logger)
-		//if err = registryCacheConfigListener.Start(context.Background()); err != nil {
-		//	setupLog.Error(err, "unable to start registry cache config listener")
-		//	os.Exit(1)
-		//}
-		//registryCacheConfigListener.ReceivedEvents()
-
 		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, runtimeClientClosure)
 		if err = registryCacheConfigReconciler.SetupWithManager(mgr, 1, regsitryCacheListenerPort, defaultRegistryCacheListenerComponentName); err != nil {
 			setupLog.Error(err, "unable to setup registry cache config controller with Manager", "controller", "Runtime")
