@@ -26,10 +26,6 @@ var (
 	ErrExtractingRuntimeID    = errors.New("failed to extract runtime ID from event data")
 )
 
-type KymaLookupService interface {
-	NameByRuntimeID(ctx context.Context, runtimeID string) (string, error)
-}
-
 // AdaptEvents converts given channel from the type used by runtime-watcher/listener
 // module to the type required by the controller-runtime library.
 func AdaptEvents(listenerChan func() <-chan WatcherListenerEvent) <-chan CtrlRuntimeEvent {
