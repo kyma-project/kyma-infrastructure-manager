@@ -140,7 +140,7 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 	}
 
 	return ctrl.Result{
-		RequeueAfter: 5 * time.Minute,
+		RequeueAfter: 60 * time.Minute,
 	}, err
 }
 
