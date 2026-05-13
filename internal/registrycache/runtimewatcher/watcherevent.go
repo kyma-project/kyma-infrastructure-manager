@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/kyma-project/runtime-watcher/listener/pkg/v2/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/util/workqueue"
@@ -42,15 +43,14 @@ func AdaptEvents(listenerChan func() <-chan WatcherListenerEvent) <-chan CtrlRun
 	return dest
 }
 
-func CreateSkrEventHandler() *handler.Funcs {
+func CreateSkrEventHandler(l logr.Logger) *handler.Funcs {
 	return &handler.Funcs{
 		GenericFunc: func(ctx context.Context, evnt event.GenericEvent,
 			queue workqueue.TypedRateLimitingInterface[ctrl.Request],
 		) {
-			logger := ctrl.Log.WithName("listener")
 			runtimeID, err := getRuntimeIDFromEvent(evnt)
 			if err != nil {
-				logger.Error(fmt.Errorf("%w: %w", ErrHandlingWatcherEvent, err), fmt.Sprintf("event: %v", evnt.Object))
+				l.Error(fmt.Errorf("%w: %w", ErrHandlingWatcherEvent, err), fmt.Sprintf("event: %v", evnt.Object))
 				return
 			}
 
@@ -59,7 +59,7 @@ func CreateSkrEventHandler() *handler.Funcs {
 				Namespace: "kcp-system",
 			}
 			req := ctrl.Request{NamespacedName: kcpKubeconfigKey}
-			logger.Info(fmt.Sprintf("event received from SKR, adding %s to queue", req.NamespacedName))
+			l.Info(fmt.Sprintf("event received from SKR, adding %s to queue", req.NamespacedName))
 
 			queue.Add(req)
 		},
