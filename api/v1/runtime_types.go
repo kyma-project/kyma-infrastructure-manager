@@ -146,9 +146,12 @@ type RuntimeList struct {
 
 // RuntimeSpec defines the desired state of Runtime
 type RuntimeSpec struct {
-	Shoot    RuntimeShoot         `json:"shoot"`
-	Security Security             `json:"security"`
-	Caching  []ImageRegistryCache `json:"imageRegistryCache,omitempty"`
+	Shoot                 RuntimeShoot         `json:"shoot"`
+	Security              Security             `json:"security"`
+	Caching               []ImageRegistryCache `json:"imageRegistryCache,omitempty"`
+
+	// AuditLogAccessEnabled indicates whether the client requires access to their audit log data
+	AuditLogAccessEnabled *bool                `json:"auditLogAccessEnabled,omitempty"`
 }
 
 type ImageRegistryCache struct {
@@ -177,6 +180,9 @@ type RuntimeStatus struct {
 
 	// LastError indicates the last occurred error for an operation on a Gardener's `shoot` resource.
 	ShootLastErrors []gardener.LastError `json:"shootLastErrors,omitempty" protobuf:"bytes,6,rep,name=lastErrors"`
+
+	// AuditLogCR holds the name of the AuditLog custom resource chosen for this Runtime
+	AuditLogCR string `json:"auditLogCR,omitempty"`
 }
 
 type RuntimeShoot struct {
