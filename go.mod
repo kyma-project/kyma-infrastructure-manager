@@ -4,29 +4,29 @@ go 1.26.2
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/gardener/gardener v1.140.1
+	github.com/gardener/gardener v1.141.0
 	github.com/gardener/gardener-extension-provider-alicloud v1.69.0
 	github.com/gardener/gardener-extension-provider-aws v1.68.3
-	github.com/gardener/gardener-extension-provider-gcp v1.50.0
+	github.com/gardener/gardener-extension-provider-gcp v1.51.0
 	github.com/gardener/gardener-extension-provider-openstack v1.53.1
 	github.com/gardener/gardener-extension-registry-cache v0.21.0
 	github.com/gardener/gardener-extension-runtime-gvisor v0.33.0
-	github.com/gardener/gardener/pkg/apis v1.140.1
+	github.com/gardener/gardener/pkg/apis v1.141.0
 	github.com/gardener/oidc-webhook-authenticator v0.42.0
 	github.com/go-logr/logr v1.4.3
 	github.com/go-playground/validator/v10 v10.30.2
 	github.com/kyma-project/lifecycle-manager/api v0.0.0-20250415061517-3922bac13370
 	github.com/kyma-project/registry-cache v0.0.0-20251023124504-71bc19cf102a
 	github.com/kyma-project/runtime-watcher/listener v1.4.0
-	github.com/onsi/ginkgo/v2 v2.28.1
+	github.com/onsi/ginkgo/v2 v2.28.2
 	github.com/onsi/gomega v1.39.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/stretchr/testify v1.11.1
-	k8s.io/api v0.35.3
-	k8s.io/apiextensions-apiserver v0.35.3
-	k8s.io/apimachinery v0.35.3
-	k8s.io/client-go v0.35.3
+	k8s.io/api v0.35.4
+	k8s.io/apiextensions-apiserver v0.35.4
+	k8s.io/apimachinery v0.35.4
+	k8s.io/client-go v0.35.4
 	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5
 	sigs.k8s.io/controller-runtime v0.23.3
 	sigs.k8s.io/yaml v1.6.0
@@ -99,7 +99,7 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/component-base v0.35.3 // indirect
+	k8s.io/component-base v0.35.4 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260127142750-a19766b6e2d4 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
