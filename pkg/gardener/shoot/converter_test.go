@@ -331,6 +331,10 @@ func fixConverterConfig() config.ConverterConfig {
 			AWS: config.AWSConfig{
 				EnableIMDSv2: true,
 			},
+			Worker: config.WorkerConfig{
+				DefaultMaxEvictRetries:     "2",
+				DefaultMachineDrainTimeout: "15m",
+			},
 		},
 		MachineImage: config.MachineImageConfig{
 			DefaultName:    "gardenlinux",
@@ -578,6 +582,10 @@ var testReader io.Reader = strings.NewReader(
   "provider": {
 		"aws": {
   "enableIMDSv2": true
+		},
+		"worker": {
+  "defaultMaxEvictRetries": "2",
+  "defaultMachineDrainTimeout": "15m"
 		}
   },
   "machineImage": {
@@ -643,6 +651,10 @@ func Test_ConverterConfig_Load_OK(t *testing.T) {
 			Provider: config.ProviderConfig{
 				AWS: config.AWSConfig{
 					EnableIMDSv2: true,
+				},
+				Worker: config.WorkerConfig{
+					DefaultMaxEvictRetries:     "2",
+					DefaultMachineDrainTimeout: "15m",
 				},
 			},
 			MachineImage: config.MachineImageConfig{
