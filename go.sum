@@ -104,8 +104,8 @@ github.com/gardener/gardener-extension-provider-gcp v1.50.0 h1:Y9dxEx/M6A95jc7Rn
 github.com/gardener/gardener-extension-provider-gcp v1.50.0/go.mod h1:34/OXAmvJYfyDJdd10JWswG+9jx5+xPPOlT3dBlxkjE=
 github.com/gardener/gardener-extension-provider-openstack v1.53.1 h1:b1NYh//Jx9oxCJ8Fl1qT+J52ycFn6HY84aEcmxgO760=
 github.com/gardener/gardener-extension-provider-openstack v1.53.1/go.mod h1:jtVef+XAVa2YGAqfIs/zavG186dhg7I7zYhYYa98a0g=
-github.com/gardener/gardener-extension-registry-cache v0.21.0 h1:AlY0TZhCBtLf65yhS/gZMHOHw0f+uDWiWSsvK+C0uU0=
-github.com/gardener/gardener-extension-registry-cache v0.21.0/go.mod h1:KwL8f9Aqb+N6ofuCdkdqWW/F+z9nT+R/nba15UIKD8Q=
+github.com/gardener/gardener-extension-registry-cache v0.22.0 h1:0hmqQGR1mu4/8Wejv/Sc0tbgvbc1e3bHyo2mj/mHtyE=
+github.com/gardener/gardener-extension-registry-cache v0.22.0/go.mod h1:sm9NcBnp18SCWgfqbq5yxo6vyHVx2t6vuGoULQ83YPw=
 github.com/gardener/gardener-extension-runtime-gvisor v0.33.0 h1:OaVnOFe6PcmrjNp+rIpZn40OeHBgzqB7QWSXg0zTFx0=
 github.com/gardener/gardener-extension-runtime-gvisor v0.33.0/go.mod h1:Fg8isPv6/0C9NOUuMAD6SO6Xxvt96OfxJmZoWNFkXhI=
 github.com/gardener/gardener/pkg/apis v1.140.1 h1:5YoYoZmbvrg11/rA/rM9z+sI38SU/xB+QhLkmmY1zGQ=
