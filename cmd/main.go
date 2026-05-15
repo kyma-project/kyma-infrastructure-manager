@@ -423,6 +423,8 @@ func main() {
 
 	refreshRuntimeMetrics(restConfig, logger, metrics)
 
+	ctx := ctrl.SetupSignalHandler()
+
 	if registryCacheConfigControllerEnabled {
 		// use closure that creates runtime client with prebuilt scheme
 		runtimeClientClosure := func(secret corev1.Secret) (client.Client, error) {
@@ -430,7 +432,7 @@ func main() {
 		}
 
 		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, runtimeClientClosure)
-		if err = registryCacheConfigReconciler.SetupWithManager(mgr, 1, registryCacheListenerPort, defaultRegistryCacheListenerComponentName); err != nil {
+		if err = registryCacheConfigReconciler.SetupWithManager(ctx, mgr, 1, registryCacheListenerPort, defaultRegistryCacheListenerComponentName); err != nil {
 			setupLog.Error(err, "unable to setup registry cache config controller with Manager", "controller", "Runtime")
 			os.Exit(1)
 		}
@@ -438,7 +440,7 @@ func main() {
 
 	setupLog.Info("Starting Manager", "kubeconfigExpirationTime", expirationTime, "kubeconfigRotationPeriod", rotationPeriod)
 
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}

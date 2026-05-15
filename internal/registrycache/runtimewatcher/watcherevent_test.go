@@ -88,6 +88,28 @@ func TestGetRuntimeIDFromEvent(t *testing.T) {
 	}
 }
 
+func TestAdaptEvents_ContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	src := make(chan WatcherListenerEvent, 1)
+	dest := AdaptEvents(ctx, func() <-chan WatcherListenerEvent { return src })
+
+	cancel()
+
+	_, open := <-dest
+	assert.False(t, open, "dest channel should be closed after context cancellation")
+}
+
+func TestAdaptEvents_SourceClose(t *testing.T) {
+	src := make(chan WatcherListenerEvent, 1)
+	dest := AdaptEvents(context.Background(), func() <-chan WatcherListenerEvent { return src })
+
+	close(src)
+
+	_, open := <-dest
+	assert.False(t, open, "dest channel should be closed when source channel is closed")
+}
+
 func TestSkrEventHandler_GenericFunc(t *testing.T) {
 	tests := []struct {
 		name              string

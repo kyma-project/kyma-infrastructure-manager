@@ -206,7 +206,7 @@ func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, runt
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *RegistryCacheConfigReconciler) SetupWithManager(mgr ctrl.Manager, numberOfWorkers int, registryCacheListenerPort, registryCacheListenerComponentName string) error {
+func (r *RegistryCacheConfigReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, numberOfWorkers int, registryCacheListenerPort, registryCacheListenerComponentName string) error {
 	runnableListener := watcherevent.NewSKREventListener(
 		registryCacheListenerPort,
 		registryCacheListenerComponentName,
@@ -225,7 +225,7 @@ func (r *RegistryCacheConfigReconciler) SetupWithManager(mgr ctrl.Manager, numbe
 			predicate.LabelChangedPredicate{},
 			predicate.AnnotationChangedPredicate{},
 		)).
-		WatchesRawSource(source.Channel(runtimewatcher.AdaptEvents(runnableListener.ReceivedEvents), runtimewatcher.CreateSkrEventHandler(r.Log))).
+		WatchesRawSource(source.Channel(runtimewatcher.AdaptEvents(ctx, runnableListener.ReceivedEvents), runtimewatcher.CreateSkrEventHandler(r.Log))).
 		Named("registry-config-controller").
 		Complete(r)
 }

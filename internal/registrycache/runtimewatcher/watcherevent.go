@@ -28,12 +28,26 @@ var (
 
 // AdaptEvents converts given channel from the type used by runtime-watcher/listener
 // module to the type required by the controller-runtime library.
-func AdaptEvents(listenerChan func() <-chan WatcherListenerEvent) <-chan CtrlRuntimeEvent {
+// The goroutine exits when ctx is cancelled or the source channel is closed.
+func AdaptEvents(ctx context.Context, listenerChan func() <-chan WatcherListenerEvent) <-chan CtrlRuntimeEvent {
 	dest := make(chan CtrlRuntimeEvent)
 	go func() {
 		defer close(dest)
-		for evt := range listenerChan() {
-			dest <- CtrlRuntimeEvent{Object: evt.Object}
+		src := listenerChan()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case evt, ok := <-src:
+				if !ok {
+					return
+				}
+				select {
+				case dest <- CtrlRuntimeEvent{Object: evt.Object}:
+				case <-ctx.Done():
+					return
+				}
+			}
 		}
 	}()
 	return dest
