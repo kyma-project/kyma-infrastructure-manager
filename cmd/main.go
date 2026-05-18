@@ -81,19 +81,20 @@ func init() {
 
 // Default values for the Runtime controller configuration
 const (
-	defaultControlPlaneRequeueDuration   = 10 * time.Second
-	defaultGardenerRequestTimeout        = 3 * time.Second
-	defaultGardenerRateLimiterQPS        = 5
-	defaultGardenerRateLimiterBurst      = 5
-	defaultMinimalRotationTimeRatio      = 0.6
-	defaultExpirationTime                = 24 * time.Hour
-	defaultGardenerReconciliationTimeout = 60 * time.Second
-	defaultGardenerRequeueDuration       = 15 * time.Second
-	defaultShootCreateRequeueDuration    = 60 * time.Second
-	defaultShootDeleteRequeueDuration    = 90 * time.Second
-	defaultShootReconcileRequeueDuration = 30 * time.Second
-	defaultRuntimeCtrlWorkersCnt         = 25
-	defaultGardenerClusterCtrlWorkersCnt = 25
+	defaultControlPlaneRequeueDuration        = 10 * time.Second
+	defaultGardenerRequestTimeout             = 3 * time.Second
+	defaultGardenerRateLimiterQPS             = 5
+	defaultGardenerRateLimiterBurst           = 5
+	defaultMinimalRotationTimeRatio           = 0.6
+	defaultExpirationTime                     = 24 * time.Hour
+	defaultGardenerReconciliationTimeout      = 60 * time.Second
+	defaultGardenerRequeueDuration            = 15 * time.Second
+	defaultShootCreateRequeueDuration         = 60 * time.Second
+	defaultShootDeleteRequeueDuration         = 90 * time.Second
+	defaultShootReconcileRequeueDuration      = 30 * time.Second
+	defaultRuntimeCtrlWorkersCnt              = 25
+	defaultGardenerClusterCtrlWorkersCnt      = 25
+	defaultRegistryCacheListenerComponentName = "infrastructure-manager-registry-cache"
 )
 
 func main() {
@@ -113,6 +114,7 @@ func main() {
 	var converterConfigFilepath string
 	var auditLogMandatory bool
 	var registryCacheConfigControllerEnabled bool
+	var registryCacheListenerPort string
 	var apiServerAclEnabled bool
 	var runtimeBootstrapperEnabled bool
 	var runtimeBootstrapperKCPConfigName string
@@ -149,6 +151,9 @@ func main() {
 	flag.IntVar(&runtimeCtrlGardenerRateLimiterBurst, "gardener-ratelimiter-burst", defaultGardenerRateLimiterBurst, "Gardener client rate limiter burst for Runtime Controller. The burst value allows for more requests than the qps limit for short periods (see https://cloud.google.com/config-connector/docs/how-to/customize-controller-manager-rate-limit)")
 	flag.IntVar(&runtimeCtrlWorkersCnt, "runtime-ctrl-workers-cnt", defaultRuntimeCtrlWorkersCnt, "Number of workers running in parallel for Runtime Controller. The number of parallel workers has an impact on the amount of requests send to the Gardener cluster")
 	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "File path to the gardener shoot converter configuration.")
+
+	// Registry cache specific parameters:
+	flag.StringVar(&registryCacheListenerPort, "registry-cache-listener-port", ":8082", "Port for the registry cache listener to listen on")
 
 	//Feature flags:
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration. When enabled this feature, a Shoot cluster will only be created when an auditlog tenant exists (this is defined in the auditlog mapping configuration file)")
@@ -418,14 +423,16 @@ func main() {
 
 	refreshRuntimeMetrics(restConfig, logger, metrics)
 
+	ctx := ctrl.SetupSignalHandler()
+
 	if registryCacheConfigControllerEnabled {
 		// use closure that creates runtime client with prebuilt scheme
 		runtimeClientClosure := func(secret corev1.Secret) (client.Client, error) {
 			return gardener.GetRuntimeClientWithScheme(secret, prebuiltRuntimeScheme)
 		}
 
-		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, runtimeClientClosure)
-		if err = registryCacheConfigReconciler.SetupWithManager(mgr, 1); err != nil {
+		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, "kcp-system", runtimeClientClosure)
+		if err = registryCacheConfigReconciler.SetupWithManager(ctx, mgr, 1, registryCacheListenerPort, defaultRegistryCacheListenerComponentName); err != nil {
 			setupLog.Error(err, "unable to setup registry cache config controller with Manager", "controller", "Runtime")
 			os.Exit(1)
 		}
@@ -433,7 +440,7 @@ func main() {
 
 	setupLog.Info("Starting Manager", "kubeconfigExpirationTime", expirationTime, "kubeconfigRotationPeriod", rotationPeriod)
 
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}

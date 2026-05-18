@@ -64,14 +64,14 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	reconciler = NewRegistryCacheConfigReconciler(mgr, logger, fixRuntimeClientGetter(fixRuntimeClients()))
+	reconciler = NewRegistryCacheConfigReconciler(mgr, logger, "kcp-system", fixRuntimeClientGetter(fixRuntimeClients()))
 	Expect(reconciler).NotTo(BeNil())
-	err = reconciler.SetupWithManager(mgr, 1)
+	suiteCtx, cancelFunc = context.WithCancel(context.Background())
+	err = reconciler.SetupWithManager(suiteCtx, mgr, 1, ":8082", "infrastructure-manager-registry-cache")
 	Expect(err).To(BeNil())
 
 	go func() {
 		defer GinkgoRecover()
-		suiteCtx, cancelFunc = context.WithCancel(context.Background())
 		err = mgr.Start(suiteCtx)
 		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
 	}()
