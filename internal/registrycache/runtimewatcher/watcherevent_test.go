@@ -123,7 +123,7 @@ func TestSkrEventHandler_GenericFunc(t *testing.T) {
 			object:            map[string]any{"runtime-id": "rid-789"},
 			expectedQueueLen:  1,
 			expectedName:      "kubeconfig-rid-789",
-			expectedNamespace: "kcp-system",
+			expectedNamespace: "test-namespace",
 		},
 		{
 			name:             "missing runtime-id does not add to queue",
@@ -134,7 +134,7 @@ func TestSkrEventHandler_GenericFunc(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := CreateSkrEventHandler(logr.Discard())
+			h := CreateSkrEventHandler(logr.Discard(), "test-namespace")
 			queue := workqueue.NewTypedRateLimitingQueue[ctrl.Request](
 				workqueue.DefaultTypedControllerRateLimiter[ctrl.Request](),
 			)

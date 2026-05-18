@@ -431,7 +431,7 @@ func main() {
 			return gardener.GetRuntimeClientWithScheme(secret, prebuiltRuntimeScheme)
 		}
 
-		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, runtimeClientClosure)
+		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, "kcp-system", runtimeClientClosure)
 		if err = registryCacheConfigReconciler.SetupWithManager(ctx, mgr, 1, registryCacheListenerPort, defaultRegistryCacheListenerComponentName); err != nil {
 			setupLog.Error(err, "unable to setup registry cache config controller with Manager", "controller", "Runtime")
 			os.Exit(1)

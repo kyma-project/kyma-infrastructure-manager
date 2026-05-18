@@ -53,7 +53,7 @@ func AdaptEvents(ctx context.Context, listenerChan func() <-chan WatcherListener
 	return dest
 }
 
-func CreateSkrEventHandler(l logr.Logger) *handler.Funcs {
+func CreateSkrEventHandler(l logr.Logger, namespace string) *handler.Funcs {
 	return &handler.Funcs{
 		GenericFunc: func(ctx context.Context, evnt event.GenericEvent,
 			queue workqueue.TypedRateLimitingInterface[ctrl.Request],
@@ -66,7 +66,7 @@ func CreateSkrEventHandler(l logr.Logger) *handler.Funcs {
 
 			kcpKubeconfigKey := client.ObjectKey{
 				Name:      "kubeconfig-" + runtimeID,
-				Namespace: "kcp-system",
+				Namespace: namespace,
 			}
 			req := ctrl.Request{NamespacedName: kcpKubeconfigKey}
 			l.Info(fmt.Sprintf("event received from SKR, adding %s to queue", req.NamespacedName))

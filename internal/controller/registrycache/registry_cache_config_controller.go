@@ -38,6 +38,7 @@ type RegistryCacheConfigReconciler struct {
 	EventRecorder       record.EventRecorder
 	RequestID           atomic.Uint64
 	RuntimeClientGetter RuntimeClientGetter
+	KcpNamespace        string
 }
 
 const (
@@ -194,7 +195,7 @@ func secretControlledByKIM(secret corev1.Secret) bool {
 
 type RuntimeClientGetter func(secret corev1.Secret) (client.Client, error)
 
-func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, runtimeClientGetter RuntimeClientGetter) *RegistryCacheConfigReconciler {
+func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, kcpNamespace string, runtimeClientGetter RuntimeClientGetter) *RegistryCacheConfigReconciler {
 	return &RegistryCacheConfigReconciler{
 		KcpClient: mgr.GetClient(),
 		Scheme:    mgr.GetScheme(),
@@ -202,6 +203,7 @@ func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, runt
 		EventRecorder:       mgr.GetEventRecorderFor("runtime-controller"),
 		Log:                 logger,
 		RuntimeClientGetter: runtimeClientGetter,
+		KcpNamespace:        kcpNamespace,
 	}
 }
 
@@ -225,7 +227,7 @@ func (r *RegistryCacheConfigReconciler) SetupWithManager(ctx context.Context, mg
 			predicate.LabelChangedPredicate{},
 			predicate.AnnotationChangedPredicate{},
 		)).
-		WatchesRawSource(source.Channel(runtimewatcher.AdaptEvents(ctx, runnableListener.ReceivedEvents), runtimewatcher.CreateSkrEventHandler(r.Log))).
+		WatchesRawSource(source.Channel(runtimewatcher.AdaptEvents(ctx, runnableListener.ReceivedEvents), runtimewatcher.CreateSkrEventHandler(r.Log, r.KcpNamespace))).
 		Named("registry-config-controller").
 		Complete(r)
 }
