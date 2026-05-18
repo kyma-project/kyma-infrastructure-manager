@@ -83,6 +83,7 @@ func NewDNSExtensionInternal() (*gardener.Extension, error) {
 	providerConfig := &DNSExtensionProviderConfig{
 		APIVersion:                    "service.dns.extensions.gardener.cloud/v1alpha1",
 		Kind:                          "DNSConfig",
+		DNSProviderReplication:        &DNSProviderReplication{Enabled: true},
 		SyncProvidersFromShootSpecDNS: ptr.To(true),
 	}
 

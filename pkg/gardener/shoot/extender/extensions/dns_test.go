@@ -85,7 +85,8 @@ func verifyLocalDNSExtension(t *testing.T, ext *gardener.Extension) {
 
 	err := json.Unmarshal(ext.ProviderConfig.Raw, &dnsConfig)
 	require.NoError(t, err)
-	require.Nil(t, dnsConfig.DNSProviderReplication)
+	require.NotNil(t, dnsConfig.DNSProviderReplication)
+	assert.Equal(t, true, dnsConfig.DNSProviderReplication.Enabled)
 	require.NotNil(t, dnsConfig.SyncProvidersFromShootSpecDNS)
 
 	assert.Equal(t, "service.dns.extensions.gardener.cloud/v1alpha1", dnsConfig.APIVersion)
