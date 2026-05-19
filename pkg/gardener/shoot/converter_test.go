@@ -125,6 +125,7 @@ func TestConverter(t *testing.T) {
 			AuditLogData:         auditLogData,
 			InfrastructureConfig: fixAWSInfrastructureConfig("10.250.0.0/16", []string{"eu-central-1c", "eu-central-1b", "eu-central-1a"}),
 			ControlPlaneConfig:   fixAWSControlPlaneConfig(),
+			UseDNSCredentialsRef: true,
 		})
 
 		// when
@@ -143,7 +144,11 @@ func TestConverter(t *testing.T) {
 		assert.Equal(t, "1.30", shoot.Spec.Kubernetes.Version)
 		assert.Equal(t, "gardenlinux", shoot.Spec.Provider.Workers[0].Machine.Image.Name)
 		assert.Equal(t, "1592.2.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
-		assert.Nil(t, shoot.Spec.DNS)
+		require.NotNil(t, shoot.Spec.DNS)
+		require.Len(t, shoot.Spec.DNS.Providers, 1)
+		require.NotNil(t, shoot.Spec.DNS.Providers[0].CredentialsRef)
+		assert.Equal(t, "dns-secret", shoot.Spec.DNS.Providers[0].CredentialsRef.Name)
+		assert.Nil(t, shoot.Spec.DNS.Providers[0].SecretName) //nolint:staticcheck
 
 		extensionLen := len(shoot.Spec.Extensions)
 		require.Equalf(t, extensionLen, 5, "unexpected number of extensions: %d, expected: 5", extensionLen)
@@ -357,7 +362,7 @@ func fixAllExtensionsOnTheShoot() []gardener.Extension {
 		{
 			Type: extensions.DNSExtensionType,
 			ProviderConfig: &runtime.RawExtension{
-				Raw: []byte(`{"apiVersion":"service.dns.extensions.gardener.cloud/v1alpha1","dnsProviderReplication":{"enabled":true},"syncProvidersFromShootSpecDNS":true,"providers":[{"domains":{"include":["test-shoot-name.test-domain"],"exclude":null},"secretName":"test-dns-secret","type":"test-provider"}],"kind":"DNSConfig"}`),
+				Raw: []byte(`{"apiVersion":"service.dns.extensions.gardener.cloud/v1alpha1","dnsProviderReplication":{"enabled":true},"syncProvidersFromShootSpecDNS":true,"providers":[{"domains":{"include":["test-shoot-name.test-domain"],"exclude":null},"credentials":"test-dns-secret","type":"test-provider"}],"kind":"DNSConfig"}`),
 			},
 		},
 		{

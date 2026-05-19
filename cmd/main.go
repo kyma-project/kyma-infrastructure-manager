@@ -114,6 +114,7 @@ func main() {
 	var auditLogMandatory bool
 	var registryCacheConfigControllerEnabled bool
 	var apiServerAclEnabled bool
+	var useDNSCredentialsRef bool
 	var runtimeBootstrapperEnabled bool
 	var runtimeBootstrapperKCPConfigName string
 	var runtimeBootstrapperKCPPullSecretName string
@@ -155,6 +156,7 @@ func main() {
 	flag.BoolVar(&registryCacheConfigControllerEnabled, "registry-cache-config-controller-enabled", false, "Feature flag to enable registry cache config controller")
 	flag.BoolVar(&runtimeBootstrapperEnabled, "runtime-bootstrapper-enabled", false, "Feature flag to enable runtime bootstrapper")
 	flag.BoolVar(&apiServerAclEnabled, "api-server-acl-enabled", false, "Feature flag to enable the shoot API server ACL extender which restricts access to the API server to a defined set of CIDRs")
+	flag.BoolVar(&useDNSCredentialsRef, "use-dns-credentials-ref", true, "Feature flag controlling whether KIM emits DNS provider credentials via the new credentialsRef field (and the DNS extension's credentials field). When false, the deprecated secretName field is emitted instead. The deprecated form is forbidden on Kubernetes 1.35+.")
 
 	// Runtime bootstrapper configuration
 	flag.StringVar(&runtimeBootstrapperManifestsConfigMapName, "runtime-bootstrapper-manifests-config-map-name", "runtime-bootstrapper-manifests", "Config map with Runtime Bootstrapper manifests.")
@@ -384,6 +386,7 @@ func main() {
 		Config:                               config,
 		AuditLogMandatory:                    auditLogMandatory,
 		ApiServerAclEnabled:                  apiServerAclEnabled,
+		UseDNSCredentialsRef:                 useDNSCredentialsRef,
 		Metrics:                              metrics,
 		AuditLogging:                         auditLogDataMap,
 		RegistryCacheConfigControllerEnabled: registryCacheConfigControllerEnabled,

@@ -19,7 +19,7 @@ type Extension struct {
 	Create CreateExtensionFunc
 }
 
-func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, registryCache []imv1.ImageRegistryCache, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, registryCache []imv1.ImageRegistryCache, apiServerAclEnabled, useDNSCredentialsRef bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			Type: NetworkFilterType,
@@ -39,7 +39,7 @@ func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client
 				if config.DNS.IsGardenerInternal() {
 					return NewDNSExtensionInternal()
 				}
-				return NewDNSExtensionExternal(shoot.Name, config.DNS.SecretName, config.DNS.DomainPrefix, config.DNS.ProviderType)
+				return NewDNSExtensionExternal(shoot.Name, config.DNS.SecretName, config.DNS.DomainPrefix, config.DNS.ProviderType, useDNSCredentialsRef)
 			},
 		},
 		{
@@ -95,7 +95,7 @@ func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client
 	}, nil)
 }
 
-func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension, apiServerAclEnabled, useDNSCredentialsRef bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			AuditlogExtensionType,
@@ -137,6 +137,15 @@ func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client,
 			Type: NetworkFilterType,
 			Create: func(runtime imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
 				return NewNetworkFilterExtension(runtime.Spec.Security.Networking.Filter)
+			},
+		},
+		{
+			Type: DNSExtensionType,
+			Create: func(_ imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+				if config.DNS.IsGardenerInternal() {
+					return NewDNSExtensionInternal()
+				}
+				return NewDNSExtensionExternal(shoot.Name, config.DNS.SecretName, config.DNS.DomainPrefix, config.DNS.ProviderType, useDNSCredentialsRef)
 			},
 		},
 		{

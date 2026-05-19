@@ -91,6 +91,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		AuditLogData:          data,
 		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
 		ApiServerAclEnabled:   m.ApiServerAclEnabled,
+		UseDNSCredentialsRef:  m.UseDNSCredentialsRef,
 	})
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object")

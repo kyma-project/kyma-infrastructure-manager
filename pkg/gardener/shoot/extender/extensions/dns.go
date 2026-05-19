@@ -3,6 +3,7 @@ package extensions
 import (
 	"encoding/json"
 	"fmt"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
@@ -35,6 +36,9 @@ type DNSProvider struct {
 	// SecretName is a name of a secret containing credentials for the stated domain and the
 	// provider.
 	SecretName *string `json:"secretName,omitempty"`
+	// Credentials is the name of the resource reference containing the credentials for the provider.
+	// It is an alternative to SecretName and can reference either a secret or a workload identity.
+	Credentials *string `json:"credentials,omitempty"`
 	// Type is the DNS provider type.
 	Type *string `json:"type,omitempty"`
 	// Zones contains information about which hosted zones shall be included/excluded for this provider.
@@ -54,27 +58,32 @@ type DNSProviderReplication struct {
 	Enabled bool `json:"enabled"`
 }
 
-func newDNSExtensionConfig(domain, secretName, dnsProviderType string) *DNSExtensionProviderConfig {
+func newDNSExtensionConfig(domain, secretName, dnsProviderType string, useCredentialsRef bool) *DNSExtensionProviderConfig {
+	provider := DNSProvider{
+		Domains: &DNSIncludeExclude{
+			Include: []string{domain},
+		},
+		Type: ptr.To(dnsProviderType),
+	}
+
+	if useCredentialsRef {
+		provider.Credentials = ptr.To(secretName)
+	} else {
+		provider.SecretName = ptr.To(secretName)
+	}
+
 	return &DNSExtensionProviderConfig{
 		APIVersion:                    "service.dns.extensions.gardener.cloud/v1alpha1",
 		Kind:                          "DNSConfig",
 		DNSProviderReplication:        &DNSProviderReplication{Enabled: true},
 		SyncProvidersFromShootSpecDNS: ptr.To(true),
-		Providers: []DNSProvider{
-			{
-				Domains: &DNSIncludeExclude{
-					Include: []string{domain},
-				},
-				SecretName: ptr.To(secretName),
-				Type:       ptr.To(dnsProviderType),
-			},
-		},
+		Providers:                     []DNSProvider{provider},
 	}
 }
 
-func NewDNSExtensionExternal(shootName, secretName, domainSuffix, dnsProviderType string) (*gardener.Extension, error) {
+func NewDNSExtensionExternal(shootName, secretName, domainSuffix, dnsProviderType string, useCredentialsRef bool) (*gardener.Extension, error) {
 	domain := fmt.Sprintf("%s.%s", shootName, domainSuffix)
-	providerConfig := newDNSExtensionConfig(domain, secretName, dnsProviderType)
+	providerConfig := newDNSExtensionConfig(domain, secretName, dnsProviderType, useCredentialsRef)
 
 	return serializedDNSExtension(providerConfig)
 }
