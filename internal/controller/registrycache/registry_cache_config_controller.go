@@ -99,7 +99,7 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 	}
 
 	return ctrl.Result{
-		RequeueAfter: 5 * time.Minute,
+		RequeueAfter: 60 * time.Minute,
 	}, err
 }
 
@@ -146,6 +146,16 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 }
 
 func registryCacheEnabled(ctx context.Context, runtimeClient client.Client) (bool, error) {
+
+	var kymacrd apiextensions.CustomResourceDefinition
+	crdErr := runtimeClient.Get(ctx, types.NamespacedName{Name: "kymas.operator.kyma-project.io"}, &kymacrd)
+	if crdErr != nil {
+		if apierrors.IsNotFound(crdErr) {
+			return false, nil
+		}
+		return false, crdErr
+	}
+
 	var defaultKyma kyma.Kyma
 	err := runtimeClient.Get(ctx, types.NamespacedName{Name: "default", Namespace: "kyma-system"}, &defaultKyma)
 	if err != nil {
@@ -163,7 +173,7 @@ func registryCacheEnabled(ctx context.Context, runtimeClient client.Client) (boo
 	// Fallback: search for CRD
 	// This is a temporary solution until module is available to be installed
 	var crd apiextensions.CustomResourceDefinition
-	crdErr := runtimeClient.Get(ctx, types.NamespacedName{Name: "registrycacheconfigs.core.kyma-project.io"}, &crd)
+	crdErr = runtimeClient.Get(ctx, types.NamespacedName{Name: "registrycacheconfigs.core.kyma-project.io"}, &crd)
 	if crdErr != nil {
 		if apierrors.IsNotFound(crdErr) {
 			return false, nil
