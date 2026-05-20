@@ -2,10 +2,11 @@ package extensions
 
 import (
 	"encoding/json"
+	"testing"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestDNSExtensionsExtender(t *testing.T) {
@@ -69,7 +70,7 @@ func verifyExternalDNSExtension(t *testing.T, ext *gardener.Extension) {
 	require.NotNil(t, provider.Type)
 
 	require.NotNil(t, provider.Credentials)
-	assert.Equal(t, "aws-route53-secret-dev", *provider.Credentials)
+	assert.Equal(t, "shoot-dns-service-aws-route53-secret-dev", *provider.Credentials)
 	assert.Equal(t, "aws-route53", *provider.Type)
 
 	require.Len(t, provider.Domains.Include, 1)

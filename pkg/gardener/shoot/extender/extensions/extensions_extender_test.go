@@ -686,7 +686,7 @@ func verifyDNSExtension(t *testing.T, ext gardener.Extension) {
 	require.NotNil(t, provider.Credentials)
 	require.NotNil(t, provider.Type)
 
-	assert.Equal(t, "test-dns-secret", *provider.Credentials)
+	assert.Equal(t, "shoot-dns-service-test-dns-secret", *provider.Credentials)
 	assert.Equal(t, "test-provider", *provider.Type)
 
 	require.Len(t, provider.Domains.Include, 1)
