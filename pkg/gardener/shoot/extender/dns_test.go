@@ -1,8 +1,9 @@
 package extender
 
 import (
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"testing"
+
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/stretchr/testify/assert"
@@ -33,11 +34,11 @@ func TestDNSExtender(t *testing.T) {
 		assert.Equal(t, dnsProviderType, *shoot.Spec.DNS.Providers[0].Type)                                //nolint:staticcheck
 		assert.Equal(t, true, *shoot.Spec.DNS.Providers[0].Primary)                                        //nolint:staticcheck
 
-		require.Nil(t, shoot.Spec.DNS.Providers[0].SecretName) //nolint:staticcheck
-		require.NotNil(t, shoot.Spec.DNS.Providers[0].CredentialsRef)
-		assert.Equal(t, "v1", shoot.Spec.DNS.Providers[0].CredentialsRef.APIVersion)
-		assert.Equal(t, "Secret", shoot.Spec.DNS.Providers[0].CredentialsRef.Kind)
-		assert.Equal(t, secretName, shoot.Spec.DNS.Providers[0].CredentialsRef.Name)
+		require.Nil(t, shoot.Spec.DNS.Providers[0].SecretName)                       //nolint:staticcheck
+		require.NotNil(t, shoot.Spec.DNS.Providers[0].CredentialsRef)                //nolint:staticcheck
+		assert.Equal(t, "v1", shoot.Spec.DNS.Providers[0].CredentialsRef.APIVersion) //nolint:staticcheck
+		assert.Equal(t, "Secret", shoot.Spec.DNS.Providers[0].CredentialsRef.Kind)   //nolint:staticcheck
+		assert.Equal(t, secretName, shoot.Spec.DNS.Providers[0].CredentialsRef.Name) //nolint:staticcheck
 	})
 
 	t.Run("Set deprecated secretName when useCredentialsRef is false", func(t *testing.T) {
@@ -48,6 +49,6 @@ func TestDNSExtender(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, secretName, *shoot.Spec.DNS.Providers[0].SecretName) //nolint:staticcheck
-		assert.Nil(t, shoot.Spec.DNS.Providers[0].CredentialsRef)
+		assert.Nil(t, shoot.Spec.DNS.Providers[0].CredentialsRef)            //nolint:staticcheck
 	})
 }
