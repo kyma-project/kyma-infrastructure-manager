@@ -60,7 +60,7 @@ func newDNSExtensionConfig(domain, secretName, dnsProviderType string) *DNSExten
 			Include: []string{domain},
 		},
 		Type:        ptr.To(dnsProviderType),
-		Credentials: ptr.To(secretName),
+		Credentials: ptr.To(fmt.Sprintf("%s-%s", DNSExtensionType, secretName)),
 	}
 
 	return &DNSExtensionProviderConfig{
