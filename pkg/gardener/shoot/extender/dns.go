@@ -76,6 +76,7 @@ func NewDNSExtender(secretName, domainPrefix, dnsProviderType string, useCredent
 				Kind:       "Secret",
 				Name:       secretName,
 			}
+			provider.SecretName = nil //nolint:staticcheck
 		} else {
 			provider.SecretName = &secretName //nolint:staticcheck
 		}
