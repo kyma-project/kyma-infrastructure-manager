@@ -33,11 +33,7 @@ type DNSExtensionProviderConfig struct {
 type DNSProvider struct {
 	// Domains contains information about which domains shall be included/excluded for this provider.
 	Domains *DNSIncludeExclude `json:"domains,omitempty"`
-	// SecretName is a name of a secret containing credentials for the stated domain and the
-	// provider.
-	SecretName *string `json:"secretName,omitempty"`
 	// Credentials is the name of the resource reference containing the credentials for the provider.
-	// It is an alternative to SecretName and can reference either a secret or a workload identity.
 	Credentials *string `json:"credentials,omitempty"`
 	// Type is the DNS provider type.
 	Type *string `json:"type,omitempty"`
@@ -58,18 +54,13 @@ type DNSProviderReplication struct {
 	Enabled bool `json:"enabled"`
 }
 
-func newDNSExtensionConfig(domain, secretName, dnsProviderType string, useCredentialsRef bool) *DNSExtensionProviderConfig {
+func newDNSExtensionConfig(domain, secretName, dnsProviderType string) *DNSExtensionProviderConfig {
 	provider := DNSProvider{
 		Domains: &DNSIncludeExclude{
 			Include: []string{domain},
 		},
-		Type: ptr.To(dnsProviderType),
-	}
-
-	if useCredentialsRef {
-		provider.Credentials = ptr.To(secretName)
-	} else {
-		provider.SecretName = ptr.To(secretName)
+		Type:        ptr.To(dnsProviderType),
+		Credentials: ptr.To(secretName),
 	}
 
 	return &DNSExtensionProviderConfig{
@@ -81,9 +72,9 @@ func newDNSExtensionConfig(domain, secretName, dnsProviderType string, useCreden
 	}
 }
 
-func NewDNSExtensionExternal(shootName, secretName, domainSuffix, dnsProviderType string, useCredentialsRef bool) (*gardener.Extension, error) {
+func NewDNSExtensionExternal(shootName, secretName, domainSuffix, dnsProviderType string) (*gardener.Extension, error) {
 	domain := fmt.Sprintf("%s.%s", shootName, domainSuffix)
-	providerConfig := newDNSExtensionConfig(domain, secretName, dnsProviderType, useCredentialsRef)
+	providerConfig := newDNSExtensionConfig(domain, secretName, dnsProviderType)
 
 	return serializedDNSExtension(providerConfig)
 }

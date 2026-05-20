@@ -10,31 +10,20 @@ import (
 
 func TestDNSExtensionsExtender(t *testing.T) {
 	for _, testcase := range []struct {
-		name              string
-		shootName         string
-		secretName        string
-		prefix            string
-		providerType      string
-		useCredentialsRef bool
-		expectLocal       bool
+		name         string
+		shootName    string
+		secretName   string
+		prefix       string
+		providerType string
+		expectLocal  bool
 	}{
 		{
-			name:              "Should generate DNS extension with credentials field for external DNS configuration",
-			shootName:         "myshoot",
-			secretName:        "aws-route53-secret-dev",
-			prefix:            "dev.kyma.ondemand.com",
-			providerType:      "aws-route53",
-			useCredentialsRef: true,
-			expectLocal:       false,
-		},
-		{
-			name:              "Should generate DNS extension with deprecated secretName for external DNS configuration when flag is off",
-			shootName:         "myshoot",
-			secretName:        "aws-route53-secret-dev",
-			prefix:            "dev.kyma.ondemand.com",
-			providerType:      "aws-route53",
-			useCredentialsRef: false,
-			expectLocal:       false,
+			name:         "Should generate DNS extension with credentials field for external DNS configuration",
+			shootName:    "myshoot",
+			secretName:   "aws-route53-secret-dev",
+			prefix:       "dev.kyma.ondemand.com",
+			providerType: "aws-route53",
+			expectLocal:  false,
 		},
 		{
 			name:        "Should generate DNS extension for internal Gardener DNS configuration",
@@ -48,15 +37,15 @@ func TestDNSExtensionsExtender(t *testing.T) {
 				require.NoError(t, err)
 				verifyLocalDNSExtension(t, ext)
 			} else {
-				ext, err := NewDNSExtensionExternal(testcase.shootName, testcase.secretName, testcase.prefix, testcase.providerType, testcase.useCredentialsRef)
+				ext, err := NewDNSExtensionExternal(testcase.shootName, testcase.secretName, testcase.prefix, testcase.providerType)
 				require.NoError(t, err)
-				verifyExternalDNSExtension(t, ext, testcase.useCredentialsRef)
+				verifyExternalDNSExtension(t, ext)
 			}
 		})
 	}
 }
 
-func verifyExternalDNSExtension(t *testing.T, ext *gardener.Extension, useCredentialsRef bool) {
+func verifyExternalDNSExtension(t *testing.T, ext *gardener.Extension) {
 	require.NotNil(t, ext)
 	require.NotNil(t, ext.ProviderConfig)
 	require.NotNil(t, ext.ProviderConfig.Raw)
@@ -79,15 +68,8 @@ func verifyExternalDNSExtension(t *testing.T, ext *gardener.Extension, useCreden
 	require.NotNil(t, provider.Domains)
 	require.NotNil(t, provider.Type)
 
-	if useCredentialsRef {
-		require.NotNil(t, provider.Credentials)
-		assert.Equal(t, "aws-route53-secret-dev", *provider.Credentials)
-		assert.Nil(t, provider.SecretName)
-	} else {
-		require.NotNil(t, provider.SecretName)
-		assert.Equal(t, "aws-route53-secret-dev", *provider.SecretName)
-		assert.Nil(t, provider.Credentials)
-	}
+	require.NotNil(t, provider.Credentials)
+	assert.Equal(t, "aws-route53-secret-dev", *provider.Credentials)
 	assert.Equal(t, "aws-route53", *provider.Type)
 
 	require.Len(t, provider.Domains.Include, 1)

@@ -34,7 +34,6 @@ type RCCfg struct {
 	ShootNamesapace                      string
 	AuditLogMandatory                    bool
 	ApiServerAclEnabled                  bool
-	UseDNSCredentialsRef                 bool
 	Metrics                              metrics.Metrics
 	AuditLogging                         auditlogs.Configuration
 	RegistryCacheConfigControllerEnabled bool

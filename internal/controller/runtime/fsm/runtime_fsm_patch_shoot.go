@@ -80,7 +80,6 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		InfrastructureConfig:  s.shoot.Spec.Provider.InfrastructureConfig,
 		ControlPlaneConfig:    s.shoot.Spec.Provider.ControlPlaneConfig,
 		ApiServerAclEnabled:   m.ApiServerAclEnabled,
-		UseDNSCredentialsRef:  m.UseDNSCredentialsRef,
 	})
 
 	if err != nil {

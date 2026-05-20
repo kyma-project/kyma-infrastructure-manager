@@ -125,7 +125,6 @@ func TestConverter(t *testing.T) {
 			AuditLogData:         auditLogData,
 			InfrastructureConfig: fixAWSInfrastructureConfig("10.250.0.0/16", []string{"eu-central-1c", "eu-central-1b", "eu-central-1a"}),
 			ControlPlaneConfig:   fixAWSControlPlaneConfig(),
-			UseDNSCredentialsRef: true,
 		})
 
 		// when

@@ -157,7 +157,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 				},
 			}
 
-			extender := NewExtensionsExtenderForCreate(context.Background(), fakeClient, config, testcase.inputAuditLogData, testcase.registryCache, testcase.apiServerACLEnabled, true)
+			extender := NewExtensionsExtenderForCreate(context.Background(), fakeClient, config, testcase.inputAuditLogData, testcase.registryCache, testcase.apiServerACLEnabled)
 
 			err := extender(testRuntime, shoot)
 			assert.NoError(t, err)
@@ -436,7 +436,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			kubeApiServerACLEnabled := AclNeedsToBeEnabled(testCase.apiServerACLEnabled, testRuntime)
 			nvidiaOpenshellExistsInOutput := isNvidiaOpenshellEnabled(testRuntime) || existingExtension(NvidiaOpenshellExtensionType, prevShoot) != nil
 
-			extender := NewExtensionsExtenderForPatch(context.Background(), fakeClient, config, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled, true)
+			extender := NewExtensionsExtenderForPatch(context.Background(), fakeClient, config, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled)
 			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided, kubeApiServerACLEnabled, nvidiaOpenshellExistsInOutput)
 
 			err := extender(testRuntime, shoot)
@@ -687,7 +687,6 @@ func verifyDNSExtension(t *testing.T, ext gardener.Extension) {
 	require.NotNil(t, provider.Type)
 
 	assert.Equal(t, "test-dns-secret", *provider.Credentials)
-	assert.Nil(t, provider.SecretName)
 	assert.Equal(t, "test-provider", *provider.Type)
 
 	require.Len(t, provider.Domains.Include, 1)
