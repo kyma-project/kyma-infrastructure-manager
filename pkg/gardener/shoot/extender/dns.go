@@ -73,7 +73,7 @@ func NewDNSExtender(secretName, domainPrefix, dnsProviderType string) func(runti
 				Kind:       "Secret",
 				Name:       secretName,
 			},
-			SecretName: nil, //
+			SecretName: nil,
 		}
 
 		shoot.Spec.DNS = &gardener.DNS{
