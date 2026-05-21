@@ -198,6 +198,10 @@ func GardenSecretNeedToBeRemoved(currentExtensions []gardener.Extension, desired
 	}
 
 	for _, cache := range registryConfig.Caches {
+		if cache.SecretReferenceName == nil {
+			continue
+		}
+
 		secretNotReferencedInRuntimeCR := slices.ContainsFunc(imageRegistryConfigWithSecrets, func(c imv1.ImageRegistryCache) bool {
 			return *cache.SecretReferenceName == fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, c.UID)
 		})
