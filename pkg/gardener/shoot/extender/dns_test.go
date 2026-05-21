@@ -30,13 +30,13 @@ func TestDNSExtender(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, "myshoot.dev.mydomain.com", *shoot.Spec.DNS.Domain)
-		assert.Equal(t, []string{"myshoot.dev.mydomain.com"}, shoot.Spec.DNS.Providers[0].Domains.Include)
-		assert.Equal(t, dnsProviderType, *shoot.Spec.DNS.Providers[0].Type)
-		assert.Equal(t, true, *shoot.Spec.DNS.Providers[0].Primary)
+		assert.Equal(t, []string{"myshoot.dev.mydomain.com"}, shoot.Spec.DNS.Providers[0].Domains.Include) //nolint:staticcheck
+		assert.Equal(t, dnsProviderType, *shoot.Spec.DNS.Providers[0].Type)                                //nolint:staticcheck
+		assert.Equal(t, true, *shoot.Spec.DNS.Providers[0].Primary)                                        //nolint:staticcheck
 
-		require.NotNil(t, shoot.Spec.DNS.Providers[0].CredentialsRef)
-		assert.Equal(t, "v1", shoot.Spec.DNS.Providers[0].CredentialsRef.APIVersion)
-		assert.Equal(t, "Secret", shoot.Spec.DNS.Providers[0].CredentialsRef.Kind)
-		assert.Equal(t, secretName, shoot.Spec.DNS.Providers[0].CredentialsRef.Name)
+		require.NotNil(t, shoot.Spec.DNS.Providers[0].CredentialsRef)                //nolint:staticcheck
+		assert.Equal(t, "v1", shoot.Spec.DNS.Providers[0].CredentialsRef.APIVersion) //nolint:staticcheck
+		assert.Equal(t, "Secret", shoot.Spec.DNS.Providers[0].CredentialsRef.Kind)   //nolint:staticcheck
+		assert.Equal(t, secretName, shoot.Spec.DNS.Providers[0].CredentialsRef.Name) //nolint:staticcheck
 	})
 }

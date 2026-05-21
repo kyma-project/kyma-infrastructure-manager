@@ -3,6 +3,7 @@ package extensions
 import (
 	"context"
 	"encoding/json"
+	"reflect"
 	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -36,10 +37,7 @@ func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client
 		{
 			Type: DNSExtensionType,
 			Create: func(_ imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-				if config.DNS.IsGardenerInternal() {
-					return NewDNSExtensionInternal()
-				}
-				return NewDNSExtensionExternal(shoot.Name, config.DNS.SecretName, config.DNS.DomainPrefix, config.DNS.ProviderType)
+				return buildDNSExtension(config.DNS, shoot.Name)
 			},
 		},
 		{
@@ -142,10 +140,7 @@ func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client,
 		{
 			Type: DNSExtensionType,
 			Create: func(_ imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-				if config.DNS.IsGardenerInternal() {
-					return NewDNSExtensionInternal()
-				}
-				return NewDNSExtensionExternal(shoot.Name, config.DNS.SecretName, config.DNS.DomainPrefix, config.DNS.ProviderType)
+				return dnsExtensionForPatch(config.DNS, shoot)
 			},
 		},
 		{
@@ -234,4 +229,38 @@ func existingExtension(extensionType string, shoot gardener.Shoot) *gardener.Ext
 
 func isNvidiaOpenshellEnabled(runtime imv1.Runtime) bool {
 	return runtime.Spec.Shoot.EnableNvidiaOpenshell != nil && *runtime.Spec.Shoot.EnableNvidiaOpenshell
+}
+
+func buildDNSExtension(dnsConfig config.DNSConfig, shootName string) (*gardener.Extension, error) {
+	if dnsConfig.IsGardenerInternal() {
+		return NewDNSExtensionInternal()
+	}
+	return NewDNSExtensionExternal(shootName, dnsConfig.SecretName, dnsConfig.DomainPrefix, dnsConfig.ProviderType)
+}
+
+func dnsExtensionForPatch(dnsConfig config.DNSConfig, shoot gardener.Shoot) (*gardener.Extension, error) {
+	desired, err := buildDNSExtension(dnsConfig, shoot.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	existing := existingExtension(DNSExtensionType, shoot)
+	if existing == nil || existing.ProviderConfig == nil {
+		return desired, nil
+	}
+
+	var existingCfg DNSExtensionProviderConfig
+	if err := json.Unmarshal(existing.ProviderConfig.Raw, &existingCfg); err != nil {
+		return nil, err
+	}
+
+	var desiredCfg DNSExtensionProviderConfig
+	if err := json.Unmarshal(desired.ProviderConfig.Raw, &desiredCfg); err != nil {
+		return nil, err
+	}
+
+	if reflect.DeepEqual(existingCfg, desiredCfg) {
+		return nil, nil
+	}
+	return desired, nil
 }
