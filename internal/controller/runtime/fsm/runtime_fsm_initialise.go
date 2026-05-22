@@ -41,7 +41,7 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 		if err != nil {
 			m.log.Error(err, "Failed to delete registry cache secrets during runtime deletion")
 
-			return updateStatusAndRequeue()
+			return updateStatusAndRequeue(m)
 		}
 
 		if instanceHasFinalizer {
@@ -57,7 +57,7 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 			metav1.ConditionUnknown,
 			"Runtime initialized",
 		)
-		return updateStatusAndRequeue()
+		return updateStatusAndRequeue(m)
 	}
 
 	if s.shoot == nil {

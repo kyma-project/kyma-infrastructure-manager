@@ -30,6 +30,7 @@ type RCCfg struct {
 	RequeueDurationShootDelete           time.Duration
 	RequeueDurationShootReconcile        time.Duration
 	ControlPlaneRequeueDuration          time.Duration
+	StatusRequeueDelay                   time.Duration
 	Finalizer                            string
 	ShootNamesapace                      string
 	AuditLogMandatory                    bool

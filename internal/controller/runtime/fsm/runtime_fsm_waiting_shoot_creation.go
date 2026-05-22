@@ -12,18 +12,18 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func ensureStatusConditionIsSetAndContinue(instance *imv1.Runtime, condType imv1.RuntimeConditionType, condReason imv1.RuntimeConditionReason, message string, next stateFn) (stateFn, *ctrl.Result, error) {
+func ensureStatusConditionIsSetAndContinue(m *fsm, instance *imv1.Runtime, condType imv1.RuntimeConditionType, condReason imv1.RuntimeConditionReason, message string, next stateFn) (stateFn, *ctrl.Result, error) {
 	if !instance.IsStateWithConditionAndStatusSet(imv1.RuntimeStatePending, condType, condReason, "True") {
 		instance.UpdateStatePending(condType, condReason, metav1.ConditionTrue, message)
-		return updateStatusAndRequeue()
+		return updateStatusAndRequeue(m)
 	}
 	return switchState(next)
 }
 
-func ensureTerminatingStatusConditionAndContinue(instance *imv1.Runtime, condType imv1.RuntimeConditionType, condReason imv1.RuntimeConditionReason, message string, next stateFn) (stateFn, *ctrl.Result, error) {
+func ensureTerminatingStatusConditionAndContinue(m *fsm, instance *imv1.Runtime, condType imv1.RuntimeConditionType, condReason imv1.RuntimeConditionReason, message string, next stateFn) (stateFn, *ctrl.Result, error) {
 	if !instance.IsStateWithConditionAndStatusSet(imv1.RuntimeStateTerminating, condType, condReason, "True") {
 		instance.UpdateStateDeletion(condType, condReason, metav1.ConditionTrue, message)
-		return updateStatusAndRequeue()
+		return updateStatusAndRequeue(m)
 	}
 	return switchState(next)
 }
@@ -80,6 +80,7 @@ func sFnWaitForShootCreation(_ context.Context, m *fsm, s *systemState) (stateFn
 	case gardener.LastOperationStateSucceeded:
 		m.log.Info(fmt.Sprintf("Shoot %s successfully created", s.shoot.Name))
 		return ensureStatusConditionIsSetAndContinue(
+			m,
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonShootCreationCompleted,

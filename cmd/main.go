@@ -94,6 +94,7 @@ const (
 	defaultShootReconcileRequeueDuration = 30 * time.Second
 	defaultRuntimeCtrlWorkersCnt         = 25
 	defaultGardenerClusterCtrlWorkersCnt = 25
+	defaultStatusRequeueDelay            = 1 * time.Second
 )
 
 func main() {
@@ -124,6 +125,7 @@ func main() {
 	var runtimeBootstrapperSKRPullSecretName string
 	var runtimeBootstrapperSKRClusterTrustBundle string
 	var runtimeBootstrapperSKRNamespace string
+	var statusRequeueDelay time.Duration
 
 	//Kubebuilder related parameters:
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to. Monitoring and alerting tools can use this endpoint to collect application specific metrics during runtime")
@@ -149,6 +151,7 @@ func main() {
 	flag.IntVar(&runtimeCtrlGardenerRateLimiterBurst, "gardener-ratelimiter-burst", defaultGardenerRateLimiterBurst, "Gardener client rate limiter burst for Runtime Controller. The burst value allows for more requests than the qps limit for short periods (see https://cloud.google.com/config-connector/docs/how-to/customize-controller-manager-rate-limit)")
 	flag.IntVar(&runtimeCtrlWorkersCnt, "runtime-ctrl-workers-cnt", defaultRuntimeCtrlWorkersCnt, "Number of workers running in parallel for Runtime Controller. The number of parallel workers has an impact on the amount of requests send to the Gardener cluster")
 	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "File path to the gardener shoot converter configuration.")
+	flag.DurationVar(&statusRequeueDelay, "status-requeue-delay", defaultStatusRequeueDelay, "Delay applied when the FSM re-enqueues itself after writing Runtime status. A small non-zero value lets the informer cache observe the status write before the next reconcile, avoiding 409 conflicts caused by reading a stale resourceVersion.")
 
 	//Feature flags:
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration. When enabled this feature, a Shoot cluster will only be created when an auditlog tenant exists (this is defined in the auditlog mapping configuration file)")
@@ -379,6 +382,7 @@ func main() {
 		RequeueDurationShootDelete:           defaultShootDeleteRequeueDuration,
 		RequeueDurationShootReconcile:        defaultShootReconcileRequeueDuration,
 		ControlPlaneRequeueDuration:          defaultControlPlaneRequeueDuration,
+		StatusRequeueDelay:                   statusRequeueDelay,
 		Finalizer:                            infrastructuremanagerv1.Finalizer,
 		ShootNamesapace:                      gardenerNamespace,
 		Config:                               config,

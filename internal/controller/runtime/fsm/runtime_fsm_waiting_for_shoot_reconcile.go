@@ -53,6 +53,7 @@ func sFnWaitForShootReconcile(_ context.Context, m *fsm, s *systemState) (stateF
 	case gardener.LastOperationStateSucceeded:
 		m.log.Info(fmt.Sprintf("Shoot %s successfully updated, moving to processing", s.shoot.Name))
 		return ensureStatusConditionIsSetAndContinue(
+			m,
 			&s.instance,
 			imv1.ConditionTypeRuntimeProvisioned,
 			imv1.ConditionReasonConfigurationCompleted,

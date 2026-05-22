@@ -28,7 +28,7 @@ func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (state
 			)
 			m.log.Error(err, "Failed to get runtime client")
 
-			return updateStatusAndRequeue()
+			return updateStatusAndRequeue(m)
 		}
 
 		statusManager := registrycache.NewStatusManager(runtimeClient)
@@ -59,7 +59,7 @@ func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (state
 				m.log.Error(err, "Failed to update registry cache status")
 			}
 
-			return updateStatusAndRequeue()
+			return updateStatusAndRequeue(m)
 		}
 	}
 
