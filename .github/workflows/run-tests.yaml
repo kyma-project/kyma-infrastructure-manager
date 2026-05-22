@@ -12,7 +12,7 @@ on:
       - .gitignore
       - "**.md"
 
-  pull_request_target:
+  pull_request:
     types: [opened, synchronize, reopened]
     paths-ignore:
       - .reuse
@@ -34,9 +34,9 @@ jobs:
     steps:
 ############################################################################################
     - name: Checkout code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
-        ref: ${{ github.event.pull_request.head.ref }}
+        ref: ${{ github.event.pull_request.head.sha }}
         repository: ${{ github.event.pull_request.head.repo.full_name }}
 ############################################################################################
     - name: Set up cache

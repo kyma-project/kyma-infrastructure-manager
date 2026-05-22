@@ -30,7 +30,19 @@ permissions:
   contents: read # This is required for actions/checkout
 
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      github.event.pull_request.head.repo.full_name != github.repository
+    environment: ${{ vars.PROTECTED_ENVIRONMENT }}
+    steps:
+      - name: Approve fork PR image build
+        run: echo "Image build approved for fork PR"
+
   setup:
+    needs: [gate]
+    if: ${{ !cancelled() && (needs.gate.result == 'success' || needs.gate.result == 'skipped') }}
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -39,9 +51,9 @@ jobs:
       latest: ${{ steps.latest.outputs.latest || '' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
       - id: tag
         if: github.event_name == 'push' && github.ref_type == 'tag'
@@ -51,7 +63,10 @@ jobs:
         run: echo "latest=latest" >> $GITHUB_OUTPUT
 
   build-image:
-    needs: setup
+    needs: [setup, gate]
+    if: >-
+      needs.setup.result == 'success' &&
+      (needs.gate.result == 'success' || needs.gate.result == 'skipped')
     uses: kyma-project/test-infra/.github/workflows/image-builder.yml@main # Usage: kyma-project/test-infra/.github/workflows/image-builder.yml@main
     with:
       name: infrastructure-manager
@@ -64,17 +79,14 @@ jobs:
   summary:
     runs-on: ubuntu-latest
     needs: [build-image]
-    if: success() || failure()
+    if: needs.build-image.result == 'success'
     steps:
       - name: "Generate summary"
         run: |
           {
             echo '# Kyma Infrastructure Manager'
-            # if build-image was successful
-            if [ "${{ needs.build-image.result }}" == "success" ]; then
-              printf '\n\n## Image\n'
-              printf '\n```json\n'
-              echo '${{ needs.build-image.outputs.images }}' | jq
-              printf '\n```\n'
-            fi
+            printf '\n\n## Image\n'
+            printf '\n```json\n'
+            echo '${{ needs.build-image.outputs.images }}' | jq
+            printf '\n```\n'
           } >> $GITHUB_STEP_SUMMARY
