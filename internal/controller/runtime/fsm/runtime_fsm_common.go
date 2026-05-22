@@ -7,6 +7,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+// updateStatusAndRequeue writes the Runtime status and re-enqueues after
+// m.StatusRequeueDelay. The delay must be > 0: controller-runtime treats
+// Result{RequeueAfter: 0} as "no requeue", so a zero or negative value
+// silently stalls the FSM at any state that relies on this helper.
 func updateStatusAndRequeue(m *fsm) (stateFn, *ctrl.Result, error) {
 	return sFnUpdateStatus(&ctrl.Result{RequeueAfter: m.StatusRequeueDelay}, nil), nil, nil
 }
