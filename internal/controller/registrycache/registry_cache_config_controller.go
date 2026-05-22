@@ -39,6 +39,7 @@ type RegistryCacheConfigReconciler struct {
 	RequestID           atomic.Uint64
 	RuntimeClientGetter RuntimeClientGetter
 	KcpNamespace        string
+	ReconcilePeriod     time.Duration
 }
 
 const (
@@ -99,7 +100,7 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 	}
 
 	return ctrl.Result{
-		RequeueAfter: 60 * time.Minute,
+		RequeueAfter: r.ReconcilePeriod,
 	}, err
 }
 
@@ -141,7 +142,7 @@ func (r *RegistryCacheConfigReconciler) reconcileRegistryCacheConfig(ctx context
 	}
 
 	return ctrl.Result{
-		RequeueAfter: 60 * time.Minute,
+		RequeueAfter: r.ReconcilePeriod,
 	}, err
 }
 
@@ -205,7 +206,7 @@ func secretControlledByKIM(secret corev1.Secret) bool {
 
 type RuntimeClientGetter func(secret corev1.Secret) (client.Client, error)
 
-func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, kcpNamespace string, runtimeClientGetter RuntimeClientGetter) *RegistryCacheConfigReconciler {
+func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, kcpNamespace string, runtimeClientGetter RuntimeClientGetter, reconcilePeriod time.Duration) *RegistryCacheConfigReconciler {
 	return &RegistryCacheConfigReconciler{
 		KcpClient: mgr.GetClient(),
 		Scheme:    mgr.GetScheme(),
@@ -214,6 +215,7 @@ func NewRegistryCacheConfigReconciler(mgr ctrl.Manager, logger logr.Logger, kcpN
 		Log:                 logger,
 		RuntimeClientGetter: runtimeClientGetter,
 		KcpNamespace:        kcpNamespace,
+		ReconcilePeriod:     reconcilePeriod,
 	}
 }
 

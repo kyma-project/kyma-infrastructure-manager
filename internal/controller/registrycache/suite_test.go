@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"testing"
+	"time"
 )
 
 var (
@@ -64,7 +65,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	reconciler = NewRegistryCacheConfigReconciler(mgr, logger, "kcp-system", fixRuntimeClientGetter(fixRuntimeClients()))
+	reconciler = NewRegistryCacheConfigReconciler(mgr, logger, "kcp-system", fixRuntimeClientGetter(fixRuntimeClients()), 5*time.Minute)
 	Expect(reconciler).NotTo(BeNil())
 	suiteCtx, cancelFunc = context.WithCancel(context.Background())
 	err = reconciler.SetupWithManager(suiteCtx, mgr, 1, ":0", "infrastructure-manager-registry-cache")
