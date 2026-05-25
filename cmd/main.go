@@ -180,6 +180,11 @@ func main() {
 	logger := zap.New(zap.UseFlagOptions(&opts))
 	ctrl.SetLogger(logger)
 
+	if statusRequeueDelay <= 0 {
+		setupLog.Error(nil, "invalid --status-requeue-delay; must be greater than zero", "value", statusRequeueDelay)
+		os.Exit(1)
+	}
+
 	restConfig := ctrl.GetConfigOrDie()
 
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
