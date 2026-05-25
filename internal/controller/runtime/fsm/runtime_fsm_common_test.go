@@ -9,17 +9,17 @@ import (
 	. "github.com/onsi/gomega"    //nolint:revive
 )
 
-// These tests guard the fix for KIM issue #1413: updateStatusAndRequeue must
-// re-enqueue with a non-zero RequeueAfter taken from fsm.StatusRequeueDelay.
+// These tests guard the fix for KIM issue #1413: updateStatusAndRequeueAfter must
+// re-enqueue with a non-zero RequeueAfter.
 // Returning Result{Requeue: true} (i.e. RequeueAfter == 0) caused the next
 // reconcile to read a stale resourceVersion from the informer cache and 409
 // on the next status Update.
-var _ = Describe("updateStatusAndRequeue", func() {
+var _ = Describe("updateStatusAndRequeueAfter", func() {
 
-	DescribeTable("re-enqueues with the configured StatusRequeueDelay",
+	DescribeTable("re-enqueues with the given duration",
 		func(delay time.Duration) {
-			m := &fsm{RCCfg: RCCfg{StatusRequeueDelay: delay}}
-			next, immediate, err := updateStatusAndRequeue(m)
+			m := &fsm{}
+			next, immediate, err := updateStatusAndRequeueAfter(delay)
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(immediate).Should(BeNil(),
@@ -27,7 +27,7 @@ var _ = Describe("updateStatusAndRequeue", func() {
 			Expect(next).ShouldNot(BeNil())
 
 			// The returned stateFn is the sFnUpdateStatus closure, which carries the
-			// Result captured by updateStatusAndRequeue. When Status == snapshot
+			// Result captured by updateStatusAndRequeueAfter. When Status == snapshot
 			// (no status diff) the closure returns the captured Result unchanged
 			// without writing to the API server, so we can read it back here.
 			s := &systemState{instance: imv1.Runtime{}}
@@ -37,7 +37,7 @@ var _ = Describe("updateStatusAndRequeue", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(result).ShouldNot(BeNil())
 			Expect(result.RequeueAfter).Should(Equal(delay),
-				"RequeueAfter must equal m.StatusRequeueDelay")
+				"RequeueAfter must equal the given duration")
 			Expect(result.Requeue).Should(BeFalse(),
 				"helper must not set Result.Requeue (zero-delay requeue)")
 		},

@@ -16,8 +16,8 @@ import (
 // End-to-end regression test for KIM issue #1413. Drives sFnWaitForShootReconcile
 // with a Succeeded shoot and a Runtime that does not yet carry the success
 // condition. The state function calls ensureStatusConditionIsSetAndContinue,
-// which mutates the Runtime status and returns updateStatusAndRequeue(m). The
-// FSM then walks through sFnUpdateStatus → sFnEmmitEventfunc and surfaces the
+// which mutates the Runtime status and returns updateStatusAndRequeueAfter(m.StatusRequeueDelay).
+// The FSM then walks through sFnUpdateStatus → sFnEmmitEventfunc and surfaces the
 // captured Result. The reconcile result must carry RequeueAfter ==
 // StatusRequeueDelay (not Requeue: true / RequeueAfter: 0).
 var _ = Describe("sFnWaitForShootReconcile re-enqueue delay", Label("issue-1413"), func() {
