@@ -15,7 +15,7 @@ import (
 func ensureStatusConditionIsSetAndContinue(m *fsm, instance *imv1.Runtime, condType imv1.RuntimeConditionType, condReason imv1.RuntimeConditionReason, message string, next stateFn) (stateFn, *ctrl.Result, error) {
 	if !instance.IsStateWithConditionAndStatusSet(imv1.RuntimeStatePending, condType, condReason, "True") {
 		instance.UpdateStatePending(condType, condReason, metav1.ConditionTrue, message)
-		return updateStatusAndRequeue(m)
+		return updateStatusAndRequeueAfter(m.StatusRequeueDelay)
 	}
 	return switchState(next)
 }
@@ -23,7 +23,7 @@ func ensureStatusConditionIsSetAndContinue(m *fsm, instance *imv1.Runtime, condT
 func ensureTerminatingStatusConditionAndContinue(m *fsm, instance *imv1.Runtime, condType imv1.RuntimeConditionType, condReason imv1.RuntimeConditionReason, message string, next stateFn) (stateFn, *ctrl.Result, error) {
 	if !instance.IsStateWithConditionAndStatusSet(imv1.RuntimeStateTerminating, condType, condReason, "True") {
 		instance.UpdateStateDeletion(condType, condReason, metav1.ConditionTrue, message)
-		return updateStatusAndRequeue(m)
+		return updateStatusAndRequeueAfter(m.StatusRequeueDelay)
 	}
 	return switchState(next)
 }
