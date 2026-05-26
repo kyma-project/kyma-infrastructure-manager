@@ -5,6 +5,7 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 )
 
 // The types were copied from the following file: https://github.com/gardener/gardener-extension-shoot-dns-service/blob/master/pkg/apis/service/types.go
@@ -32,6 +33,9 @@ type DNSProvider struct {
 	// SecretName is a name of a secret containing credentials for the stated domain and the
 	// provider.
 	SecretName *string `json:"secretName,omitempty"`
+	// Credentials is the name of the resource reference containing the credentials for the provider.
+	// It is an alternative to SecretName and can reference either a secret or a workload identity.
+	Credentials *string `json:"credentials,omitempty"`
 	// Type is the DNS provider type.
 	Type *string `json:"type,omitempty"`
 	// Zones contains information about which hosted zones shall be included/excluded for this provider.
@@ -56,20 +60,24 @@ func NewDNSExtender(secretName, domainPrefix, dnsProviderType string) func(runti
 		domain := fmt.Sprintf("%s.%s", runtime.Spec.Shoot.Name, domainPrefix)
 		isPrimary := true
 
-		shoot.Spec.DNS = &gardener.DNS{
-			Domain: &domain,
-			Providers: []gardener.DNSProvider{
-				{
-					Domains: &gardener.DNSIncludeExclude{
-						Include: []string{
-							domain,
-						},
-					},
-					Primary:    &isPrimary,
-					SecretName: &secretName,
-					Type:       &dnsProviderType,
+		provider := gardener.DNSProvider{
+			Domains: &gardener.DNSIncludeExclude{
+				Include: []string{
+					domain,
 				},
 			},
+			Primary: &isPrimary,
+			Type:    &dnsProviderType,
+			CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+				APIVersion: "v1",
+				Kind:       "Secret",
+				Name:       secretName,
+			},
+		}
+
+		shoot.Spec.DNS = &gardener.DNS{
+			Domain:    &domain,
+			Providers: []gardener.DNSProvider{provider},
 		}
 
 		return nil
