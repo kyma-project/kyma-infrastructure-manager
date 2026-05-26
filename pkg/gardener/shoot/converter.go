@@ -124,6 +124,10 @@ func NewConverterPatch(ctx context.Context, opts PatchOpts) Converter {
 		extender2.NewResourcesExtenderForPatch(opts.Resources),
 		extensions.NewExtensionsExtenderForPatch(ctx, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, opts.Extensions, opts.ApiServerAclEnabled))
 
+	if !opts.DNS.IsGardenerInternal() {
+		extendersForPatch = append(extendersForPatch, extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType))
+	}
+
 	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
 	extendersForPatch = append(extendersForPatch, maintenance.NewMaintenanceExtender(opts.Kubernetes.EnableKubernetesVersionAutoUpdate, opts.Kubernetes.EnableMachineImageVersionAutoUpdate, opts.MaintenanceTimeWindow))
 	extendersForPatch = append(extendersForPatch, extender2.ExtendWithCredentialsBinding(opts.Gardener.EnableCredentialBinding))
