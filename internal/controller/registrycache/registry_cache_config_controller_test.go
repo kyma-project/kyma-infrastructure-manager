@@ -136,8 +136,8 @@ var _ = Describe("Registry Cache Config Controller", func() {
 
 func fixRuntimeClients() map[string]client.Client {
 	return map[string]client.Client{
-		runtimeWithoutRegistryCacheConfig: fixRuntimeClient(append(fixRegistryCache(), fixKymaCR())...),
-		runtimeWithRegistryCacheEnabled:   fixRuntimeClient(append(fixRegistryCache(), fixKymaCR())...),
+		runtimeWithoutRegistryCacheConfig: fixRuntimeClient(fixRegistryCache()...),
+		runtimeWithRegistryCacheEnabled:   fixRuntimeClient(fixRegistryCache()...),
 		runtimeThatShouldNotBeModified:    fixRuntimeClient(),
 	}
 }
@@ -164,32 +164,30 @@ func fixRuntimeClient(objs ...client.Object) client.Client {
 	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
 }
 
-func fixKymaCR() client.Object {
-	return &kyma.Kyma{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "default",
-			Namespace: "kyma-system",
-		},
-		Spec: kyma.KymaSpec{
-			Channel: "stable",
-			Modules: []kyma.Module{
-				{
-					Name: "registry-cache",
-				},
+func fixRegistryCache() []client.Object {
+	return []client.Object{
+		&v1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test",
 			},
 		},
-	}
-}
-
-func fixRegistryCache() []client.Object {
-	return []client.Object{&v1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test",
-		},
-	},
 		&apiextensions.CustomResourceDefinition{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "kymas.operator.kyma-project.io",
+			},
+		},
+		&kyma.Kyma{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "default",
+				Namespace: "kyma-system",
+			},
+			Spec: kyma.KymaSpec{
+				Channel: "stable",
+				Modules: []kyma.Module{
+					{
+						Name: "registry-cache",
+					},
+				},
 			},
 		},
 		&registrycache.RegistryCacheConfig{
@@ -200,7 +198,8 @@ func fixRegistryCache() []client.Object {
 			Spec: registrycache.RegistryCacheConfigSpec{
 				Upstream: "docker.io",
 			},
-		}, &registrycache.RegistryCacheConfig{
+		},
+		&registrycache.RegistryCacheConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "config2",
 				Namespace: "test",
