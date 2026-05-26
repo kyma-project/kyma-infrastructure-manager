@@ -95,6 +95,7 @@ const (
 	defaultRuntimeCtrlWorkersCnt              = 25
 	defaultGardenerClusterCtrlWorkersCnt      = 25
 	defaultRegistryCacheListenerComponentName = "infrastructure-manager-registry-cache"
+	defaultregistryCacheReconcilePeriod       = 60 * time.Minute
 )
 
 func main() {
@@ -126,6 +127,7 @@ func main() {
 	var runtimeBootstrapperSKRPullSecretName string
 	var runtimeBootstrapperSKRClusterTrustBundle string
 	var runtimeBootstrapperSKRNamespace string
+	var registryCacheReconcilePeriod time.Duration
 
 	//Kubebuilder related parameters:
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to. Monitoring and alerting tools can use this endpoint to collect application specific metrics during runtime")
@@ -154,6 +156,7 @@ func main() {
 
 	// Registry cache specific parameters:
 	flag.StringVar(&registryCacheListenerPort, "registry-cache-listener-port", ":8082", "Port for the registry cache listener to listen on")
+	flag.DurationVar(&registryCacheReconcilePeriod, "registry-cache-reconcile-period", defaultregistryCacheReconcilePeriod, "Time base reconciliation period for Registry Cache Controller.")
 
 	//Feature flags:
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration. When enabled this feature, a Shoot cluster will only be created when an auditlog tenant exists (this is defined in the auditlog mapping configuration file)")
@@ -431,7 +434,7 @@ func main() {
 			return gardener.GetRuntimeClientWithScheme(secret, prebuiltRuntimeScheme)
 		}
 
-		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, "kcp-system", runtimeClientClosure, 60*time.Minute)
+		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, "kcp-system", runtimeClientClosure, registryCacheReconcilePeriod)
 		if err = registryCacheConfigReconciler.SetupWithManager(ctx, mgr, 1, registryCacheListenerPort, defaultRegistryCacheListenerComponentName); err != nil {
 			setupLog.Error(err, "unable to setup registry cache config controller with Manager", "controller", "Runtime")
 			os.Exit(1)
