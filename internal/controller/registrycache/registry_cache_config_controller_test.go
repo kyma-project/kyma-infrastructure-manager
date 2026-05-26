@@ -187,6 +187,11 @@ func fixRegistryCache() []client.Object {
 			Name: "test",
 		},
 	},
+		&apiextensions.CustomResourceDefinition{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "kymas.operator.kyma-project.io",
+			},
+		},
 		&registrycache.RegistryCacheConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "config1",
