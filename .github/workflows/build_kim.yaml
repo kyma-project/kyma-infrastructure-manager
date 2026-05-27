@@ -32,9 +32,7 @@ permissions:
 jobs:
   gate:
     runs-on: ubuntu-latest
-    if: >-
-      github.event_name == 'pull_request_target' &&
-      github.event.pull_request.head.repo.full_name != github.repository
+    if: github.event_name == 'pull_request_target'
     environment: ${{ vars.PROTECTED_ENVIRONMENT }}
     steps:
       - name: Approve fork PR image build
@@ -64,9 +62,7 @@ jobs:
 
   build-image:
     needs: [setup, gate]
-    if: >-
-      needs.setup.result == 'success' &&
-      (needs.gate.result == 'success' || needs.gate.result == 'skipped')
+    if: ${{ !cancelled() && needs.setup.result == 'success' && (needs.gate.result == 'success' || needs.gate.result == 'skipped') }}
     uses: kyma-project/test-infra/.github/workflows/image-builder.yml@main # Usage: kyma-project/test-infra/.github/workflows/image-builder.yml@main
     with:
       name: infrastructure-manager
