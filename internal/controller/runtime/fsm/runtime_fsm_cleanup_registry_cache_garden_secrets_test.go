@@ -16,7 +16,7 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-func TestFnFinalizeRegistryCache(t *testing.T) {
+func TestFnCleanupRegistryCacheGardenSecrets(t *testing.T) {
 	// given
 	testCtx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -60,7 +60,7 @@ func TestFnFinalizeRegistryCache(t *testing.T) {
 	systemState := &systemState{instance: rt}
 
 	// When
-	nextState, res, err := sFnFinalizeRegistryCache(testCtx, fsm, systemState)
+	nextState, res, err := sFnCleanupRegistryCacheGardenSecrets(testCtx, fsm, systemState)
 
 	// Then
 	require.NoError(t, err)

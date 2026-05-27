@@ -11,7 +11,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func sFnFinalizeRegistryCache(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+func sFnCleanupRegistryCacheGardenSecrets(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 
 	if !m.RegistryCacheConfigControllerEnabled {
 		return switchState(sFnConfigureSKR)
