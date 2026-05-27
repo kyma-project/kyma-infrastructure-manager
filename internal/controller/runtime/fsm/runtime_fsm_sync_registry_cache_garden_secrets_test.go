@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestFnPrepareRegistryCache(t *testing.T) {
+func TestFnSyncRegistryCacheGardenSecrets(t *testing.T) {
 	// given
 	testCtx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -53,7 +53,7 @@ func TestFnPrepareRegistryCache(t *testing.T) {
 	systemState := &systemState{instance: rt}
 
 	// when
-	nextState, res, err := sFnPrepareRegistryCache(testCtx, fsm, systemState)
+	nextState, res, err := sFnSyncRegistryCacheGardenSecrets(testCtx, fsm, systemState)
 
 	// then
 	require.NoError(t, err)
