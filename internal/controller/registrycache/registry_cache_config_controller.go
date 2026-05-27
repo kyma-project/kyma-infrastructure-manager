@@ -169,7 +169,7 @@ func moduleEnabled(ctx context.Context, runtimeClient client.Client) (bool, erro
 		}
 	}
 
-	return true, nil
+	return false, nil
 }
 
 func requeueOnError(err error) (ctrl.Result, error) {
