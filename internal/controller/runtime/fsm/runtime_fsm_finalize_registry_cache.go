@@ -59,7 +59,7 @@ func sFnFinalizeRegistryCache(ctx context.Context, m *fsm, s *systemState) (stat
 		}
 
 		return ensureStatusConditionIsSetAndContinue(
-			m,
+			m.StatusRequeueDelay,
 			&s.instance,
 			imv1.ConditionTypeRegistryCacheConfigured,
 			imv1.ConditionReasonRegistryCacheConfigured,
