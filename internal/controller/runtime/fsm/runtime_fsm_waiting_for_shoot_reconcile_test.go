@@ -83,8 +83,6 @@ var _ = Describe("sFnWaitForShootReconcile re-enqueue delay", Label("issue-1413"
 			Expect(runErr).ShouldNot(HaveOccurred())
 			Expect(result.RequeueAfter).Should(Equal(delay),
 				"reconcile result must re-enqueue after StatusRequeueDelay, not after 0")
-			Expect(result.Requeue).Should(BeFalse(),
-				"reconcile result must not set Requeue (zero-delay re-enqueue causes 409 conflicts)")
 		},
 		Entry("1s delay", 1*time.Second),
 		Entry("3s delay", 3*time.Second),

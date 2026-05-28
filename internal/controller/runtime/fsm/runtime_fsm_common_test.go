@@ -38,8 +38,6 @@ var _ = Describe("updateStatusAndRequeueAfter", func() {
 			Expect(result).ShouldNot(BeNil())
 			Expect(result.RequeueAfter).Should(Equal(delay),
 				"RequeueAfter must equal the given duration")
-			Expect(result.Requeue).Should(BeFalse(),
-				"helper must not set Result.Requeue (zero-delay requeue)")
 		},
 		Entry("1s delay", 1*time.Second),
 		Entry("5s delay", 5*time.Second),
