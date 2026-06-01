@@ -155,7 +155,7 @@ func main() {
 	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "File path to the gardener shoot converter configuration.")
 
 	// Registry cache specific parameters:
-	flag.StringVar(&registryCacheListenerPort, "registry-cache-listener-port", ":8082", "Port for the registry cache listener to listen on")
+	flag.StringVar(&registryCacheListenerPort, "registry-cache-listener-port", "8082", "Port for the registry cache listener to listen on")
 	flag.DurationVar(&registryCacheReconcilePeriod, "registry-cache-reconcile-period", defaultregistryCacheReconcilePeriod, "Time base reconciliation period for Registry Cache Controller.")
 
 	//Feature flags:
