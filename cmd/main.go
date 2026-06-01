@@ -81,20 +81,20 @@ func init() {
 
 // Default values for the Runtime controller configuration
 const (
-	defaultControlPlaneRequeueDuration   = 10 * time.Second
-	defaultGardenerRequestTimeout        = 3 * time.Second
-	defaultGardenerRateLimiterQPS        = 5
-	defaultGardenerRateLimiterBurst      = 5
-	defaultMinimalRotationTimeRatio      = 0.6
-	defaultExpirationTime                = 24 * time.Hour
-	defaultGardenerReconciliationTimeout = 60 * time.Second
-	defaultGardenerRequeueDuration       = 15 * time.Second
-	defaultShootCreateRequeueDuration    = 60 * time.Second
-	defaultShootDeleteRequeueDuration    = 90 * time.Second
-	defaultShootReconcileRequeueDuration = 30 * time.Second
-	defaultRuntimeCtrlWorkersCnt         = 25
-	defaultGardenerClusterCtrlWorkersCnt = 25
-	defaultStatusRequeueDelay            = 1 * time.Second
+	defaultControlPlaneRequeueDuration        = 10 * time.Second
+	defaultGardenerRequestTimeout             = 3 * time.Second
+	defaultGardenerRateLimiterQPS             = 5
+	defaultGardenerRateLimiterBurst           = 5
+	defaultMinimalRotationTimeRatio           = 0.6
+	defaultExpirationTime                     = 24 * time.Hour
+	defaultGardenerReconciliationTimeout      = 60 * time.Second
+	defaultGardenerRequeueDuration            = 15 * time.Second
+	defaultShootCreateRequeueDuration         = 60 * time.Second
+	defaultShootDeleteRequeueDuration         = 90 * time.Second
+	defaultShootReconcileRequeueDuration      = 30 * time.Second
+	defaultRuntimeCtrlWorkersCnt              = 25
+	defaultGardenerClusterCtrlWorkersCnt      = 25
+	defaultStatusRequeueDelay                 = 1 * time.Second
 	defaultRegistryCacheListenerComponentName = "infrastructure-manager-registry-cache"
 	defaultregistryCacheReconcilePeriod       = 60 * time.Minute
 )
