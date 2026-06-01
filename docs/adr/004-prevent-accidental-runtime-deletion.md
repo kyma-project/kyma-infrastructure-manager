@@ -209,7 +209,6 @@ webhooks:
 The `deletion-confirmed` annotation must not be freely settable by any service account that also holds the `delete` verb on `runtimes`. Otherwise, a single compromised or buggy service account could annotate and delete in one automated flow, reducing the two-step protocol to a single step.
 
 - **KEB's service account** holds `patch`/`update` on `runtimes` (to apply the annotation) **and** `delete` permission. This is unavoidable for programmatic deletions. **Known limitation:** for the KEB path the two-step requirement is enforced procedurally (annotation must precede delete in KEB's workflow), not technically. The timestamp window mitigates the risk of annotation pre-staging (an annotation set long in advance will have expired by the time the delete is issued) but a bug or compromise in KEB that sets the annotation and immediately deletes within the window would bypass the intent of the two-step protocol. This limitation is accepted for the KEB path; future work may introduce a separate, annotation-only service account for KEB distinct from its delete credential.
-- **SRE break-glass roles** should have `delete` permission but not `patch`/`update` on `runtimes` in STAGE/PROD landscapes, so that a human deletion always requires a second person with annotation rights to act first. This enforces the two-step protocol technically for the human access path.
 
 ## Consequences
 
