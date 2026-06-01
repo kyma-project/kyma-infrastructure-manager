@@ -52,23 +52,27 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 	}
 
 	shootStatus := s.shoot.Status
-	shootMidReconcile := s.shoot.Generation > shootStatus.ObservedGeneration ||
-		lastOperation.State == gardener.LastOperationStatePending ||
-		lastOperation.State == gardener.LastOperationStateProcessing
 
-	if shootMidReconcile {
-		m.log.Info("Shoot indicates active reconciliation despite Runtime state Ready/Failed, switching to wait state",
-			"RuntimeCR", s.instance.Name,
-			"shoot", s.shoot.Name,
-			"shootGeneration", s.shoot.Generation,
-			"shootObservedGeneration", shootStatus.ObservedGeneration,
-			"lastOperationState", lastOperation.State,
-			"lastOperationType", lastOperation.Type)
+	if s.instance.Status.State == imv1.RuntimeStateReady ||
+		s.instance.Status.State == imv1.RuntimeStateFailed {
+		shootMidReconcile := s.shoot.Generation > shootStatus.ObservedGeneration ||
+			lastOperation.State == gardener.LastOperationStatePending ||
+			lastOperation.State == gardener.LastOperationStateProcessing
 
-		if lastOperation.Type == gardener.LastOperationTypeCreate {
-			return switchState(sFnWaitForShootCreation)
+		if shootMidReconcile {
+			m.log.Info("Shoot indicates active reconciliation despite Runtime state Ready/Failed, switching to wait state",
+				"RuntimeCR", s.instance.Name,
+				"shoot", s.shoot.Name,
+				"shootGeneration", s.shoot.Generation,
+				"shootObservedGeneration", shootStatus.ObservedGeneration,
+				"lastOperationState", lastOperation.State,
+				"lastOperationType", lastOperation.Type)
+
+			if lastOperation.Type == gardener.LastOperationTypeCreate {
+				return switchState(sFnWaitForShootCreation)
+			}
+			return switchState(sFnWaitForShootReconcile)
 		}
-		return switchState(sFnWaitForShootReconcile)
 	}
 
 	// All other runtimes in Ready and Failed state will be not processed to mitigate massive reconciliation during restart
