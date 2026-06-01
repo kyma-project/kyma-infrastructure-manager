@@ -7,12 +7,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func updateStatusAndRequeue() (stateFn, *ctrl.Result, error) {
-	return sFnUpdateStatus(&ctrl.Result{Requeue: true}, nil), nil, nil
-}
-
 func updateStatusAndRequeueAfter(
-	//nolint:unparam
 	duration time.Duration) (stateFn, *ctrl.Result, error) {
 	return sFnUpdateStatus(&ctrl.Result{RequeueAfter: duration}, nil), nil, nil
 }

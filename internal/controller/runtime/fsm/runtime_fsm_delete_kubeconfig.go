@@ -34,7 +34,7 @@ func sFnDeleteKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 		}
 
 		// out section
-		return ensureTerminatingStatusConditionAndContinue(&s.instance,
+		return ensureTerminatingStatusConditionAndContinue(m.StatusRequeueDelay, &s.instance,
 			imv1.ConditionTypeRuntimeDeprovisioned,
 			imv1.ConditionReasonGardenerCRDeleted,
 			"Gardener Cluster CR successfully deleted",
