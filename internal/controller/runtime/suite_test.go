@@ -149,6 +149,7 @@ var _ = BeforeSuite(func() {
 		RequeueDurationShootReconcile: 3 * time.Second,
 		RequeueDurationShootCreate:    3 * time.Second,
 		RequeueDurationShootDelete:    3 * time.Second,
+		StatusRequeueDelay:            1 * time.Second,
 	}
 
 	runtimeReconciler = NewRuntimeReconciler(mgr, gardenerTestClient, runtimeClientGetterMock, nil, logger, fsmCfg)
