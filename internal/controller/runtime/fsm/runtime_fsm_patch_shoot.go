@@ -107,7 +107,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		m.log.Error(err, "Failed to check if registry cache secret should be removed")
 
 		s.instance.UpdateStatePending(imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonRegistryCacheConfigured, metav1.ConditionFalse, "Failed to check if registry cache secret should be removed")
-		return updateStatusAndRequeue()
+		return updateStatusAndRequeueAfter(m.StatusRequeueDelay)
 	}
 
 	workersShouldBeUpdated := !workersAreEqual(s.shoot.Spec.Provider.Workers, updatedShoot.Spec.Provider.Workers)

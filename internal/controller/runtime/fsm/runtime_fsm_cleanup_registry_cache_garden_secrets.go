@@ -27,7 +27,7 @@ func sFnCleanupRegistryCacheGardenSecrets(ctx context.Context, m *fsm, s *system
 		)
 		m.log.Error(err, "Failed to get runtime client")
 
-		return updateStatusAndRequeue()
+		return updateStatusAndRequeueAfter(m.StatusRequeueDelay)
 	}
 
 	secretSyncer := registrycache.NewGardenSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
@@ -43,7 +43,7 @@ func sFnCleanupRegistryCacheGardenSecrets(ctx context.Context, m *fsm, s *system
 		)
 		m.log.Error(err, "Failed to delete not used registry cache secrets")
 
-		return updateStatusAndRequeue()
+		return updateStatusAndRequeueAfter(m.StatusRequeueDelay)
 	}
 
 	if registryCacheExists(s.instance) {
@@ -59,6 +59,7 @@ func sFnCleanupRegistryCacheGardenSecrets(ctx context.Context, m *fsm, s *system
 		}
 
 		return ensureStatusConditionIsSetAndContinue(
+			m.StatusRequeueDelay,
 			&s.instance,
 			imv1.ConditionTypeRegistryCacheConfigured,
 			imv1.ConditionReasonRegistryCacheConfigured,
