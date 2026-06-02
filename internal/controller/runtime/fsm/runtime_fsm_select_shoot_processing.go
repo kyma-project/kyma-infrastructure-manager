@@ -51,6 +51,35 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 		}
 	}
 
+	shootStatus := s.shoot.Status
+
+	// Guard against premature stop() when Runtime state is stale in the informer cache
+	// (e.g. after force-annotation removal triggers re-enqueue before the status-write
+	// watch event propagates). We consult the Shoot directly: if Gardener still has
+	// unprocessed work (generation drift or active operation), route to the appropriate
+	// wait state instead of falling through to stop() with no retry.
+	if s.instance.Status.State == imv1.RuntimeStateReady ||
+		s.instance.Status.State == imv1.RuntimeStateFailed {
+		shootMidReconcile := s.shoot.Generation > shootStatus.ObservedGeneration ||
+			lastOperation.State == gardener.LastOperationStatePending ||
+			lastOperation.State == gardener.LastOperationStateProcessing
+
+		if shootMidReconcile {
+			m.log.Info("Shoot indicates active reconciliation despite Runtime state Ready/Failed, switching to wait state",
+				"RuntimeCR", s.instance.Name,
+				"shoot", s.shoot.Name,
+				"shootGeneration", s.shoot.Generation,
+				"shootObservedGeneration", shootStatus.ObservedGeneration,
+				"lastOperationState", lastOperation.State,
+				"lastOperationType", lastOperation.Type)
+
+			if lastOperation.Type == gardener.LastOperationTypeCreate {
+				return switchState(sFnWaitForShootCreation)
+			}
+			return switchState(sFnWaitForShootReconcile)
+		}
+	}
+
 	// All other runtimes in Ready and Failed state will be not processed to mitigate massive reconciliation during restart
 	m.log.Info("Stopping processing reconcile, exiting with no retry", "RuntimeCR", s.instance.Name, "shoot", s.shoot.Name, "function", "sFnSelectShootProcessing")
 	return stop()
