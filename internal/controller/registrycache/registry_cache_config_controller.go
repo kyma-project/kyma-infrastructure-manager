@@ -94,16 +94,16 @@ func (r *RegistryCacheConfigReconciler) applyRegistryCacheConfig(ctx context.Con
 		return ctrl.Result{}, err
 	}
 
-	var caches []imv1.ImageRegistryCache
+	var newRegistryCacheConfig []imv1.ImageRegistryCache
 
 	if enabled {
-		caches, err = fetchConfigs(ctx, log, runtimeClient, caches)
+		newRegistryCacheConfig, err = fetchConfigs(ctx, log, runtimeClient)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
-	err = patchRuntime(ctx, log, runtime, caches, err, r)
+	err = r.patchRuntime(ctx, log, runtime, newRegistryCacheConfig)
 
 	if err != nil {
 		log.Error(err, "Failed to patch runtime")
@@ -119,10 +119,11 @@ func (r *RegistryCacheConfigReconciler) applyRegistryCacheConfig(ctx context.Con
 	return ctrl.Result{}, nil
 }
 
-func patchRuntime(ctx context.Context, log logr.Logger, runtime imv1.Runtime, caches []imv1.ImageRegistryCache, err error, r *RegistryCacheConfigReconciler) error {
+func (r *RegistryCacheConfigReconciler) patchRuntime(ctx context.Context, log logr.Logger, runtime imv1.Runtime, newRegistryCacheConfig []imv1.ImageRegistryCache) error {
 	log.Info("Updating runtime with registry cache config")
-	runtime.Spec.Caching = caches
+	runtime.Spec.Caching = newRegistryCacheConfig
 	runtime.ManagedFields = nil
+
 	//nolint:staticcheck // SA1019: client.Apply is used with Patch, which is the correct API for this version
 	return r.KcpClient.Patch(ctx, &runtime, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,
@@ -130,7 +131,7 @@ func patchRuntime(ctx context.Context, log logr.Logger, runtime imv1.Runtime, ca
 	})
 }
 
-func fetchConfigs(ctx context.Context, log logr.Logger, runtimeClient client.Client, caches []imv1.ImageRegistryCache) ([]imv1.ImageRegistryCache, error) {
+func fetchConfigs(ctx context.Context, log logr.Logger, runtimeClient client.Client) ([]imv1.ImageRegistryCache, error) {
 	var registryCacheConfigs registrycache.RegistryCacheConfigList
 	err := runtimeClient.List(ctx, &registryCacheConfigs, &client.ListOptions{})
 	if err != nil {
@@ -138,6 +139,7 @@ func fetchConfigs(ctx context.Context, log logr.Logger, runtimeClient client.Cli
 		return nil, err
 	}
 
+	imageRegistryCaches := make([]imv1.ImageRegistryCache, 0, len(registryCacheConfigs.Items))
 	for _, config := range registryCacheConfigs.Items {
 		runtimeRegistryCacheConfig := imv1.ImageRegistryCache{
 			Name:      config.Name,
@@ -145,9 +147,10 @@ func fetchConfigs(ctx context.Context, log logr.Logger, runtimeClient client.Cli
 			UID:       string(config.UID),
 			Config:    config.Spec,
 		}
-		caches = append(caches, runtimeRegistryCacheConfig)
+		imageRegistryCaches = append(imageRegistryCaches, runtimeRegistryCacheConfig)
 	}
-	return caches, nil
+
+	return imageRegistryCaches, nil
 }
 
 func moduleEnabled(ctx context.Context, runtimeClient client.Client) (bool, error) {
