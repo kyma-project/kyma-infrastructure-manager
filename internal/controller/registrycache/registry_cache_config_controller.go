@@ -70,78 +70,84 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 		return requeueOnError(err)
 	}
 
-	enabled, err := moduleEnabled(ctx, runtimeClient)
-	if err != nil {
-		log.Error(err, "Failed to verify whether Registry Cache should be enabled")
-		return requeueOnError(err)
-	}
-
-	var runtimeList imv1.RuntimeList
-
-	err = r.KcpClient.List(ctx, &runtimeList,
-		client.MatchingLabels(map[string]string{RuntimeIDLabel: runtimeID}))
+	var runtimeToUpdate imv1.Runtime
+	err = r.KcpClient.Get(ctx, types.NamespacedName{Name: runtimeID, Namespace: r.KcpNamespace}, &runtimeToUpdate)
 
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("Runtime not found, it has been deleted")
+			return ctrl.Result{}, nil
+		}
+
 		log.Error(err, "Failed to find runtime")
 		return requeueOnError(err)
 	}
 
-	if len(runtimeList.Items) == 0 || len(runtimeList.Items) > 1 {
-		e := fmt.Errorf("expected to find one runtime for given runtime ID, found %d", len(runtimeList.Items))
-		log.Error(e, "unexpected number of runtimes found", "count", len(runtimeList.Items))
-		return ctrl.Result{}, nil
-	}
-
-	runtimeToUpdate := runtimeList.Items[0]
-
-	if enabled || len(runtimeToUpdate.Spec.Caching) > 0 {
-		return r.applyRegistryCacheConfig(ctx, log, runtimeClient, runtimeToUpdate, enabled)
-	}
-
-	return ctrl.Result{
-		RequeueAfter: r.ReconcilePeriod,
-	}, err
+	return r.applyRegistryCacheConfig(ctx, log, runtimeClient, runtimeToUpdate)
 }
 
-func (r *RegistryCacheConfigReconciler) applyRegistryCacheConfig(ctx context.Context, log logr.Logger, runtimeClient client.Client, runtime imv1.Runtime, enabled bool) (ctrl.Result, error) {
+func (r *RegistryCacheConfigReconciler) applyRegistryCacheConfig(ctx context.Context, log logr.Logger, runtimeClient client.Client, runtime imv1.Runtime) (ctrl.Result, error) {
+
+	enabled, err := moduleEnabled(ctx, runtimeClient)
+	if err != nil {
+		log.Error(err, "Failed to verify whether Registry Cache should be enabled")
+		return ctrl.Result{}, err
+	}
 
 	var caches []imv1.ImageRegistryCache
 
 	if enabled {
-		var registryCacheConfigs registrycache.RegistryCacheConfigList
-		err := runtimeClient.List(ctx, &registryCacheConfigs, &client.ListOptions{})
+		caches, err = fetchConfigs(ctx, log, runtimeClient, caches)
 		if err != nil {
-			log.Error(err, "Failed to list registry cache configs")
 			return ctrl.Result{}, err
 		}
-
-		for _, config := range registryCacheConfigs.Items {
-			runtimeRegistryCacheConfig := imv1.ImageRegistryCache{
-				Name:      config.Name,
-				Namespace: config.Namespace,
-				UID:       string(config.UID),
-				Config:    config.Spec,
-			}
-			caches = append(caches, runtimeRegistryCacheConfig)
-		}
 	}
-	log.Info("Updating runtime with registry cache config")
-	runtime.Spec.Caching = caches
-	runtime.ManagedFields = nil
-	//nolint:staticcheck // SA1019: client.Apply is used with Patch, which is the correct API for this version
-	err := r.KcpClient.Patch(ctx, &runtime, client.Apply, &client.PatchOptions{
-		FieldManager: fieldManagerName,
-		Force:        ptr.To(true),
-	})
+
+	err = patchRuntime(ctx, log, runtime, caches, err, r)
 
 	if err != nil {
 		log.Error(err, "Failed to patch runtime")
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{
-		RequeueAfter: r.ReconcilePeriod,
-	}, err
+	if enabled {
+		return ctrl.Result{
+			RequeueAfter: r.ReconcilePeriod,
+		}, nil
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func patchRuntime(ctx context.Context, log logr.Logger, runtime imv1.Runtime, caches []imv1.ImageRegistryCache, err error, r *RegistryCacheConfigReconciler) error {
+	log.Info("Updating runtime with registry cache config")
+	runtime.Spec.Caching = caches
+	runtime.ManagedFields = nil
+	//nolint:staticcheck // SA1019: client.Apply is used with Patch, which is the correct API for this version
+	return r.KcpClient.Patch(ctx, &runtime, client.Apply, &client.PatchOptions{
+		FieldManager: fieldManagerName,
+		Force:        ptr.To(true),
+	})
+}
+
+func fetchConfigs(ctx context.Context, log logr.Logger, runtimeClient client.Client, caches []imv1.ImageRegistryCache) ([]imv1.ImageRegistryCache, error) {
+	var registryCacheConfigs registrycache.RegistryCacheConfigList
+	err := runtimeClient.List(ctx, &registryCacheConfigs, &client.ListOptions{})
+	if err != nil {
+		log.Error(err, "Failed to list registry cache configs")
+		return nil, err
+	}
+
+	for _, config := range registryCacheConfigs.Items {
+		runtimeRegistryCacheConfig := imv1.ImageRegistryCache{
+			Name:      config.Name,
+			Namespace: config.Namespace,
+			UID:       string(config.UID),
+			Config:    config.Spec,
+		}
+		caches = append(caches, runtimeRegistryCacheConfig)
+	}
+	return caches, nil
 }
 
 func moduleEnabled(ctx context.Context, runtimeClient client.Client) (bool, error) {
