@@ -53,6 +53,11 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 
 	shootStatus := s.shoot.Status
 
+	// Guard against premature stop() when Runtime state is stale in the informer cache
+	// (e.g. after force-annotation removal triggers re-enqueue before the status-write
+	// watch event propagates). We consult the Shoot directly: if Gardener still has
+	// unprocessed work (generation drift or active operation), route to the appropriate
+	// wait state instead of falling through to stop() with no retry.
 	if s.instance.Status.State == imv1.RuntimeStateReady ||
 		s.instance.Status.State == imv1.RuntimeStateFailed {
 		shootMidReconcile := s.shoot.Generation > shootStatus.ObservedGeneration ||
