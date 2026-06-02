@@ -122,7 +122,7 @@ var _ = Describe("Registry Cache Config Controller", func() {
 				runtime := imv1.Runtime{}
 				if err := k8sClient.Get(ctx, types.NamespacedName{
 					Name:      runtimeThatShouldNotBeModified,
-					Namespace: "default",
+					Namespace: "kcp-system",
 				}, &runtime); err != nil {
 					return false
 				}
@@ -222,7 +222,7 @@ func createSecretStub(name string, labels map[string]string) *v1.Secret {
 	return &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: "default",
+			Namespace: "kcp-system",
 			Labels:    labels,
 		},
 	}
@@ -232,7 +232,7 @@ func createRuntimeStub(name string, shootName string, registryCacheConfig *imv1.
 	runtime := &imv1.Runtime{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: "default",
+			Namespace: "kcp-system",
 			Labels: map[string]string{
 				"kyma-project.io/runtime-id": name,
 			},

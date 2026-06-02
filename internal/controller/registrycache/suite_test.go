@@ -65,6 +65,10 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
+	kcpNamespace := &v1.Namespace{}
+	kcpNamespace.Name = "kcp-system"
+	Expect(k8sClient.Create(context.Background(), kcpNamespace)).To(Succeed())
+
 	reconciler = NewRegistryCacheConfigReconciler(mgr, logger, "kcp-system", fixRuntimeClientGetter(fixRuntimeClients()), 2*time.Minute)
 	Expect(reconciler).NotTo(BeNil())
 	suiteCtx, cancelFunc = context.WithCancel(context.Background())
