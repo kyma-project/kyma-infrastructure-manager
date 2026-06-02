@@ -68,7 +68,7 @@ var _ = BeforeSuite(func() {
 	reconciler = NewRegistryCacheConfigReconciler(mgr, logger, "kcp-system", fixRuntimeClientGetter(fixRuntimeClients()), 2*time.Minute)
 	Expect(reconciler).NotTo(BeNil())
 	suiteCtx, cancelFunc = context.WithCancel(context.Background())
-	err = reconciler.SetupWithManager(suiteCtx, mgr, 1, ":0", "infrastructure-manager-registry-cache")
+	err = reconciler.SetupWithManager(suiteCtx, mgr, 1, "0", "infrastructure-manager-registry-cache")
 	Expect(err).To(BeNil())
 
 	go func() {
