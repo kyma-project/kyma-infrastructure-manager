@@ -21,6 +21,7 @@ on:
 jobs:
   upload-release-report:
     runs-on: ubuntu-latest
+    environment: ${{ vars.PROTECTED_ENVIRONMENT }}
 
     permissions:
       actions: read
