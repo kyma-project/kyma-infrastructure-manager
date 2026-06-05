@@ -76,7 +76,8 @@ func NewDNSExtenderForCreate(secretName, domainPrefix, dnsProviderType string) f
 		}
 
 		shoot.Spec.DNS = &gardener.DNS{
-			Domain:    &domain,
+			Domain: &domain,
+			//nolint:staticcheck // SA1019: Needs to be removed at some point
 			Providers: []gardener.DNSProvider{provider},
 		}
 
@@ -86,6 +87,7 @@ func NewDNSExtenderForCreate(secretName, domainPrefix, dnsProviderType string) f
 
 func NewDNSExtenderForPatch(secretName, domainPrefix, dnsProviderType string, existingDNS *gardener.DNS) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+		//nolint:staticcheck // SA1019: Needs to be removed at some point
 		if existingDNS != nil && len(existingDNS.Providers) == 0 {
 			shoot.Spec.DNS = existingDNS
 			return nil
