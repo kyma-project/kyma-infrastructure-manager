@@ -74,11 +74,6 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 	err = r.KcpClient.Get(ctx, types.NamespacedName{Name: runtimeID, Namespace: r.KcpNamespace}, &runtimeToUpdate)
 
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			log.Info("Runtime not found, it has been deleted")
-			return ctrl.Result{}, nil
-		}
-
 		log.Error(err, "Failed to find runtime")
 		return requeueOnError(err)
 	}
