@@ -86,7 +86,7 @@ func NewDNSExtenderForCreate(secretName, domainPrefix, dnsProviderType string) f
 
 func NewDNSExtenderForPatch(secretName, domainPrefix, dnsProviderType string, existingDNS *gardener.DNS) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		if len(existingDNS.Providers) == 0 {
+		if existingDNS != nil && len(existingDNS.Providers) == 0 {
 			shoot.Spec.DNS = existingDNS
 			return nil
 		}
