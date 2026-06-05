@@ -260,8 +260,7 @@ func dnsExtensionForPatch(dnsConfig config.DNSConfig, shoot gardener.Shoot) (*ga
 	}
 
 	// Some clusters may not use custom DNS domains
-	// In such a case the providers slice is empty and we should skip modifying that extension
-	if len(existingCfg.Providers) == 0 && len(desiredCfg.Providers) == 0 {
+	if len(existingCfg.Providers) == 0 {
 		return existing, nil
 	}
 
