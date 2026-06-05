@@ -68,6 +68,7 @@ func TestDNSExtenderForPatch(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, shoot.Spec.DNS)
 		assert.Equal(t, existingDNS, shoot.Spec.DNS)
+		//nolint:staticcheck // SA1019: Needs to be removed at some point
 		assert.Empty(t, shoot.Spec.DNS.Providers)
 	})
 
