@@ -90,8 +90,7 @@ func (r *RegistryCacheConfigReconciler) applyRegistryCacheConfig(ctx context.Con
 	}
 
 	if enabled {
-		var newRegistryCacheConfig []imv1.ImageRegistryCache
-		newRegistryCacheConfig, err = fetchConfigs(ctx, log, runtimeClient)
+		newRegistryCacheConfig, err := fetchConfigs(ctx, log, runtimeClient)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -113,7 +112,7 @@ func (r *RegistryCacheConfigReconciler) applyRegistryCacheConfig(ctx context.Con
 
 	// If the module is not enabled but there is a registry cache config, it means that the module has been disabled and we need to remove the config from the runtime
 	log.Info("Disabling registry cache config")
-	err = r.patchRuntime(ctx, log, runtime, nil)
+	err = r.patchRuntime(ctx, log, runtime, []imv1.ImageRegistryCache{})
 	if err != nil {
 		log.Error(err, "Failed to disable registry cache in runtime")
 		return ctrl.Result{}, err
