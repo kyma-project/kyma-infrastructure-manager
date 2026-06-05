@@ -23,7 +23,7 @@ func TestDNSExtender(t *testing.T) {
 	}
 
 	t.Run("Set credentialsRef", func(t *testing.T) {
-		extender := NewDNSExtender(secretName, domainPrefix, dnsProviderType)
+		extender := NewDNSExtenderForCreate(secretName, domainPrefix, dnsProviderType)
 		shoot := testutils.FixEmptyGardenerShoot("test", "dev")
 
 		err := extender(runtimeShoot, &shoot)
