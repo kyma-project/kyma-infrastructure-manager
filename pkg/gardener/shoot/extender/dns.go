@@ -55,7 +55,7 @@ type DNSProviderReplication struct {
 	Enabled bool `json:"enabled"`
 }
 
-func NewDNSExtender(secretName, domainPrefix, dnsProviderType string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewDNSExtenderForCreate(secretName, domainPrefix, dnsProviderType string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		domain := fmt.Sprintf("%s.%s", runtime.Spec.Shoot.Name, domainPrefix)
 		isPrimary := true
@@ -76,10 +76,24 @@ func NewDNSExtender(secretName, domainPrefix, dnsProviderType string) func(runti
 		}
 
 		shoot.Spec.DNS = &gardener.DNS{
-			Domain:    &domain,
+			Domain: &domain,
+			//nolint:staticcheck // SA1019: Needs to be removed at some point
 			Providers: []gardener.DNSProvider{provider},
 		}
 
 		return nil
+	}
+}
+
+func NewDNSExtenderForPatch(secretName, domainPrefix, dnsProviderType string, existingDNS *gardener.DNS) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+		//nolint:staticcheck // SA1019: Needs to be removed at some point
+		if existingDNS != nil && len(existingDNS.Providers) == 0 {
+			// The cluster was created prior to introducing custom domains for the DNS extension. In this case, we want to preserve the existing configuration
+			shoot.Spec.DNS = existingDNS
+			return nil
+		}
+
+		return NewDNSExtenderForCreate(secretName, domainPrefix, dnsProviderType)(runtime, shoot)
 	}
 }

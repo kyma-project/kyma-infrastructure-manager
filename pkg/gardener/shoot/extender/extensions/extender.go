@@ -259,6 +259,11 @@ func dnsExtensionForPatch(dnsConfig config.DNSConfig, shoot gardener.Shoot) (*ga
 		return nil, err
 	}
 
+	// The cluster was created prior to introducing custom domains for the DNS extension. In this case, we want to preserve the existing configuration
+	if len(existingCfg.Providers) == 0 {
+		return existing, nil
+	}
+
 	if reflect.DeepEqual(existingCfg, desiredCfg) {
 		return nil, nil
 	}
