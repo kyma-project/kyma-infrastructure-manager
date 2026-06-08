@@ -89,6 +89,7 @@ func NewDNSExtenderForPatch(secretName, domainPrefix, dnsProviderType string, ex
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		//nolint:staticcheck // SA1019: Needs to be removed at some point
 		if existingDNS != nil && len(existingDNS.Providers) == 0 {
+			// The cluster was created prior to introducing custom domains for the DNS extension. In this case, we want to preserve the existing configuration
 			shoot.Spec.DNS = existingDNS
 			return nil
 		}
