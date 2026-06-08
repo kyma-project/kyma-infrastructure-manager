@@ -96,4 +96,14 @@ func TestDNSExtenderForPatch(t *testing.T) {
 		assert.Equal(t, "Secret", shoot.Spec.DNS.Providers[0].CredentialsRef.Kind)   //nolint:staticcheck
 		assert.Equal(t, secretName, shoot.Spec.DNS.Providers[0].CredentialsRef.Name) //nolint:staticcheck
 	})
+
+	t.Run("Create new DNS config when existingDNS is nil", func(t *testing.T) {
+		extender := NewDNSExtenderForPatch(secretName, domainPrefix, dnsProviderType, nil)
+		shoot := testutils.FixEmptyGardenerShoot("test", "dev")
+
+		err := extender(runtimeShoot, &shoot)
+
+		require.NoError(t, err)
+		assert.NotNil(t, shoot.Spec.DNS)
+	})
 }
