@@ -251,6 +251,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		apiServerACLEnabled   bool
 		enableNvidiaOpenshell *bool
 		providerType          string
+		expectedInternalDNS   bool
 	}{
 		{
 			name:                 "Should add AuditLog extension at the end without changing order and data of other extensions",
@@ -411,6 +412,24 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			enableNvidiaOpenshell: ptr.To(true),
 			providerType:          hyperscaler.TypeAWS,
 		},
+		{
+			name:                 "Should preserve existing internal DNS extension when existing providers list is empty",
+			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixInternalDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:    auditlogs.AuditLogData{},
+			expectedAuditLogData: auditlogs.AuditLogData{},
+			registryCaches:       nil,
+			enableNetworkFilter:  false,
+			expectedInternalDNS:  true,
+		},
+		{
+			name:                 "Should update DNS extension when existing providers list is non-empty",
+			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:    auditlogs.AuditLogData{},
+			expectedAuditLogData: auditlogs.AuditLogData{},
+			registryCaches:       nil,
+			enableNetworkFilter:  false,
+			expectedInternalDNS:  false,
+		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			testRuntime := fixRuntimeCRForExtensionExtenderTests(testCase.enableNetworkFilter, testCase.registryCaches, testCase.apiServerACL, testCase.providerType, testCase.enableNvidiaOpenshell)
@@ -457,7 +476,11 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 					verifyCertExtension(t, ext)
 
 				case DNSExtensionType:
-					verifyDNSExtension(t, ext)
+					if testCase.expectedInternalDNS {
+						verifyInternalDNSExtension(t, ext)
+					} else {
+						verifyDNSExtension(t, ext)
+					}
 
 				case OidcExtensionType:
 					verifyOIDCExtension(t, ext)
@@ -517,6 +540,15 @@ func fixDNSExtension() gardener.Extension {
 		Type: DNSExtensionType,
 		ProviderConfig: &runtime.RawExtension{
 			Raw: []byte(`{"apiVersion":"service.dns.extensions.gardener.cloud/v1alpha1","dnsProviderReplication":{"enabled":true},"syncProvidersFromShootSpecDNS":true,"providers":[{"domains":{"include":["test-shoot-name.test-domain"],"exclude":null},"credentials":"test-dns-secret","type":"test-provider"}],"kind":"DNSConfig"}`),
+		},
+	}
+}
+
+func fixInternalDNSExtension() gardener.Extension {
+	return gardener.Extension{
+		Type: DNSExtensionType,
+		ProviderConfig: &runtime.RawExtension{
+			Raw: []byte(`{"apiVersion":"service.dns.extensions.gardener.cloud/v1alpha1","dnsProviderReplication":{"enabled":true},"syncProvidersFromShootSpecDNS":true,"providers":[],"kind":"DNSConfig"}`),
 		},
 	}
 }
@@ -691,6 +723,20 @@ func verifyDNSExtension(t *testing.T, ext gardener.Extension) {
 
 	require.Len(t, provider.Domains.Include, 1)
 	assert.Equal(t, "test-shoot-name.test-domain", provider.Domains.Include[0])
+}
+
+func verifyInternalDNSExtension(t *testing.T, ext gardener.Extension) {
+	require.NotNil(t, ext.ProviderConfig)
+	require.NotNil(t, ext.ProviderConfig.Raw)
+
+	var dnsConfig DNSExtensionProviderConfig
+
+	err := json.Unmarshal(ext.ProviderConfig.Raw, &dnsConfig)
+	require.NoError(t, err)
+
+	assert.Equal(t, "service.dns.extensions.gardener.cloud/v1alpha1", dnsConfig.APIVersion)
+	assert.Equal(t, "DNSConfig", dnsConfig.Kind)
+	assert.Empty(t, dnsConfig.Providers)
 }
 
 func verifyCertExtension(t *testing.T, ext gardener.Extension) {
