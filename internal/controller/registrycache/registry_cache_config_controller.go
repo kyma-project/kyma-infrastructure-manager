@@ -3,6 +3,7 @@ package registrycache
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sync/atomic"
 	"time"
 
@@ -15,7 +16,6 @@ import (
 	registrycache "github.com/kyma-project/registry-cache/api/v1beta1"
 	watcherevent "github.com/kyma-project/runtime-watcher/listener/pkg/v2/event"
 	corev1 "k8s.io/api/core/v1"
-	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -52,11 +52,11 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 
 	var secret corev1.Secret
 	if err := r.KcpClient.Get(ctx, request.NamespacedName, &secret); err != nil {
-		return requeueOnError(err)
+		return stopIfNotFound(err)
 	}
 
 	if !secretControlledByKIM(secret) {
-		return ctrl.Result{}, nil
+		return stop()
 	}
 
 	runtimeID := secret.Labels[RuntimeIDLabel]
@@ -66,73 +66,63 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 	runtimeClient, err := r.RuntimeClientGetter(secret)
 	if err != nil {
 		log.Error(err, "Failed to get runtime client for runtime")
-		return requeueOnError(err)
+		return ctrl.Result{}, err
+	}
+
+	return r.applyRegistryCacheConfig(ctx, log, runtimeClient, runtimeID)
+}
+
+func (r *RegistryCacheConfigReconciler) applyRegistryCacheConfig(ctx context.Context, log logr.Logger, runtimeClient client.Client, runtimeID string) (ctrl.Result, error) {
+	newRegistryCacheConfig, err := fetchConfigs(ctx, log, runtimeClient)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	var runtimeToUpdate imv1.Runtime
 	err = r.KcpClient.Get(ctx, types.NamespacedName{Name: runtimeID, Namespace: r.KcpNamespace}, &runtimeToUpdate)
-
 	if err != nil {
-		log.Error(err, "Failed to find runtime")
-		return requeueOnError(err)
+		log.Error(err, "Failed to get runtime")
+		return stopIfNotFound(err)
 	}
 
-	return r.applyRegistryCacheConfig(ctx, log, runtimeClient, runtimeToUpdate)
+	err = r.updateRuntime(ctx, log, runtimeToUpdate, newRegistryCacheConfig)
+	if err != nil {
+		log.Error(err, "Failed to update runtime with registry cache config")
+		return stopIfNotFound(err)
+	}
+
+	return ctrl.Result{
+		RequeueAfter: r.ReconcilePeriod,
+	}, nil
 }
 
-func (r *RegistryCacheConfigReconciler) applyRegistryCacheConfig(ctx context.Context, log logr.Logger, runtimeClient client.Client, runtime imv1.Runtime) (ctrl.Result, error) {
+func (r *RegistryCacheConfigReconciler) updateRuntime(ctx context.Context, log logr.Logger, runtimeToUpdate imv1.Runtime, newRegistryCacheConfig []imv1.ImageRegistryCache) error {
 
-	enabled, err := moduleEnabled(ctx, runtimeClient)
-	if err != nil {
-		log.Error(err, "Failed to verify whether Registry Cache should be enabled")
-		return ctrl.Result{}, err
+	if slices.Equal(newRegistryCacheConfig, runtimeToUpdate.Spec.Caching) {
+		return nil
 	}
 
-	if enabled {
-		newRegistryCacheConfig, err := fetchConfigs(ctx, log, runtimeClient)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
-		err = r.updateRuntime(ctx, log, runtime, newRegistryCacheConfig)
-		if err != nil {
-			log.Error(err, "Failed to update runtime with registry cache config")
-			return ctrl.Result{}, err
-		}
-
-		return ctrl.Result{
-			RequeueAfter: r.ReconcilePeriod,
-		}, nil
-	}
-
-	if len(runtime.Spec.Caching) == 0 {
-		return ctrl.Result{}, nil
-	}
-
-	// If the module is not enabled but there is a registry cache config, it means that the module has been disabled and we need to remove the config from the runtime
-	log.Info("Disabling registry cache config")
-	err = r.updateRuntime(ctx, log, runtime, []imv1.ImageRegistryCache{})
-	if err != nil {
-		log.Error(err, "Failed to disable registry cache in runtime")
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{}, nil
-}
-
-func (r *RegistryCacheConfigReconciler) updateRuntime(ctx context.Context, log logr.Logger, runtime imv1.Runtime, newRegistryCacheConfig []imv1.ImageRegistryCache) error {
 	log.Info("Updating runtime with registry cache config")
-	runtime.Spec.Caching = newRegistryCacheConfig
+	runtimeToUpdate.Spec.Caching = newRegistryCacheConfig
 
-	//nolint:staticcheck // SA1019: client.Apply is used with Patch, which is the correct API for this version
-	return r.KcpClient.Update(ctx, &runtime, &client.UpdateOptions{
+	return r.KcpClient.Update(ctx, &runtimeToUpdate, &client.UpdateOptions{
 		FieldManager: fieldManagerName,
 	})
 }
 
 func fetchConfigs(ctx context.Context, log logr.Logger, runtimeClient client.Client) ([]imv1.ImageRegistryCache, error) {
+	enabled, err := moduleEnabled(ctx, runtimeClient)
+	if err != nil {
+		log.Error(err, "Failed to verify whether Registry Cache is enabled")
+		return nil, err
+	}
+
+	if !enabled {
+		return nil, nil
+	}
+
 	var registryCacheConfigs registrycache.RegistryCacheConfigList
-	err := runtimeClient.List(ctx, &registryCacheConfigs, &client.ListOptions{})
+	err = runtimeClient.List(ctx, &registryCacheConfigs, &client.ListOptions{})
 	if err != nil {
 		log.Error(err, "Failed to list registry cache configs")
 		return nil, err
@@ -154,15 +144,6 @@ func fetchConfigs(ctx context.Context, log logr.Logger, runtimeClient client.Cli
 
 func moduleEnabled(ctx context.Context, runtimeClient client.Client) (bool, error) {
 
-	var kymacrd apiextensions.CustomResourceDefinition
-	crdErr := runtimeClient.Get(ctx, types.NamespacedName{Name: "kymas.operator.kyma-project.io"}, &kymacrd)
-	if crdErr != nil {
-		if apierrors.IsNotFound(crdErr) {
-			return false, nil
-		}
-		return false, crdErr
-	}
-
 	var defaultKyma kyma.Kyma
 	err := runtimeClient.Get(ctx, types.NamespacedName{Name: "default", Namespace: "kyma-system"}, &defaultKyma)
 	if err != nil {
@@ -180,7 +161,11 @@ func moduleEnabled(ctx context.Context, runtimeClient client.Client) (bool, erro
 	return false, nil
 }
 
-func requeueOnError(err error) (ctrl.Result, error) {
+func stop() (ctrl.Result, error) {
+	return ctrl.Result{}, nil
+}
+
+func stopIfNotFound(err error) (ctrl.Result, error) {
 
 	if err != nil && apierrors.IsNotFound(err) {
 		return ctrl.Result{}, nil
