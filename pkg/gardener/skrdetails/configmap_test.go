@@ -23,13 +23,13 @@ func TestToKymaProvisioningInfo(t *testing.T) {
 					imv1.LabelKymaName:            "test-kyma-name",
 					imv1.LabelKymaGlobalAccountID: "test-global-account-id",
 					imv1.LabelKymaSubaccountID:    "test-subaccount-id",
-					imv1.LabelKymaRegion:          "eu-central-1",
-					imv1.LabelKymaPlatformRegion:  "cf-eu12",
 				},
 			},
 			Spec: imv1.RuntimeSpec{
 				Shoot: imv1.RuntimeShoot{
-					Name: "test-shoot",
+					Name:           "test-shoot",
+					Region:         "eu-central-1",
+					PlatformRegion: "cf-eu12",
 					Provider: imv1.Provider{
 						Type: "aws",
 						Workers: []gardener.Worker{
@@ -268,13 +268,13 @@ func TestToKymaProvisioningInfoConfigMap(t *testing.T) {
 					imv1.LabelKymaName:            "my-kyma-instance",
 					imv1.LabelKymaGlobalAccountID: "global-acc-456",
 					imv1.LabelKymaSubaccountID:    "sub-acc-789",
-					imv1.LabelKymaRegion:          "eu-central-1",
-					imv1.LabelKymaPlatformRegion:  "cf-eu12",
 				},
 			},
 			Spec: imv1.RuntimeSpec{
 				Shoot: imv1.RuntimeShoot{
-					Name: "test-shoot",
+					Name:           "test-shoot",
+					Region:         "eu-central-1",
+					PlatformRegion: "cf-eu12",
 					Provider: imv1.Provider{
 						Type: "aws",
 						Workers: []gardener.Worker{

@@ -87,8 +87,8 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 		SubaccountID:          runtime.Labels[imv1.LabelKymaSubaccountID],
 		EnvironmentInstanceID: runtime.Labels[imv1.LabelKymaInstanceID],
 		InstanceName:          runtime.Labels[imv1.LabelKymaName],
-		Region:                runtime.Labels[imv1.LabelKymaRegion],
-		PlatformRegion:        runtime.Labels[imv1.LabelKymaPlatformRegion],
+		Region:                runtime.Spec.Shoot.Region,
+		PlatformRegion:        runtime.Spec.Shoot.PlatformRegion,
 		InfrastructureConfig:  *shoot.Spec.Provider.InfrastructureConfig,
 		NetworkDetails: NetworkDetails{
 			DualStackIPEnabled: IsDualStackEnabled(shoot),
