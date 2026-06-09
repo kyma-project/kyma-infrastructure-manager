@@ -46,7 +46,7 @@ func sFnCleanupRegistryCacheGardenSecrets(ctx context.Context, m *fsm, s *system
 		return updateStatusAndRequeueAfter(m.StatusRequeueDelay)
 	}
 
-	if registryCacheExists(s.instance) {
+	if len(s.instance.Spec.Caching) > 0 {
 		m.log.V(log_level.DEBUG).Info("Registry cache configuration exists", "instance", s.instance.Name)
 		statusManager := registrycache.NewStatusManager(runtimeClient)
 
