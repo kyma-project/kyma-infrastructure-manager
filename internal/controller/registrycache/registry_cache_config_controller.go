@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -95,7 +94,7 @@ func (r *RegistryCacheConfigReconciler) applyRegistryCacheConfig(ctx context.Con
 			return ctrl.Result{}, err
 		}
 
-		err = r.patchRuntime(ctx, log, runtime, newRegistryCacheConfig)
+		err = r.updateRuntime(ctx, log, runtime, newRegistryCacheConfig)
 		if err != nil {
 			log.Error(err, "Failed to update runtime with registry cache config")
 			return ctrl.Result{}, err
@@ -112,7 +111,7 @@ func (r *RegistryCacheConfigReconciler) applyRegistryCacheConfig(ctx context.Con
 
 	// If the module is not enabled but there is a registry cache config, it means that the module has been disabled and we need to remove the config from the runtime
 	log.Info("Disabling registry cache config")
-	err = r.patchRuntime(ctx, log, runtime, []imv1.ImageRegistryCache{})
+	err = r.updateRuntime(ctx, log, runtime, []imv1.ImageRegistryCache{})
 	if err != nil {
 		log.Error(err, "Failed to disable registry cache in runtime")
 		return ctrl.Result{}, err
@@ -121,15 +120,13 @@ func (r *RegistryCacheConfigReconciler) applyRegistryCacheConfig(ctx context.Con
 	return ctrl.Result{}, nil
 }
 
-func (r *RegistryCacheConfigReconciler) patchRuntime(ctx context.Context, log logr.Logger, runtime imv1.Runtime, newRegistryCacheConfig []imv1.ImageRegistryCache) error {
+func (r *RegistryCacheConfigReconciler) updateRuntime(ctx context.Context, log logr.Logger, runtime imv1.Runtime, newRegistryCacheConfig []imv1.ImageRegistryCache) error {
 	log.Info("Updating runtime with registry cache config")
 	runtime.Spec.Caching = newRegistryCacheConfig
-	runtime.ManagedFields = nil
 
 	//nolint:staticcheck // SA1019: client.Apply is used with Patch, which is the correct API for this version
-	return r.KcpClient.Patch(ctx, &runtime, client.Apply, &client.PatchOptions{
+	return r.KcpClient.Update(ctx, &runtime, &client.UpdateOptions{
 		FieldManager: fieldManagerName,
-		Force:        ptr.To(true),
 	})
 }
 
