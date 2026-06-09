@@ -276,7 +276,7 @@ func TestToKymaProvisioningInfoConfigMap(t *testing.T) {
 				Shoot: imv1.RuntimeShoot{
 					Name: "test-shoot",
 					Provider: imv1.Provider{
-						Type: "AWS",
+						Type: "aws",
 						Workers: []gardener.Worker{
 							{
 								Name: "worker-1",
