@@ -3,6 +3,7 @@ package registrycache
 import (
 	"context"
 	"fmt"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"slices"
 	"sync/atomic"
 	"time"
@@ -143,6 +144,15 @@ func fetchConfigs(ctx context.Context, log logr.Logger, runtimeClient client.Cli
 }
 
 func moduleEnabled(ctx context.Context, runtimeClient client.Client) (bool, error) {
+
+	var kymacrd apiextensionsv1.CustomResourceDefinition
+	crdErr := runtimeClient.Get(ctx, types.NamespacedName{Name: "kymas.operator.kyma-project.io"}, &kymacrd)
+	if crdErr != nil {
+		if apierrors.IsNotFound(crdErr) {
+			return false, nil
+		}
+		return false, crdErr
+	}
 
 	var defaultKyma kyma.Kyma
 	err := runtimeClient.Get(ctx, types.NamespacedName{Name: "default", Namespace: "kyma-system"}, &defaultKyma)
