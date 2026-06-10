@@ -6,8 +6,6 @@
   ],
   "prHourlyLimit": 0,
   "rebaseWhen": "conflicted",
-  "platformAutomerge": true,
-  "automergeType": "pr",
   "gomod": {
     "postUpdateOptions": [
       "gomodTidy"
