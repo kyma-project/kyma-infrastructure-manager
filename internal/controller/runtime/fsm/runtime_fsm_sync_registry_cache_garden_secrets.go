@@ -43,7 +43,7 @@ func sFnSyncRegistryCacheGardenSecrets(ctx context.Context, m *fsm, s *systemSta
 
 		secretSyncer := registrycache.NewGardenSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
 
-		if !registryCacheWithSecretsExist(s.instance) {
+		if registryCacheWithSecretsExist(s.instance) {
 			m.log.V(log_level.DEBUG).Info("Registry cache secrets creation", "instance", s.instance.Name)
 			err = secretSyncer.CreateOrUpdate(ctx, s.instance.Spec.Caching)
 			if err != nil {
