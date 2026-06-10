@@ -5,7 +5,9 @@
     "schedule:earlyMondays"
   ],
   "prHourlyLimit": 0,
-  "rebaseWhen": "behind-base-branch",
+  "rebaseWhen": "conflicted",
+  "platformAutomerge": true,
+  "automergeType": "pr",
   "gomod": {
     "postUpdateOptions": [
       "gomodTidy"
@@ -36,7 +38,9 @@
     {
       "matchUpdateTypes": ["minor", "patch"],
       "matchCurrentVersion": "!/^0/",
-      "automerge": true
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
     }
   ]
 }
