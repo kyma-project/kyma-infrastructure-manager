@@ -17,7 +17,7 @@ func sFnSyncRegistryCacheGardenSecrets(ctx context.Context, m *fsm, s *systemSta
 	}
 
 	if len(s.instance.Spec.Caching) > 0 {
-		m.log.Info("Registry cache configuration exists", "instance", s.instance.Name)
+		m.log.V(log_level.DEBUG).Info("Registry cache configuration exists", "instance", s.instance.Name)
 		runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 		if err != nil {
 			s.instance.UpdateStatePending(
@@ -44,7 +44,7 @@ func sFnSyncRegistryCacheGardenSecrets(ctx context.Context, m *fsm, s *systemSta
 		secretSyncer := registrycache.NewGardenSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
 
 		if registryCacheWithSecretsExist(s.instance) {
-			m.log.Info("Registry cache secrets creation", "instance", s.instance.Name)
+			m.log.V(log_level.DEBUG).Info("Registry cache secrets creation", "instance", s.instance.Name)
 			err = secretSyncer.CreateOrUpdate(ctx, s.instance.Spec.Caching)
 			if err != nil {
 				s.instance.UpdateStatePending(
