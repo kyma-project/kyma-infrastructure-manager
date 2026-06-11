@@ -27,7 +27,9 @@ func TestToKymaProvisioningInfo(t *testing.T) {
 			},
 			Spec: imv1.RuntimeSpec{
 				Shoot: imv1.RuntimeShoot{
-					Name: "test-shoot",
+					Name:           "test-shoot",
+					Region:         "eu-central-1",
+					PlatformRegion: "cf-eu12",
 					Provider: imv1.Provider{
 						Type: "aws",
 						Workers: []gardener.Worker{
@@ -64,6 +66,8 @@ func TestToKymaProvisioningInfo(t *testing.T) {
 		assert.Equal(t, "test-kyma-name", result.InstanceName)
 		assert.Equal(t, "test-global-account-id", result.GlobalAccountID)
 		assert.Equal(t, "test-subaccount-id", result.SubaccountID)
+		assert.Equal(t, "eu-central-1", result.Region)
+		assert.Equal(t, "cf-eu12", result.PlatformRegion)
 	})
 
 	t.Run("Should handle missing labels gracefully", func(t *testing.T) {
@@ -268,7 +272,9 @@ func TestToKymaProvisioningInfoConfigMap(t *testing.T) {
 			},
 			Spec: imv1.RuntimeSpec{
 				Shoot: imv1.RuntimeShoot{
-					Name: "test-shoot",
+					Name:           "test-shoot",
+					Region:         "eu-central-1",
+					PlatformRegion: "cf-eu12",
 					Provider: imv1.Provider{
 						Type: "aws",
 						Workers: []gardener.Worker{
@@ -308,5 +314,7 @@ func TestToKymaProvisioningInfoConfigMap(t *testing.T) {
 		assert.Contains(t, cm.Data["details"], "instanceName: my-kyma-instance")
 		assert.Contains(t, cm.Data["details"], "globalAccountID: global-acc-456")
 		assert.Contains(t, cm.Data["details"], "subaccountID: sub-acc-789")
+		assert.Contains(t, cm.Data["details"], "region: eu-central-1")
+		assert.Contains(t, cm.Data["details"], "platformRegion: cf-eu12")
 	})
 }
