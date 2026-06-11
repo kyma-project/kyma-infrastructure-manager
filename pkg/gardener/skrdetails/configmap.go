@@ -15,6 +15,8 @@ type KymaProvisioningInfo struct {
 	SubaccountID          string               `json:"subaccountID,omitzero"`
 	EnvironmentInstanceID string               `json:"environmentInstanceID,omitzero"`
 	InstanceName          string               `json:"instanceName,omitzero"`
+	Region                string               `json:"region,omitzero"`
+	PlatformRegion        string               `json:"platformRegion,omitzero"`
 	InfrastructureConfig  runtime.RawExtension `json:"infrastructureConfig,omitzero"`
 	NetworkDetails        NetworkDetails       `json:"networkDetails"`
 }
@@ -85,6 +87,8 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 		SubaccountID:          runtime.Labels[imv1.LabelKymaSubaccountID],
 		EnvironmentInstanceID: runtime.Labels[imv1.LabelKymaInstanceID],
 		InstanceName:          runtime.Labels[imv1.LabelKymaName],
+		Region:                runtime.Spec.Shoot.Region,
+		PlatformRegion:        runtime.Spec.Shoot.PlatformRegion,
 		InfrastructureConfig:  *shoot.Spec.Provider.InfrastructureConfig,
 		NetworkDetails: NetworkDetails{
 			DualStackIPEnabled: IsDualStackEnabled(shoot),
