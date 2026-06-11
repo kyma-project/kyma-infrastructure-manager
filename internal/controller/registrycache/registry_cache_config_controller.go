@@ -43,7 +43,7 @@ type RegistryCacheConfigReconciler struct {
 }
 
 const (
-	fieldManagerName        = "customconfigcontroller"
+	fieldManagerName        = "registrycachecontroller"
 	RegistryCacheModuleName = "registry-cache"
 	RuntimeIDLabel          = "kyma-project.io/runtime-id"
 )
