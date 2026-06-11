@@ -1,0 +1,6 @@
+name: kyma-project.io/kyma-runtime/kcp-components/infrastructure-manager
+team: kyma/framefrog
+images:
+  - europe-docker.pkg.dev/kyma-project/prod/infrastructure-manager:latest
+  - europe-docker.pkg.dev/kyma-project/prod/rt-bootstrapper:latest
+  - europe-docker.pkg.dev/kyma-project/prod/subscription-cleanup-job:latest
