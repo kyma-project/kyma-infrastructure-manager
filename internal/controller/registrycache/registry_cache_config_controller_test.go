@@ -33,6 +33,9 @@ const (
 	runtimeWithModuleDisabledAndExistingCaching  = "test-runtime-module-disabled-with-caching"
 	runtimeWithModuleDisabledAndNoCaching        = "test-runtime-module-disabled-no-caching"
 	runtimeWithGetterError                       = "test-runtime-getter-error"
+
+	secretForRuntimeWithNoCRD = "kubeconfig-secret-no-crd"
+	runtimeWithNoCRD          = "test-runtime-no-crd"
 )
 
 var _ = Describe("Registry Cache Config Controller", func() {
@@ -195,6 +198,37 @@ var _ = Describe("Registry Cache Config Controller", func() {
 			}, time.Second*30, time.Second*3).Should(BeTrue())
 		})
 
+		It("Should not update Runtime when runtime cluster has no Kyma CRD installed", func() {
+			const shootName = "shoot-no-crd"
+
+			By("Creating a Runtime resource")
+			runtime := createRuntimeStub(runtimeWithNoCRD, shootName, nil)
+			Expect(k8sClient.Create(ctx, runtime)).To(Succeed())
+
+			By("Creating a KIM-managed Secret for a runtime cluster with no Kyma CRD")
+			secret := createSecretStub(secretForRuntimeWithNoCRD, getSecretLabels(runtimeWithNoCRD, "infrastructure-manager"))
+			Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+
+			By("Waiting for Runtime to be readable")
+			Eventually(func() bool {
+				rt := imv1.Runtime{}
+				return k8sClient.Get(ctx, types.NamespacedName{Name: runtimeWithNoCRD, Namespace: "kcp-system"}, &rt) == nil
+			}, time.Second*10, time.Millisecond*200).Should(BeTrue())
+
+			By("Checking that Runtime caching stays empty")
+			Consistently(func() bool {
+				rt := imv1.Runtime{}
+				if err := k8sClient.Get(ctx, types.NamespacedName{
+					Name:      runtimeWithNoCRD,
+					Namespace: "kcp-system",
+				}, &rt); err != nil {
+					return false
+				}
+
+				return len(rt.Spec.Caching) == 0
+			}, time.Second*30, time.Second*3).Should(BeTrue())
+		})
+
 		It("Should not update Runtime when RuntimeClientGetter returns an error", func() {
 			const shootName = "shoot-getter-error"
 
@@ -218,7 +252,7 @@ var _ = Describe("Registry Cache Config Controller", func() {
 					return false
 				}
 
-				return rt.Spec.Caching == nil
+				return len(rt.Spec.Caching) == 0
 			}, time.Second*30, time.Second*3).Should(BeTrue())
 		})
 	})
@@ -231,6 +265,7 @@ func fixRuntimeClients() map[string]client.Client {
 		runtimeThatShouldNotBeModified:              fixRuntimeClient(),
 		runtimeWithModuleDisabledAndExistingCaching: fixRuntimeClient(fixRegistryCacheWithModuleDisabled()...),
 		runtimeWithModuleDisabledAndNoCaching:       fixRuntimeClient(fixRegistryCacheWithModuleDisabled()...),
+		runtimeWithNoCRD:                            fixRuntimeClient(),
 	}
 }
 
