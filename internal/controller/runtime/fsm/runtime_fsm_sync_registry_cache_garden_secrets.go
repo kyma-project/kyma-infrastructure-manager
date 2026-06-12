@@ -11,12 +11,12 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+func sFnSyncRegistryCacheGardenSecrets(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	if !m.RegistryCacheConfigControllerEnabled {
 		return switchState(sFnPatchExistingShoot)
 	}
 
-	if registryCacheExists(s.instance) {
+	if len(s.instance.Spec.Caching) > 0 {
 		m.log.V(log_level.DEBUG).Info("Registry cache configuration exists", "instance", s.instance.Name)
 		runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 		if err != nil {
@@ -32,7 +32,6 @@ func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (state
 		}
 
 		statusManager := registrycache.NewStatusManager(runtimeClient)
-		secretSyncer := registrycache.NewGardenSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
 
 		m.log.V(log_level.DEBUG).Info("Registry cache CRs state set to Pending", "instance", s.instance.Name)
 		err = statusManager.SetStatusPending(ctx, s.instance, registrycacheapi.ConditionReasonRegistryCacheConfigured)
@@ -42,26 +41,40 @@ func sFnPrepareRegistryCache(ctx context.Context, m *fsm, s *systemState) (state
 			return requeue()
 		}
 
-		m.log.V(log_level.DEBUG).Info("Registry cache secrets creation", "instance", s.instance.Name)
-		err = secretSyncer.CreateOrUpdate(ctx, s.instance.Spec.Caching)
-		if err != nil {
-			s.instance.UpdateStatePending(
-				imv1.ConditionTypeRegistryCacheConfigured,
-				imv1.ConditionReasonRegistryCacheGardenClusterConfigurationFailed,
-				metav1.ConditionFalse,
-				err.Error(),
-			)
-			m.log.Error(err, "Failed to sync registry cache secrets")
+		secretSyncer := registrycache.NewGardenSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
 
-			err = statusManager.SetStatusFailed(ctx, s.instance, registrycacheapi.ConditionReasonRegistryCacheGardenClusterConfigurationFailed, err.Error())
-
+		if registryCacheWithSecretsExist(s.instance) {
+			m.log.V(log_level.DEBUG).Info("Registry cache secrets creation", "instance", s.instance.Name)
+			err = secretSyncer.CreateOrUpdate(ctx, s.instance.Spec.Caching)
 			if err != nil {
-				m.log.Error(err, "Failed to update registry cache status")
-			}
+				s.instance.UpdateStatePending(
+					imv1.ConditionTypeRegistryCacheConfigured,
+					imv1.ConditionReasonRegistryCacheGardenClusterConfigurationFailed,
+					metav1.ConditionFalse,
+					err.Error(),
+				)
+				m.log.Error(err, "Failed to sync registry cache secrets")
 
-			return updateStatusAndRequeueAfter(m.StatusRequeueDelay)
+				err = statusManager.SetStatusFailed(ctx, s.instance, registrycacheapi.ConditionReasonRegistryCacheGardenClusterConfigurationFailed, err.Error())
+
+				if err != nil {
+					m.log.Error(err, "Failed to update registry cache status")
+				}
+
+				return updateStatusAndRequeueAfter(m.StatusRequeueDelay)
+			}
 		}
 	}
 
 	return switchState(sFnPatchExistingShoot)
+}
+
+func registryCacheWithSecretsExist(runtime imv1.Runtime) bool {
+	for _, cache := range runtime.Spec.Caching {
+		if cache.Config.SecretReferenceName != nil && *cache.Config.SecretReferenceName != "" {
+			return true
+		}
+	}
+
+	return false
 }

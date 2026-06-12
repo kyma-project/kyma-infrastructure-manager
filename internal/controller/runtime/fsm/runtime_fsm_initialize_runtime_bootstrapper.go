@@ -24,7 +24,7 @@ const (
 func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	if !m.RuntimeBootstrapperEnabled || m.RuntimeBootstrapperInstaller == nil {
 		m.log.V(log_level.DEBUG).Info("Runtime bootstrapper installation is disabled")
-		return switchState(sFnFinalizeRegistryCache)
+		return switchState(sFnCleanupRegistryCacheGardenSecrets)
 	}
 
 	err := m.RuntimeBootstrapperInstaller.Configure(ctx, s.instance)
@@ -131,5 +131,5 @@ func sFnInitializeRuntimeBootstrapper(ctx context.Context, m *fsm, s *systemStat
 		)
 	}
 
-	return switchState(sFnFinalizeRegistryCache)
+	return switchState(sFnCleanupRegistryCacheGardenSecrets)
 }
