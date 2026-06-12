@@ -21,13 +21,19 @@ on:
 jobs:
   upload-release-report:
     runs-on: ubuntu-latest
-    environment: ${{ vars.PROTECTED_ENVIRONMENT || 'protected' }}
 
     permissions:
       actions: read
       contents: read
 
     steps:
+      - name: Validate required environment variable
+        run: |
+          if [ -z "${{ vars.PROTECTED_ENVIRONMENT }}" ]; then
+            echo "::error::Repository variable PROTECTED_ENVIRONMENT is not set. Refusing to continue."
+            exit 1
+          fi
+
       - name: Set release version
         run: |
           echo "RELEASE_VERSION=${{ inputs.release_version }}" >> $GITHUB_ENV
