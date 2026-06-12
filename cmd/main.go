@@ -96,7 +96,7 @@ const (
 	defaultGardenerClusterCtrlWorkersCnt      = 25
 	defaultStatusRequeueDelay                 = 1 * time.Second
 	defaultRegistryCacheListenerComponentName = "infrastructure-manager-registry-cache"
-	defaultregistryCacheReconcilePeriod       = 60 * time.Minute
+	defaultRegistryCacheReconcilePeriod       = 60 * time.Minute
 )
 
 func main() {
@@ -159,7 +159,7 @@ func main() {
 
 	// Registry cache specific parameters:
 	flag.StringVar(&registryCacheListenerPort, "registry-cache-listener-port", "8082", "Port for the registry cache listener to listen on")
-	flag.DurationVar(&registryCacheReconcilePeriod, "registry-cache-reconcile-period", defaultregistryCacheReconcilePeriod, "Time base reconciliation period for Registry Cache Controller.")
+	flag.DurationVar(&registryCacheReconcilePeriod, "registry-cache-reconcile-period", defaultRegistryCacheReconcilePeriod, "Time base reconciliation period for Registry Cache Controller.")
 
 	//Feature flags:
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration. When enabled this feature, a Shoot cluster will only be created when an auditlog tenant exists (this is defined in the auditlog mapping configuration file)")

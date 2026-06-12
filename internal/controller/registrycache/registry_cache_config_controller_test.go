@@ -91,7 +91,7 @@ var _ = Describe("Registry Cache Config Controller", func() {
 					runtime.Spec.Caching[1].Namespace == expectedRuntimeRegistryCacheConfig[1].Namespace &&
 					runtime.Spec.Caching[1].UID == expectedRuntimeRegistryCacheConfig[1].UID
 
-			}, time.Second*300, time.Second*3).Should(BeTrue())
+			}, time.Second*30, time.Second*3).Should(BeTrue())
 		},
 			Entry("with registry cache enabled",
 				createRuntimeStub(runtimeWithoutRegistryCacheConfig, shootNameForRuntimeWithoutRegistryCache, nil),
@@ -170,7 +170,7 @@ var _ = Describe("Registry Cache Config Controller", func() {
 				}
 
 				return len(rt.Spec.Caching) == 0
-			}, time.Second*300, time.Second*3).Should(BeTrue())
+			}, time.Second*30, time.Second*3).Should(BeTrue())
 		})
 
 		It("Should not patch Runtime when registry-cache module is disabled and Runtime has no caching", func() {
@@ -208,12 +208,6 @@ var _ = Describe("Registry Cache Config Controller", func() {
 			By("Creating a KIM-managed Secret for a runtime cluster with no Kyma CRD")
 			secret := createSecretStub(secretForRuntimeWithNoCRD, getSecretLabels(runtimeWithNoCRD, "infrastructure-manager"))
 			Expect(k8sClient.Create(ctx, secret)).To(Succeed())
-
-			By("Waiting for Runtime to be readable")
-			Eventually(func() bool {
-				rt := imv1.Runtime{}
-				return k8sClient.Get(ctx, types.NamespacedName{Name: runtimeWithNoCRD, Namespace: "kcp-system"}, &rt) == nil
-			}, time.Second*10, time.Millisecond*200).Should(BeTrue())
 
 			By("Checking that Runtime caching stays empty")
 			Consistently(func() bool {
