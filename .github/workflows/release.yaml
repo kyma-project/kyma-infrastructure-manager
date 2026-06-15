@@ -48,7 +48,6 @@ jobs:
   upload-release-report:
     needs: generate-release
     if: needs.generate-release.result == 'success'
-    environment: ${{ vars.PROTECTED_ENVIRONMENT || 'protected' }}
     permissions:
       actions: read
       contents: read
