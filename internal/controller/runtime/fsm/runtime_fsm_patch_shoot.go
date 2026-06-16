@@ -80,6 +80,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		InfrastructureConfig:  s.shoot.Spec.Provider.InfrastructureConfig,
 		ControlPlaneConfig:    s.shoot.Spec.Provider.ControlPlaneConfig,
 		ApiServerAclEnabled:   m.ApiServerAclEnabled,
+		ExistingDNS:           s.shoot.Spec.DNS,
 	})
 
 	if err != nil {
@@ -202,16 +203,6 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	)
 
 	return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
-}
-
-func registryCacheExists(runtime imv1.Runtime) bool {
-	for _, cache := range runtime.Spec.Caching {
-		if cache.Config.SecretReferenceName != nil && *cache.Config.SecretReferenceName != "" {
-			return true
-		}
-	}
-
-	return false
 }
 
 func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg string) (stateFn, *ctrl.Result, error) {

@@ -11,7 +11,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func sFnFinalizeRegistryCache(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+func sFnCleanupRegistryCacheGardenSecrets(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 
 	if !m.RegistryCacheConfigControllerEnabled {
 		return switchState(sFnConfigureSKR)
@@ -46,7 +46,7 @@ func sFnFinalizeRegistryCache(ctx context.Context, m *fsm, s *systemState) (stat
 		return updateStatusAndRequeueAfter(m.StatusRequeueDelay)
 	}
 
-	if registryCacheExists(s.instance) {
+	if len(s.instance.Spec.Caching) > 0 {
 		m.log.V(log_level.DEBUG).Info("Registry cache configuration exists", "instance", s.instance.Name)
 		statusManager := registrycache.NewStatusManager(runtimeClient)
 

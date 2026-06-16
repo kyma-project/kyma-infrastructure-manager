@@ -26,6 +26,16 @@ const (
 	runtimeWithoutRegistryCacheConfig        = "test-runtime-without-registry-cache"
 	runtimeWithRegistryCacheEnabled          = "test-runtime-with-registry-cache-enabled"
 	runtimeThatShouldNotBeModified           = "test-runtime-that-should-not-be-modified"
+
+	secretForRuntimeWithModuleDisabledAndCaching = "kubeconfig-secret-module-disabled-with-caching"
+	secretForRuntimeWithModuleDisabledNoCaching  = "kubeconfig-secret-module-disabled-no-caching"
+	secretForRuntimeWithGetterError              = "kubeconfig-secret-getter-error"
+	runtimeWithModuleDisabledAndExistingCaching  = "test-runtime-module-disabled-with-caching"
+	runtimeWithModuleDisabledAndNoCaching        = "test-runtime-module-disabled-no-caching"
+	runtimeWithGetterError                       = "test-runtime-getter-error"
+
+	secretForRuntimeWithNoCRD = "kubeconfig-secret-no-crd"
+	runtimeWithNoCRD          = "test-runtime-no-crd"
 )
 
 var _ = Describe("Registry Cache Config Controller", func() {
@@ -81,7 +91,7 @@ var _ = Describe("Registry Cache Config Controller", func() {
 					runtime.Spec.Caching[1].Namespace == expectedRuntimeRegistryCacheConfig[1].Namespace &&
 					runtime.Spec.Caching[1].UID == expectedRuntimeRegistryCacheConfig[1].UID
 
-			}, time.Second*300, time.Second*3).Should(BeTrue())
+			}, time.Second*30, time.Second*3).Should(BeTrue())
 		},
 			Entry("with registry cache enabled",
 				createRuntimeStub(runtimeWithoutRegistryCacheConfig, shootNameForRuntimeWithoutRegistryCache, nil),
@@ -122,7 +132,7 @@ var _ = Describe("Registry Cache Config Controller", func() {
 				runtime := imv1.Runtime{}
 				if err := k8sClient.Get(ctx, types.NamespacedName{
 					Name:      runtimeThatShouldNotBeModified,
-					Namespace: "default",
+					Namespace: "kcp-system",
 				}, &runtime); err != nil {
 					return false
 				}
@@ -131,14 +141,125 @@ var _ = Describe("Registry Cache Config Controller", func() {
 
 			}, time.Second*30, time.Second*3).Should(BeTrue())
 		})
+
+		It("Should clear caching config when registry-cache module is disabled and Runtime had existing caching", func() {
+			const shootName = "shoot-module-disabled-with-caching"
+
+			By("Creating a Runtime resource with existing caching config")
+			runtime := createRuntimeStub(runtimeWithModuleDisabledAndExistingCaching, shootName, &imv1.ImageRegistryCache{
+				Name:      "old-config",
+				Namespace: "test",
+				Config: registrycache.RegistryCacheConfigSpec{
+					Upstream: "docker.io",
+				},
+			})
+			Expect(k8sClient.Create(ctx, runtime)).To(Succeed())
+
+			By("Creating a KIM-managed Secret for that Runtime")
+			secret := createSecretStub(secretForRuntimeWithModuleDisabledAndCaching, getSecretLabels(runtimeWithModuleDisabledAndExistingCaching, "infrastructure-manager"))
+			Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+
+			By("Checking that Runtime caching config is eventually cleared")
+			Eventually(func() bool {
+				rt := imv1.Runtime{}
+				if err := k8sClient.Get(ctx, types.NamespacedName{
+					Name:      runtimeWithModuleDisabledAndExistingCaching,
+					Namespace: "kcp-system",
+				}, &rt); err != nil {
+					return false
+				}
+
+				return len(rt.Spec.Caching) == 0
+			}, time.Second*30, time.Second*3).Should(BeTrue())
+		})
+
+		It("Should not patch Runtime when registry-cache module is disabled and Runtime has no caching", func() {
+			const shootName = "shoot-module-disabled-no-caching"
+
+			By("Creating a Runtime resource with no caching config")
+			runtime := createRuntimeStub(runtimeWithModuleDisabledAndNoCaching, shootName, nil)
+			Expect(k8sClient.Create(ctx, runtime)).To(Succeed())
+
+			By("Creating a KIM-managed Secret for that Runtime")
+			secret := createSecretStub(secretForRuntimeWithModuleDisabledNoCaching, getSecretLabels(runtimeWithModuleDisabledAndNoCaching, "infrastructure-manager"))
+			Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+
+			By("Checking that Runtime caching stays nil")
+			Consistently(func() bool {
+				rt := imv1.Runtime{}
+				if err := k8sClient.Get(ctx, types.NamespacedName{
+					Name:      runtimeWithModuleDisabledAndNoCaching,
+					Namespace: "kcp-system",
+				}, &rt); err != nil {
+					return false
+				}
+
+				return rt.Spec.Caching == nil
+			}, time.Second*30, time.Second*3).Should(BeTrue())
+		})
+
+		It("Should not update Runtime when runtime cluster has no Kyma CRD installed", func() {
+			const shootName = "shoot-no-crd"
+
+			By("Creating a Runtime resource")
+			runtime := createRuntimeStub(runtimeWithNoCRD, shootName, nil)
+			Expect(k8sClient.Create(ctx, runtime)).To(Succeed())
+
+			By("Creating a KIM-managed Secret for a runtime cluster with no Kyma CRD")
+			secret := createSecretStub(secretForRuntimeWithNoCRD, getSecretLabels(runtimeWithNoCRD, "infrastructure-manager"))
+			Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+
+			By("Checking that Runtime caching stays empty")
+			Consistently(func() bool {
+				rt := imv1.Runtime{}
+				if err := k8sClient.Get(ctx, types.NamespacedName{
+					Name:      runtimeWithNoCRD,
+					Namespace: "kcp-system",
+				}, &rt); err != nil {
+					return false
+				}
+
+				return len(rt.Spec.Caching) == 0
+			}, time.Second*30, time.Second*3).Should(BeTrue())
+		})
+
+		It("Should not update Runtime when RuntimeClientGetter returns an error", func() {
+			const shootName = "shoot-getter-error"
+
+			By("Creating a Runtime resource")
+			runtime := createRuntimeStub(runtimeWithGetterError, shootName, nil)
+			Expect(k8sClient.Create(ctx, runtime)).To(Succeed())
+
+			By("Creating a KIM-managed Secret whose runtime-id has no registered client")
+			// runtimeWithGetterError is intentionally absent from fixRuntimeClients(),
+			// so the getter returns an error for this secret.
+			secret := createSecretStub(secretForRuntimeWithGetterError, getSecretLabels(runtimeWithGetterError, "infrastructure-manager"))
+			Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+
+			By("Checking that Runtime caching stays nil despite the error")
+			Consistently(func() bool {
+				rt := imv1.Runtime{}
+				if err := k8sClient.Get(ctx, types.NamespacedName{
+					Name:      runtimeWithGetterError,
+					Namespace: "kcp-system",
+				}, &rt); err != nil {
+					return false
+				}
+
+				return len(rt.Spec.Caching) == 0
+			}, time.Second*30, time.Second*3).Should(BeTrue())
+		})
 	})
 })
 
 func fixRuntimeClients() map[string]client.Client {
 	return map[string]client.Client{
-		runtimeWithoutRegistryCacheConfig: fixRuntimeClient(append(fixRegistryCache(), fixKymaCR())...),
-		runtimeWithRegistryCacheEnabled:   fixRuntimeClient(append(fixRegistryCache(), fixKymaCR())...),
-		runtimeThatShouldNotBeModified:    fixRuntimeClient(),
+		runtimeWithoutRegistryCacheConfig:           fixRuntimeClient(fixRegistryCache()...),
+		runtimeWithRegistryCacheEnabled:             fixRuntimeClient(fixRegistryCache()...),
+		runtimeThatShouldNotBeModified:              fixRuntimeClient(),
+		runtimeWithModuleDisabledAndExistingCaching: fixRuntimeClient(fixRegistryCacheWithModuleDisabled()...),
+		runtimeWithModuleDisabledAndNoCaching:       fixRuntimeClient(fixRegistryCacheWithModuleDisabled()...),
+		runtimeWithNoCRD:                            fixRuntimeClient(),
 	}
 }
 
@@ -164,29 +285,32 @@ func fixRuntimeClient(objs ...client.Object) client.Client {
 	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
 }
 
-func fixKymaCR() client.Object {
-	return &kyma.Kyma{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "default",
-			Namespace: "kyma-system",
+func fixRegistryCache() []client.Object {
+	return []client.Object{
+		&v1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test",
+			},
 		},
-		Spec: kyma.KymaSpec{
-			Channel: "stable",
-			Modules: []kyma.Module{
-				{
-					Name: "registry-cache",
+		&apiextensions.CustomResourceDefinition{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "kymas.operator.kyma-project.io",
+			},
+		},
+		&kyma.Kyma{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "default",
+				Namespace: "kyma-system",
+			},
+			Spec: kyma.KymaSpec{
+				Channel: "stable",
+				Modules: []kyma.Module{
+					{
+						Name: "registry-cache",
+					},
 				},
 			},
 		},
-	}
-}
-
-func fixRegistryCache() []client.Object {
-	return []client.Object{&v1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test",
-		},
-	},
 		&registrycache.RegistryCacheConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "config1",
@@ -195,13 +319,36 @@ func fixRegistryCache() []client.Object {
 			Spec: registrycache.RegistryCacheConfigSpec{
 				Upstream: "docker.io",
 			},
-		}, &registrycache.RegistryCacheConfig{
+		},
+		&registrycache.RegistryCacheConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "config2",
 				Namespace: "test",
 			},
 			Spec: registrycache.RegistryCacheConfigSpec{
 				Upstream: "quay.io",
+			},
+		},
+	}
+}
+
+// fixRegistryCacheWithModuleDisabled returns objects for a runtime cluster where
+// the Kyma CRD exists but the registry-cache module is not listed in the default Kyma CR.
+func fixRegistryCacheWithModuleDisabled() []client.Object {
+	return []client.Object{
+		&apiextensions.CustomResourceDefinition{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "kymas.operator.kyma-project.io",
+			},
+		},
+		&kyma.Kyma{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "default",
+				Namespace: "kyma-system",
+			},
+			Spec: kyma.KymaSpec{
+				Channel: "stable",
+				Modules: []kyma.Module{},
 			},
 		},
 	}
@@ -218,7 +365,7 @@ func createSecretStub(name string, labels map[string]string) *v1.Secret {
 	return &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: "default",
+			Namespace: "kcp-system",
 			Labels:    labels,
 		},
 	}
@@ -228,7 +375,7 @@ func createRuntimeStub(name string, shootName string, registryCacheConfig *imv1.
 	runtime := &imv1.Runtime{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: "default",
+			Namespace: "kcp-system",
 			Labels: map[string]string{
 				"kyma-project.io/runtime-id": name,
 			},

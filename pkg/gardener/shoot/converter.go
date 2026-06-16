@@ -69,6 +69,7 @@ type PatchOpts struct {
 	InfrastructureConfig *runtime.RawExtension
 	ControlPlaneConfig   *runtime.RawExtension
 	ApiServerAclEnabled  bool
+	ExistingDNS          *gardener.DNS
 }
 
 func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
@@ -86,7 +87,7 @@ func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
 	)
 
 	if !opts.DNS.IsGardenerInternal() {
-		extendersForCreate = append(extendersForCreate, extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType))
+		extendersForCreate = append(extendersForCreate, extender2.NewDNSExtenderForCreate(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType))
 	}
 	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(ctx, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, nil, opts.ApiServerAclEnabled))
 	extendersForCreate = append(extendersForCreate,
@@ -125,7 +126,7 @@ func NewConverterPatch(ctx context.Context, opts PatchOpts) Converter {
 		extensions.NewExtensionsExtenderForPatch(ctx, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, opts.Extensions, opts.ApiServerAclEnabled))
 
 	if !opts.DNS.IsGardenerInternal() {
-		extendersForPatch = append(extendersForPatch, extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType))
+		extendersForPatch = append(extendersForPatch, extender2.NewDNSExtenderForPatch(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType, opts.ExistingDNS))
 	}
 
 	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))

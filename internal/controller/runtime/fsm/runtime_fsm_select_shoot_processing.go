@@ -38,7 +38,7 @@ func sFnSelectShootProcessing(_ context.Context, m *fsm, s *systemState) (stateF
 	}
 
 	if patchShoot {
-		return switchState(sFnPrepareRegistryCache)
+		return switchState(sFnSyncRegistryCacheGardenSecrets)
 	}
 
 	if s.instance.Status.State == imv1.RuntimeStatePending || s.instance.Status.State == "" {
