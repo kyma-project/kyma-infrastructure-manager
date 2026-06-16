@@ -115,6 +115,7 @@ func main() {
 	var gardenerClusterCtrlWorkersCnt int
 	var converterConfigFilepath string
 	var auditLogMandatory bool
+	var dedicatedAuditLoggingEnabled bool
 	var registryCacheConfigControllerEnabled bool
 	var registryCacheListenerPort string
 	var apiServerAclEnabled bool
@@ -163,6 +164,7 @@ func main() {
 
 	//Feature flags:
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration. When enabled this feature, a Shoot cluster will only be created when an auditlog tenant exists (this is defined in the auditlog mapping configuration file)")
+	flag.BoolVar(&dedicatedAuditLoggingEnabled, "dedicated-audit-logging-enabled", false, "Feature flag to enable dedicated BTP audit logging infrastructure for provisioned Kyma Runtime. When enabled, this feature integrates with the Kyma Audit Log Manager to provide self-service access to runtime audit logs")
 	flag.BoolVar(&registryCacheConfigControllerEnabled, "registry-cache-config-controller-enabled", false, "Feature flag to enable registry cache config controller")
 	flag.BoolVar(&runtimeBootstrapperEnabled, "runtime-bootstrapper-enabled", false, "Feature flag to enable runtime bootstrapper")
 	flag.BoolVar(&apiServerAclEnabled, "api-server-acl-enabled", false, "Feature flag to enable the shoot API server ACL extender which restricts access to the API server to a defined set of CIDRs")
@@ -400,6 +402,7 @@ func main() {
 		ShootNamesapace:                      gardenerNamespace,
 		Config:                               config,
 		AuditLogMandatory:                    auditLogMandatory,
+		DedicatedAuditLoggingEnabled:         dedicatedAuditLoggingEnabled,
 		ApiServerAclEnabled:                  apiServerAclEnabled,
 		Metrics:                              metrics,
 		AuditLogging:                         auditLogDataMap,

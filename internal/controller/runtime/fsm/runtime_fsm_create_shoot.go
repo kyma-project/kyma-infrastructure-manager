@@ -65,6 +65,14 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 			msgFailedStructuredConfigMap)
 	}
 
+	if s.instance.Spec.AuditLogAccessEnabled != nil && *s.instance.Spec.AuditLogAccessEnabled {
+		if !m.DedicatedAuditLoggingEnabled {
+			m.log.Info(
+				"The functionality of using dedicated BTP audit logging infrastructure for provisioned shoot is disabled.",
+			)
+		}
+	}
+
 	data, err := m.AuditLogging.GetAuditLogData(
 		s.instance.Spec.Shoot.Provider.Type,
 		s.instance.Spec.Shoot.Region)

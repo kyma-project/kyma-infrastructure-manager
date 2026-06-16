@@ -36,6 +36,7 @@ type RCCfg struct {
 	AuditLogMandatory                    bool
 	ApiServerAclEnabled                  bool
 	Metrics                              metrics.Metrics
+	DedicatedAuditLoggingEnabled         bool
 	AuditLogging                         auditlogs.Configuration
 	RegistryCacheConfigControllerEnabled bool
 	RuntimeBootstrapperEnabled           bool
