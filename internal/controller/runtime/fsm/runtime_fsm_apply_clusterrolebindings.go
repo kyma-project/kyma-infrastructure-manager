@@ -62,12 +62,22 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 		"Cluster admin configuration complete",
 	)
 
+	m.log.Info("Finished configuring shoot")
+
+	// Only proceed to audit log migration if both flags are enabled
+	if m.DedicatedAuditLoggingEnabled &&
+		s.instance.Spec.AuditLogAccessEnabled != nil &&
+		*s.instance.Spec.AuditLogAccessEnabled {
+		m.log.Info("Proceeding to dedicated audit log infrastructure configuration")
+		return switchState(sFnMigrateToDedicatedAuditLog)
+	}
+
+	// Complete provisioning without migration
 	if !s.instance.IsProvisioningCompletedStatusSet() {
 		s.instance.UpdateStateProvisioningCompleted()
 	}
 
-	m.log.Info("Finished configuring shoot")
-
+	m.log.Info("Completing provisioning without audit log migration")
 	return updateStatusAndStop()
 }
 

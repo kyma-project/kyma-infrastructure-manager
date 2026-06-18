@@ -3,15 +3,89 @@ package auditlog
 import (
 	"context"
 	"fmt"
+	"time"
 
 	auditlogv1 "github.com/kyma-project/infrastructure-manager/pkg/auditlog/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// getOrClaimAuditLogCR attempts to get an already claimed AuditLogCR or claim a new one
+const (
+	// Label keys for reservation (Phase 1 of two-phase claim)
+	LabelReservedForRuntimeID = "reserved-for-runtime-id"
+	LabelReservedAt           = "reserved-for-runtime-at"
+)
+
+// reserveAuditLogCR performs Phase 1 of two-phase claim: adds reservation labels to an AuditLogCR
+// This creates a "light lock" that prevents other runtimes from selecting this CR during provisioning
+func (p *DefaultDataProvider) reserveAuditLogCR(ctx context.Context, runtimeID string) error {
+	// Check if we already have a reservation
+	reserved, err := p.findAuditLogCRByReservation(ctx, runtimeID)
+	if err != nil {
+		return fmt.Errorf("failed to find reserved AuditLogCR: %w", err)
+	}
+	if reserved != nil {
+		p.logger.Info("Found existing reservation for runtime", "name", reserved.Name, "runtimeID", runtimeID)
+		return nil // Already reserved for us
+	}
+
+	// Find available AuditLogCR (SiemApproved, not assigned, not reserved)
+	available, err := p.findAvailableAuditLogCR(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to find available AuditLogCR: %w", err)
+	}
+	if available == nil {
+		return fmt.Errorf("no available AuditLogCR in the pool")
+	}
+
+	// Add reservation labels (light lock)
+	if available.Labels == nil {
+		available.Labels = make(map[string]string)
+	}
+	available.Labels[LabelReservedForRuntimeID] = runtimeID
+	available.Labels[LabelReservedAt] = time.Now().UTC().Format(time.RFC3339)
+
+	// Update with optimistic concurrency
+	if err := p.client.Update(ctx, available); err != nil {
+		if apierrors.IsConflict(err) {
+			// Someone else reserved it concurrently, caller should retry
+			return fmt.Errorf("conflict reserving AuditLogCR %s: another runtime reserved it concurrently", available.Name)
+		}
+		return fmt.Errorf("failed to reserve AuditLogCR %s: %w", available.Name, err)
+	}
+
+	p.logger.Info("Successfully reserved AuditLogCR",
+		"name", available.Name,
+		"runtimeID", runtimeID,
+		"reservedAt", available.Labels[LabelReservedAt])
+	return nil
+}
+
+// findAuditLogCRByReservation finds an AuditLogCR that is reserved for the given runtime ID
+func (p *DefaultDataProvider) findAuditLogCRByReservation(ctx context.Context, runtimeID string) (*auditlogv1.AuditLog, error) {
+	var auditLogList auditlogv1.AuditLogList
+	err := p.client.List(ctx, &auditLogList, client.MatchingLabels{
+		LabelReservedForRuntimeID: runtimeID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list AuditLog CRs by reservation label: %w", err)
+	}
+
+	if len(auditLogList.Items) == 0 {
+		return nil, nil
+	}
+
+	if len(auditLogList.Items) > 1 {
+		p.logger.Info("Warning: multiple reserved AuditLog CRs found for runtime, using first one",
+			"runtimeID", runtimeID, "count", len(auditLogList.Items))
+	}
+
+	return &auditLogList.Items[0], nil
+}
+
+// getOrClaimAuditLogCR performs Phase 2 of two-phase claim: upgrades reservation to full claim
 func (p *DefaultDataProvider) getOrClaimAuditLogCR(ctx context.Context, runtimeID string) (*auditlogv1.AuditLog, error) {
-	// Check if already claimed
+	// Check if already claimed (heavy lock via assignedToRuntimeID)
 	claimed, err := p.findAuditLogCRByRuntimeID(ctx, runtimeID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find claimed AuditLogCR: %w", err)
@@ -21,27 +95,29 @@ func (p *DefaultDataProvider) getOrClaimAuditLogCR(ctx context.Context, runtimeI
 		return claimed, nil
 	}
 
-	// Find available AuditLogCR
-	available, err := p.findAvailableAuditLogCR(ctx)
+	// Find our reserved CR (light lock via label)
+	reserved, err := p.findAuditLogCRByReservation(ctx, runtimeID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find available AuditLogCR: %w", err)
+		return nil, fmt.Errorf("failed to find reserved AuditLogCR: %w", err)
 	}
-	if available == nil {
-		return nil, fmt.Errorf("no available AuditLogCR in the pool")
+	if reserved == nil {
+		return nil, fmt.Errorf("no reserved AuditLogCR found for runtime %s (reservation might have been cleaned up or never created)", runtimeID)
 	}
 
-	// Claim it (optimistic concurrency via resourceVersion)
-	available.Spec.AssignedToRuntimeID = runtimeID
-	if err := p.client.Update(ctx, available); err != nil {
+	// Upgrade reservation to full claim (heavy lock)
+	reserved.Spec.AssignedToRuntimeID = runtimeID
+	if err := p.client.Update(ctx, reserved); err != nil {
 		if apierrors.IsConflict(err) {
-			// Someone else claimed it concurrently, that's ok - caller can retry
-			return nil, fmt.Errorf("conflict claiming AuditLogCR %s: another runtime claimed it concurrently", available.Name)
+			// Unlikely since we have reservation label, but possible - caller can retry
+			return nil, fmt.Errorf("conflict claiming AuditLogCR %s: concurrent update detected", reserved.Name)
 		}
-		return nil, fmt.Errorf("failed to claim AuditLogCR %s: %w", available.Name, err)
+		return nil, fmt.Errorf("failed to claim reserved AuditLogCR %s: %w", reserved.Name, err)
 	}
 
-	p.logger.Info("Successfully claimed AuditLogCR", "name", available.Name, "runtimeID", runtimeID)
-	return available, nil
+	p.logger.Info("Successfully upgraded reservation to claim",
+		"name", reserved.Name,
+		"runtimeID", runtimeID)
+	return reserved, nil
 }
 
 // findAuditLogCRByRuntimeID finds an AuditLogCR that is assigned to the given runtime ID
@@ -67,7 +143,7 @@ func (p *DefaultDataProvider) findAuditLogCRByRuntimeID(ctx context.Context, run
 }
 
 // findAvailableAuditLogCR finds an available AuditLogCR from the pool
-// An AuditLogCR is available if it's in SiemApproved state and not assigned to any runtime
+// An AuditLogCR is available if it's in SiemApproved state, not assigned to any runtime, and not reserved
 func (p *DefaultDataProvider) findAvailableAuditLogCR(ctx context.Context) (*auditlogv1.AuditLog, error) {
 	var auditLogList auditlogv1.AuditLogList
 	err := p.client.List(ctx, &auditLogList)
@@ -75,13 +151,24 @@ func (p *DefaultDataProvider) findAvailableAuditLogCR(ctx context.Context) (*aud
 		return nil, fmt.Errorf("failed to list AuditLog CRs: %w", err)
 	}
 
-	// Find first available CR in SiemApproved state without assigned runtime
+	// Find first available CR: SiemApproved state, no assignment, no reservation
 	for i := range auditLogList.Items {
 		auditLog := &auditLogList.Items[i]
-		if auditLog.Status.State == auditlogv1.StateSiemApproved &&
-			auditLog.Spec.AssignedToRuntimeID == "" {
-			return auditLog, nil
+
+		// Check if in correct state and not assigned
+		if auditLog.Status.State != auditlogv1.StateSiemApproved ||
+			auditLog.Spec.AssignedToRuntimeID != "" {
+			continue
 		}
+
+		// Check if not reserved by checking for reservation label
+		if auditLog.Labels != nil {
+			if _, hasReservation := auditLog.Labels[LabelReservedForRuntimeID]; hasReservation {
+				continue // Skip reserved CRs
+			}
+		}
+
+		return auditLog, nil
 	}
 
 	return nil, nil

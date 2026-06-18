@@ -11,8 +11,8 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
+	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,7 +37,7 @@ type RCCfg struct {
 	ApiServerAclEnabled                  bool
 	Metrics                              metrics.Metrics
 	DedicatedAuditLoggingEnabled         bool
-	AuditLogging                         auditlogs.Configuration
+	AuditLogDataProvider                 auditlog.DataProvider
 	RegistryCacheConfigControllerEnabled bool
 	RuntimeBootstrapperEnabled           bool
 	RuntimeBootstrapperInstaller         RuntimeBootstrapperInstaller

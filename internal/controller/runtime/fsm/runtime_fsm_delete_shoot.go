@@ -14,6 +14,16 @@ import (
 )
 
 func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+	// Release the claimed AuditLogCR if dedicated audit logging was used
+	if m.DedicatedAuditLoggingEnabled {
+		if err := m.AuditLogDataProvider.ReleaseDedicated(ctx, s.instance.GetName()); err != nil {
+			m.log.Error(err, "Failed to release dedicated audit log", "runtimeID", s.instance.GetName())
+			// Continue with shoot deletion anyway - don't block deletion on release failure
+		} else {
+			m.log.Info("Successfully released dedicated audit log", "runtimeID", s.instance.GetName())
+		}
+	}
+
 	// wait section
 	if !s.shoot.GetDeletionTimestamp().IsZero() {
 		m.log.V(log_level.DEBUG).Info("Waiting for shoot to be deleted", "Name", s.shoot.Name, "Namespace", s.shoot.Namespace)

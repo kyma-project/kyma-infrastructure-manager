@@ -57,10 +57,10 @@ import (
 	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
 	runtimecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
+	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
@@ -276,11 +276,19 @@ func main() {
 		}
 	}
 
-	auditLogDataMap, err := loadAuditLogDataMap(config.ConverterConfig.AuditLog.TenantConfigPath)
+	auditLogSharedConfig, err := loadAuditLogDataMap(config.ConverterConfig.AuditLog.TenantConfigPath)
 	if err != nil {
 		setupLog.Error(err, "invalid audit log tenant configuration")
 		os.Exit(1)
 	}
+
+	// Create audit log data provider
+	auditLogDataProvider := auditlog.NewDataProvider(
+		mgr.GetClient(),
+		auditLogSharedConfig,
+		dedicatedAuditLoggingEnabled,
+		logger,
+	)
 
 	_, err = token.ValidateTokenExpirationTime(config.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
 	if err != nil {
@@ -405,7 +413,7 @@ func main() {
 		DedicatedAuditLoggingEnabled:         dedicatedAuditLoggingEnabled,
 		ApiServerAclEnabled:                  apiServerAclEnabled,
 		Metrics:                              metrics,
-		AuditLogging:                         auditLogDataMap,
+		AuditLogDataProvider:                 auditLogDataProvider,
 		RegistryCacheConfigControllerEnabled: registryCacheConfigControllerEnabled,
 		RuntimeBootstrapperEnabled:           runtimeBootstrapperEnabled,
 		RuntimeBootstrapperInstaller:         runtimeBootstrapperInstaller,
@@ -502,13 +510,13 @@ func initGardenerClients(kubeconfigPath string, namespace string, timeout time.D
 	return gardenerClient, shootClient, dynamicKubeconfigAPI, nil
 }
 
-func loadAuditLogDataMap(p string) (auditlogs.Configuration, error) {
+func loadAuditLogDataMap(p string) (auditlog.Configuration, error) {
 	file, err := os.Open(p)
 	if err != nil {
 		return nil, err
 	}
 
-	var data auditlogs.Configuration
+	var data auditlog.Configuration
 	if err := json.NewDecoder(file).Decode(&data); err != nil {
 		return nil, err
 	}

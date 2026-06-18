@@ -9,6 +9,7 @@ import (
 
 	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
 	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
@@ -28,9 +29,18 @@ import (
 const fieldManagerName = "kim"
 
 func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
-	data, err := m.AuditLogging.GetAuditLogData(
+
+	dedicatedAuditLogs := m.DedicatedAuditLoggingEnabled &&
+		s.instance.Spec.AuditLogAccessEnabled != nil &&
+		*s.instance.Spec.AuditLogAccessEnabled
+
+	data, err := m.AuditLogDataProvider.GetAuditLogData(
+		ctx,
 		s.instance.Spec.Shoot.Provider.Type,
-		s.instance.Spec.Shoot.Region)
+		s.instance.Spec.Shoot.Region,
+		s.instance.GetName(),
+		dedicatedAuditLogs,
+	)
 
 	if err != nil {
 		m.log.Error(err, msgFailedToConfigureAuditlogs)
@@ -67,11 +77,18 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	timeBoundaries, _ := token.ValidateTokenExpirationTime(m.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
 	logTokenExpirationInfo(m.log, timeBoundaries)
 
+	// Convert auditlog.AuditLogData to extender auditlogs.AuditLogData
+	auditLogConfig := auditlogs.AuditLogData{
+		TenantID:   data.TenantID,
+		ServiceURL: data.ServiceURL,
+		SecretName: data.SecretName,
+	}
+
 	// NOTE: In the future we want to pass the whole shoot object here
 	updatedShoot, err := convertPatch(ctx, &s.instance, gardener_shoot.PatchOpts{
 		KcpClient:             m.KcpClient,
 		ConverterConfig:       m.ConverterConfig,
-		AuditLogData:          data,
+		AuditLogData:          auditLogConfig,
 		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
 		Workers:               s.shoot.Spec.Provider.Workers,
 		ShootK8SVersion:       s.shoot.Spec.Kubernetes.Version,

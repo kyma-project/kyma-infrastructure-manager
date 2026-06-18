@@ -12,6 +12,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
 	"k8s.io/apimachinery/pkg/types"
@@ -50,6 +51,37 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		}
 	}
 
+	// Check if dedicated audit logging is requested and available before creating shoot
+	if m.DedicatedAuditLoggingEnabled &&
+		s.instance.Spec.AuditLogAccessEnabled != nil &&
+		*s.instance.Spec.AuditLogAccessEnabled {
+		m.log.Info("Validating dedicated audit logging availability before shoot creation",
+			"runtimeID", s.instance.GetName())
+
+		// Phase 1: Reserve an AuditLogCR by adding labels (light lock)
+		err := m.AuditLogDataProvider.ReserveAuditLog(
+			ctx,
+			s.instance.Spec.Shoot.Provider.Type,
+			s.instance.Spec.Shoot.Region,
+			s.instance.GetName(),
+		)
+
+		if err != nil {
+			msg := fmt.Sprintf("Dedicated audit logging requested but no available configuration found: %v", err)
+			m.log.Error(err, "Cannot provision runtime with dedicated audit logging")
+			m.Metrics.IncRuntimeFSMStopCounter()
+			return updateStateFailedWithErrorAndStop(
+				&s.instance,
+				imv1.ConditionTypeRuntimeProvisioned,
+				imv1.ConditionReasonAuditLogError,
+				msg)
+		}
+
+		m.log.Info("Dedicated audit logging configuration reserved, proceeding with shoot creation",
+			"runtimeID", s.instance.GetName())
+
+	}
+
 	cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
 	oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
 
@@ -65,17 +97,13 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 			msgFailedStructuredConfigMap)
 	}
 
-	if s.instance.Spec.AuditLogAccessEnabled != nil && *s.instance.Spec.AuditLogAccessEnabled {
-		if !m.DedicatedAuditLoggingEnabled {
-			m.log.Info(
-				"The functionality of using dedicated BTP audit logging infrastructure for provisioned shoot is disabled.",
-			)
-		}
-	}
-
-	data, err := m.AuditLogging.GetAuditLogData(
+	data, err := m.AuditLogDataProvider.GetAuditLogData(
+		ctx,
 		s.instance.Spec.Shoot.Provider.Type,
-		s.instance.Spec.Shoot.Region)
+		s.instance.Spec.Shoot.Region,
+		s.instance.GetName(),
+		false, // use shared config for initial shoot creation
+	)
 
 	if err != nil {
 		m.log.Error(err, msgFailedToConfigureAuditlogs)
@@ -90,13 +118,20 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 			msgFailedToConfigureAuditlogs)
 	}
 
+	// Convert auditlog.AuditLogData to extender auditlogs.AuditLogData
+	auditLogConfig := auditlogs.AuditLogData{
+		TenantID:   data.TenantID,
+		ServiceURL: data.ServiceURL,
+		SecretName: data.SecretName,
+	}
+
 	timeBoundaries, _ := token.ValidateTokenExpirationTime(m.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
 	logTokenExpirationInfo(m.log, timeBoundaries)
 
 	shoot, err := convertCreate(ctx, &s.instance, gardener_shoot.CreateOpts{
 		KcpClient:             m.KcpClient,
 		ConverterConfig:       m.ConverterConfig,
-		AuditLogData:          data,
+		AuditLogData:          auditLogConfig,
 		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
 		ApiServerAclEnabled:   m.ApiServerAclEnabled,
 	})

@@ -35,23 +35,33 @@ Key KALM states:
 
 ## Architectural Approach
 
-We implement a **two-phase provisioning model** where the Gardener shoot is created first with shared audit logging, then migrated to dedicated logging after successful shoot creation.
+We implement a **validation-first, migrate-last provisioning model** where dedicated audit logging availability is validated before shoot creation, the shoot is created with shared audit logging, the entire provisioning completes successfully, and only then is the runtime migrated to dedicated logging as the final step.
 
 ### FSM State Flow
 
 ```
-sFnCreateShoot
+sFnCreateShoot (validates dedicated config availability if requested)
     ↓
 sFnWaitForShootCreation
     ↓
-sFnMigrateToDedicatedAuditLog  (new state - inserted here)
-    ↓
 sFnHandleKubeconfig
     ↓
-... (continue normal flow)
+sFnCreateKymaNamespace
+    ↓
+sFnInitializeRuntimeBootstrapper
+    ↓
+sFnCleanupRegistryCacheGardenSecrets
+    ↓
+sFnConfigureSKR
+    ↓
+sFnApplyClusterRoleBindings
+    ↓
+sFnMigrateToDedicatedAuditLog  (new state - absolute final step)
+    ↓
+Complete (updateStatusAndStop)
 ```
 
-**Note**: After `sFnMigrateToDedicatedAuditLog` patches the shoot with dedicated config, it requeues the reconciliation. On the next reconciliation, the state will be skipped (because the shoot already has dedicated logging configured), and the flow continues to `sFnHandleKubeconfig`.
+**Note**: After `sFnMigrateToDedicatedAuditLog` patches the shoot with dedicated config, it requeues the reconciliation. On the next reconciliation, the state will be skipped (because the shoot already has dedicated logging configured), and provisioning completes successfully.
 
 ### Sequence Diagram
 
@@ -65,7 +75,29 @@ sequenceDiagram
 
     KEB->>KIM: Create Runtime CR
     
-    Note over KIM: sFnCreateShoot
+    Note over KIM: sFnCreateShoot<br/>(Phase 1: Reserve)
+    alt Dedicated audit logging requested
+        KIM->>K8s: List AuditLog CRs<br/>(label: reserved-for-runtime-id = runtimeID)
+        alt Existing reservation found
+            K8s-->>KIM: Return reserved AuditLogCR
+        else No existing reservation
+            KIM->>K8s: List AuditLog CRs<br/>(state = SiemApproved, unassigned, no reservation)
+            alt Available CR found
+                K8s-->>KIM: Return available AuditLogCR
+                KIM->>K8s: Add labels:<br/>reserved-for-runtime-id: <runtimeID><br/>reserved-for-runtime-at: <timestamp>
+                alt Reservation successful
+                    K8s-->>KIM: Reservation success (light lock)
+                else Conflict (concurrent reservation)
+                    K8s-->>KIM: Conflict error
+                    Note over KIM: Retry with different CR
+                end
+            else No available CR
+                Note over KIM: Fail provisioning immediately
+                KIM-->>KEB: Provisioning failed: no audit log available
+            end
+        end
+    end
+    
     KIM->>KIM: Load shared audit log config<br/>(from static mapping file)
     KIM->>Gardener: Create Shoot with shared audit logging
     Gardener-->>KIM: Shoot created
@@ -74,23 +106,29 @@ sequenceDiagram
     KIM->>Gardener: Poll shoot status
     Gardener-->>KIM: Shoot creation succeeded
     
-    Note over KIM: sFnMigrateToDedicatedAuditLog<br/>(first reconciliation)
+    Note over KIM: ... Full provisioning flow ...
+    Note over KIM: sFnConfigureSKR
+    KIM->>KIM: Configure SKR
+    
+    Note over KIM: sFnApplyClusterRoleBindings
+    KIM->>KIM: Apply cluster role bindings
+    
+    Note over KIM: sFnMigrateToDedicatedAuditLog<br/>(Phase 2: Claim - final step)
     alt Feature flag enabled
         KIM->>KIM: Check if already using dedicated config
         alt Not using dedicated yet
-            KIM->>K8s: List AuditLog CRs<br/>(assignedToRuntimeID = runtimeID)
-            alt Existing claim found
-                K8s-->>KIM: Return claimed AuditLogCR
-            else No claim found
-                KIM->>K8s: List AuditLog CRs<br/>(state = SiemApproved, unassigned)
-                K8s-->>KIM: Return available AuditLogCR
-                KIM->>K8s: Update AuditLogCR.assignedToRuntimeID
+            KIM->>K8s: List AuditLog CRs<br/>(label: reserved-for-runtime-id = runtimeID)
+            alt Reserved CR found
+                K8s-->>KIM: Return reserved AuditLogCR
+                KIM->>K8s: Set assignedToRuntimeID = runtimeID<br/>(upgrade to heavy lock)
                 alt Claim successful
                     K8s-->>KIM: Claim success
-                else Conflict (concurrent claim)
+                else Conflict
                     K8s-->>KIM: Conflict error
-                    Note over KIM: Requeue, will retry with different CR
+                    Note over KIM: Requeue, retry claim
                 end
+            else Reservation not found
+                Note over KIM: Fail provisioning:<br/>reserved CR missing
             end
             KIM->>KIM: Extract config from AuditLogCR
             KIM->>Gardener: PATCH Shoot with dedicated config
@@ -102,22 +140,17 @@ sequenceDiagram
                 Note over KIM: Requeue, will retry<br/>(AuditLogCR stays claimed)
             end
         else Already using dedicated
-            Note over KIM: Skip migration, continue
+            Note over KIM: Complete provisioning
         end
-    else Feature flag disabled or no CRs available
-        Note over KIM: Skip, continue with shared logging
+    else Feature flag disabled
+        Note over KIM: Complete provisioning with shared logging
     end
     
     Note over KIM: sFnMigrateToDedicatedAuditLog<br/>(next reconciliation)
     KIM->>KIM: Check if already using dedicated config
-    Note over KIM: Already migrated, skip state
+    Note over KIM: Already migrated, complete provisioning
     
-    Note over KIM: sFnHandleKubeconfig
-    KIM->>Gardener: Generate kubeconfig
-    
-    Note over KIM: ... Continue normal flow ...
-    
-    KIM->>KEB: Update Runtime CR status<br/>(Ready)
+    KIM->>KEB: Update Runtime CR status<br/>(Provisioning Completed)
     
     Note over KIM,Gardener: ... Runtime operational ...
     
@@ -132,38 +165,88 @@ sequenceDiagram
     Gardener-->>KIM: Shoot deleted
 ```
 
-### Phase 1: Create Shoot with Shared Audit Logging
+### Phase 1: Validate and Create Shoot with Shared Audit Logging
 
-The `sFnCreateShoot` state creates the Gardener shoot using the existing shared audit log configuration from the static mapping file.
+The `sFnCreateShoot` state first validates that dedicated audit logging configuration is available (if requested), then creates the Gardener shoot using the existing shared audit log configuration from the static mapping file.
 
-**Rationale**: Prevents wasted resources if shoot creation fails due to:
-- Quota exceeded
-- Invalid configuration
-- Infrastructure provider issues
-- Network configuration errors
+**Validation**: If the runtime requests dedicated audit logging (`auditLogAccessEnabled: true`) and the global feature flag is enabled, the state checks that a dedicated AuditLogCR is available in the pool. If not available, provisioning fails immediately.
 
-### Phase 2: Migrate to Dedicated Audit Logging
+**Rationale for validation-first approach**:
+- Fail fast: Don't waste time and resources provisioning a runtime if dedicated logging cannot be provided as requested
+- Clear error: User gets immediate feedback that their request cannot be fulfilled
+- No orphaned resources: Shoot is never created if dedicated logging requirement cannot be met
 
-After the shoot becomes ready, the `sFnMigrateToDedicatedAuditLog` state:
+**Rationale for using shared logging initially**:
+- Allows shoot to be created and tested before claiming expensive dedicated resources
+- If the shoot fails for other reasons (quota, config, infrastructure), no dedicated resources are wasted
 
-1. **Checks if already migrated**: Skip if shoot already uses dedicated logging
-2. **Claims AuditLogCR** (idempotent):
-   - Search for existing claim by RuntimeID
-   - If not found, claim available AuditLogCR from pool
-   - Set `AuditLog.Spec.AssignedToRuntimeID = runtimeID`
-3. **Updates shoot configuration** (idempotent):
-   - Patch shoot with audit log config from claimed AuditLogCR
-   - Uses values from `AuditLog.Spec.Config.ServiceURL` and `AuditLog.Spec.Config.GardenerSecretName`
+### Phase 2: Complete Provisioning
+
+The runtime goes through the full provisioning flow:
+- `sFnWaitForShootCreation` - Wait for shoot to be ready
+- `sFnHandleKubeconfig` - Handle kubeconfig
+- `sFnCreateKymaNamespace` - Create Kyma namespace
+- `sFnInitializeRuntimeBootstrapper` - Initialize bootstrapper
+- `sFnCleanupRegistryCacheGardenSecrets` - Cleanup secrets
+- `sFnConfigureSKR` - Configure SKR
+- `sFnApplyClusterRoleBindings` - Apply cluster role bindings
+
+All these steps complete successfully before any dedicated audit logging resources are claimed.
+
+### Phase 3: Migrate to Dedicated Audit Logging (Final Step)
+
+After **all provisioning is complete**, the `sFnMigrateToDedicatedAuditLog` state executes as the absolute final step. This state uses an optimized order of operations to minimize side effects and handle errors gracefully:
+
+**Step 1: Get Reserved Audit Log Data** (read-only, no side effects)
+- Retrieves configuration from the reserved AuditLogCR (using reservation label)
+- Fails immediately if no reservation found
+- No resources claimed yet - safe to fail
+
+**Step 2: Get Current Shoot Configuration** (read-only, no side effects)
+- Extracts current audit log config from shoot's extension
+- Compares with desired configuration
+- Determines if patch is needed
+
+**Step 3: Confirm Reservation** (upgrade light lock to heavy lock)
+- Calls `ConfirmReservation(runtimeID)` to upgrade reservation to claim
+- Sets `AuditLog.Spec.AssignedToRuntimeID = runtimeID` (heavy lock)
+- **Always happens**, even if configs are equal (ensures reservation is confirmed)
+- Idempotent: safe to retry if already claimed
+- Fails provisioning if reservation cannot be confirmed
+
+**Step 4: Conditional Patch** (only if configurations differ)
+- If configs are equal: Skip patch, complete provisioning immediately
+- If configs differ: Patch shoot with dedicated audit log configuration
+- Uses values from `AuditLog.Spec.Config.ServiceURL` and `AuditLog.Spec.Config.GardenerSecretName`
+- If patch fails: Requeue (claim persists, retry patch on next reconciliation)
+
+**Step 5: Complete Provisioning**
+- Sets `ProvisioningCompleted` status
+- Returns `updateStatusAndStop()` (no explicit requeue)
+- Gardener shoot reconciliation will trigger Runtime reconciliation if needed
 
 **Key Properties**:
-- **Idempotent claim**: `findAuditLogCRByRuntimeID()` finds existing claim before creating new one
-- **Idempotent update**: Shoot patch can be retried safely
-- **Graceful degradation**: If no AuditLogCR available, runtime continues with shared logging
+- **Read-only operations first**: No side effects until commit point (claim)
+- **Always confirms claim**: Even when configs equal, ensuring reservation is locked
+- **Idempotent at every step**: Safe to retry from any failure point
+- **Efficient**: Skips unnecessary patches when configs already match
+- **Clean completion**: No unnecessary requeues after success
+- **Atomic claim**: Once claimed, resource is locked even if patch fails
 - **Optimistic concurrency**: Kubernetes resourceVersion prevents double-claiming
 
 ## Rejected Alternatives
 
-### Alternative 1: Claim Before Shoot Creation
+### Alternative 1: Single-Phase Claim (Validate Only, No Reservation)
+
+**Approach**: Validate availability in `sFnCreateShoot`, claim in `sFnMigrateToDedicatedAuditLog` without reservation
+
+**Rejected because**:
+- Race condition: Between validation and claim (~5-10 minutes), another runtime could take the resource
+- User gets false positive: Validation succeeds but migration fails
+- Poor user experience: Provisioning fails at the very end after all resources created
+- Wastes shoot resources: Entire shoot is created then has to be torn down
+
+### Alternative 2: Claim Before Shoot Creation (Heavy Lock First)
 
 **Approach**: Claim AuditLogCR → Create shoot with dedicated config
 
@@ -218,45 +301,222 @@ type DataProvider interface {
 - Shared vs dedicated decision is encapsulated
 - Graceful fallback to shared config is transparent
 
-### Claiming Algorithm
+### Claiming Algorithm: Two-Phase Reservation
 
+The claiming algorithm uses a **two-phase approach** to solve the race condition between validation (pre-creation) and actual claiming (post-provisioning):
+
+#### Problem Statement
+
+Between the time we validate that an AuditLogCR is available (in `sFnCreateShoot`) and when we actually claim it (in `sFnMigrateToDedicatedAuditLog` ~5-10 minutes later), another runtime could claim that resource. This would cause the migration to fail even though validation passed.
+
+#### Solution: Label-Based Reservation (Light Lock)
+
+We use Kubernetes labels as a "light lock" mechanism to reserve an AuditLogCR during the provisioning window:
+
+**Phase 1: Reserve (in `sFnCreateShoot`)**
 ```go
-func getOrClaimAuditLogCR(ctx, runtimeID) (*AuditLog, error) {
-    // Check if already claimed (idempotent)
-    claimed := findAuditLogCRByRuntimeID(ctx, runtimeID)
-    if claimed != nil {
-        return claimed, nil
+func reserveAuditLogCR(ctx, runtimeID) (*AuditLog, error) {
+    // 1. Check if we already have a reservation
+    reserved := findAuditLogCRByLabel(ctx, "reserved-for-runtime-id", runtimeID)
+    if reserved != nil {
+        return reserved, nil // Already reserved for us
     }
     
-    // Find available CR (state = SiemApproved, assignedToRuntimeID = "")
+    // 2. Find available CR (state = SiemApproved, assignedToRuntimeID = "", no reservation label)
     available := findAvailableAuditLogCR(ctx)
     if available == nil {
         return nil, ErrNoAvailableAuditLog
     }
     
-    // Claim it (optimistic concurrency via resourceVersion)
-    available.Spec.AssignedToRuntimeID = runtimeID
+    // 3. Add reservation labels (light lock)
+    if available.Labels == nil {
+        available.Labels = make(map[string]string)
+    }
+    available.Labels["reserved-for-runtime-id"] = runtimeID
+    available.Labels["reserved-for-runtime-at"] = time.Now().UTC().Format(time.RFC3339)
+    
+    // 4. Update with optimistic concurrency
     err := client.Update(ctx, available)
     if IsConflict(err) {
-        // Another runtime claimed it concurrently, retry
-        return nil, ErrConflictClaiming
+        // Another runtime reserved it concurrently, retry with different CR
+        return nil, ErrConflictReserving
     }
     
     return available, nil
 }
 ```
 
-**Key aspects**:
-- **Idempotent**: Finding existing claim makes retries safe
-- **Concurrent-safe**: Kubernetes resourceVersion prevents double-claiming
-- **Failure-tolerant**: Conflict errors are expected and handled by retry
+**Phase 2: Claim (in `sFnMigrateToDedicatedAuditLog`)**
+```go
+func claimReservedAuditLogCR(ctx, runtimeID) (*AuditLog, error) {
+    // 1. Find our reserved CR
+    reserved := findAuditLogCRByLabel(ctx, "reserved-for-runtime-id", runtimeID)
+    if reserved == nil {
+        return nil, ErrReservationNotFound
+    }
+    
+    // 2. Check if already claimed (idempotent)
+    if reserved.Spec.AssignedToRuntimeID == runtimeID {
+        return reserved, nil // Already claimed by us
+    }
+    
+    // 3. Upgrade reservation to full claim (heavy lock)
+    reserved.Spec.AssignedToRuntimeID = runtimeID
+    
+    // 4. Update with optimistic concurrency
+    err := client.Update(ctx, reserved)
+    if IsConflict(err) {
+        // Unlikely but possible, retry
+        return nil, ErrConflictClaiming
+    }
+    
+    return reserved, nil
+}
+```
+
+#### Reservation Labels
+
+Two labels are added to the AuditLogCR during reservation:
+
+- **`reserved-for-runtime-id`**: The Runtime CR name (e.g., `"1234-5678-90ab-cdef"`)
+  - Used to find the reserved resource in Phase 2
+  - Identifies which runtime has reserved this CR
+  
+- **`reserved-for-runtime-at`**: RFC3339 timestamp (e.g., `"2026-06-18T14:30:00Z"`)
+  - Records when the reservation was made
+  - Enables detection of stale reservations
+  - Can be used for automated cleanup of abandoned reservations
+
+#### Resource States
+
+An AuditLogCR can be in one of these states:
+
+1. **Available**: `state=SiemApproved`, `assignedToRuntimeID=""`, no reservation labels
+2. **Reserved (Light Lock)**: Has reservation labels, `assignedToRuntimeID=""`
+3. **Claimed (Heavy Lock)**: Has reservation labels, `assignedToRuntimeID=<runtimeID>`
+4. **Orphaned**: `spec.orphaned=true`, retention period active
+
+#### State Transitions
+
+```
+Available → Reserved (by sFnCreateShoot adding labels)
+    ↓
+Reserved → Claimed (by sFnMigrateToDedicatedAuditLog setting assignedToRuntimeID)
+    ↓
+Claimed → Orphaned (by sFnDeleteShoot setting orphaned=true)
+    ↓
+Orphaned → Cleaned up (by KALM after retention period)
+
+Special case:
+Reserved → Available (manual label removal if provisioning abandoned)
+```
+
+#### Cleanup of Abandoned Reservations
+
+**Manual Cleanup (Recommended for MVP)**:
+- Operators can manually remove reservation labels from AuditLogCRs that are reserved but not claimed
+- Query: `kubectl get auditlog -l reserved-for-runtime-id,!assignedToRuntimeID`
+- This returns resources that are reserved (have label) but never claimed (no assignment)
+- Safe to remove labels and return to pool:
+  ```bash
+  kubectl label auditlog <name> reserved-for-runtime-id- reserved-for-runtime-at-
+  ```
+
+**Automated Cleanup (Future Enhancement)**:
+A KALM controller or separate cleanup job could automate this:
+
+```go
+// Pseudo-code for automated cleanup
+func cleanupStaleReservations(ctx) {
+    // Find reserved but not claimed CRs
+    list := client.List(ctx, &AuditLogList{}, 
+        client.MatchingLabels{"reserved-for-runtime-id": "*"},
+        client.MatchingFields{"spec.assignedToRuntimeID": ""})
+    
+    for _, cr := range list.Items {
+        reservedAt, err := time.Parse(time.RFC3339, cr.Labels["reserved-for-runtime-at"])
+        if err != nil {
+            continue
+        }
+        
+        // If reserved for more than 1 hour without claim, release it
+        if time.Since(reservedAt) > 1*time.Hour {
+            delete(cr.Labels, "reserved-for-runtime-id")
+            delete(cr.Labels, "reserved-for-runtime-at")
+            client.Update(ctx, &cr)
+            log.Info("Released stale reservation", "auditlog", cr.Name, "reservedFor", 1*time.Hour)
+        }
+    }
+}
+```
+
+**Cleanup Parameters**:
+- **Timeout threshold**: 1 hour (configurable)
+  - Normal provisioning takes 5-15 minutes
+  - 1 hour provides generous buffer for retries and delays
+  - Prevents indefinite pool exhaustion from failed provisions
+- **Cleanup frequency**: Every 30 minutes
+- **Safety**: Only removes labels from CRs with `assignedToRuntimeID=""` (never disrupts claimed resources)
+
+#### Why Labels Instead of Spec Fields?
+
+1. **No CRD changes required**: Labels can be added without modifying KALM's AuditLog CRD
+2. **Kubernetes-native**: Label selectors are efficient and well-supported
+3. **Non-intrusive**: Labels don't affect KALM's state machine or business logic
+4. **Easy cleanup**: Labels can be removed without validation or reconciliation
+5. **Observable**: `kubectl get auditlog -l reserved-for-runtime-id` shows all reservations
+
+#### Coordination with KALM
+
+KALM should be updated to respect reservations:
+
+1. **Pool Management**: When counting available AuditLogCRs, exclude those with reservation labels:
+   ```go
+   availableCount := count(state=SiemApproved AND assignedToRuntimeID="" AND no reservation labels)
+   ```
+
+2. **State Transitions**: KALM's state machine should ignore reservation labels
+   - Labels don't affect `SiemApproved` → `Assigned` transition
+   - Only `assignedToRuntimeID` field triggers state change
+
+3. **Cleanup (Optional)**: KALM could run the automated cleanup job described above
+
+#### Key Properties
+
+- **Solves race condition**: Reservation prevents other runtimes from selecting the same CR during provisioning
+- **Idempotent**: Both reserve and claim operations can be safely retried
+- **Concurrent-safe**: Kubernetes optimistic concurrency prevents double-reservation
+- **Fail-fast**: Validation + reservation happens before expensive shoot creation
+- **Minimal waste**: If provisioning fails, only a label needs cleanup (not a fully assigned resource)
+- **Observable**: Easy to query reserved vs available resources
+- **Manual override**: Operators can manually release stale reservations if needed
+
+#### Error Scenarios
+
+| Scenario | Handling |
+|----------|----------|
+| No available CR to reserve | Fail provisioning immediately in `sFnCreateShoot` |
+| Conflict during reservation | Retry with different available CR |
+| Reservation not found in Phase 2 | Should never happen if Phase 1 succeeded; fail provisioning with clear error |
+| Conflict during claim | Retry claim operation |
+| Provisioning fails after reservation | Label remains; cleaned up manually or by automated job |
+| Runtime deleted before migration | Label remains; cleaned up manually or by automated job |
+
+
 
 ### Migration State Implementation
 
 ```go
 func sFnMigrateToDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+    // Check if global feature flag is enabled
     if !m.RCCfg.DedicatedAuditLoggingEnabled {
-        return sFnHandleKubeconfig, nil, nil // Feature flag disabled - skip
+        return sFnHandleKubeconfig, nil, nil // Global feature flag disabled - skip
+    }
+
+    // Check if runtime-specific audit log access is enabled
+    // This is set per-runtime in Runtime.Spec.AuditLogAccessEnabled
+    if s.instance.Spec.AuditLogAccessEnabled == nil || !*s.instance.Spec.AuditLogAccessEnabled {
+        return sFnHandleKubeconfig, nil, nil // Runtime doesn't request audit log access - skip
     }
 
     // Check if already using dedicated audit logging
@@ -302,29 +562,47 @@ func sFnMigrateToDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState) 
 }
 
 // isUsingDedicatedAuditLog checks if the shoot is already configured with dedicated audit logging
-// This prevents re-migration on subsequent reconciliations
+// This prevents re-migration on subsequent reconciliations by checking for the dedicated audit log label
 func isUsingDedicatedAuditLog(shoot *gardener.Shoot) bool {
-    if shoot == nil || shoot.Spec.Extensions == nil {
+    if shoot == nil || shoot.Labels == nil {
         return false
     }
     
-    // Check if audit log extension contains dedicated config marker
-    // (implementation details depend on how audit log config is stored in shoot spec)
-    for _, ext := range shoot.Spec.Extensions {
-        if ext.Type == "shoot-auditlog-service" {
-            // Check if providerConfig contains dedicated audit log markers
-            // e.g., check if secretName matches pattern for dedicated logs
-            return isDedicatedAuditLogConfig(ext.ProviderConfig)
-        }
+    // Check if the dedicated audit log label exists and is set to "true"
+    value, exists := shoot.Labels[DedicatedAuditLogLabel]
+    return exists && value == "true"
+}
+
+// patchShootAuditLog patches the shoot with dedicated audit log configuration and adds the label
+func patchShootAuditLog(ctx context.Context, m *fsm, s *systemState, auditLogData auditlog.AuditLogData) error {
+    patchedShoot := s.shoot.DeepCopy()
+
+    // Ensure labels map exists
+    if patchedShoot.Labels == nil {
+        patchedShoot.Labels = make(map[string]string)
     }
-    return false
+
+    // Add dedicated audit log label
+    patchedShoot.Labels[DedicatedAuditLogLabel] = "true"
+
+    // Find and update the audit log extension config...
+    // (update TenantID, ServiceURL, SecretReferenceName from auditLogData)
+
+    return m.GardenClient.Patch(ctx, patchedShoot, client.MergeFrom(s.shoot))
 }
 ```
 
+**Label-Based Detection**:
+- Label: `infrastructuremanager.kyma-project.io/dedicated-auditlog: "true"`
+- Simple, reliable check without parsing JSON config
+- Label is added during migration and persists on the shoot
+- Allows easy filtering/querying of shoots using dedicated logging
+
 **Key behavior**:
-- **First reconciliation after shoot creation**: State checks if already migrated (no), claims AuditLogCR, patches shoot, requeues
-- **Second reconciliation**: State checks if already migrated (yes), skips immediately to `sFnHandleKubeconfig`
+- **First reconciliation after shoot creation**: State checks label (not present), claims AuditLogCR, patches shoot with label, requeues
+- **Second reconciliation**: State checks label (present), skips immediately to `sFnHandleKubeconfig`
 - **Subsequent reconciliations**: Same as second - always skips once migrated
+
 
 ### Cleanup on Runtime Deletion
 
@@ -352,9 +630,21 @@ func sFnDeleteShoot(ctx, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) 
 
 ## Configuration Changes
 
-### Feature Flag
+### Two-Level Flag System
 
-A new feature flag controls dedicated audit logging:
+Dedicated audit logging requires **two flags** to be enabled:
+
+1. **Global Feature Flag** (Infrastructure Manager level)
+2. **Runtime-Specific Flag** (Runtime CR level)
+
+This two-level approach allows:
+- Global control over the feature availability
+- Per-runtime opt-in for audit log access
+- Gradual rollout to specific customers
+
+#### Global Feature Flag
+
+A new command-line flag controls the feature at the infrastructure manager level:
 
 ```go
 flag.BoolVar(&dedicatedAuditLoggingEnabled, 
@@ -362,6 +652,41 @@ flag.BoolVar(&dedicatedAuditLoggingEnabled,
     false, 
     "Feature flag to enable dedicated BTP audit logging infrastructure for provisioned Kyma Runtime")
 ```
+
+When `false` (default), all runtimes use shared audit logging regardless of their individual settings.
+
+#### Runtime-Specific Flag
+
+Each Runtime CR can opt-in to dedicated audit logging:
+
+```yaml
+apiVersion: infrastructuremanager.kyma-project.io/v1
+kind: Runtime
+metadata:
+  name: my-runtime
+spec:
+  auditLogAccessEnabled: true  # Request dedicated audit logging for this runtime
+  shoot:
+    provider:
+      type: aws
+      region: us-east-1
+    # ...
+```
+
+The `spec.auditLogAccessEnabled` field is optional (pointer to bool):
+- `true` - Request dedicated audit logging (if global flag also enabled and AuditLogCR available)
+- `false` or `nil` (default) - Use shared audit logging
+
+#### Decision Matrix
+
+| Global Flag | Runtime Flag | Result |
+|-------------|--------------|---------|
+| `false` | `true` | Shared logging (global flag takes precedence) |
+| `false` | `false`/`nil` | Shared logging |
+| `true` | `true` | Dedicated logging (if available) |
+| `true` | `false`/`nil` | Shared logging (runtime didn't opt-in) |
+
+**Note**: Even with both flags enabled, if no AuditLogCR is available in the pool, the runtime will use shared logging (graceful degradation).
 
 ### FSM Configuration
 
@@ -391,26 +716,46 @@ pkg/auditlog/
 
 ## Error Handling and Edge Cases
 
-### No Available AuditLogCR
+### No Available AuditLogCR (Phase 1 - Reservation)
 
-**Scenario**: Pool is exhausted, no `SiemApproved` CRs available
+**Scenario**: Pool is exhausted, no `SiemApproved` CRs available for reservation
 
 **Handling**: 
-- Log warning
-- Continue with shared audit logging
-- Runtime remains functional
-- Next reconciliation retries
+- Fail provisioning immediately in `sFnCreateShoot`
+- User gets clear error: "Dedicated audit logging requested but no available configuration found"
+- No shoot resources created or wasted
+- User can retry later when pool has capacity
 
-### Concurrent Claims
+### Concurrent Reservations (Phase 1)
 
-**Scenario**: Two runtimes try to claim the same AuditLogCR simultaneously
+**Scenario**: Two runtimes try to reserve the same AuditLogCR simultaneously
 
 **Handling**:
 - Kubernetes resourceVersion causes conflict error for second runtime
-- Second runtime retries with different AuditLogCR from pool
-- Eventually both runtimes get unique AuditLogCRs
+- Second runtime retries with different available AuditLogCR from pool
+- Eventually both runtimes get unique reservations
+- No double-booking possible
 
-### Shoot Update Failure
+### Reservation Not Found (Phase 2 - Claim)
+
+**Scenario**: In `sFnMigrateToDedicatedAuditLog`, the reserved CR cannot be found
+
+**Handling**:
+- Should never happen if Phase 1 succeeded and runtime completed provisioning
+- If it happens: Fail provisioning with clear error
+- Possible causes: Manual label removal, KALM bug, race condition
+- Operator can investigate and either restore label or retry provisioning
+
+### Concurrent Claims (Phase 2)
+
+**Scenario**: Conflict during claim operation (unlikely since CR is already reserved)
+
+**Handling**:
+- Requeue and retry claim operation
+- Reserved CR won't be taken by another runtime (has our label)
+- Retry will succeed on next reconciliation
+
+### Shoot Update Failure (Phase 2)
 
 **Scenario**: Shoot patch operation fails after claiming AuditLogCR
 
@@ -420,63 +765,144 @@ pkg/auditlog/
 - Retries shoot update
 - No duplicate claims, no resource waste
 
-### Reconciliation Interrupted
+### Provisioning Fails After Reservation (Phase 1 Complete, Before Phase 2)
 
-**Scenario**: Controller crashes between claiming and updating shoot
+**Scenario**: Runtime provisioning fails (e.g., kubeconfig issues, namespace creation) after reservation but before claim
 
 **Handling**:
-- Next reconciliation finds existing claim by RuntimeID
-- Continues from where it left off
-- Idempotent operations ensure correctness
+- Reserved AuditLogCR has label but no `assignedToRuntimeID`
+- Label remains on CR, marking it as "reserved but unused"
+- **Manual cleanup**: Operator removes labels to return CR to pool
+- **Automated cleanup** (optional): Job removes labels after 1 hour timeout
+- CR safely returns to available pool
+
+### Reconciliation Interrupted
+
+**Scenario**: Controller crashes between reservation and claim
+
+**Handling**:
+- **After Phase 1, before shoot creation**: Next reconciliation finds existing reservation, continues
+- **After Phase 2, before shoot patch**: Next reconciliation finds existing claim, retries patch
+- Idempotent operations ensure correctness throughout
 
 ### KALM Unavailable
 
 **Scenario**: KALM controller is down or CRD not installed
 
 **Handling**:
-- List/Get operations fail
-- Provider falls back to shared configuration
-- Runtime continues to function normally
+- List/Get operations fail in `sFnCreateShoot`
+- If user requested dedicated logging: Provisioning fails with clear error
+- If user didn't request dedicated: Uses shared logging, unaffected
 
 ## Monitoring and Observability
 
 Metrics to be implemented:
 
-- `kim_dedicated_audit_log_claims_total` - Total claims attempted
+- `kim_dedicated_audit_log_reservations_total` - Total reservation attempts (Phase 1)
+- `kim_dedicated_audit_log_reservations_success_total` - Successful reservations
+- `kim_dedicated_audit_log_reservations_conflict_total` - Conflict errors during reservation
+- `kim_dedicated_audit_log_claims_total` - Total claim attempts (Phase 2)
 - `kim_dedicated_audit_log_claims_success_total` - Successful claims
-- `kim_dedicated_audit_log_claims_conflict_total` - Conflict errors (concurrent claims)
-- `kim_dedicated_audit_log_pool_available` - Available AuditLogCRs in pool
+- `kim_dedicated_audit_log_claims_conflict_total` - Conflict errors during claim
+- `kim_dedicated_audit_log_pool_available` - Available AuditLogCRs in pool (unreserved, unassigned)
+- `kim_dedicated_audit_log_pool_reserved` - AuditLogCRs with reservation labels
+- `kim_dedicated_audit_log_pool_claimed` - AuditLogCRs with assignedToRuntimeID set
 - `kim_dedicated_audit_log_migration_duration_seconds` - Time to migrate shoot
 
 Log events:
+- Reservation success/failure with RuntimeID
 - Claim success/failure with RuntimeID
 - Migration start/complete
-- Fallback to shared configuration with reason
+- Stale reservation detected (if automated cleanup implemented)
 - Release on runtime deletion
 
 # Consequences
 
 ## Positive
 
-1. **No wasted resources**: Only claim AuditLogCR after shoot proves it can be created
-2. **Idempotent operations**: Safe retries, no duplicate claims, recovery from interruptions
-3. **Graceful degradation**: Runtimes continue working if dedicated logging unavailable
-4. **Clean abstraction**: FSM doesn't need to know claiming details
-5. **Concurrent-safe**: Optimistic concurrency prevents double-claiming
-6. **Short migration window**: Runtimes use shared logging only briefly after creation
+1. **No wasted resources**: Two-phase approach (light lock → heavy lock) ensures minimal waste
+   - Phase 1 reserves with labels (cheap, easy to clean up)
+   - Phase 2 claims only after full provisioning succeeds
+   - Failed provisions only leave behind labels, not fully-assigned resources
+
+2. **Solves race condition**: Reservation labels prevent the window between validation and claiming
+   - Validate + reserve happens atomically in Phase 1
+   - CR is guaranteed available for this runtime during entire provisioning
+
+3. **Fail-fast**: User gets immediate feedback if dedicated logging unavailable
+   - No time or resources wasted on provisioning that will fail anyway
+   - Clear error message guides user to retry when pool has capacity
+
+4. **Idempotent operations**: Safe retries throughout the flow
+   - Reservation lookup before creating new reservation
+   - Claim lookup before creating new claim
+   - Recovery from interruptions at any stage
+
+5. **Manual cleanup option**: Operators have simple path to recover stale reservations
+   - No complex state to understand
+   - Labels visible with standard kubectl commands
+   - Simple label removal returns CR to pool
+
+6. **Concurrent-safe**: Kubernetes optimistic concurrency prevents conflicts
+   - Multiple runtimes can provision simultaneously
+   - Conflicts automatically trigger retries with different CRs
+
+7. **Observable**: Easy to monitor pool state
+   - Available: No labels, no assignment
+   - Reserved: Has labels, no assignment
+   - Claimed: Has labels, has assignment
+   - Query with simple label selectors
+
+8. **No CRD changes**: Label-based approach doesn't require KALM modifications
+   - Non-intrusive to KALM's state machine
+   - Can be implemented immediately
 
 ## Negative
 
-1. **Brief shared logging period**: Runtime uses shared logging between creation and migration (typically <1 minute)
-2. **Two-phase configuration**: Shoot configuration is updated post-creation
-3. **Vendored CRD maintenance**: Must sync types when KALM updates AuditLog CRD
-4. **Migration state complexity**: Additional FSM state increases controller logic
+1. **Two-phase complexity**: More complex than single-phase claim
+   - Requires understanding of reservation vs claim semantics
+   - Two different code paths (reserve in create, claim in migrate)
+   - More states to test and document
+
+2. **Manual cleanup required (MVP)**: Stale reservations need operator intervention
+   - Automated cleanup can be added later
+   - Operators need to monitor for reservations without assignments
+   - Process must be documented for on-call
+
+3. **Brief shared logging period**: Runtime uses shared logging during provisioning (~5-15 minutes)
+   - Audit logs split between shared and dedicated during this window
+   - Not a security issue but may complicate log analysis
+
+4. **Vendored CRD maintenance**: Must sync types when KALM updates AuditLog CRD
+   - Creates dependency on KALM release cycle
+   - Breaking changes in KALM could require code updates
+
+5. **Migration state complexity**: Additional FSM state increases controller logic
+   - More code paths to test
+   - Conditional state transitions based on flags
+
+6. **Label namespace coordination**: Need to coordinate label names with KALM team
+   - Risk of conflicts if KALM uses same label names
+   - Requires documentation and communication
 
 ## Neutral
 
-1. **Feature flag required**: Dedicated logging is opt-in via feature flag
+1. **Two-level feature flags**: Both global and per-runtime flags required
+   - Provides flexibility for gradual rollout
+   - But requires both to be set for feature to work
+
 2. **KALM dependency**: Requires KALM to be installed and maintaining pool
-3. **Eventual consistency**: Migration happens asynchronously after shoot creation
+   - Strong coupling between two components
+   - Provisioning fails if KALM unavailable (when dedicated requested)
+
+3. **Eventual consistency**: Migration happens asynchronously after provisioning
+   - Standard Kubernetes reconciliation pattern
+   - Brief window where shoot exists but isn't fully configured
+
+4. **Reservation timeout**: 1-hour timeout is arbitrary
+   - Too short: Legitimate slow provisions get cleaned up
+   - Too long: Pool exhaustion from stale reservations
+   - May need tuning based on real-world data
 
 # References
 

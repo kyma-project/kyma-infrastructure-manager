@@ -12,10 +12,9 @@ type providerType = string
 
 // AuditLogData represents audit log configuration
 type AuditLogData struct {
-	TenantID    string `json:"tenantID" validate:"required"`
-	ServiceURL  string `json:"serviceURL" validate:"required,url"`
-	SecretName  string `json:"secretName" validate:"required"`
-	IsDedicated bool   `json:"-"` // Indicates if this is from dedicated or shared config
+	TenantID   string `json:"tenantID" validate:"required"`
+	ServiceURL string `json:"serviceURL" validate:"required,url"`
+	SecretName string `json:"secretName" validate:"required"`
 }
 
 // Configuration is the map-based shared audit log configuration
