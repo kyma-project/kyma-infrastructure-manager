@@ -2,8 +2,9 @@ package config
 
 import (
 	"encoding/json"
-	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"io"
+
+	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 type Config struct {
@@ -16,7 +17,13 @@ type ClusterConfig struct {
 }
 
 type ProviderConfig struct {
-	AWS AWSConfig `json:"aws"`
+	AWS    AWSConfig    `json:"aws"`
+	Worker WorkerConfig `json:"worker"`
+}
+
+type WorkerConfig struct {
+	DefaultMaxEvictRetries     string `json:"defaultMaxEvictRetries"`
+	DefaultMachineDrainTimeout string `json:"defaultMachineDrainTimeout"`
 }
 
 type AWSConfig struct {
@@ -76,8 +83,12 @@ type MachineImageConfig struct {
 	DefaultName    string `json:"defaultName" validate:"required"`
 	DefaultVersion string `json:"defaultVersion" validate:"required"`
 }
+type ACL struct {
+	ConfigMapName string `json:"configMapName"`
+}
 
 type KubeApiServer struct {
+	ACL                ACL             `json:"acl"`
 	MaxTokenExpiration string          `json:"maxTokenExpiration"`
 	RuntimeConfig      map[string]bool `json:"runtimeConfig"`
 	FeatureGates       map[string]bool `json:"featureGates"`

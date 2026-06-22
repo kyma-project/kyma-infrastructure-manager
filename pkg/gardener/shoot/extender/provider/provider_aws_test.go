@@ -7,6 +7,7 @@ import (
 	awsext "github.com/gardener/gardener-extension-provider-aws/pkg/apis/aws/v1alpha1"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/aws"
@@ -35,7 +36,9 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a"}),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -53,7 +56,9 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b"}),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -71,7 +76,9 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -89,7 +96,9 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAWS, "", "", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -106,7 +115,9 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAWS, "", "", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 						Networking: imv1.Networking{
+							Pods:      "100.64.0.0/22",
 							Nodes:     "10.250.0.0/22",
+							Services:  "100.104.0.0/13",
 							DualStack: ptr.To(true),
 						},
 					},
@@ -125,7 +136,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 
 			// when
 
-			extender := NewProviderExtenderForCreateOperation(tc.EnableDualStackIP, tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
+			extender := NewProviderExtenderForCreateOperation(tc.EnableDualStackIP, tc.EnableIMDSv2, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
 			err := extender(tc.Runtime, &shoot)
 
 			// then
@@ -158,7 +169,9 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -178,6 +191,11 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+						Networking: imv1.Networking{
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
+						},
 					},
 				},
 			},
@@ -196,6 +214,11 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAWS, "", "", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+						Networking: imv1.Networking{
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
+						},
 					},
 				},
 			},
@@ -214,6 +237,11 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+						Networking: imv1.Networking{
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
+						},
 					},
 				},
 			},
@@ -232,6 +260,11 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAWS, "", "", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+						Networking: imv1.Networking{
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
+						},
 					},
 				},
 			},
@@ -250,6 +283,11 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+						Networking: imv1.Networking{
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
+						},
 					},
 				},
 			},
@@ -268,6 +306,11 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
 						Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}),
+						Networking: imv1.Networking{
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
+						},
 					},
 				},
 			},
@@ -287,7 +330,7 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderPatchOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion, tc.CurrentShootWorkers, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig)
+			extender := NewProviderExtenderPatchOperation(tc.EnableIMDSv2, tc.CurrentShootWorkers, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig)
 			err := extender(tc.Runtime, &shoot)
 
 			// then

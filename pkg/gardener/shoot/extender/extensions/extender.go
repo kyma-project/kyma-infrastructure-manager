@@ -1,13 +1,16 @@
 package extensions
 
 import (
+	"context"
 	"encoding/json"
+	"reflect"
 	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type CreateExtensionFunc func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error)
@@ -17,7 +20,7 @@ type Extension struct {
 	Create CreateExtensionFunc
 }
 
-func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData auditlogs.AuditLogData, registryCache []imv1.ImageRegistryCache) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, registryCache []imv1.ImageRegistryCache, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			Type: NetworkFilterType,
@@ -34,10 +37,7 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 		{
 			Type: DNSExtensionType,
 			Create: func(_ imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-				if config.DNS.IsGardenerInternal() {
-					return NewDNSExtensionInternal()
-				}
-				return NewDNSExtensionExternal(shoot.Name, config.DNS.SecretName, config.DNS.DomainPrefix, config.DNS.ProviderType)
+				return buildDNSExtension(config.DNS, shoot.Name)
 			},
 		},
 		{
@@ -66,10 +66,34 @@ func NewExtensionsExtenderForCreate(config config.ConverterConfig, auditLogData 
 				return NewRegistryCacheExtension(registryCache, nil)
 			},
 		},
+		{
+			Type: ApiServerACLExtensionType,
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+				if !AclNeedsToBeEnabled(apiServerAclEnabled, runtime) {
+					return nil, nil
+				}
+
+				operatorIPs, kcpIPs, err := loadIPsFromConfigMap(ctx, kcpClient, config.Kubernetes.KubeApiServer.ACL.ConfigMapName)
+				if err != nil {
+					return nil, err
+				}
+				return NewApiServerACLExtension(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs, operatorIPs, kcpIPs)
+			},
+		},
+		{
+			Type: NvidiaOpenshellExtensionType,
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+				if !isNvidiaOpenshellEnabled(runtime) {
+					return nil, nil
+				}
+
+				return EnableNvidiaOpenshellExtension()
+			},
+		},
 	}, nil)
 }
 
-func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			AuditlogExtensionType,
@@ -114,18 +138,48 @@ func NewExtensionsExtenderForPatch(auditLogData auditlogs.AuditLogData, extensio
 			},
 		},
 		{
+			Type: DNSExtensionType,
+			Create: func(_ imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+				return dnsExtensionForPatch(config.DNS, shoot)
+			},
+		},
+		{
 			Type: RegistryCacheExtensionType,
 			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-				var existingExtension *gardener.Extension
-
-				for _, ext := range shoot.Spec.Extensions {
-					if ext.Type == RegistryCacheExtensionType {
-						existingExtension = &ext
-						break
+				return NewRegistryCacheExtension(runtime.Spec.Caching, existingExtension(RegistryCacheExtensionType, shoot))
+			},
+		},
+		{
+			Type: ApiServerACLExtensionType,
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+				if !AclNeedsToBeEnabled(apiServerAclEnabled, runtime) {
+					if existingExtension(ApiServerACLExtensionType, shoot) == nil {
+						return nil, nil
 					}
+
+					return NewApiServerACLExtension(nil, nil, "")
 				}
 
-				return NewRegistryCacheExtension(runtime.Spec.Caching, existingExtension)
+				operatorIPs, kcpIPs, err := loadIPsFromConfigMap(ctx, kcpClient, config.Kubernetes.KubeApiServer.ACL.ConfigMapName)
+				if err != nil {
+					return nil, err
+				}
+
+				return NewApiServerACLExtension(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs, operatorIPs, kcpIPs)
+			},
+		},
+		{
+			Type: NvidiaOpenshellExtensionType,
+			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+				if isNvidiaOpenshellEnabled(runtime) {
+					return EnableNvidiaOpenshellExtension()
+				}
+
+				if existingExtension(NvidiaOpenshellExtensionType, shoot) == nil {
+					return nil, nil
+				}
+
+				return DisableNvidiaOpenshellExtension()
 			},
 		},
 	}, extensionsOnTheShoot)
@@ -162,4 +216,56 @@ func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensi
 
 		return nil
 	}
+}
+
+func existingExtension(extensionType string, shoot gardener.Shoot) *gardener.Extension {
+	for _, ext := range shoot.Spec.Extensions {
+		if ext.Type == extensionType {
+			return &ext
+		}
+	}
+	return nil
+}
+
+func isNvidiaOpenshellEnabled(runtime imv1.Runtime) bool {
+	return runtime.Spec.Shoot.EnableNvidiaOpenshell != nil && *runtime.Spec.Shoot.EnableNvidiaOpenshell
+}
+
+func buildDNSExtension(dnsConfig config.DNSConfig, shootName string) (*gardener.Extension, error) {
+	if dnsConfig.IsGardenerInternal() {
+		return NewDNSExtensionInternal()
+	}
+	return NewDNSExtensionExternal(shootName, dnsConfig.SecretName, dnsConfig.DomainPrefix, dnsConfig.ProviderType)
+}
+
+func dnsExtensionForPatch(dnsConfig config.DNSConfig, shoot gardener.Shoot) (*gardener.Extension, error) {
+	desired, err := buildDNSExtension(dnsConfig, shoot.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	existing := existingExtension(DNSExtensionType, shoot)
+	if existing == nil || existing.ProviderConfig == nil {
+		return desired, nil
+	}
+
+	var existingCfg DNSExtensionProviderConfig
+	if err := json.Unmarshal(existing.ProviderConfig.Raw, &existingCfg); err != nil {
+		return nil, err
+	}
+
+	var desiredCfg DNSExtensionProviderConfig
+	if err := json.Unmarshal(desired.ProviderConfig.Raw, &desiredCfg); err != nil {
+		return nil, err
+	}
+
+	// The cluster was created prior to introducing custom domains for the DNS extension. In this case, we want to preserve the existing configuration
+	if len(existingCfg.Providers) == 0 {
+		return existing, nil
+	}
+
+	if reflect.DeepEqual(existingCfg, desiredCfg) {
+		return nil, nil
+	}
+	return desired, nil
 }

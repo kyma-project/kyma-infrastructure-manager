@@ -28,6 +28,7 @@ func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		setObjectFields(s.shoot)
 		s.shoot.Annotations = addGardenerCloudDelConfirmation(s.shoot.Annotations)
 
+		//nolint:staticcheck // SA1019: client.Apply is used with Patch, which is the correct API for this version
 		err := m.GardenClient.Patch(ctx, s.shoot, client.Apply, &client.PatchOptions{
 			FieldManager: "kim",
 			Force:        ptr.To(true),

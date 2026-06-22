@@ -32,6 +32,71 @@ var _ = Describe("KIM sFnSelectShootProcessing", func() {
 
 	inputRtWithForceAnnotation := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/force-patch-reconciliation": "true"})
 	inputRtWithSuspendAnnotation := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/suspend-patch-reconciliation": "true"})
+	inputRtReady := makeInputRuntimeWithAnnotation(nil)
+	inputRtReady.Status.State = imv1.RuntimeStateReady
+	inputRtFailed := makeInputRuntimeWithAnnotation(nil)
+	inputRtFailed.Status.State = imv1.RuntimeStateFailed
+
+	shootRuntimeGenerationAnnotation := map[string]string{
+		"infrastructuremanager.kyma-project.io/runtime-generation": "0",
+	}
+
+	testShootGenerationAhead := gardener.Shoot{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "test-shoot",
+			Namespace:   "garden-",
+			Generation:  2,
+			Annotations: shootRuntimeGenerationAnnotation,
+		},
+		Spec: gardener.ShootSpec{
+			DNS: &gardener.DNS{Domain: ptr.To("test-domain")},
+		},
+		Status: gardener.ShootStatus{
+			ObservedGeneration: 1,
+			LastOperation: &gardener.LastOperation{
+				State: gardener.LastOperationStateSucceeded,
+				Type:  gardener.LastOperationTypeReconcile,
+			},
+		},
+	}
+
+	testShootProcessing := gardener.Shoot{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "test-shoot",
+			Namespace:   "garden-",
+			Generation:  1,
+			Annotations: shootRuntimeGenerationAnnotation,
+		},
+		Spec: gardener.ShootSpec{
+			DNS: &gardener.DNS{Domain: ptr.To("test-domain")},
+		},
+		Status: gardener.ShootStatus{
+			ObservedGeneration: 1,
+			LastOperation: &gardener.LastOperation{
+				State: gardener.LastOperationStateProcessing,
+				Type:  gardener.LastOperationTypeReconcile,
+			},
+		},
+	}
+
+	testShootQuiet := gardener.Shoot{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "test-shoot",
+			Namespace:   "garden-",
+			Generation:  1,
+			Annotations: shootRuntimeGenerationAnnotation,
+		},
+		Spec: gardener.ShootSpec{
+			DNS: &gardener.DNS{Domain: ptr.To("test-domain")},
+		},
+		Status: gardener.ShootStatus{
+			ObservedGeneration: 1,
+			LastOperation: &gardener.LastOperation{
+				State: gardener.LastOperationStateSucceeded,
+				Type:  gardener.LastOperationTypeReconcile,
+			},
+		},
+	}
 
 	testShoot := gardener.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
@@ -62,7 +127,7 @@ var _ = Describe("KIM sFnSelectShootProcessing", func() {
 			&systemState{instance: *inputRtWithForceAnnotation, shoot: &testShoot},
 			testOpts{
 				MatchExpectedErr: BeNil(),
-				MatchNextFnState: haveName("sFnPrepareRegistryCache"),
+				MatchNextFnState: haveName("sFnSyncRegistryCacheGardenSecrets"),
 			},
 		),
 		Entry(
@@ -70,6 +135,46 @@ var _ = Describe("KIM sFnSelectShootProcessing", func() {
 			testCtx,
 			must(newFakeFSM, withTestFinalizer, withTestSchemeAndObjects()),
 			&systemState{instance: *inputRtWithSuspendAnnotation, shoot: &testShoot},
+			testOpts{
+				MatchExpectedErr: BeNil(),
+				MatchNextFnState: BeNil(),
+			},
+		),
+		Entry(
+			"RuntimeCR Ready + Shoot Generation ahead of ObservedGeneration, route to sFnWaitForShootReconcile",
+			testCtx,
+			must(newFakeFSM, withTestFinalizer, withTestSchemeAndObjects()),
+			&systemState{instance: *inputRtReady, shoot: &testShootGenerationAhead},
+			testOpts{
+				MatchExpectedErr: BeNil(),
+				MatchNextFnState: haveName("sFnWaitForShootReconcile"),
+			},
+		),
+		Entry(
+			"RuntimeCR Ready + Shoot LastOperation Processing, route to sFnWaitForShootReconcile",
+			testCtx,
+			must(newFakeFSM, withTestFinalizer, withTestSchemeAndObjects()),
+			&systemState{instance: *inputRtReady, shoot: &testShootProcessing},
+			testOpts{
+				MatchExpectedErr: BeNil(),
+				MatchNextFnState: haveName("sFnWaitForShootReconcile"),
+			},
+		),
+		Entry(
+			"RuntimeCR Ready + Shoot quiet, stop() (no-storm guard preserved)",
+			testCtx,
+			must(newFakeFSM, withTestFinalizer, withTestSchemeAndObjects()),
+			&systemState{instance: *inputRtReady, shoot: &testShootQuiet},
+			testOpts{
+				MatchExpectedErr: BeNil(),
+				MatchNextFnState: BeNil(),
+			},
+		),
+		Entry(
+			"RuntimeCR Failed + Shoot quiet -> stop() (no-storm guard preserved)",
+			testCtx,
+			must(newFakeFSM, withTestFinalizer, withTestSchemeAndObjects()),
+			&systemState{instance: *inputRtFailed, shoot: &testShootQuiet},
 			testOpts{
 				MatchExpectedErr: BeNil(),
 				MatchNextFnState: BeNil(),

@@ -27,7 +27,9 @@ func TestToKymaProvisioningInfo(t *testing.T) {
 			},
 			Spec: imv1.RuntimeSpec{
 				Shoot: imv1.RuntimeShoot{
-					Name: "test-shoot",
+					Name:           "test-shoot",
+					Region:         "eu-central-1",
+					PlatformRegion: "cf-eu12",
 					Provider: imv1.Provider{
 						Type: "aws",
 						Workers: []gardener.Worker{
@@ -64,6 +66,8 @@ func TestToKymaProvisioningInfo(t *testing.T) {
 		assert.Equal(t, "test-kyma-name", result.InstanceName)
 		assert.Equal(t, "test-global-account-id", result.GlobalAccountID)
 		assert.Equal(t, "test-subaccount-id", result.SubaccountID)
+		assert.Equal(t, "eu-central-1", result.Region)
+		assert.Equal(t, "cf-eu12", result.PlatformRegion)
 	})
 
 	t.Run("Should handle missing labels gracefully", func(t *testing.T) {
@@ -106,6 +110,152 @@ func TestToKymaProvisioningInfo(t *testing.T) {
 	})
 }
 
+func TestToKymaProvisioningInfoWithACL(t *testing.T) {
+	t.Run("Should include ACL when allowedCIDRs is set", func(t *testing.T) {
+		// given
+		runtimeCR := imv1.Runtime{
+			Spec: imv1.RuntimeSpec{
+				Shoot: imv1.RuntimeShoot{
+					Name: "test-shoot",
+					Provider: imv1.Provider{
+						Type: "aws",
+						Workers: []gardener.Worker{
+							{
+								Name: "worker-1",
+								Machine: gardener.Machine{
+									Type: "m5.xlarge",
+								},
+								Minimum: 1,
+								Maximum: 3,
+								Zones:   []string{"eu-west-1a"},
+							},
+						},
+					},
+					Kubernetes: imv1.Kubernetes{
+						KubeAPIServer: imv1.APIServer{
+							ACL: &imv1.ACL{
+								AllowedCIDRs: []string{"10.0.0.0/8", "192.168.0.0/16"},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		shoot := &gardener.Shoot{
+			Spec: gardener.ShootSpec{
+				Provider: gardener.Provider{
+					InfrastructureConfig: &apiruntime.RawExtension{
+						Raw: []byte(`{}`),
+					},
+				},
+			},
+		}
+
+		// when
+		result := ToKymaProvisioningInfo(runtimeCR, shoot)
+
+		// then
+		assert.Equal(t, []string{"10.0.0.0/8", "192.168.0.0/16"}, result.NetworkDetails.KubeAPIServer.ACL)
+	})
+
+	t.Run("Should omit ACL field when allowedCIDRs is empty array", func(t *testing.T) {
+		// given
+		runtimeCR := imv1.Runtime{
+			Spec: imv1.RuntimeSpec{
+				Shoot: imv1.RuntimeShoot{
+					Name: "test-shoot",
+					Provider: imv1.Provider{
+						Type: "aws",
+						Workers: []gardener.Worker{
+							{
+								Name: "worker-1",
+								Machine: gardener.Machine{
+									Type: "m5.xlarge",
+								},
+								Minimum: 1,
+								Maximum: 3,
+								Zones:   []string{"eu-west-1a"},
+							},
+						},
+					},
+					Kubernetes: imv1.Kubernetes{
+						KubeAPIServer: imv1.APIServer{
+							ACL: &imv1.ACL{
+								AllowedCIDRs: []string{},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		shoot := &gardener.Shoot{
+			Spec: gardener.ShootSpec{
+				Provider: gardener.Provider{
+					InfrastructureConfig: &apiruntime.RawExtension{
+						Raw: []byte(`{}`),
+					},
+				},
+			},
+		}
+
+		// when
+		result := ToKymaProvisioningInfo(runtimeCR, shoot)
+
+		// then
+		assert.Nil(t, result.NetworkDetails.KubeAPIServer.ACL)
+		assert.Empty(t, result.NetworkDetails.KubeAPIServer.ACL)
+	})
+
+	t.Run("Should omit ACL field when ACL is nil", func(t *testing.T) {
+		// given
+		runtimeCR := imv1.Runtime{
+			Spec: imv1.RuntimeSpec{
+				Shoot: imv1.RuntimeShoot{
+					Name: "test-shoot",
+					Provider: imv1.Provider{
+						Type: "aws",
+						Workers: []gardener.Worker{
+							{
+								Name: "worker-1",
+								Machine: gardener.Machine{
+									Type: "m5.xlarge",
+								},
+								Minimum: 1,
+								Maximum: 3,
+								Zones:   []string{"eu-west-1a"},
+							},
+						},
+					},
+					Kubernetes: imv1.Kubernetes{
+						KubeAPIServer: imv1.APIServer{
+							ACL: nil,
+						},
+					},
+				},
+			},
+		}
+
+		shoot := &gardener.Shoot{
+			Spec: gardener.ShootSpec{
+				Provider: gardener.Provider{
+					InfrastructureConfig: &apiruntime.RawExtension{
+						Raw: []byte(`{}`),
+					},
+				},
+			},
+		}
+
+		// when
+		result := ToKymaProvisioningInfo(runtimeCR, shoot)
+
+		// then
+		assert.Nil(t, result.NetworkDetails.KubeAPIServer.ACL)
+		assert.Empty(t, result.NetworkDetails.KubeAPIServer.ACL)
+	})
+}
+
 func TestToKymaProvisioningInfoConfigMap(t *testing.T) {
 	t.Run("Should create ConfigMap with all fields including environmentInstanceID and instanceName", func(t *testing.T) {
 		// given
@@ -122,7 +272,9 @@ func TestToKymaProvisioningInfoConfigMap(t *testing.T) {
 			},
 			Spec: imv1.RuntimeSpec{
 				Shoot: imv1.RuntimeShoot{
-					Name: "test-shoot",
+					Name:           "test-shoot",
+					Region:         "eu-central-1",
+					PlatformRegion: "cf-eu12",
 					Provider: imv1.Provider{
 						Type: "aws",
 						Workers: []gardener.Worker{
@@ -162,5 +314,7 @@ func TestToKymaProvisioningInfoConfigMap(t *testing.T) {
 		assert.Contains(t, cm.Data["details"], "instanceName: my-kyma-instance")
 		assert.Contains(t, cm.Data["details"], "globalAccountID: global-acc-456")
 		assert.Contains(t, cm.Data["details"], "subaccountID: sub-acc-789")
+		assert.Contains(t, cm.Data["details"], "region: eu-central-1")
+		assert.Contains(t, cm.Data["details"], "platformRegion: cf-eu12")
 	})
 }

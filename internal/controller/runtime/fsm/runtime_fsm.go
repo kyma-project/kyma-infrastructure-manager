@@ -30,9 +30,11 @@ type RCCfg struct {
 	RequeueDurationShootDelete           time.Duration
 	RequeueDurationShootReconcile        time.Duration
 	ControlPlaneRequeueDuration          time.Duration
+	StatusRequeueDelay                   time.Duration
 	Finalizer                            string
 	ShootNamesapace                      string
 	AuditLogMandatory                    bool
+	ApiServerAclEnabled                  bool
 	Metrics                              metrics.Metrics
 	AuditLogging                         auditlogs.Configuration
 	RegistryCacheConfigControllerEnabled bool

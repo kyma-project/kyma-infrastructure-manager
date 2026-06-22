@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: acl-ip-list
+  namespace: kcp-system
+data:
+  acl-list.json: >-
+    ["2.2.2.2/29","3.3.3.3/29","4.4.4.4/29"]
+  kcp-external-nat-ip.json: '"1.1.1.1/32"'

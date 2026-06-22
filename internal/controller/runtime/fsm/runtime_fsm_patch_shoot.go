@@ -3,8 +3,9 @@ package fsm
 import (
 	"context"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"reflect"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
@@ -67,7 +68,8 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	logTokenExpirationInfo(m.log, timeBoundaries)
 
 	// NOTE: In the future we want to pass the whole shoot object here
-	updatedShoot, err := convertPatch(&s.instance, gardener_shoot.PatchOpts{
+	updatedShoot, err := convertPatch(ctx, &s.instance, gardener_shoot.PatchOpts{
+		KcpClient:             m.KcpClient,
 		ConverterConfig:       m.ConverterConfig,
 		AuditLogData:          data,
 		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
@@ -77,6 +79,8 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		Resources:             s.shoot.Spec.Resources,
 		InfrastructureConfig:  s.shoot.Spec.Provider.InfrastructureConfig,
 		ControlPlaneConfig:    s.shoot.Spec.Provider.ControlPlaneConfig,
+		ApiServerAclEnabled:   m.ApiServerAclEnabled,
+		ExistingDNS:           s.shoot.Spec.DNS,
 	})
 
 	if err != nil {
@@ -104,7 +108,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		m.log.Error(err, "Failed to check if registry cache secret should be removed")
 
 		s.instance.UpdateStatePending(imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonRegistryCacheConfigured, metav1.ConditionFalse, "Failed to check if registry cache secret should be removed")
-		return updateStatusAndRequeue()
+		return updateStatusAndRequeueAfter(m.StatusRequeueDelay)
 	}
 
 	workersShouldBeUpdated := !workersAreEqual(s.shoot.Spec.Provider.Workers, updatedShoot.Spec.Provider.Workers)
@@ -159,6 +163,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		}
 	}
 
+	//nolint:staticcheck // SA1019: client.Apply is used with Patch, which is the correct API for this version
 	patchErr := m.GardenClient.Patch(ctx, &updatedShoot, client.Apply, &client.PatchOptions{
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
@@ -198,16 +203,6 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	)
 
 	return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
-}
-
-func registryCacheExists(runtime imv1.Runtime) bool {
-	for _, cache := range runtime.Spec.Caching {
-		if cache.Config.SecretReferenceName != nil && *cache.Config.SecretReferenceName != "" {
-			return true
-		}
-	}
-
-	return false
 }
 
 func handleUpdateError(err error, m *fsm, s *systemState, errMsg, statusMsg string) (stateFn, *ctrl.Result, error) {
@@ -276,12 +271,12 @@ func handleForceReconciliationAnnotation(runtime *imv1.Runtime, fsm *fsm, ctx co
 	return nil
 }
 
-func convertPatch(instance *imv1.Runtime, opts gardener_shoot.PatchOpts) (gardener.Shoot, error) {
+func convertPatch(ctx context.Context, instance *imv1.Runtime, opts gardener_shoot.PatchOpts) (gardener.Shoot, error) {
 	if err := instance.ValidateRequiredLabels(); err != nil {
 		return gardener.Shoot{}, err
 	}
 
-	converter := gardener_shoot.NewConverterPatch(opts)
+	converter := gardener_shoot.NewConverterPatch(ctx, opts)
 	newShoot, err := converter.ToShoot(*instance)
 	if err != nil {
 		return newShoot, err

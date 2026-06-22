@@ -149,6 +149,7 @@ var _ = BeforeSuite(func() {
 		RequeueDurationShootReconcile: 3 * time.Second,
 		RequeueDurationShootCreate:    3 * time.Second,
 		RequeueDurationShootDelete:    3 * time.Second,
+		StatusRequeueDelay:            1 * time.Second,
 	}
 
 	runtimeReconciler = NewRuntimeReconciler(mgr, gardenerTestClient, runtimeClientGetterMock, nil, logger, fsmCfg)
@@ -229,7 +230,7 @@ func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot, seeds []*gard
 func getBaseShootForTestingSequence() gardener_api.Shoot {
 	runtimeStub := CreateRuntimeStub("test-resource")
 	infrastructureManagerConfig := fixConverterConfigForTests()
-	converter := gardener_shoot.NewConverterCreate(gardener_shoot.CreateOpts{
+	converter := gardener_shoot.NewConverterCreate(context.Background(), gardener_shoot.CreateOpts{
 		ConverterConfig: infrastructureManagerConfig.ConverterConfig,
 	})
 	convertedShoot, err := converter.ToShoot(*runtimeStub)
@@ -300,7 +301,7 @@ func getSeedForRegion(providerType, region string) gardener_api.Seed {
 			LastOperation: &gardener_api.LastOperation{},
 			Conditions: []gardener_api.Condition{
 				{
-					Type:   gardener_api.SeedGardenletReady,
+					Type:   gardener_api.GardenletReady,
 					Status: gardener_api.ConditionTrue,
 				},
 				{
@@ -407,6 +408,10 @@ func fixConverterConfigForTests() config.Config {
 			Provider: config.ProviderConfig{
 				AWS: config.AWSConfig{
 					EnableIMDSv2: true,
+				},
+				Worker: config.WorkerConfig{
+					DefaultMaxEvictRetries:     "10",
+					DefaultMachineDrainTimeout: "15m",
 				},
 			},
 			Gardener: config.GardenerConfig{

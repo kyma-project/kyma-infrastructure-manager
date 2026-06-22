@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	fsm_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"github.com/stretchr/testify/mock"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -282,6 +283,8 @@ func TestSkrConfigState(t *testing.T) {
 		ctx := context.Background()
 
 		runtime := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
+		runtime.Spec.Shoot.Provider.Type = hyperscaler.TypeAWS
+		runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL = &imv1.ACL{AllowedCIDRs: []string{"1.2.3.4/32", "5.6.7.8/16"}}
 		shootStub := fsm_testing.TestShootForPatch()
 		oidcService := gardener.Extension{
 			Type:     "shoot-oidc-service",
@@ -311,7 +314,7 @@ func TestSkrConfigState(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, detailsCM.Data)
 		assert.NotNil(t, detailsCM.Data["details"])
-		assert.Equal(t, detailsCM.Data["details"], "environmentInstanceID: instance-id\nglobalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\ninstanceName: kyma-name\nnetworkDetails:\n  dualStackIPEnabled: false\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
+		assert.Equal(t, detailsCM.Data["details"], "environmentInstanceID: instance-id\nglobalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\ninstanceName: kyma-name\nnetworkDetails:\n  dualStackIPEnabled: false\n  kubeAPIServer:\n    acl:\n    - 1.2.3.4/32\n    - 5.6.7.8/16\nregion: region\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
 		assert.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
 		assertSuccesfullStatusConditions(t, systemState)
 	})
@@ -377,7 +380,7 @@ func TestSkrConfigState(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, detailsCM.Data)
 		assert.NotNil(t, detailsCM.Data["details"])
-		assert.Equal(t, detailsCM.Data["details"], "environmentInstanceID: instance-id\nglobalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\ninstanceName: kyma-name\nnetworkDetails:\n  dualStackIPEnabled: false\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
+		assert.Equal(t, detailsCM.Data["details"], "environmentInstanceID: instance-id\nglobalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\ninstanceName: kyma-name\nnetworkDetails:\n  dualStackIPEnabled: false\nregion: region\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
 		assert.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
 		assertSuccesfullStatusConditions(t, systemState)
 	})
@@ -588,6 +591,7 @@ func createOpenIDConnectCR(name string, labelKey, labelValue string) *authentica
 
 func assertOIDCCRD(t *testing.T, expectedName, expectedClientID string, actual authenticationv1alpha1.OpenIDConnect) {
 	assert.Equal(t, expectedName, actual.Name)
+	//nolint:staticcheck // SA1019: ClientID is deprecated in favor of audiences, but we verify it for now
 	assert.Equal(t, expectedClientID, actual.Spec.ClientID)
 	assert.Equal(t, ptr.To("groups"), actual.Spec.GroupsClaim)
 	assert.Nil(t, actual.Spec.GroupsPrefix)

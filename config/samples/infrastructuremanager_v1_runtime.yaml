@@ -27,6 +27,8 @@ spec:
     secretBindingName: "hyperscaler secret"
     # spec.shoot.enforceSeedLocation is optional ; it allows to make sure the seed cluster will be located in the same region as the runtime
     enforceSeedLocation: true
+    # spec.shoot.enableNvidiaOpenshell is optional ; when set to true, enables the shoot-nvidia-openshell Gardener extension for GPU support
+    # enableNvidiaOpenshell: true
     kubernetes:
       # spec.shoot.kubernetes.version is optional, when not provided default will be used
       # Will be modified by the SRE
@@ -90,6 +92,19 @@ spec:
           # spec.shoot.workers.maxUnavailable is required in the first release.
           # It can be optional in the future, as it is always set to 0
           maxUnavailable: 0
+          # enabling gVisor container runtime for this worker pool
+          cri:
+            name: containerd
+            containerRuntimes:
+            # See configuration options for gVisor container runtime at https://github.com/gardener/gardener-extension-runtime-gvisor
+              - type: gvisor 
+                providerConfig:
+                  apiVersion: gvisor.runtime.extensions.config.gardener.cloud/v1alpha1
+                  kind: GVisorConfiguration
+                  configFlags:
+                    debug: "false"
+                    net-raw: "false"
+                    nvproxy: "false"
     # spec.shoot.Networking is required
     networking:
       pods: 100.64.0.0/12

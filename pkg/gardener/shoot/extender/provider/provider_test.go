@@ -2,11 +2,15 @@ package provider
 
 import (
 	"testing"
+	"time"
 
 	awsinfra "github.com/gardener/gardener-extension-provider-aws/pkg/apis/aws/v1alpha1"
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -15,6 +19,173 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestMaxPodsClamping(t *testing.T) {
+	t.Run("Clamp maxPods when higher than calculated from pods CIDR", func(t *testing.T) {
+		// given: per-node /24 cap first (2000 -> 254), then pool /22 = 1022; sum 254 within pool
+		shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
+		workers := fixWorkers("worker", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a"})
+		workers[0].Kubernetes = &gardener.WorkerKubernetes{
+			Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(2000))},
+		}
+		rt := imv1.Runtime{
+			Spec: imv1.RuntimeSpec{
+				Shoot: imv1.RuntimeShoot{
+					Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAWS, workers),
+					Networking: imv1.Networking{
+						Pods:     "100.64.0.0/22", // /22 = 1022 usable
+						Nodes:    "10.250.0.0/22",
+						Services: "100.104.0.0/13",
+					},
+				},
+			},
+		}
+
+		// when
+		extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: "gardenlinux", DefaultVersion: "1312.3.0"}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
+		err := extender(rt, &shoot)
+
+		// then
+		require.NoError(t, err)
+		require.NotNil(t, shoot.Spec.Provider.Workers[0].Kubernetes)
+		require.NotNil(t, shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet)
+		require.NotNil(t, shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.MaxPods)
+		assert.Equal(t, int32(254), *shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.MaxPods)
+	})
+	t.Run("Leave maxPods unchanged when in valid range", func(t *testing.T) {
+		// given: pods /22 = 1022 usable, worker has maxPods 100
+		shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
+		workers := fixWorkers("worker", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a"})
+		workers[0].Kubernetes = &gardener.WorkerKubernetes{
+			Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(100))},
+		}
+		rt := imv1.Runtime{
+			Spec: imv1.RuntimeSpec{
+				Shoot: imv1.RuntimeShoot{
+					Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAWS, workers),
+					Networking: imv1.Networking{
+						Pods:     "100.64.0.0/22",
+						Nodes:    "10.250.0.0/22",
+						Services: "100.104.0.0/13",
+					},
+				},
+			},
+		}
+
+		// when
+		extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: "gardenlinux", DefaultVersion: "1312.3.0"}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
+		err := extender(rt, &shoot)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, int32(100), *shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.MaxPods)
+	})
+	t.Run("Return error for invalid pods CIDR", func(t *testing.T) {
+		shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
+		rt := imv1.Runtime{
+			Spec: imv1.RuntimeSpec{
+				Shoot: imv1.RuntimeShoot{
+					Provider: fixProvider(hyperscaler.TypeAWS, "gardenlinux", "1312.2.0", []string{"eu-central-1a"}),
+					Networking: imv1.Networking{
+						Pods:     "invalid",
+						Nodes:    "10.250.0.0/22",
+						Services: "100.104.0.0/13",
+					},
+				},
+			},
+		}
+
+		extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: "gardenlinux", DefaultVersion: "1312.3.0"}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
+		err := extender(rt, &shoot)
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid pods CIDR for maxPods calculation")
+	})
+	t.Run("Return error for IPv6 pods CIDR", func(t *testing.T) {
+		shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
+		workers := fixWorkers("worker", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a"})
+		workers[0].Kubernetes = &gardener.WorkerKubernetes{
+			Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(100))},
+		}
+		rt := imv1.Runtime{
+			Spec: imv1.RuntimeSpec{
+				Shoot: imv1.RuntimeShoot{
+					Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAWS, workers),
+					Networking: imv1.Networking{
+						Pods:     "2001:db8::/120",
+						Nodes:    "10.250.0.0/22",
+						Services: "100.104.0.0/13",
+					},
+				},
+			},
+		}
+
+		extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: "gardenlinux", DefaultVersion: "1312.3.0"}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
+		err := extender(rt, &shoot)
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid pods CIDR for maxPods calculation")
+	})
+	t.Run("Empty pods CIDR: per-node /24 cap only, skip aggregate clamping", func(t *testing.T) {
+		// given: no pods CIDR — cannot sum maxPods against cluster pod IPs; /24 per-node limit still applies
+		shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
+		workers := fixWorkers("worker", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a"})
+		workers[0].Kubernetes = &gardener.WorkerKubernetes{
+			Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(500))},
+		}
+		rt := imv1.Runtime{
+			Spec: imv1.RuntimeSpec{
+				Shoot: imv1.RuntimeShoot{
+					Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAWS, workers),
+					Networking: imv1.Networking{
+						Pods:     "",
+						Nodes:    "10.250.0.0/22",
+						Services: "100.104.0.0/13",
+					},
+				},
+			},
+		}
+
+		// when
+		extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: "gardenlinux", DefaultVersion: "1312.3.0"}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
+		err := extender(rt, &shoot)
+
+		// then: no error, maxPods clamped to /24 ceiling (254)
+		require.NoError(t, err)
+		assert.Equal(t, int32(254), *shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.MaxPods)
+	})
+	t.Run("Clamp last worker when sum exceeds totalIPs", func(t *testing.T) {
+		// given: per-node cap leaves worker2 at 254; pods /24 = 254 total; sum 100+254 > 254 — clamp last
+		shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
+		workers := fixMultipleWorkers([]workerConfig{
+			{"worker1", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a"}},
+			{"worker2", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a"}},
+		})
+		workers[0].Kubernetes = &gardener.WorkerKubernetes{Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(100))}}
+		workers[1].Kubernetes = &gardener.WorkerKubernetes{Kubelet: &gardener.KubeletConfig{MaxPods: ptr.To(int32(1000))}}
+		rt := imv1.Runtime{
+			Spec: imv1.RuntimeSpec{
+				Shoot: imv1.RuntimeShoot{
+					Provider: fixProviderWithMultipleWorkersAndConfig(hyperscaler.TypeAWS, workers, fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a"}), fixAWSControlPlaneConfig()),
+					Networking: imv1.Networking{
+						Pods:     "100.64.0.0/24",
+						Nodes:    "10.250.0.0/22",
+						Services: "100.104.0.0/13",
+					},
+				},
+			},
+		}
+
+		// when
+		extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: "gardenlinux", DefaultVersion: "1312.3.0"}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
+		err := extender(rt, &shoot)
+
+		// then: worker1 unchanged (100), worker2 aggregate-clamped (254 -> 154)
+		require.NoError(t, err)
+		assert.Equal(t, int32(100), *shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.MaxPods)
+		assert.Equal(t, int32(154), *shoot.Spec.Provider.Workers[1].Kubernetes.Kubelet.MaxPods)
+	})
+}
 
 func TestValidations(t *testing.T) {
 	t.Run("Return error for unknown provider", func(t *testing.T) {
@@ -31,7 +202,7 @@ func TestValidations(t *testing.T) {
 		}
 
 		// when
-		extender := NewProviderExtenderForCreateOperation(false, false, "", "")
+		extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
 		err := extender(rt, &shoot)
 
 		// then
@@ -52,7 +223,9 @@ func TestFixAlignWorkerZonesWithGardener(t *testing.T) {
 						{"additional", "m7i.large", "gardenlinux", "1311.2.0", 2, 4, []string{"eu-central-1a"}},
 					}), fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}), fixAWSControlPlaneConfig()),
 					Networking: imv1.Networking{
-						Nodes: "10.250.0.0/22",
+						Pods:     "100.64.0.0/22",
+						Nodes:    "10.250.0.0/22",
+						Services: "100.104.0.0/13",
 					},
 				},
 			},
@@ -64,7 +237,7 @@ func TestFixAlignWorkerZonesWithGardener(t *testing.T) {
 		})
 
 		// when
-		extender := NewProviderExtenderPatchOperation(false, "gardenlinux", "1311.2.0", currentWorkers, fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}), fixAWSControlPlaneConfig())
+		extender := NewProviderExtenderPatchOperation(false, currentWorkers, config.MachineImageConfig{DefaultName: "gardenlinux", DefaultVersion: "1311.2.0"}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}), fixAWSControlPlaneConfig())
 		err := extender(runtime, &shoot)
 
 		// then
@@ -162,7 +335,9 @@ func TestProviderExtenderForCreateMultipleWorkersAWS(t *testing.T) {
 							{"another", "m8i.large", "gardenlinux", "1312.2.0", 3, 5, []string{"eu-central-1c"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -186,7 +361,9 @@ func TestProviderExtenderForCreateMultipleWorkersAWS(t *testing.T) {
 							{"another", "m8i.large", "gardenlinux", "1312.2.0", 3, 5, []string{"eu-central-1c"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -206,7 +383,7 @@ func TestProviderExtenderForCreateMultipleWorkersAWS(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderForCreateOperation(tc.EnableDualStackIP, tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion)
+			extender := NewProviderExtenderForCreateOperation(tc.EnableDualStackIP, tc.EnableIMDSv2, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
 			err := extender(tc.Runtime, &shoot)
 
 			// then
@@ -240,7 +417,9 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 							{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -265,7 +444,9 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 							{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1d"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -290,7 +471,9 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 							{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -317,7 +500,9 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 							{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1d"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -344,7 +529,9 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 							{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1d"}},
 						}), fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"1", "2", "3"}), fixAWSControlPlaneConfig()),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -371,7 +558,9 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 							{"additional", "m6i.large", "gardenlinux", "1312.2.0", 1, 3, []string{"eu-central-1a"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -396,7 +585,9 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 						Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeAWS, fixMultipleWorkers([]workerConfig{
 							{"main-worker", "m6i.large", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}}})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -422,7 +613,9 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 							{"additional", "m6i.large", "gardenlinux", "1313.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -448,7 +641,9 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 							{"main-worker", "m6i.large", "gardenlinux", "1313.4.0", 1, 3, []string{"eu-central-1a"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -474,7 +669,9 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 							{"additional", "m6i.large", "gardenlinux", "1313.2.0", 1, 3, []string{"eu-central-1a", "eu-central-1b"}},
 						}), fixAWSInfrastructureConfig(t, "10.250.0.0/22", []string{"eu-central-1a", "eu-central-1b", "eu-central-1c"}), fixAWSControlPlaneConfig()),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -498,7 +695,7 @@ func TestProviderExtenderForPatchWorkersUpdateAWS(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderPatchOperation(tc.EnableIMDSv2, tc.DefaultMachineImageName, tc.DefaultMachineImageVersion, tc.CurrentShootWorkers, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig)
+			extender := NewProviderExtenderPatchOperation(tc.EnableIMDSv2, tc.CurrentShootWorkers, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig)
 			err := extender(tc.Runtime, &shoot)
 
 			// then
@@ -526,7 +723,9 @@ func TestProviderExtenderForPatchWorkersUpdateErrors(t *testing.T) {
 							{"main-worker", "m6i.large", "gardenlinux", "1313.4.0", 1, 3, []string{"eu-central-1a"}},
 						})),
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -544,7 +743,9 @@ func TestProviderExtenderForPatchWorkersUpdateErrors(t *testing.T) {
 							Type: "aws",
 						},
 						Networking: imv1.Networking{
-							Nodes: "10.250.0.0/22",
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.250.0.0/22",
+							Services: "100.104.0.0/13",
 						},
 					},
 				},
@@ -560,7 +761,7 @@ func TestProviderExtenderForPatchWorkersUpdateErrors(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderPatchOperation(false, "", "", tc.CurrentShootWorkers, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig)
+			extender := NewProviderExtenderPatchOperation(false, tc.CurrentShootWorkers, config.MachineImageConfig{}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig)
 			err := extender(tc.Runtime, &shoot)
 
 			// then
@@ -600,11 +801,19 @@ func fixProvider(providerType string, machineImageName, machineImageVersion stri
 					Type:  "m6i.large",
 					Image: fixMachineImage(machineImageName, machineImageVersion),
 				},
-				Minimum: 1,
-				Maximum: 3,
-				Zones:   zones,
+				Minimum:                          1,
+				Maximum:                          3,
+				Zones:                            zones,
+				MachineControllerManagerSettings: fixMachineControllerManagerSettings(),
 			},
 		},
+	}
+}
+
+func fixMachineControllerManagerSettings() *gardener.MachineControllerManagerSettings {
+	return &gardener.MachineControllerManagerSettings{
+		MachineDrainTimeout: &metav1.Duration{Duration: 15 * time.Minute},
+		MaxEvictRetries:     ptr.To(int32(2)),
 	}
 }
 
@@ -715,6 +924,7 @@ func assertProvider(t *testing.T, runtimeShoot imv1.RuntimeShoot, shoot gardener
 		}
 		assert.Equal(t, expectedMachineImageVersion, *worker.Machine.Image.Version)
 		assert.Equal(t, expectedMachineImageName, worker.Machine.Image.Name)
+		assert.NotNil(t, worker.MachineControllerManagerSettings)
 	}
 }
 

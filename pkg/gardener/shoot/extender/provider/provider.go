@@ -4,7 +4,10 @@ import (
 	"slices"
 	"sort"
 
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/workers/machinecontroller"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/workers/maxpods"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -19,7 +22,7 @@ import (
 )
 
 // InfrastructureConfig and ControlPlaneConfig are generated unless they are specified in the RuntimeCR
-func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIMDSv2 bool, defMachineImgName, defMachineImgVer string) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIMDSv2 bool, machineImageCfg config.MachineImageConfig, workerMachineCfg config.WorkerConfig) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
 		provider.Type = rt.Spec.Shoot.Provider.Type
@@ -46,18 +49,24 @@ func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIM
 		provider.ControlPlaneConfig = controlPlaneConf
 		provider.InfrastructureConfig = infraConfig
 
-		setMachineImage(provider, defMachineImgName, defMachineImgVer)
+		setMachineImage(provider, machineImageCfg.DefaultName, machineImageCfg.DefaultVersion)
 		if err = setWorkerConfig(provider, provider.Type, enableIMDSv2); err != nil {
 			return err
 		}
-		setWorkerSettings(provider)
+		if err = setWorkerSettings(provider, rt.Spec.Shoot.Networking.Pods); err != nil {
+			return err
+		}
 
-		return err
+		if err = setWorkerMachineControllerManager(provider.Workers, workerMachineCfg.DefaultMachineDrainTimeout, workerMachineCfg.DefaultMaxEvictRetries); err != nil {
+			return err
+		}
+
+		return nil
 	}
 }
 
 // Zones for patching workes are taken from existing shoot workers
-func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, defMachineImgVer string, shootWorkers []gardener.Worker, existingInfraConfig, existingControlPlaneConfig *runtime.RawExtension) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtenderPatchOperation(enableIMDSv2 bool, shootWorkers []gardener.Worker, machineImageCfg config.MachineImageConfig, workerMachineCfg config.WorkerConfig, existingInfraConfig, existingControlPlaneConfig *runtime.RawExtension) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
 		provider.Type = rt.Spec.Shoot.Provider.Type
@@ -105,17 +114,30 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, defMachineImgName, def
 			provider.InfrastructureConfig = infraConfig
 		}
 
-		setMachineImage(provider, defMachineImgName, defMachineImgVer)
+		setMachineImage(provider, machineImageCfg.DefaultName, machineImageCfg.DefaultVersion)
 
 		if err := setWorkerConfig(provider, provider.Type, enableIMDSv2); err != nil {
 			return err
 		}
 
-		setWorkerSettings(provider)
+		if err = setWorkerSettings(provider, rt.Spec.Shoot.Networking.Pods); err != nil {
+			return err
+		}
+
+		if err = setWorkerMachineControllerManager(provider.Workers, workerMachineCfg.DefaultMachineDrainTimeout, workerMachineCfg.DefaultMaxEvictRetries); err != nil {
+			return err
+		}
+
+		// alignWorkersWithGardener runs after maxPods clamping. It only aligns zones, machine image, and
+		// update strategy from existing Shoot workers; it does not touch maxPods, so clamped values are preserved.
 		alignWorkersWithGardener(provider, shootWorkers)
 
 		return nil
 	}
+}
+
+func setWorkerMachineControllerManager(workers []gardener.Worker, defaultDrainTimeout, defaultEvictRetries string) error {
+	return machinecontroller.ApplyMachineControllerManagerConfig(workers, defaultDrainTimeout, defaultEvictRetries)
 }
 
 func isAzureLiteSetup(providerType string, infraConfigBytes []byte) (bool, error) {
@@ -268,12 +290,33 @@ func setWorkerConfig(provider *gardener.Provider, providerType string, enableIMD
 	return nil
 }
 
-func setWorkerSettings(provider *gardener.Provider) {
+func setWorkerSettings(provider *gardener.Provider, podsCIDR string) error {
 	provider.WorkersSettings = &gardener.WorkersSettings{
 		SSHAccess: &gardener.SSHAccess{
 			Enabled: false,
 		},
 	}
+
+	perNodeLimit, err := maxpods.MaxPodsFromCIDR(maxpods.CanonicalPodsCIDRSlash24)
+	if err != nil {
+		return errors.Wrap(err, "per-node maxPods limit from /24 pods CIDR")
+	}
+	maxpods.ApplyPerNodeMaxPodsCap(provider.Workers, int32(perNodeLimit))
+
+	if podsCIDR == "" {
+		return nil
+	}
+
+	totalIPs, err := maxpods.MaxPodsFromCIDR(podsCIDR)
+	if err != nil {
+		return errors.Wrap(err, "invalid pods CIDR for maxPods calculation")
+	}
+
+	if err := maxpods.ApplyMaxPodsWithTotalCap(provider.Workers, totalIPs); err != nil {
+		return errors.Wrap(err, "maxPods clamping")
+	}
+
+	return nil
 }
 
 // It sets the machine image name and version to the values specified in the Runtime worker configuration.
