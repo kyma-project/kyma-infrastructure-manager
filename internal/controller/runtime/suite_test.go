@@ -30,9 +30,9 @@ import (
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
 	fsm_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
+	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
@@ -139,11 +139,20 @@ var _ = BeforeSuite(func() {
 
 	runtimeClientGetterMock.On("Get", mock.Anything, mock.Anything).Return(fakeClient, nil)
 
+	// Create a mock audit log data provider for tests
+	mockAuditLogProvider := &mockAuditLogDataProvider{
+		data: auditlog.AuditLogData{
+			TenantID:   "test-tenant",
+			ServiceURL: "http://test-service",
+			SecretName: "test-secret",
+		},
+	}
+
 	fsmCfg := fsm.RCCfg{
 		Finalizer:                     imv1.Finalizer,
 		Config:                        convConfig,
 		Metrics:                       mm,
-		AuditLogging:                  map[string]map[string]auditlogs.AuditLogData{},
+		AuditLogDataProvider:          mockAuditLogProvider,
 		GardenerRequeueDuration:       3 * time.Second,
 		ControlPlaneRequeueDuration:   3 * time.Second,
 		RequeueDurationShootReconcile: 3 * time.Second,
@@ -473,4 +482,29 @@ func addAuditLogConfigToShoot(shoot *gardener_api.Shoot) {
 
 	ext.ProviderConfig = &runtime.RawExtension{}
 	ext.ProviderConfig.Raw, _ = json.Marshal(cfg)
+}
+
+// mockAuditLogDataProvider is a simple mock implementation for testing
+type mockAuditLogDataProvider struct {
+	data auditlog.AuditLogData
+}
+
+func (m *mockAuditLogDataProvider) ReserveAuditLog(_ context.Context, _, _, _ string) error {
+	return nil
+}
+
+func (m *mockAuditLogDataProvider) GetDedicatedAuditLogData(_ context.Context, _ string, _ bool) (auditlog.AuditLogData, error) {
+	return m.data, nil
+}
+
+func (m *mockAuditLogDataProvider) GetSharedAuditLogData(_ context.Context, _, _ string) (auditlog.AuditLogData, error) {
+	return m.data, nil
+}
+
+func (m *mockAuditLogDataProvider) IsDedicated(_ context.Context, _ string) (bool, error) {
+	return false, nil
+}
+
+func (m *mockAuditLogDataProvider) ReleaseDedicated(_ context.Context, _ string) error {
+	return nil
 }

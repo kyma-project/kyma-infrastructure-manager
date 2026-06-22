@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
@@ -34,13 +35,24 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		s.instance.Spec.AuditLogAccessEnabled != nil &&
 		*s.instance.Spec.AuditLogAccessEnabled
 
-	data, err := m.AuditLogDataProvider.GetAuditLogData(
-		ctx,
-		s.instance.Spec.Shoot.Provider.Type,
-		s.instance.Spec.Shoot.Region,
-		s.instance.GetName(),
-		dedicatedAuditLogs,
-	)
+	var data auditlog.AuditLogData
+	var err error
+
+	if dedicatedAuditLogs {
+		// Get dedicated audit log data (without claiming)
+		data, err = m.AuditLogDataProvider.GetDedicatedAuditLogData(
+			ctx,
+			s.instance.GetName(),
+			false, // don't claim, just retrieve
+		)
+	} else {
+		// Use shared configuration
+		data, err = m.AuditLogDataProvider.GetSharedAuditLogData(
+			ctx,
+			s.instance.Spec.Shoot.Provider.Type,
+			s.instance.Spec.Shoot.Region,
+		)
+	}
 
 	if err != nil {
 		m.log.Error(err, msgFailedToConfigureAuditlogs)

@@ -80,7 +80,9 @@ func (p *DefaultDataProvider) findAuditLogCRByReservation(ctx context.Context, r
 			"runtimeID", runtimeID, "count", len(auditLogList.Items))
 	}
 
-	return &auditLogList.Items[0], nil
+	// Return a copy to avoid dangling pointer after auditLogList goes out of scope
+	result := auditLogList.Items[0]
+	return &result, nil
 }
 
 // getOrClaimAuditLogCR performs Phase 2 of two-phase claim: upgrades reservation to full claim
@@ -139,7 +141,9 @@ func (p *DefaultDataProvider) findAuditLogCRByRuntimeID(ctx context.Context, run
 			"runtimeID", runtimeID, "count", len(auditLogList.Items))
 	}
 
-	return &auditLogList.Items[0], nil
+	// Return a copy to avoid dangling pointer after auditLogList goes out of scope
+	result := auditLogList.Items[0]
+	return &result, nil
 }
 
 // findAvailableAuditLogCR finds an available AuditLogCR from the pool

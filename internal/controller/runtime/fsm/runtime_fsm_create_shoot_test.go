@@ -5,6 +5,7 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
+	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
@@ -30,10 +31,25 @@ var _ = Describe("KIM sFnCreateShoot", func() {
 			var fakeClient = fake.NewClientBuilder().
 				WithScheme(scheme).
 				Build()
-			testFsm := &fsm{K8s: K8s{
-				GardenClient: fakeClient,
-				KcpClient:    fakeClient,
-			}}
+
+			// Create mock audit log provider
+			mockProvider := &mockAuditLogDataProvider{
+				data: auditlog.AuditLogData{
+					TenantID:   "test-tenant",
+					ServiceURL: "http://test-service",
+					SecretName: "test-secret",
+				},
+			}
+
+			testFsm := &fsm{
+				K8s: K8s{
+					GardenClient: fakeClient,
+					KcpClient:    fakeClient,
+				},
+				RCCfg: RCCfg{
+					AuditLogDataProvider: mockProvider,
+				},
+			}
 			testFsm.ConverterConfig.Provider.Worker = config.WorkerConfig{
 				DefaultMaxEvictRetries:     "2",
 				DefaultMachineDrainTimeout: "15m",

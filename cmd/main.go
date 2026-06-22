@@ -286,7 +286,6 @@ func main() {
 	auditLogDataProvider := auditlog.NewDataProvider(
 		mgr.GetClient(),
 		auditLogSharedConfig,
-		dedicatedAuditLoggingEnabled,
 		logger,
 	)
 

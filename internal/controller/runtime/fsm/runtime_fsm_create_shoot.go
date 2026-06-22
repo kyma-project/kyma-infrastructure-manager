@@ -79,7 +79,6 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 
 		m.log.Info("Dedicated audit logging configuration reserved, proceeding with shoot creation",
 			"runtimeID", s.instance.GetName())
-
 	}
 
 	cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
@@ -97,12 +96,10 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 			msgFailedStructuredConfigMap)
 	}
 
-	data, err := m.AuditLogDataProvider.GetAuditLogData(
+	data, err := m.AuditLogDataProvider.GetSharedAuditLogData(
 		ctx,
 		s.instance.Spec.Shoot.Provider.Type,
 		s.instance.Spec.Shoot.Region,
-		s.instance.GetName(),
-		false, // use shared config for initial shoot creation
 	)
 
 	if err != nil {
