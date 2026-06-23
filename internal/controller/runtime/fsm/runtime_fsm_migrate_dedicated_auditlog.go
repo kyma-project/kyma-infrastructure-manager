@@ -82,10 +82,9 @@ func sFnMigrateToDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState) 
 		m.log.Info("Shoot already configured with correct dedicated audit logging, exiting",
 			"runtimeID", runtimeID)
 
-		s.instance.UpdateStatePending(
+		s.instance.UpdateStateReady(
 			imv1.ConditionTypeCustomAuditLogConfigured,
 			imv1.ConditionReasonCustomAuditLogConfigured,
-			metav1.ConditionTrue,
 			"Custom AuditLog shoot configuration completed",
 		)
 

@@ -283,3 +283,173 @@ func TestUpdateAuditLogExtension(t *testing.T) {
 		require.Contains(t, err.Error(), "provider config is nil")
 	})
 }
+
+func TestGetShootAuditLogConfig(t *testing.T) {
+	t.Run("should extract audit log config with secret name from resources", func(t *testing.T) {
+		// given
+		config := extensions.AuditlogExtensionConfig{
+			Type:                "standard",
+			TenantID:            "test-tenant-id",
+			ServiceURL:          "https://test.auditlog.example.com",
+			SecretReferenceName: dedicatedAuditlogSecretReference,
+		}
+		configJSON, _ := json.Marshal(config)
+
+		shoot := &gardener.Shoot{
+			Spec: gardener.ShootSpec{
+				Extensions: []gardener.Extension{
+					{
+						Type: extensions.AuditlogExtensionType,
+						ProviderConfig: &runtime.RawExtension{
+							Raw: configJSON,
+						},
+					},
+				},
+				Resources: []gardener.NamedResourceReference{
+					{
+						Name: dedicatedAuditlogSecretReference,
+						ResourceRef: v1.CrossVersionObjectReference{
+							Name:       "actual-gardener-secret",
+							Kind:       "Secret",
+							APIVersion: "v1",
+						},
+					},
+				},
+			},
+		}
+
+		// when
+		auditLogData, err := getShootAuditLogConfig(shoot)
+
+		// then
+		require.NoError(t, err)
+		require.NotNil(t, auditLogData)
+		require.Equal(t, "test-tenant-id", auditLogData.TenantID)
+		require.Equal(t, "https://test.auditlog.example.com", auditLogData.ServiceURL)
+		require.Equal(t, "actual-gardener-secret", auditLogData.SecretName)
+	})
+
+	t.Run("should return error when resource reference not found", func(t *testing.T) {
+		// given
+		config := extensions.AuditlogExtensionConfig{
+			Type:                "standard",
+			TenantID:            "test-tenant-id",
+			ServiceURL:          "https://test.auditlog.example.com",
+			SecretReferenceName: dedicatedAuditlogSecretReference,
+		}
+		configJSON, _ := json.Marshal(config)
+
+		shoot := &gardener.Shoot{
+			Spec: gardener.ShootSpec{
+				Extensions: []gardener.Extension{
+					{
+						Type: extensions.AuditlogExtensionType,
+						ProviderConfig: &runtime.RawExtension{
+							Raw: configJSON,
+						},
+					},
+				},
+				Resources: []gardener.NamedResourceReference{
+					{
+						Name: "some-other-resource",
+						ResourceRef: v1.CrossVersionObjectReference{
+							Name:       "other-secret",
+							Kind:       "Secret",
+							APIVersion: "v1",
+						},
+					},
+				},
+			},
+		}
+
+		// when
+		auditLogData, err := getShootAuditLogConfig(shoot)
+
+		// then
+		require.Error(t, err)
+		require.Nil(t, auditLogData)
+		require.Contains(t, err.Error(), "resource reference 'dedicated-auditlog-credentials' not found")
+	})
+
+	t.Run("should return error when audit log extension not found", func(t *testing.T) {
+		// given
+		shoot := &gardener.Shoot{
+			Spec: gardener.ShootSpec{
+				Extensions: []gardener.Extension{
+					{
+						Type: "some-other-extension",
+					},
+				},
+			},
+		}
+
+		// when
+		auditLogData, err := getShootAuditLogConfig(shoot)
+
+		// then
+		require.Error(t, err)
+		require.Nil(t, auditLogData)
+		require.Contains(t, err.Error(), "audit log extension not found")
+	})
+}
+
+func TestGetSecretNameFromResources(t *testing.T) {
+	t.Run("should find secret name from resources", func(t *testing.T) {
+		// given
+		shoot := &gardener.Shoot{
+			Spec: gardener.ShootSpec{
+				Resources: []gardener.NamedResourceReference{
+					{
+						Name: "other-resource",
+						ResourceRef: v1.CrossVersionObjectReference{
+							Name:       "other-secret",
+							Kind:       "Secret",
+							APIVersion: "v1",
+						},
+					},
+					{
+						Name: dedicatedAuditlogSecretReference,
+						ResourceRef: v1.CrossVersionObjectReference{
+							Name:       "actual-secret-name",
+							Kind:       "Secret",
+							APIVersion: "v1",
+						},
+					},
+				},
+			},
+		}
+
+		// when
+		secretName, err := getSecretNameFromResources(shoot, dedicatedAuditlogSecretReference)
+
+		// then
+		require.NoError(t, err)
+		require.Equal(t, "actual-secret-name", secretName)
+	})
+
+	t.Run("should return error when resource reference not found", func(t *testing.T) {
+		// given
+		shoot := &gardener.Shoot{
+			Spec: gardener.ShootSpec{
+				Resources: []gardener.NamedResourceReference{
+					{
+						Name: "other-resource",
+						ResourceRef: v1.CrossVersionObjectReference{
+							Name:       "other-secret",
+							Kind:       "Secret",
+							APIVersion: "v1",
+						},
+					},
+				},
+			},
+		}
+
+		// when
+		secretName, err := getSecretNameFromResources(shoot, "non-existent-reference")
+
+		// then
+		require.Error(t, err)
+		require.Empty(t, secretName)
+		require.Contains(t, err.Error(), "resource reference 'non-existent-reference' not found")
+	})
+}

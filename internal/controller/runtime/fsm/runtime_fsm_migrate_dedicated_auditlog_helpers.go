@@ -124,16 +124,33 @@ func getShootAuditLogConfig(shoot *gardener.Shoot) (*auditlog.AuditLogData, erro
 				return nil, fmt.Errorf("failed to unmarshal audit log config: %w", err)
 			}
 
+			// Look up the actual secret name from shoot.Spec.Resources using the SecretReferenceName
+			secretName, err := getSecretNameFromResources(shoot, config.SecretReferenceName)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get secret name from resources: %w", err)
+			}
+
 			// Return the audit log data
 			return &auditlog.AuditLogData{
 				TenantID:   config.TenantID,
 				ServiceURL: config.ServiceURL,
-				SecretName: config.SecretReferenceName,
+				SecretName: secretName,
 			}, nil
 		}
 	}
 
 	return nil, fmt.Errorf("audit log extension not found in shoot spec")
+}
+
+// getSecretNameFromResources looks up the actual Gardener secret name from shoot.Spec.Resources
+// using the resource reference name (e.g., "dedicated-auditlog-credentials" or "auditlog-credentials")
+func getSecretNameFromResources(shoot *gardener.Shoot, resourceReferenceName string) (string, error) {
+	for i := range shoot.Spec.Resources {
+		if shoot.Spec.Resources[i].Name == resourceReferenceName {
+			return shoot.Spec.Resources[i].ResourceRef.Name, nil
+		}
+	}
+	return "", fmt.Errorf("resource reference '%s' not found in shoot.Spec.Resources", resourceReferenceName)
 }
 
 // auditLogConfigsEqual compares two audit log configurations
