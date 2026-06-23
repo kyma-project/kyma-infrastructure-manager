@@ -4,19 +4,26 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
+	v1 "k8s.io/api/autoscaling/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const dedicatedAuditlogSecretReference = "dedicated-auditlog-credentials"
+
 // patchShootAuditLog patches the shoot with dedicated audit log configuration
+// This is a two-part operation:
+// 1. Updates the AuditlogExtension's secretReferenceName to use "dedicated-auditlog-credentials"
+// 2. Adds/updates a NamedResourceReference that maps "dedicated-auditlog-credentials" to the actual Gardener secret
 func patchShootAuditLog(ctx context.Context, m *fsm, s *systemState, auditLogData auditlog.AuditLogData) error {
 	// Create a copy of the shoot to modify
 	patchedShoot := s.shoot.DeepCopy()
 
-	// Find and update the audit log extension
+	// Part 1: Find and update the audit log extension
 	found := false
 	for i := range patchedShoot.Spec.Extensions {
 		if patchedShoot.Spec.Extensions[i].Type == extensions.AuditlogExtensionType {
@@ -31,6 +38,29 @@ func patchShootAuditLog(ctx context.Context, m *fsm, s *systemState, auditLogDat
 
 	if !found {
 		return fmt.Errorf("audit log extension not found in shoot spec")
+	}
+
+	// Part 2: Add or update the secret resource reference
+	resource := gardener.NamedResourceReference{
+		Name: dedicatedAuditlogSecretReference,
+		ResourceRef: v1.CrossVersionObjectReference{
+			Name:       auditLogData.SecretName,
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
+	}
+
+	// Find if the resource reference already exists
+	index := slices.IndexFunc(patchedShoot.Spec.Resources, func(r gardener.NamedResourceReference) bool {
+		return r.Name == dedicatedAuditlogSecretReference
+	})
+
+	if index == -1 {
+		// Add new resource reference
+		patchedShoot.Spec.Resources = append(patchedShoot.Spec.Resources, resource)
+	} else {
+		// Update existing resource reference
+		patchedShoot.Spec.Resources[index] = resource
 	}
 
 	// Patch the shoot resource
@@ -59,7 +89,8 @@ func updateAuditLogExtension(ext *gardener.Extension, auditLogData auditlog.Audi
 	// Update with dedicated audit log settings
 	config.TenantID = auditLogData.TenantID
 	config.ServiceURL = auditLogData.ServiceURL
-	config.SecretReferenceName = auditLogData.SecretName
+	// Use constant resource reference name, not the actual secret name
+	config.SecretReferenceName = dedicatedAuditlogSecretReference
 	config.Type = "standard"
 
 	// Marshal back to JSON

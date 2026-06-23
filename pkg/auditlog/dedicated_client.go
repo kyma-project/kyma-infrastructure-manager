@@ -21,6 +21,10 @@ const (
 // The region parameter is the hyperscaler region (e.g., eu-central-1) that must match one of the
 // AuditLogCR's spec.regions entries
 func (p *DefaultDataProvider) reserveAuditLogCR(ctx context.Context, runtimeID string, region string) error {
+	if runtimeID == "" {
+		return fmt.Errorf("runtimeID is empty")
+	}
+
 	// Check if we already have a reservation
 	reserved, err := p.findAuditLogCRByReservation(ctx, runtimeID)
 	if err != nil {
@@ -45,7 +49,7 @@ func (p *DefaultDataProvider) reserveAuditLogCR(ctx context.Context, runtimeID s
 		available.Labels = make(map[string]string)
 	}
 	available.Labels[LabelReservedForRuntimeID] = runtimeID
-	available.Labels[LabelReservedAt] = time.Now().UTC().Format(time.RFC3339)
+	available.Labels[LabelReservedAt] = fmt.Sprintf("%d", time.Now().UTC().Unix())
 
 	// Update with optimistic concurrency
 	if err := p.client.Update(ctx, available); err != nil {

@@ -57,6 +57,7 @@ import (
 	runtimecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
 	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
+	auditlogv1 "github.com/kyma-project/infrastructure-manager/pkg/auditlog/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
@@ -75,6 +76,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(infrastructuremanagerv1.AddToScheme(scheme))
 	utilruntime.Must(rbacv1.AddToScheme(scheme))
+	utilruntime.Must(auditlogv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 

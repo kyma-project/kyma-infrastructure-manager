@@ -65,7 +65,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		err := m.AuditLogDataProvider.ReserveAuditLog(
 			ctx,
 			s.instance.Spec.Shoot.Region,
-			s.instance.GetName(),
+			s.instance.Labels[imv1.LabelKymaRuntimeID],
 		)
 
 		if err != nil {

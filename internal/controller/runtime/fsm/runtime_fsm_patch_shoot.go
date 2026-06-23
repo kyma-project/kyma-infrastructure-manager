@@ -39,10 +39,12 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	var err error
 
 	if dedicatedAuditLogs {
+		runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
+
 		// Get dedicated audit log data (without claiming)
 		data, err = m.AuditLogDataProvider.GetDedicatedAuditLogData(
 			ctx,
-			s.instance.GetName(),
+			runtimeID,
 			false, // don't claim, just retrieve
 		)
 	} else {

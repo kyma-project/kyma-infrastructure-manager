@@ -77,7 +77,7 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 		s.instance.UpdateStateProvisioningCompleted()
 	}
 
-	m.log.Info("Completing provisioning without audit log migration")
+	m.log.Info("Finished configuring shoot without audit log migration")
 	return updateStatusAndStop()
 }
 
