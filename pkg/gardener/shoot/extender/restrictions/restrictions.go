@@ -32,11 +32,12 @@ func extendWithEuAccess(shoot *gardener.Shoot) {
 }
 
 func isEuAccess(platformRegion string) bool {
-	switch platformRegion {
-	case "cf-eu11":
-		return true
-	case "cf-ch20":
-		return true
-	}
-	return false
+	regions := map[string]bool{
+		"cf-eu11": true,
+		"cf-ch20": true,
+		"cf-eu01": true,
+		"cf-eu02": true,
+		"cf-eu31": true}
+
+	return regions[platformRegion]
 }
