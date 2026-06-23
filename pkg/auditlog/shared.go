@@ -1,6 +1,12 @@
 package auditlog
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+
+	"github.com/go-playground/validator/v10"
+)
 
 var (
 	ErrConfigurationNotFound = fmt.Errorf("audit logs configuration not found")
@@ -39,4 +45,29 @@ func (a Configuration) GetAuditLogData(providerType, region string) (AuditLogDat
 	}
 
 	return providerCfgForRegion, nil
+}
+
+// LoadConfiguration loads audit log configuration from a JSON file
+func LoadConfiguration(path string) (Configuration, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var data Configuration
+	if err := json.NewDecoder(file).Decode(&data); err != nil {
+		return nil, err
+	}
+
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	for _, nestedMap := range data {
+		for _, auditLogData := range nestedMap {
+			if err := validate.Struct(auditLogData); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return data, nil
 }

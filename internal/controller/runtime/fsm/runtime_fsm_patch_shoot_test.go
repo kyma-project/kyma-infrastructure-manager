@@ -3,25 +3,28 @@ package fsm
 import (
 	"context"
 	"fmt"
-	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
-	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
-	registrycachev1beta1 "github.com/kyma-project/registry-cache/api/v1beta1"
-	"github.com/pkg/errors"
-	core_v1 "k8s.io/api/core/v1"
-	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 	"time"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	//nolint:revive
-	. "github.com/onsi/gomega" //nolint:revive
+	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
+	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
+	auditlogmocks "github.com/kyma-project/infrastructure-manager/pkg/auditlog/mocks"
+	registrycachev1beta1 "github.com/kyma-project/registry-cache/api/v1beta1"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/mock"
+	core_v1 "k8s.io/api/core/v1"
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	api "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	util "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	//nolint:revive
+	. "github.com/onsi/gomega" //nolint:revive
 )
 
 func TestFSMPatchShoot(t *testing.T) {
@@ -205,13 +208,11 @@ func TestFSMPatchShoot(t *testing.T) {
 }
 
 func setupFakeFSMForTest(scheme *api.Scheme, objs ...client.Object) *fsm {
-	mockProvider := &mockAuditLogDataProvider{
-		data: auditlog.AuditLogData{
-			TenantID:   "test-tenant",
-			ServiceURL: "http://test-service",
-			SecretName: "test-secret",
-		},
-	}
+	mockProvider := newMockAuditLogDataProvider(auditlog.AuditLogData{
+		TenantID:   "test-tenant",
+		ServiceURL: "http://test-service",
+		SecretName: "test-secret",
+	})
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withTestFinalizer,
@@ -224,13 +225,11 @@ func setupFakeFSMForTest(scheme *api.Scheme, objs ...client.Object) *fsm {
 }
 
 func setupFakeFSMUpdatePatchForTest(scheme *api.Scheme, objs ...client.Object) *fsm {
-	mockProvider := &mockAuditLogDataProvider{
-		data: auditlog.AuditLogData{
-			TenantID:   "test-tenant",
-			ServiceURL: "http://test-service",
-			SecretName: "test-secret",
-		},
-	}
+	mockProvider := newMockAuditLogDataProvider(auditlog.AuditLogData{
+		TenantID:   "test-tenant",
+		ServiceURL: "http://test-service",
+		SecretName: "test-secret",
+	})
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withTestFinalizer,
@@ -243,13 +242,11 @@ func setupFakeFSMUpdatePatchForTest(scheme *api.Scheme, objs ...client.Object) *
 }
 
 func setupFakeFSMForTestKeepGeneration(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
-	mockProvider := &mockAuditLogDataProvider{
-		data: auditlog.AuditLogData{
-			TenantID:   "test-tenant",
-			ServiceURL: "http://test-service",
-			SecretName: "test-secret",
-		},
-	}
+	mockProvider := newMockAuditLogDataProvider(auditlog.AuditLogData{
+		TenantID:   "test-tenant",
+		ServiceURL: "http://test-service",
+		SecretName: "test-secret",
+	})
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withShootNamespace("garden-"),
@@ -265,13 +262,11 @@ func setupFakeFSMForTestWithFailingPatchWithInConflictError(scheme *api.Scheme, 
 	gr := schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoot"}
 	err := k8s_errors.NewConflict(gr, "test-shoot", errors.New("test conflict"))
 
-	mockProvider := &mockAuditLogDataProvider{
-		data: auditlog.AuditLogData{
-			TenantID:   "test-tenant",
-			ServiceURL: "http://test-service",
-			SecretName: "test-secret",
-		},
-	}
+	mockProvider := newMockAuditLogDataProvider(auditlog.AuditLogData{
+		TenantID:   "test-tenant",
+		ServiceURL: "http://test-service",
+		SecretName: "test-secret",
+	})
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withShootNamespace("garden-"),
@@ -287,13 +282,11 @@ func setupFakeFSMForTestWithFailingUpdateWithInConflictError(scheme *api.Scheme,
 	gr := schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoot"}
 	err := k8s_errors.NewConflict(gr, "test-shoot", errors.New("test conflict"))
 
-	mockProvider := &mockAuditLogDataProvider{
-		data: auditlog.AuditLogData{
-			TenantID:   "test-tenant",
-			ServiceURL: "http://test-service",
-			SecretName: "test-secret",
-		},
-	}
+	mockProvider := newMockAuditLogDataProvider(auditlog.AuditLogData{
+		TenantID:   "test-tenant",
+		ServiceURL: "http://test-service",
+		SecretName: "test-secret",
+	})
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withShootNamespace("garden-"),
@@ -309,13 +302,11 @@ func setupFakeFSMForTestWithFailingPatchWithForbiddenError(scheme *api.Scheme, r
 	gr := schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoot"}
 	err := k8s_errors.NewForbidden(gr, "test-shoot", errors.New("test forbidden"))
 
-	mockProvider := &mockAuditLogDataProvider{
-		data: auditlog.AuditLogData{
-			TenantID:   "test-tenant",
-			ServiceURL: "http://test-service",
-			SecretName: "test-secret",
-		},
-	}
+	mockProvider := newMockAuditLogDataProvider(auditlog.AuditLogData{
+		TenantID:   "test-tenant",
+		ServiceURL: "http://test-service",
+		SecretName: "test-secret",
+	})
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withShootNamespace("garden-"),
@@ -331,13 +322,11 @@ func setupFakeFSMForTestWithFailingUpdateWithForbiddenError(scheme *api.Scheme, 
 	gr := schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoot"}
 	err := k8s_errors.NewForbidden(gr, "test-shoot", errors.New("test forbidden"))
 
-	mockProvider := &mockAuditLogDataProvider{
-		data: auditlog.AuditLogData{
-			TenantID:   "test-tenant",
-			ServiceURL: "http://test-service",
-			SecretName: "test-secret",
-		},
-	}
+	mockProvider := newMockAuditLogDataProvider(auditlog.AuditLogData{
+		TenantID:   "test-tenant",
+		ServiceURL: "http://test-service",
+		SecretName: "test-secret",
+	})
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withShootNamespace("garden-"),
@@ -352,13 +341,11 @@ func setupFakeFSMForTestWithFailingUpdateWithForbiddenError(scheme *api.Scheme, 
 func setupFakeFSMForTestWithFailingPatchWithOtherError(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	err := k8s_errors.NewUnauthorized("test unauthorized")
 
-	mockProvider := &mockAuditLogDataProvider{
-		data: auditlog.AuditLogData{
-			TenantID:   "test-tenant",
-			ServiceURL: "http://test-service",
-			SecretName: "test-secret",
-		},
-	}
+	mockProvider := newMockAuditLogDataProvider(auditlog.AuditLogData{
+		TenantID:   "test-tenant",
+		ServiceURL: "http://test-service",
+		SecretName: "test-secret",
+	})
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withShootNamespace("garden-"),
@@ -373,13 +360,11 @@ func setupFakeFSMForTestWithFailingPatchWithOtherError(scheme *api.Scheme, runti
 func setupFakeFSMForTestWithFailingUpdateWithOtherError(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
 	err := k8s_errors.NewUnauthorized("test unauthorized")
 
-	mockProvider := &mockAuditLogDataProvider{
-		data: auditlog.AuditLogData{
-			TenantID:   "test-tenant",
-			ServiceURL: "http://test-service",
-			SecretName: "test-secret",
-		},
-	}
+	mockProvider := newMockAuditLogDataProvider(auditlog.AuditLogData{
+		TenantID:   "test-tenant",
+		ServiceURL: "http://test-service",
+		SecretName: "test-secret",
+	})
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withShootNamespace("garden-"),
@@ -392,8 +377,7 @@ func setupFakeFSMForTestWithFailingUpdateWithOtherError(scheme *api.Scheme, runt
 }
 
 func setupFakeFSMForTestWithAuditLogMandatory(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
-	// Mock that returns errors for audit log operations
-	mockProvider := &mockAuditLogDataProviderWithError{}
+	mockProvider := newMockAuditLogDataProviderWithError()
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withShootNamespace("garden-"),
@@ -407,13 +391,11 @@ func setupFakeFSMForTestWithAuditLogMandatory(scheme *api.Scheme, runtime *imv1.
 }
 
 func setupFakeFSMForTestWithAuditLogMandatoryAndConfig(scheme *api.Scheme, runtime *imv1.Runtime) *fsm {
-	mockProvider := &mockAuditLogDataProvider{
-		data: auditlog.AuditLogData{
-			TenantID:   "test-tenant",
-			ServiceURL: "http://test-auditlog-service",
-			SecretName: "test-secret",
-		},
-	}
+	mockProvider := newMockAuditLogDataProvider(auditlog.AuditLogData{
+		TenantID:   "test-tenant",
+		ServiceURL: "http://test-auditlog-service",
+		SecretName: "test-secret",
+	})
 	return must(newFakeFSM,
 		withMockedMetrics(),
 		withShootNamespace("garden-"),
@@ -596,50 +578,24 @@ func Test_SFnPatchExistingShoot_CredentialsBindingPatched(t *testing.T) {
 	Expect(sFn).To(Not(BeNil()))
 }
 
-// mockAuditLogDataProvider is a simple mock implementation for testing
-type mockAuditLogDataProvider struct {
-	data auditlog.AuditLogData
+// newMockAuditLogDataProvider creates a mock DataProvider that returns the given data
+func newMockAuditLogDataProvider(data auditlog.AuditLogData) *auditlogmocks.DataProvider {
+	mockProvider := &auditlogmocks.DataProvider{}
+	mockProvider.On("ReserveAuditLog", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(data, nil)
+	mockProvider.On("GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(data, nil)
+	mockProvider.On("IsDedicated", mock.Anything, mock.Anything).Return(false, nil)
+	mockProvider.On("ReleaseDedicated", mock.Anything, mock.Anything).Return(nil)
+	return mockProvider
 }
 
-func (m *mockAuditLogDataProvider) ReserveAuditLog(_ context.Context, _, _, _ string) error {
-	return nil
-}
-
-func (m *mockAuditLogDataProvider) GetDedicatedAuditLogData(_ context.Context, _ string, _ bool) (auditlog.AuditLogData, error) {
-	return m.data, nil
-}
-
-func (m *mockAuditLogDataProvider) GetSharedAuditLogData(_ context.Context, _, _ string) (auditlog.AuditLogData, error) {
-	return m.data, nil
-}
-
-func (m *mockAuditLogDataProvider) IsDedicated(_ context.Context, _ string) (bool, error) {
-	return false, nil
-}
-
-func (m *mockAuditLogDataProvider) ReleaseDedicated(_ context.Context, _ string) error {
-	return nil
-}
-
-// mockAuditLogDataProviderWithError returns errors for all operations
-type mockAuditLogDataProviderWithError struct{}
-
-func (m *mockAuditLogDataProviderWithError) ReserveAuditLog(_ context.Context, _, _, _ string) error {
-	return fmt.Errorf("mock audit log reservation error")
-}
-
-func (m *mockAuditLogDataProviderWithError) GetDedicatedAuditLogData(_ context.Context, _ string, _ bool) (auditlog.AuditLogData, error) {
-	return auditlog.AuditLogData{}, fmt.Errorf("mock audit log error")
-}
-
-func (m *mockAuditLogDataProviderWithError) GetSharedAuditLogData(_ context.Context, _, _ string) (auditlog.AuditLogData, error) {
-	return auditlog.AuditLogData{}, fmt.Errorf("mock audit log error")
-}
-
-func (m *mockAuditLogDataProviderWithError) IsDedicated(_ context.Context, _ string) (bool, error) {
-	return false, nil
-}
-
-func (m *mockAuditLogDataProviderWithError) ReleaseDedicated(_ context.Context, _ string) error {
-	return nil
+// newMockAuditLogDataProviderWithError creates a mock DataProvider that returns errors
+func newMockAuditLogDataProviderWithError() *auditlogmocks.DataProvider {
+	mockProvider := &auditlogmocks.DataProvider{}
+	mockProvider.On("ReserveAuditLog", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("mock audit log reservation error"))
+	mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(auditlog.AuditLogData{}, fmt.Errorf("mock audit log error"))
+	mockProvider.On("GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(auditlog.AuditLogData{}, fmt.Errorf("mock audit log error"))
+	mockProvider.On("IsDedicated", mock.Anything, mock.Anything).Return(false, nil)
+	mockProvider.On("ReleaseDedicated", mock.Anything, mock.Anything).Return(nil)
+	return mockProvider
 }

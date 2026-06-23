@@ -18,16 +18,17 @@ The Kyma Audit Log Manager (KALM) introduces a pool-based approach for provision
 
 ## KALM Pool Architecture
 
-KALM maintains a pool of pre-provisioned `AuditLog` CRs in the `SiemApproved` state. These CRs contain:
+KALM maintains a pool of pre-provisioned `AuditLog` CRs. CRs become available for reservation once they reach the `RegistrationReady` or `SiemApproved` state. These CRs contain:
 - BTP subaccount with audit log service provisioned
 - Service credentials stored in Gardener secrets
-- SIEM registration completed
+- SIEM registration completed (for `SiemApproved`) or registration pending (for `RegistrationReady`)
+- **Regions list**: `spec.regions` array containing hyperscaler regions this CR can serve (e.g., `["eu-central-1", "eu-west-2"]`)
 - Ready to be assigned to a Kyma Runtime
 
 Key KALM states:
 - `Pending`: Initial state, BTP resources being provisioned
-- `RegistrationReady`: BTP resources ready, awaiting SIEM registration
-- `SiemApproved`: In the pool, ready for assignment
+- `RegistrationReady`: BTP resources ready, awaiting SIEM registration — **available for reservation**
+- `SiemApproved`: SIEM registration completed, in the pool — **available for reservation**
 - `Assigned`: Claimed by a runtime, in use
 - `Orphaned`: Runtime deleted, in retention period (default: 90 days)
 
@@ -195,44 +196,44 @@ All these steps complete successfully before any dedicated audit logging resourc
 
 ### Phase 3: Migrate to Dedicated Audit Logging (Final Step)
 
-After **all provisioning is complete**, the `sFnMigrateToDedicatedAuditLog` state executes as the absolute final step. This state uses an optimized order of operations to minimize side effects and handle errors gracefully:
+After **all provisioning is complete**, the `sFnMigrateToDedicatedAuditLog` state executes as the absolute final step. This state claims the reserved resource and patches the shoot:
 
-**Step 1: Get Reserved Audit Log Data** (read-only, no side effects)
-- Retrieves configuration from the reserved AuditLogCR (using reservation label)
-- Fails immediately if no reservation found
-- No resources claimed yet - safe to fail
+**Step 1: Get Audit Log Data and Claim** (atomic operation)
+- Calls `GetDedicatedAuditLogData(ctx, runtimeID, claim=true)`
+- Finds the reserved AuditLogCR by label
+- Upgrades reservation to claim by setting `AssignedToRuntimeID`
+- Returns audit log configuration
+- Fails provisioning immediately if claim fails (no fallback)
 
-**Step 2: Get Current Shoot Configuration** (read-only, no side effects)
+**Step 2: Get Current Shoot Configuration** (read-only)
 - Extracts current audit log config from shoot's extension
-- Compares with desired configuration
-- Determines if patch is needed
+- Uses helper function `getShootAuditLogConfig(shoot)`
 
-**Step 3: Confirm Reservation** (upgrade light lock to heavy lock)
-- Calls `ConfirmReservation(runtimeID)` to upgrade reservation to claim
-- Sets `AuditLog.Spec.AssignedToRuntimeID = runtimeID` (heavy lock)
-- **Always happens**, even if configs are equal (ensures reservation is confirmed)
-- Idempotent: safe to retry if already claimed
-- Fails provisioning if reservation cannot be confirmed
+**Step 3: Compare Configurations**
+- Uses `auditLogConfigsEqual()` to compare current and desired
+- Compares TenantID, ServiceURL, and SecretName
 
 **Step 4: Conditional Patch** (only if configurations differ)
 - If configs are equal: Skip patch, complete provisioning immediately
 - If configs differ: Patch shoot with dedicated audit log configuration
-- Uses values from `AuditLog.Spec.Config.ServiceURL` and `AuditLog.Spec.Config.GardenerSecretName`
+- Uses `patchShootAuditLog()` helper function
 - If patch fails: Requeue (claim persists, retry patch on next reconciliation)
 
 **Step 5: Complete Provisioning**
 - Sets `ProvisioningCompleted` status
 - Returns `updateStatusAndStop()` (no explicit requeue)
-- Gardener shoot reconciliation will trigger Runtime reconciliation if needed
+
+**Condition Types Used**:
+- `ConditionTypeCustomAuditlogConfigured` - Dedicated condition for audit log status
+- `ConditionReasonCustomAuditLogError` - When claim or config retrieval fails
+- `ConditionReasonCustomAuditLogConfigured` - When successfully configured
 
 **Key Properties**:
-- **Read-only operations first**: No side effects until commit point (claim)
-- **Always confirms claim**: Even when configs equal, ensuring reservation is locked
-- **Idempotent at every step**: Safe to retry from any failure point
+- **No fallback**: If dedicated config cannot be obtained, provisioning fails explicitly
+- **Claim first**: Resource is claimed before any patch attempt
 - **Efficient**: Skips unnecessary patches when configs already match
+- **Idempotent at every step**: Safe to retry from any failure point
 - **Clean completion**: No unnecessary requeues after success
-- **Atomic claim**: Once claimed, resource is locked even if patch fails
-- **Optimistic concurrency**: Kubernetes resourceVersion prevents double-claiming
 
 ## Rejected Alternatives
 
@@ -284,22 +285,35 @@ All audit log operations are abstracted behind the `auditlog.DataProvider` inter
 
 ```go
 type DataProvider interface {
-    // Returns audit log data from dedicated or shared config
-    GetAuditLogData(ctx, providerType, region, runtimeID, useDedicated) (AuditLogData, error)
-    
-    // Checks if runtime is using dedicated logging
-    IsDedicated(ctx, runtimeID) (bool, error)
-    
-    // Releases dedicated AuditLogCR (marks as orphaned)
-    ReleaseDedicated(ctx, runtimeID) error
+    // ReserveAuditLog performs Phase 1 of the two-phase claim: reserves an AuditLogCR by adding labels
+    // This should be called before shoot creation to ensure a resource is available
+    // The providerRegion is the hyperscaler region (e.g., "eu-central-1") that must match
+    // one of the AuditLogCR's spec.regions entries
+    // Returns error if no available AuditLogCR is found for the given region
+    ReserveAuditLog(ctx context.Context, providerRegion string, runtimeID string) error
+
+    // GetDedicatedAuditLogData returns audit log configuration from AuditLogCR
+    // When claim=true, performs Phase 2: upgrades reservation to full claim (sets assignedToRuntimeID)
+    // When claim=false, only retrieves data from already claimed/reserved resource
+    GetDedicatedAuditLogData(ctx context.Context, runtimeID string, claim bool) (AuditLogData, error)
+
+    // GetSharedAuditLogData returns audit log configuration from shared configuration file
+    GetSharedAuditLogData(ctx context.Context, providerType, region string) (AuditLogData, error)
+
+    // IsDedicated checks if the runtime is using dedicated audit logging
+    IsDedicated(ctx context.Context, runtimeID string) (bool, error)
+
+    // ReleaseDedicated releases the claimed AuditLogCR (marks as orphaned)
+    ReleaseDedicated(ctx context.Context, runtimeID string) error
 }
 ```
 
 **Benefits**:
-- FSM doesn't need to know about claiming logic
+- Clear separation between shared and dedicated audit log sources
+- Two-phase claim with explicit `ReserveAuditLog` and `GetDedicatedAuditLogData(claim=true)`
+- Feature flag handling at FSM level, not in provider
 - Easy to mock for testing
-- Shared vs dedicated decision is encapsulated
-- Graceful fallback to shared config is transparent
+- No implicit fallback - dedicated requests fail explicitly if unavailable
 
 ### Claiming Algorithm: Two-Phase Reservation
 
@@ -315,17 +329,19 @@ We use Kubernetes labels as a "light lock" mechanism to reserve an AuditLogCR du
 
 **Phase 1: Reserve (in `sFnCreateShoot`)**
 ```go
-func reserveAuditLogCR(ctx, runtimeID) (*AuditLog, error) {
+func reserveAuditLogCR(ctx, runtimeID, region string) error {
     // 1. Check if we already have a reservation
     reserved := findAuditLogCRByLabel(ctx, "reserved-for-runtime-id", runtimeID)
     if reserved != nil {
-        return reserved, nil // Already reserved for us
+        return nil // Already reserved for us
     }
     
-    // 2. Find available CR (state = SiemApproved, assignedToRuntimeID = "", no reservation label)
-    available := findAvailableAuditLogCR(ctx)
+    // 2. Find available CR matching the region
+    // CR must be: state = RegistrationReady or SiemApproved, assignedToRuntimeID = "", 
+    // no reservation label, AND region must be in CR's spec.regions array
+    available := findAvailableAuditLogCR(ctx, region)
     if available == nil {
-        return nil, ErrNoAvailableAuditLog
+        return fmt.Errorf("no available AuditLogCR in the pool for region %s", region)
     }
     
     // 3. Add reservation labels (light lock)
@@ -338,11 +354,46 @@ func reserveAuditLogCR(ctx, runtimeID) (*AuditLog, error) {
     // 4. Update with optimistic concurrency
     err := client.Update(ctx, available)
     if IsConflict(err) {
-        // Another runtime reserved it concurrently, retry with different CR
-        return nil, ErrConflictReserving
+        // Another runtime reserved it concurrently, caller should retry
+        return fmt.Errorf("conflict reserving AuditLogCR: another runtime reserved it concurrently")
     }
     
-    return available, nil
+    return nil
+}
+
+// findAvailableAuditLogCR finds an available AuditLogCR that serves the given region
+func findAvailableAuditLogCR(ctx, region string) *AuditLog {
+    list := client.List(ctx, &AuditLogList{})
+    
+    for _, cr := range list.Items {
+        // Check state (RegistrationReady or SiemApproved) and not assigned
+        if (cr.Status.State != StateRegistrationReady && cr.Status.State != StateSiemApproved) ||
+            cr.Spec.AssignedToRuntimeID != "" {
+            continue
+        }
+        
+        // Check for existing reservation
+        if _, hasReservation := cr.Labels["reserved-for-runtime-id"]; hasReservation {
+            continue
+        }
+        
+        // Check if region matches one of CR's regions
+        if !containsRegion(cr.Spec.Regions, region) {
+            continue
+        }
+        
+        return &cr
+    }
+    return nil
+}
+
+func containsRegion(regions []string, region string) bool {
+    for _, r := range regions {
+        if r == region {
+            return true
+        }
+    }
+    return false
 }
 ```
 
@@ -391,10 +442,14 @@ Two labels are added to the AuditLogCR during reservation:
 
 An AuditLogCR can be in one of these states:
 
-1. **Available**: `state=SiemApproved`, `assignedToRuntimeID=""`, no reservation labels
+1. **Available**: `state=RegistrationReady` or `state=SiemApproved`, `assignedToRuntimeID=""`, no reservation labels, serves one or more regions via `spec.regions`
 2. **Reserved (Light Lock)**: Has reservation labels, `assignedToRuntimeID=""`
 3. **Claimed (Heavy Lock)**: Has reservation labels, `assignedToRuntimeID=<runtimeID>`
 4. **Orphaned**: `spec.orphaned=true`, retention period active
+
+**Region Matching**: During reservation, the runtime's hyperscaler region (e.g., `eu-central-1`) must match at least one entry in the AuditLogCR's `spec.regions` array. An AuditLogCR can serve multiple regions.
+
+**Note on RegistrationReady**: CRs in `RegistrationReady` state have all BTP resources provisioned and credentials available, but are awaiting SIEM team approval. Allowing reservation of these CRs enables faster provisioning since the SIEM approval process can complete in parallel with shoot provisioning.
 
 #### State Transitions
 
@@ -495,8 +550,8 @@ KALM should be updated to respect reservations:
 
 | Scenario | Handling |
 |----------|----------|
-| No available CR to reserve | Fail provisioning immediately in `sFnCreateShoot` |
-| Conflict during reservation | Retry with different available CR |
+| No available CR for the region | Fail provisioning immediately in `sFnCreateShoot` with error: "no available AuditLogCR in the pool for region X" |
+| Conflict during reservation | Retry with different available CR from pool |
 | Reservation not found in Phase 2 | Should never happen if Phase 1 succeeded; fail provisioning with clear error |
 | Conflict during claim | Retry claim operation |
 | Provisioning fails after reservation | Label remains; cleaned up manually or by automated job |
@@ -509,99 +564,88 @@ KALM should be updated to respect reservations:
 ```go
 func sFnMigrateToDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
     // Check if global feature flag is enabled
-    if !m.RCCfg.DedicatedAuditLoggingEnabled {
-        return sFnHandleKubeconfig, nil, nil // Global feature flag disabled - skip
+    if !m.DedicatedAuditLoggingEnabled {
+        if !s.instance.IsProvisioningCompletedStatusSet() {
+            s.instance.UpdateStateProvisioningCompleted()
+        }
+        return updateStatusAndStop()
     }
 
     // Check if runtime-specific audit log access is enabled
-    // This is set per-runtime in Runtime.Spec.AuditLogAccessEnabled
     if s.instance.Spec.AuditLogAccessEnabled == nil || !*s.instance.Spec.AuditLogAccessEnabled {
-        return sFnHandleKubeconfig, nil, nil // Runtime doesn't request audit log access - skip
+        if !s.instance.IsProvisioningCompletedStatusSet() {
+            s.instance.UpdateStateProvisioningCompleted()
+        }
+        return updateStatusAndStop()
     }
 
-    // Check if already using dedicated audit logging
-    // This check ensures idempotency and prevents re-migration on subsequent reconciliations
-    if isUsingDedicatedAuditLog(s.shoot) {
-        m.log.Info("Already using dedicated audit logging, skipping migration")
-        return sFnHandleKubeconfig, nil, nil
-    }
-
-    // Step 1: Get or claim AuditLogCR (idempotent)
-    auditLogData, err := m.AuditLogDataProvider.GetAuditLogData(
+    // Step 1: Get desired audit log data and claim the resource
+    // This performs Phase 2 of the two-phase claim (upgrade from light lock to heavy lock)
+    auditLogData, err := m.AuditLogDataProvider.GetDedicatedAuditLogData(
         ctx,
-        s.instance.Spec.Shoot.Provider.Type,
-        s.instance.Spec.Shoot.Region,
         s.instance.GetName(),
-        true, // use dedicated
+        true, // claim=true to upgrade reservation to full claim
     )
     if err != nil {
-        // No available AuditLogCR - continue with shared logging
-        m.log.Info("No available dedicated audit log, continuing with shared configuration",
-            "error", err.Error())
-        return sFnHandleKubeconfig, nil, nil
+        // Claim failed - fail provisioning
+        msg := fmt.Sprintf("Failed to get and claim dedicated audit log configuration: %v", err)
+        s.instance.UpdateStateFailed(
+            imv1.ConditionTypeCustomAuditlogConfigured,
+            imv1.ConditionReasonCustomAuditLogError,
+            msg,
+        )
+        m.Metrics.IncRuntimeFSMStopCounter()
+        return updateStatusAndStop()
     }
 
-    if !auditLogData.IsDedicated {
-        // Provider fell back to shared config
-        return sFnHandleKubeconfig, nil, nil
+    // Step 2: Get current shoot audit log config (read-only)
+    shootAuditLogData, err := getShootAuditLogConfig(s.shoot)
+    if err != nil {
+        // If we can't get current config, assume we need to patch
+        shootAuditLogData = nil
     }
 
-    // Step 2: PATCH shoot with dedicated config (idempotent)
-    if err := m.patchShootAuditLog(ctx, s.shoot, auditLogData); err != nil {
+    // Step 3: Compare configurations
+    configsEqual := shootAuditLogData != nil && auditLogConfigsEqual(shootAuditLogData, auditLogData)
+
+    // Step 4: Patch only if configurations differ
+    if configsEqual {
+        // Complete provisioning - configs already match
+        if !s.instance.IsProvisioningCompletedStatusSet() {
+            s.instance.UpdateStateProvisioningCompleted()
+        }
+        return updateStatusAndStop()
+    }
+
+    // Step 5: PATCH shoot with dedicated config
+    if err := patchShootAuditLog(ctx, m, s, auditLogData); err != nil {
         // AuditLogCR is claimed, we'll retry the patch on next reconciliation
-        m.log.Error(err, "Failed to patch shoot with dedicated audit log, will retry")
-        return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
+        s.instance.UpdateStatePending(
+            imv1.ConditionTypeCustomAuditlogConfigured,
+            imv1.ConditionReasonProcessing,
+            "True",
+            fmt.Sprintf("Migrating to dedicated audit logging: %v", err),
+        )
+        return updateStatusAndRequeueAfter(m.GardenerRequeueDuration)
     }
 
-    m.log.Info("Successfully patched shoot with dedicated audit logging",
-        "runtimeID", s.instance.GetName())
-
-    // Requeue to allow the shoot update to be processed
-    // On next reconciliation, isUsingDedicatedAuditLog() will return true and we skip this state
-    return updateStatusAndRequeueAfter(m.RCCfg.GardenerRequeueDuration)
-}
-
-// isUsingDedicatedAuditLog checks if the shoot is already configured with dedicated audit logging
-// This prevents re-migration on subsequent reconciliations by checking for the dedicated audit log label
-func isUsingDedicatedAuditLog(shoot *gardener.Shoot) bool {
-    if shoot == nil || shoot.Labels == nil {
-        return false
-    }
-    
-    // Check if the dedicated audit log label exists and is set to "true"
-    value, exists := shoot.Labels[DedicatedAuditLogLabel]
-    return exists && value == "true"
-}
-
-// patchShootAuditLog patches the shoot with dedicated audit log configuration and adds the label
-func patchShootAuditLog(ctx context.Context, m *fsm, s *systemState, auditLogData auditlog.AuditLogData) error {
-    patchedShoot := s.shoot.DeepCopy()
-
-    // Ensure labels map exists
-    if patchedShoot.Labels == nil {
-        patchedShoot.Labels = make(map[string]string)
+    // Update provisioning completed status
+    if !s.instance.IsProvisioningCompletedStatusSet() {
+        s.instance.UpdateStateProvisioningCompleted()
     }
 
-    // Add dedicated audit log label
-    patchedShoot.Labels[DedicatedAuditLogLabel] = "true"
-
-    // Find and update the audit log extension config...
-    // (update TenantID, ServiceURL, SecretReferenceName from auditLogData)
-
-    return m.GardenClient.Patch(ctx, patchedShoot, client.MergeFrom(s.shoot))
+    // Complete without requeue - Gardener shoot reconciliation will trigger if needed
+    return updateStatusAndStop()
 }
 ```
 
-**Label-Based Detection**:
-- Label: `infrastructuremanager.kyma-project.io/dedicated-auditlog: "true"`
-- Simple, reliable check without parsing JSON config
-- Label is added during migration and persists on the shoot
-- Allows easy filtering/querying of shoots using dedicated logging
-
-**Key behavior**:
-- **First reconciliation after shoot creation**: State checks label (not present), claims AuditLogCR, patches shoot with label, requeues
-- **Second reconciliation**: State checks label (present), skips immediately to `sFnHandleKubeconfig`
-- **Subsequent reconciliations**: Same as second - always skips once migrated
+**Key Properties**:
+- **Claim first**: `GetDedicatedAuditLogData(claim=true)` immediately claims the reserved resource
+- **Compare then patch**: Only patches shoot if configuration actually differs
+- **Uses dedicated condition type**: `ConditionTypeCustomAuditlogConfigured` for audit log specific status
+- **No fallback**: If dedicated config cannot be obtained, provisioning fails (not falls back to shared)
+- **Idempotent**: Safe to retry - claim is idempotent, patch is idempotent
+- **Clean completion**: Returns `updateStatusAndStop()` after success
 
 
 ### Cleanup on Runtime Deletion
@@ -712,19 +756,28 @@ pkg/auditlog/
     └── groupversion_info.go      # API metadata
 ```
 
+**Key AuditLogCR fields used by KIM**:
+- `spec.regions []string` - Hyperscaler regions this CR can serve (e.g., `["eu-central-1", "eu-west-2"]`)
+- `spec.assignedToRuntimeID string` - Runtime ID when claimed (heavy lock)
+- `spec.config.serviceURL string` - Audit log service URL
+- `spec.config.gardenerSecretName string` - Secret name in Gardener
+- `spec.subaccountID string` - Used as tenant ID
+- `spec.orphaned bool` - Set to true when runtime is deleted
+- `status.state string` - Current state (SiemApproved, Assigned, etc.)
+
 **Maintenance**: When KALM updates the AuditLog CRD, these files must be re-synced.
 
 ## Error Handling and Edge Cases
 
 ### No Available AuditLogCR (Phase 1 - Reservation)
 
-**Scenario**: Pool is exhausted, no `SiemApproved` CRs available for reservation
+**Scenario**: Pool is exhausted or no `SiemApproved` CRs serve the requested region
 
 **Handling**: 
 - Fail provisioning immediately in `sFnCreateShoot`
-- User gets clear error: "Dedicated audit logging requested but no available configuration found"
+- User gets clear error: "no available AuditLogCR in the pool for region X"
 - No shoot resources created or wasted
-- User can retry later when pool has capacity
+- User can retry later when pool has capacity for their region
 
 ### Concurrent Reservations (Phase 1)
 

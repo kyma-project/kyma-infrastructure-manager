@@ -56,12 +56,14 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		s.instance.Spec.AuditLogAccessEnabled != nil &&
 		*s.instance.Spec.AuditLogAccessEnabled {
 		m.log.Info("Validating dedicated audit logging availability before shoot creation",
-			"runtimeID", s.instance.GetName())
+			"runtimeID", s.instance.GetName(),
+			"region", s.instance.Spec.Shoot.Region)
 
 		// Phase 1: Reserve an AuditLogCR by adding labels (light lock)
+		// The region is the hyperscaler region (e.g., eu-central-1) that must match
+		// one of the AuditLogCR's spec.regions entries
 		err := m.AuditLogDataProvider.ReserveAuditLog(
 			ctx,
-			s.instance.Spec.Shoot.Provider.Type,
 			s.instance.Spec.Shoot.Region,
 			s.instance.GetName(),
 		)

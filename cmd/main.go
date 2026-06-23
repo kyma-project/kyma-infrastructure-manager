@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -276,7 +275,7 @@ func main() {
 		}
 	}
 
-	auditLogSharedConfig, err := loadAuditLogDataMap(config.ConverterConfig.AuditLog.TenantConfigPath)
+	auditLogSharedConfig, err := auditlog.LoadConfiguration(config.ConverterConfig.AuditLog.TenantConfigPath)
 	if err != nil {
 		setupLog.Error(err, "invalid audit log tenant configuration")
 		os.Exit(1)
@@ -507,29 +506,6 @@ func initGardenerClients(kubeconfigPath string, namespace string, timeout time.D
 	dynamicKubeconfigAPI := gardenerClient.SubResource("adminkubeconfig")
 
 	return gardenerClient, shootClient, dynamicKubeconfigAPI, nil
-}
-
-func loadAuditLogDataMap(p string) (auditlog.Configuration, error) {
-	file, err := os.Open(p)
-	if err != nil {
-		return nil, err
-	}
-
-	var data auditlog.Configuration
-	if err := json.NewDecoder(file).Decode(&data); err != nil {
-		return nil, err
-	}
-	validate := validator.New(validator.WithRequiredStructEnabled())
-
-	for _, nestedMap := range data {
-		for _, auditLogData := range nestedMap {
-			if err := validate.Struct(auditLogData); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	return data, nil
 }
 
 func refreshRuntimeMetrics(restConfig *rest.Config, logger logr.Logger, metrics metrics.Metrics) {

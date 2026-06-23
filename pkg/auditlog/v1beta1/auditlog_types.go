@@ -114,7 +114,7 @@ const (
 	// StateOrphaned signifies the runtime has been deleted but audit logs are retained for the retention period.
 	StateOrphaned State = "Orphaned"
 
-	// StateUnrecoverableError StateOrphaned signifies the critical failure of logging stack that cannot be revovered.
+	// StateUnrecoverableError signifies the critical failure of logging stack that cannot be revovered.
 	StateUnrecoverableError State = "UnrecoverableError"
 )
 

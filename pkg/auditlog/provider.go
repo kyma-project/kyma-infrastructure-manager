@@ -15,7 +15,7 @@ type DataProvider interface {
 	// ReserveAuditLog performs Phase 1 of the two-phase claim: reserves an AuditLogCR by adding labels
 	// This should be called before shoot creation to ensure a resource is available
 	// Returns error if no available AuditLogCR is found
-	ReserveAuditLog(ctx context.Context, providerType, region string, runtimeID string) error
+	ReserveAuditLog(ctx context.Context, providerRegion string, runtimeID string) error
 
 	// GetDedicatedAuditLogData returns audit log configuration from AuditLogCR
 	// When claim=true, performs Phase 2 of two-phase claim (upgrades reservation to full claim by setting assignedToRuntimeID)
@@ -53,8 +53,8 @@ func NewDataProvider(
 }
 
 // ReserveAuditLog performs Phase 1 of two-phase claim: reserves an AuditLogCR by adding labels
-func (p *DefaultDataProvider) ReserveAuditLog(ctx context.Context, providerType, region string, runtimeID string) error {
-	return p.reserveAuditLogCR(ctx, runtimeID)
+func (p *DefaultDataProvider) ReserveAuditLog(ctx context.Context, providerRegion string, runtimeID string) error {
+	return p.reserveAuditLogCR(ctx, runtimeID, providerRegion)
 }
 
 // GetDedicatedAuditLogData returns audit log configuration from AuditLogCR

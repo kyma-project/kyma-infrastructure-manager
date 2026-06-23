@@ -31,6 +31,7 @@ import (
 	fsm_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
+	auditlogmocks "github.com/kyma-project/infrastructure-manager/pkg/auditlog/mocks"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
@@ -140,13 +141,20 @@ var _ = BeforeSuite(func() {
 	runtimeClientGetterMock.On("Get", mock.Anything, mock.Anything).Return(fakeClient, nil)
 
 	// Create a mock audit log data provider for tests
-	mockAuditLogProvider := &mockAuditLogDataProvider{
-		data: auditlog.AuditLogData{
-			TenantID:   "test-tenant",
-			ServiceURL: "http://test-service",
-			SecretName: "test-secret",
-		},
-	}
+	mockAuditLogProvider := &auditlogmocks.DataProvider{}
+	mockAuditLogProvider.On("ReserveAuditLog", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mockAuditLogProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(auditlog.AuditLogData{
+		TenantID:   "test-tenant",
+		ServiceURL: "http://test-service",
+		SecretName: "test-secret",
+	}, nil)
+	mockAuditLogProvider.On("GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(auditlog.AuditLogData{
+		TenantID:   "test-tenant",
+		ServiceURL: "http://test-service",
+		SecretName: "test-secret",
+	}, nil)
+	mockAuditLogProvider.On("IsDedicated", mock.Anything, mock.Anything).Return(false, nil)
+	mockAuditLogProvider.On("ReleaseDedicated", mock.Anything, mock.Anything).Return(nil)
 
 	fsmCfg := fsm.RCCfg{
 		Finalizer:                     imv1.Finalizer,
@@ -482,29 +490,4 @@ func addAuditLogConfigToShoot(shoot *gardener_api.Shoot) {
 
 	ext.ProviderConfig = &runtime.RawExtension{}
 	ext.ProviderConfig.Raw, _ = json.Marshal(cfg)
-}
-
-// mockAuditLogDataProvider is a simple mock implementation for testing
-type mockAuditLogDataProvider struct {
-	data auditlog.AuditLogData
-}
-
-func (m *mockAuditLogDataProvider) ReserveAuditLog(_ context.Context, _, _, _ string) error {
-	return nil
-}
-
-func (m *mockAuditLogDataProvider) GetDedicatedAuditLogData(_ context.Context, _ string, _ bool) (auditlog.AuditLogData, error) {
-	return m.data, nil
-}
-
-func (m *mockAuditLogDataProvider) GetSharedAuditLogData(_ context.Context, _, _ string) (auditlog.AuditLogData, error) {
-	return m.data, nil
-}
-
-func (m *mockAuditLogDataProvider) IsDedicated(_ context.Context, _ string) (bool, error) {
-	return false, nil
-}
-
-func (m *mockAuditLogDataProvider) ReleaseDedicated(_ context.Context, _ string) error {
-	return nil
 }

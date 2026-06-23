@@ -18,7 +18,9 @@ const (
 
 // reserveAuditLogCR performs Phase 1 of two-phase claim: adds reservation labels to an AuditLogCR
 // This creates a "light lock" that prevents other runtimes from selecting this CR during provisioning
-func (p *DefaultDataProvider) reserveAuditLogCR(ctx context.Context, runtimeID string) error {
+// The region parameter is the hyperscaler region (e.g., eu-central-1) that must match one of the
+// AuditLogCR's spec.regions entries
+func (p *DefaultDataProvider) reserveAuditLogCR(ctx context.Context, runtimeID string, region string) error {
 	// Check if we already have a reservation
 	reserved, err := p.findAuditLogCRByReservation(ctx, runtimeID)
 	if err != nil {
@@ -29,13 +31,13 @@ func (p *DefaultDataProvider) reserveAuditLogCR(ctx context.Context, runtimeID s
 		return nil // Already reserved for us
 	}
 
-	// Find available AuditLogCR (SiemApproved, not assigned, not reserved)
-	available, err := p.findAvailableAuditLogCR(ctx)
+	// Find available AuditLogCR (RegistrationReady or SiemApproved, not assigned, not reserved, matching region)
+	available, err := p.findAvailableAuditLogCR(ctx, region)
 	if err != nil {
 		return fmt.Errorf("failed to find available AuditLogCR: %w", err)
 	}
 	if available == nil {
-		return fmt.Errorf("no available AuditLogCR in the pool")
+		return fmt.Errorf("no available AuditLogCR in the pool for region %s", region)
 	}
 
 	// Add reservation labels (light lock)
@@ -57,6 +59,7 @@ func (p *DefaultDataProvider) reserveAuditLogCR(ctx context.Context, runtimeID s
 	p.logger.Info("Successfully reserved AuditLogCR",
 		"name", available.Name,
 		"runtimeID", runtimeID,
+		"region", region,
 		"reservedAt", available.Labels[LabelReservedAt])
 	return nil
 }
@@ -146,36 +149,53 @@ func (p *DefaultDataProvider) findAuditLogCRByRuntimeID(ctx context.Context, run
 	return &result, nil
 }
 
-// findAvailableAuditLogCR finds an available AuditLogCR from the pool
-// An AuditLogCR is available if it's in SiemApproved state, not assigned to any runtime, and not reserved
-func (p *DefaultDataProvider) findAvailableAuditLogCR(ctx context.Context) (*auditlogv1.AuditLog, error) {
+// findAvailableAuditLogCR finds an available AuditLogCR from the pool that matches the given region
+// An AuditLogCR is available if it's in RegistrationReady or SiemApproved state, not assigned to any runtime,
+// not reserved, and has the specified region in its spec.regions list
+func (p *DefaultDataProvider) findAvailableAuditLogCR(ctx context.Context, region string) (*auditlogv1.AuditLog, error) {
 	var auditLogList auditlogv1.AuditLogList
 	err := p.client.List(ctx, &auditLogList)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list AuditLog CRs: %w", err)
 	}
 
-	// Find first available CR: SiemApproved state, no assignment, no reservation
+	// Find first available CR: SiemApproved state, no assignment, no reservation, matching region
 	for i := range auditLogList.Items {
 		auditLog := &auditLogList.Items[i]
 
 		// Check if in correct state and not assigned
-		if auditLog.Status.State != auditlogv1.StateSiemApproved ||
-			auditLog.Spec.AssignedToRuntimeID != "" {
-			continue
-		}
-
-		// Check if not reserved by checking for reservation label
-		if auditLog.Labels != nil {
-			if _, hasReservation := auditLog.Labels[LabelReservedForRuntimeID]; hasReservation {
-				continue // Skip reserved CRs
+		if auditLog.Status.State == auditlogv1.StateSiemApproved || auditLog.Status.State == auditlogv1.StateRegistrationReady {
+			if auditLog.Spec.AssignedToRuntimeID != "" { // filter out already assigned
+				continue
 			}
-		}
 
-		return auditLog, nil
+			// filter out already reserved
+			if auditLog.Labels != nil {
+				if _, hasReservation := auditLog.Labels[LabelReservedForRuntimeID]; hasReservation {
+					continue
+				}
+			}
+
+			// Check if the region matches one of the AuditLogCR's regions
+			if !containsRegion(auditLog.Spec.Regions, region) {
+				continue // Skip CRs that don't serve this region
+			}
+
+			return auditLog, nil
+		}
 	}
 
 	return nil, nil
+}
+
+// containsRegion checks if the given region is in the list of regions
+func containsRegion(regions []string, region string) bool {
+	for _, r := range regions {
+		if r == region {
+			return true
+		}
+	}
+	return false
 }
 
 // releaseAuditLogCR releases an AuditLogCR by marking it as orphaned
