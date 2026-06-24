@@ -10,7 +10,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -208,7 +207,7 @@ func TestReserveAuditLogCR(t *testing.T) {
 		assert.NotEmpty(t, updated.Labels[LabelReservedAt])
 	})
 
-	t.Run("returns existing reservation", func(t *testing.T) {
+	t.Run("succeeds when CR already reserved for same runtime (idempotent)", func(t *testing.T) {
 		auditLog := createAuditLogCR("al-1", auditlogv1.StateSiemApproved, "", []string{"eu-central-1"}, map[string]string{
 			LabelReservedForRuntimeID: "test-runtime",
 			LabelReservedAt:           "2026-06-01T00:00:00Z",
@@ -305,7 +304,6 @@ func TestGetOrClaimAuditLogCR(t *testing.T) {
 		fakeClient := fake.NewClientBuilder().
 			WithScheme(scheme).
 			WithRuntimeObjects(&auditLog).
-			WithIndex(&auditlogv1.AuditLog{}, "spec.assignedToRuntimeID", indexByAssignedRuntimeID).
 			Build()
 
 		provider := &DefaultDataProvider{
@@ -319,13 +317,12 @@ func TestGetOrClaimAuditLogCR(t *testing.T) {
 		assert.Equal(t, "test-runtime", result.Spec.AssignedToRuntimeID)
 	})
 
-	t.Run("returns already claimed CR", func(t *testing.T) {
+	t.Run("returns already claimed CR (idempotent)", func(t *testing.T) {
 		auditLog := createAuditLogCR("al-1", auditlogv1.StateSiemApproved, "test-runtime", []string{"eu-central-1"}, nil)
 
 		fakeClient := fake.NewClientBuilder().
 			WithScheme(scheme).
 			WithRuntimeObjects(&auditLog).
-			WithIndex(&auditlogv1.AuditLog{}, "spec.assignedToRuntimeID", indexByAssignedRuntimeID).
 			Build()
 
 		provider := &DefaultDataProvider{
@@ -342,7 +339,6 @@ func TestGetOrClaimAuditLogCR(t *testing.T) {
 	t.Run("fails when no reservation found", func(t *testing.T) {
 		fakeClient := fake.NewClientBuilder().
 			WithScheme(scheme).
-			WithIndex(&auditlogv1.AuditLog{}, "spec.assignedToRuntimeID", indexByAssignedRuntimeID).
 			Build()
 
 		provider := &DefaultDataProvider{
@@ -436,12 +432,4 @@ func createAuditLogCR(name string, state auditlogv1.State, assignedTo string, re
 
 func namespacedName(name string) types.NamespacedName {
 	return types.NamespacedName{Name: name, Namespace: "default"}
-}
-
-func indexByAssignedRuntimeID(obj client.Object) []string {
-	al := obj.(*auditlogv1.AuditLog)
-	if al.Spec.AssignedToRuntimeID != "" {
-		return []string{al.Spec.AssignedToRuntimeID}
-	}
-	return nil
 }
