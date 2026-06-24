@@ -290,14 +290,14 @@ KALM should be updated to respect reservations:
 
 ### Error Scenarios
 
-| Scenario | Handling                                                                                                         |
-|----------|------------------------------------------------------------------------------------------------------------------|
-| No available CR for the region | Fail provisioning immediately in `sFnCreateShoot` with error: "no available AuditLogCR in the pool for region X" |
-| Conflict during reservation | Retry with different available CR from pool                                                                      |
-| Reservation not found in Phase 2 | Should never happen if Phase 1 succeeded; fail provisioning with clear error; Runtime CR will set staus Failed   |
-| Conflict during claim | Retry claim operation                                                                                            |
-| Provisioning fails after reservation | Label remains; cleaned up manually or by automated job                                                           |
-| Runtime deleted before migration | Label remains; cleaned up manually or by automated job                                                           |
+| Scenario | Handling                                                                                                                        |
+|----------|---------------------------------------------------------------------------------------------------------------------------------|
+| No available CR for the region | Fail provisioning immediately in `sFnCreateShoot` with error: "no available AuditLogCR in the pool for region X"                |
+| Conflict during reservation | Retry with different available CR from pool                                                                                     |
+| Reservation not found in Phase 2 | Should never happen if Phase 1 succeeded; fail provisioning with clear error; The `status.state` of Runtime CR set to Failed |
+| Conflict during claim | Retry claim operation                                                                                                           |
+| Provisioning fails after reservation | Label remains; cleaned up manually or by automated job                                                                          |
+| Runtime deleted before migration | Label remains; cleaned up manually or by automated job                                                                          |
 
 ## Migration State Implementation
 
