@@ -96,7 +96,7 @@ const (
 	ConditionReasonKubernetesAPIErr        = RuntimeConditionReason("KubernetesErr")
 
 	ConditionReasonAuditLogError            = RuntimeConditionReason("AuditLogErr")
-	ConditionReasonCustomAuditLogError      = RuntimeConditionReason("CustomAuditLogError")
+	ConditionReasonCustomAuditLogError      = RuntimeConditionReason("CustomAuditLogErr")
 	ConditionReasonCustomAuditLogConfigured = RuntimeConditionReason("CustomAuditLogConfigured")
 
 	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
