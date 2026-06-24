@@ -110,7 +110,6 @@ func TestDefaultDataProvider_GetDedicatedAuditLogData(t *testing.T) {
 		fakeClient := fake.NewClientBuilder().
 			WithScheme(scheme).
 			WithRuntimeObjects(&auditLog).
-			WithIndex(&auditlogv1.AuditLog{}, "spec.assignedToRuntimeID", indexByAssignedRuntimeID).
 			Build()
 
 		provider := NewDataProvider(fakeClient, nil, logger)
@@ -144,7 +143,6 @@ func TestDefaultDataProvider_ReleaseDedicated(t *testing.T) {
 		fakeClient := fake.NewClientBuilder().
 			WithScheme(scheme).
 			WithRuntimeObjects(&auditLog).
-			WithIndex(&auditlogv1.AuditLog{}, "spec.assignedToRuntimeID", indexByAssignedRuntimeID).
 			Build()
 
 		provider := NewDataProvider(fakeClient, nil, logger)
@@ -162,12 +160,22 @@ func TestDefaultDataProvider_ReleaseDedicated(t *testing.T) {
 	t.Run("succeeds when no CR found", func(t *testing.T) {
 		fakeClient := fake.NewClientBuilder().
 			WithScheme(scheme).
-			WithIndex(&auditlogv1.AuditLog{}, "spec.assignedToRuntimeID", indexByAssignedRuntimeID).
 			Build()
 
 		provider := NewDataProvider(fakeClient, nil, logger)
 
 		err := provider.ReleaseDedicated(context.Background(), "test-runtime")
 		require.NoError(t, err)
+	})
+
+	t.Run("returns error when List fails", func(t *testing.T) {
+		// Create a client without proper scheme setup to simulate List failure
+		fakeClient := fake.NewClientBuilder().Build()
+
+		provider := NewDataProvider(fakeClient, nil, logger)
+
+		err := provider.ReleaseDedicated(context.Background(), "test-runtime")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to find assigned AuditLogCR for runtime")
 	})
 }

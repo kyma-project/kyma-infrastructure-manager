@@ -138,7 +138,6 @@ func (p *DefaultDataProvider) findAuditLogCRByRuntimeID(ctx context.Context, run
 		return nil, fmt.Errorf("failed to list AuditLog CRs: %w", err)
 	}
 
-	// Filter by assignedToRuntimeID in loop (field selector indexing not available for this field)
 	var found *auditlogv1.AuditLog
 	for i := range auditLogList.Items {
 		if auditLogList.Items[i].Spec.AssignedToRuntimeID == runtimeID {
@@ -151,6 +150,10 @@ func (p *DefaultDataProvider) findAuditLogCRByRuntimeID(ctx context.Context, run
 			result := auditLogList.Items[i]
 			found = &result
 		}
+	}
+
+	if found == nil {
+		p.logger.Info("Warning: failed to find assigned AuditLogCR for runtime", "runtimeID", runtimeID)
 	}
 
 	return found, nil

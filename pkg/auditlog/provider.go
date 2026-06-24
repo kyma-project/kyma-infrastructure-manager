@@ -122,8 +122,12 @@ func (p *DefaultDataProvider) GetSharedAuditLogData(_ context.Context, providerT
 // ReleaseDedicated releases the claimed AuditLogCR for the runtime
 func (p *DefaultDataProvider) ReleaseDedicated(ctx context.Context, runtimeID string) error {
 	auditLogCR, err := p.findAuditLogCRByRuntimeID(ctx, runtimeID)
-	if err != nil || auditLogCR == nil {
-		return nil // Nothing to release
+
+	if err != nil {
+		return fmt.Errorf("failed to find assigned AuditLogCR for runtime %s: %w", runtimeID, err)
+	}
+	if auditLogCR == nil {
+		return nil
 	}
 
 	return p.releaseAuditLogCR(ctx, auditLogCR)
