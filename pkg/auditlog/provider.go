@@ -111,7 +111,7 @@ func (p *DefaultDataProvider) GetDedicatedAuditLogData(ctx context.Context, runt
 }
 
 // GetSharedAuditLogData returns audit log configuration from shared configuration
-func (p *DefaultDataProvider) GetSharedAuditLogData(ctx context.Context, providerType, region string) (AuditLogData, error) {
+func (p *DefaultDataProvider) GetSharedAuditLogData(_ context.Context, providerType, region string) (AuditLogData, error) {
 	data, err := p.sharedConfig.GetAuditLogData(providerType, region)
 	if err != nil {
 		return AuditLogData{}, err

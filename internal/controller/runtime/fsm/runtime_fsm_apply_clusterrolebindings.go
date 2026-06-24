@@ -89,7 +89,7 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 	return updateStatusAndStop()
 }
 
-func logDeletedClusterRoleBindings(removed []rbacv1.ClusterRoleBinding, m *fsm, s *systemState) {
+func logDeletedClusterRoleBindings(removed []rbacv1.ClusterRoleBinding, m *fsm, _ *systemState) {
 	if len(removed) > 0 {
 		var crbsNames []string
 		for _, binding := range removed {
