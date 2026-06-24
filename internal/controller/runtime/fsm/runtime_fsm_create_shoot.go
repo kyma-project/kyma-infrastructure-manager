@@ -55,8 +55,10 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	if m.DedicatedAuditLoggingEnabled &&
 		s.instance.Spec.AuditLogAccessEnabled != nil &&
 		*s.instance.Spec.AuditLogAccessEnabled {
+		runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
+
 		m.log.Info("Validating dedicated audit logging availability before shoot creation",
-			"runtimeID", s.instance.GetName(),
+			"runtimeID", runtimeID,
 			"region", s.instance.Spec.Shoot.Region)
 
 		// Phase 1: Reserve an AuditLogCR by adding labels (light lock)
@@ -65,7 +67,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		err := m.AuditLogDataProvider.ReserveAuditLog(
 			ctx,
 			s.instance.Spec.Shoot.Region,
-			s.instance.Labels[imv1.LabelKymaRuntimeID],
+			runtimeID,
 		)
 
 		if err != nil {
@@ -80,7 +82,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 		}
 
 		m.log.Info("Dedicated audit logging configuration reserved, proceeding with shoot creation",
-			"runtimeID", s.instance.GetName())
+			"runtimeID", runtimeID)
 	}
 
 	cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)

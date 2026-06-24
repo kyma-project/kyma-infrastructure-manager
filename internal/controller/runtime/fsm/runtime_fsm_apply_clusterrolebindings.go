@@ -67,7 +67,7 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 			imv1.ConditionTypeRuntimeConfigured,
 			imv1.ConditionReasonAdministratorsConfigured,
 			metav1.ConditionTrue,
-			"Cluster admin configuration complete",
+			"Cluster admin configuration completed",
 		)
 
 		m.log.Info("Proceeding to dedicated audit log infrastructure configuration")
@@ -77,7 +77,7 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 	s.instance.UpdateStateReady(
 		imv1.ConditionTypeRuntimeConfigured,
 		imv1.ConditionReasonAdministratorsConfigured,
-		"Cluster admin configuration complete",
+		"Cluster admin configuration completed",
 	)
 
 	// Complete provisioning without migration

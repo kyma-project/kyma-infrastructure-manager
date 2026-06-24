@@ -16,7 +16,6 @@ import (
 // This ensures dedicated resources are only claimed after the entire provisioning succeeds.
 func sFnMigrateToDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	m.log.V(log_level.DEBUG).Info("Migrating to dedicated audit logging state (final step)")
-	runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
 
 	// Check if global feature flag is enabled
 	if !m.DedicatedAuditLoggingEnabled {
@@ -28,6 +27,8 @@ func sFnMigrateToDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState) 
 
 		return updateStatusAndStop()
 	}
+
+	runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
 
 	// Check if runtime-specific audit log access is enabled
 	if s.instance.Spec.AuditLogAccessEnabled == nil || !*s.instance.Spec.AuditLogAccessEnabled {
@@ -116,7 +117,7 @@ func sFnMigrateToDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState) 
 	}
 
 	m.log.Info("Successfully patched shoot with dedicated audit logging",
-		"runtimeID", s.instance.GetName(),
+		"runtimeID", runtimeID,
 		"tenantID", auditLogData.TenantID)
 
 	s.instance.UpdateStatePending(

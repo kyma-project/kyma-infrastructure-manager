@@ -23,12 +23,14 @@ type DataProvider interface {
     // This should be called before shoot creation to ensure a resource is available
     // The providerRegion is the hyperscaler region (e.g., "eu-central-1") that must match
     // one of the AuditLogCR's spec.regions entries
+    // The runtimeID is obtained from Runtime CR label: imv1.LabelKymaRuntimeID ("kyma-project.io/runtime-id")
     // Returns error if no available AuditLogCR is found for the given region
     ReserveAuditLog(ctx context.Context, providerRegion string, runtimeID string) error
 
     // GetDedicatedAuditLogData returns audit log configuration from AuditLogCR
     // When claim=true, performs Phase 2: upgrades reservation to full claim (sets assignedToRuntimeID)
     // When claim=false, only retrieves data from already claimed/reserved resource
+    // The runtimeID is obtained from Runtime CR label: imv1.LabelKymaRuntimeID ("kyma-project.io/runtime-id")
     GetDedicatedAuditLogData(ctx context.Context, runtimeID string, claim bool) (AuditLogData, error)
 
     // GetSharedAuditLogData returns audit log configuration from shared configuration file
@@ -319,11 +321,13 @@ func sFnMigrateToDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState) 
         return updateStatusAndStop()
     }
 
+    runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
+
     // Step 1: Get desired audit log data and claim the resource
     // This performs Phase 2 of the two-phase claim (upgrade from light lock to heavy lock)
     auditLogData, err := m.AuditLogDataProvider.GetDedicatedAuditLogData(
         ctx,
-        s.instance.GetName(),
+        runtimeID,
         true, // claim=true to upgrade reservation to full claim
     )
     if err != nil {
@@ -387,6 +391,7 @@ func sFnMigrateToDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState) 
 ```
 
 **Key Properties**:
+- **RuntimeID from label**: Always uses `s.instance.Labels[imv1.LabelKymaRuntimeID]` to get the runtime ID, not `s.instance.GetName()` - this ensures consistent identification across all operations
 - **Claim first**: `GetDedicatedAuditLogData(claim=true)` immediately claims the reserved resource
 - **Compare then patch**: Only patches shoot if configuration actually differs
 - **Uses dedicated condition type**: `ConditionTypeCustomAuditlogConfigured` for audit log specific status
@@ -402,7 +407,8 @@ When a runtime is deleted, the claimed AuditLogCR must be released:
 func sFnDeleteShoot(ctx, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
     // Release the claimed AuditLogCR if we have one
     if m.RCCfg.DedicatedAuditLoggingEnabled {
-        err := m.AuditLogDataProvider.ReleaseDedicated(ctx, s.instance.GetName())
+        runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
+        err := m.AuditLogDataProvider.ReleaseDedicated(ctx, runtimeID)
         if err != nil {
             m.log.Error(err, "Failed to release dedicated audit log")
             // Continue with shoot deletion anyway
