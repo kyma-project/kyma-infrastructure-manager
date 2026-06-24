@@ -153,7 +153,6 @@ var _ = BeforeSuite(func() {
 		ServiceURL: "http://test-service",
 		SecretName: "test-secret",
 	}, nil)
-	mockAuditLogProvider.On("IsDedicated", mock.Anything, mock.Anything).Return(false, nil)
 	mockAuditLogProvider.On("ReleaseDedicated", mock.Anything, mock.Anything).Return(nil)
 
 	fsmCfg := fsm.RCCfg{

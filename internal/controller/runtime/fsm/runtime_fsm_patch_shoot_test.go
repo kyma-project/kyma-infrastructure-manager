@@ -584,7 +584,6 @@ func newMockAuditLogDataProvider(data auditlog.AuditLogData) *auditlogmocks.Data
 	mockProvider.On("ReserveAuditLog", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(data, nil)
 	mockProvider.On("GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(data, nil)
-	mockProvider.On("IsDedicated", mock.Anything, mock.Anything).Return(false, nil)
 	mockProvider.On("ReleaseDedicated", mock.Anything, mock.Anything).Return(nil)
 	return mockProvider
 }
@@ -595,7 +594,6 @@ func newMockAuditLogDataProviderWithError() *auditlogmocks.DataProvider {
 	mockProvider.On("ReserveAuditLog", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("mock audit log reservation error"))
 	mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(auditlog.AuditLogData{}, fmt.Errorf("mock audit log error"))
 	mockProvider.On("GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(auditlog.AuditLogData{}, fmt.Errorf("mock audit log error"))
-	mockProvider.On("IsDedicated", mock.Anything, mock.Anything).Return(false, nil)
 	mockProvider.On("ReleaseDedicated", mock.Anything, mock.Anything).Return(nil)
 	return mockProvider
 }

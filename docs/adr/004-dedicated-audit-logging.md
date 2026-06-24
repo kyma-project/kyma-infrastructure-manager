@@ -18,14 +18,14 @@ The Kyma Audit Log Manager (KALM) introduces a pool-based approach for provision
 
 ## KALM Pool Architecture
 
-KALM maintains a pool of pre-provisioned `AuditLog` CRs. CRs become available for reservation once they reach the `RegistrationReady` or `SiemApproved` state. These CRs contain:
+KALM maintains a pool of pre-provisioned `AuditLog` CRs representing ready to use Audit Logging infrastructure. CRs become available for reservation once they reach the `RegistrationReady` or `SiemApproved` state. These CRs contain:
 - BTP subaccount with audit log service provisioned
 - Service credentials stored in Gardener secrets
 - SIEM registration completed (for `SiemApproved`) or registration pending (for `RegistrationReady`)
-- **Regions list**: `spec.regions` array containing hyperscaler regions this CR can serve (e.g., `["eu-central-1", "eu-west-2"]`)
+- **Regions list**: `spec.regions` array containing Kyma Runtime hyperscaler regions this CR can serve (e.g., `["eu-central-1", "eu-west-2"]`)
 - Ready to be assigned to a Kyma Runtime
 
-Key KALM states:
+Key AuditLog CR states:
 - `Pending`: Initial state, BTP resources being provisioned
 - `RegistrationReady`: BTP resources ready, awaiting SIEM registration — **available for reservation**
 - `SiemApproved`: SIEM registration completed, in the pool — **available for reservation**
@@ -62,109 +62,7 @@ sFnMigrateToDedicatedAuditLog  (new state - absolute final step)
 Complete (updateStatusAndStop)
 ```
 
-**Note**: After `sFnMigrateToDedicatedAuditLog` patches the shoot with dedicated config, it requeues the reconciliation. On the next reconciliation, the state will be skipped (because the shoot already has dedicated logging configured), and provisioning completes successfully.
-
-### Sequence Diagram
-
-```mermaid
-sequenceDiagram
-    participant KEB as Kyma Environment Broker
-    participant KIM as Infrastructure Manager (FSM)
-    participant Gardener as Gardener API
-    participant KALM as Audit Log Pool (KALM)
-    participant K8s as Kubernetes API
-
-    KEB->>KIM: Create Runtime CR
-    
-    Note over KIM: sFnCreateShoot<br/>(Phase 1: Reserve)
-    alt Dedicated audit logging requested
-        KIM->>K8s: List AuditLog CRs<br/>(label: reserved-for-runtime-id = runtimeID)
-        alt Existing reservation found
-            K8s-->>KIM: Return reserved AuditLogCR
-        else No existing reservation
-            KIM->>K8s: List AuditLog CRs<br/>(state = SiemApproved, unassigned, no reservation)
-            alt Available CR found
-                K8s-->>KIM: Return available AuditLogCR
-                KIM->>K8s: Add labels:<br/>reserved-for-runtime-id: <runtimeID><br/>reserved-for-runtime-at: <timestamp>
-                alt Reservation successful
-                    K8s-->>KIM: Reservation success (light lock)
-                else Conflict (concurrent reservation)
-                    K8s-->>KIM: Conflict error
-                    Note over KIM: Retry with different CR
-                end
-            else No available CR
-                Note over KIM: Fail provisioning immediately
-                KIM-->>KEB: Provisioning failed: no audit log available
-            end
-        end
-    end
-    
-    KIM->>KIM: Load shared audit log config<br/>(from static mapping file)
-    KIM->>Gardener: Create Shoot with shared audit logging
-    Gardener-->>KIM: Shoot created
-    
-    Note over KIM: sFnWaitForShootCreation
-    KIM->>Gardener: Poll shoot status
-    Gardener-->>KIM: Shoot creation succeeded
-    
-    Note over KIM: ... Full provisioning flow ...
-    Note over KIM: sFnConfigureSKR
-    KIM->>KIM: Configure SKR
-    
-    Note over KIM: sFnApplyClusterRoleBindings
-    KIM->>KIM: Apply cluster role bindings
-    
-    Note over KIM: sFnMigrateToDedicatedAuditLog<br/>(Phase 2: Claim - final step)
-    alt Feature flag enabled
-        KIM->>KIM: Check if already using dedicated config
-        alt Not using dedicated yet
-            KIM->>K8s: List AuditLog CRs<br/>(label: reserved-for-runtime-id = runtimeID)
-            alt Reserved CR found
-                K8s-->>KIM: Return reserved AuditLogCR
-                KIM->>K8s: Set assignedToRuntimeID = runtimeID<br/>(upgrade to heavy lock)
-                alt Claim successful
-                    K8s-->>KIM: Claim success
-                else Conflict
-                    K8s-->>KIM: Conflict error
-                    Note over KIM: Requeue, retry claim
-                end
-            else Reservation not found
-                Note over KIM: Fail provisioning:<br/>reserved CR missing
-            end
-            KIM->>KIM: Extract config from AuditLogCR
-            KIM->>Gardener: PATCH Shoot with dedicated config
-            alt Update successful
-                Gardener-->>KIM: Shoot patched
-                Note over KIM: Requeue reconciliation
-            else Update failed
-                Gardener-->>KIM: Error
-                Note over KIM: Requeue, will retry<br/>(AuditLogCR stays claimed)
-            end
-        else Already using dedicated
-            Note over KIM: Complete provisioning
-        end
-    else Feature flag disabled
-        Note over KIM: Complete provisioning with shared logging
-    end
-    
-    Note over KIM: sFnMigrateToDedicatedAuditLog<br/>(next reconciliation)
-    KIM->>KIM: Check if already using dedicated config
-    Note over KIM: Already migrated, complete provisioning
-    
-    KIM->>KEB: Update Runtime CR status<br/>(Provisioning Completed)
-    
-    Note over KIM,Gardener: ... Runtime operational ...
-    
-    KEB->>KIM: Delete Runtime CR
-    Note over KIM: sFnDeleteShoot
-    alt Dedicated logging was used
-        KIM->>K8s: Update AuditLogCR.orphaned = true
-        K8s-->>KIM: Marked as orphaned
-        Note over KALM: KALM handles retention<br/>and cleanup (90 days)
-    end
-    KIM->>Gardener: Delete Shoot
-    Gardener-->>KIM: Shoot deleted
-```
+**Note**: After `sFnMigrateToDedicatedAuditLog` patches the shoot with dedicated config, it requeues the reconciliation. On the next reconciliation, the state will have no effect (because the shoot already has dedicated logging configured), and provisioning completes successfully.
 
 ### Phase 1: Validate and Create Shoot with Shared Audit Logging
 
@@ -214,14 +112,21 @@ After **all provisioning is complete**, the `sFnMigrateToDedicatedAuditLog` stat
 - Compares TenantID, ServiceURL, and SecretName
 
 **Step 4: Conditional Patch** (only if configurations differ)
-- If configs are equal: Skip patch, complete provisioning immediately
-- If configs differ: Patch shoot with dedicated audit log configuration
+- If configs are equal: Skip patch, complete provisioning immediately (Step 5a)
+- If configs differ: Patch shoot with dedicated audit log configuration (Step 5b)
 - Uses `patchShootAuditLog()` helper function
 - If patch fails: Requeue (claim persists, retry patch on next reconciliation)
+- If patch succeeds: Requeue to allow Gardener to reconcile the shoot changes
 
-**Step 5: Complete Provisioning**
+**Step 5a: Complete Provisioning** (when configs are equal)
+- Sets `ConditionTypeCustomAuditlogConfigured` to Ready status
 - Sets `ProvisioningCompleted` status
-- Returns `updateStatusAndStop()` (no explicit requeue)
+- Returns `updateStatusAndStop()`
+
+**Step 5b: Requeue After Patch** (when configs differ and patch succeeds)
+- Sets `ConditionTypeCustomAuditlogConfigured` to Unknown status
+- Returns `updateStatusAndRequeueAfter(m.GardenerRequeueDuration)`
+- On next reconciliation: configs will be equal → proceeds to Step 5a
 
 **Condition Types Used**:
 - `ConditionTypeCustomAuditlogConfigured` - Dedicated condition for audit log status

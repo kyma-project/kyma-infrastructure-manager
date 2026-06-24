@@ -71,27 +71,6 @@ func (m *DataProvider) GetSharedAuditLogData(ctx context.Context, providerType s
 	return r0, r1
 }
 
-// IsDedicated provides a mock function with given fields: ctx, runtimeID
-func (m *DataProvider) IsDedicated(ctx context.Context, runtimeID string) (bool, error) {
-	ret := m.Called(ctx, runtimeID)
-
-	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context, string) bool); ok {
-		r0 = rf(ctx, runtimeID)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, runtimeID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // ReleaseDedicated provides a mock function with given fields: ctx, runtimeID
 func (m *DataProvider) ReleaseDedicated(ctx context.Context, runtimeID string) error {
 	ret := m.Called(ctx, runtimeID)

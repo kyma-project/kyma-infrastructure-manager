@@ -47,7 +47,6 @@ var _ = Describe("KIM sFnCreateShoot", func() {
 				ServiceURL: "http://test-service",
 				SecretName: "test-secret",
 			}, nil)
-			mockProvider.On("IsDedicated", mock.Anything, mock.Anything).Return(false, nil)
 			mockProvider.On("ReleaseDedicated", mock.Anything, mock.Anything).Return(nil)
 
 			testFsm := &fsm{

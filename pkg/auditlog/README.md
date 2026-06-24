@@ -58,29 +58,40 @@ provider := auditlog.NewDataProvider(
 
 ### Getting Audit Log Data
 
+The DataProvider interface provides methods for both shared and dedicated audit logging:
+
 ```go
-// Get audit log data (tries dedicated first if enabled, falls back to shared)
-data, err := provider.GetAuditLogData(
+// Get shared audit log data from configuration file
+sharedData, err := provider.GetSharedAuditLogData(
     ctx,
     providerType, // e.g., "aws", "azure", "gcp"
     region,       // e.g., "us-east-1", "westeurope"
-    runtimeID,    // e.g., "my-runtime-123"
-    useDedicated, // true to prefer dedicated logging
 )
 
-// data.IsDedicated tells you which source was used
-if data.IsDedicated {
-    log.Info("Using dedicated audit logging", "runtimeID", runtimeID)
-}
+// Get dedicated audit log data from AuditLogCR
+// When claim=true, performs Phase 2 of two-phase claim (upgrades reservation to full claim)
+// When claim=false, only retrieves data from already claimed/reserved resource
+dedicatedData, err := provider.GetDedicatedAuditLogData(
+    ctx,
+    runtimeID,
+    claim, // true to upgrade reservation to claim, false to just retrieve
+)
 ```
 
-### Checking if Runtime Uses Dedicated Logging
+### Two-Phase Claiming Process
 
+Dedicated audit logging uses a two-phase approach:
+
+**Phase 1: Reserve** (during shoot creation)
 ```go
-isDedicated, err := provider.IsDedicated(ctx, runtimeID)
-if isDedicated {
-    log.Info("Runtime is using dedicated audit logging")
-}
+// Reserve an AuditLogCR by adding reservation labels (light lock)
+err := provider.ReserveAuditLog(ctx, providerRegion, runtimeID)
+```
+
+**Phase 2: Claim** (after successful provisioning)
+```go
+// Upgrade reservation to full claim by setting assignedToRuntimeID (heavy lock)
+data, err := provider.GetDedicatedAuditLogData(ctx, runtimeID, true)
 ```
 
 ### Releasing Dedicated Resources
@@ -92,20 +103,39 @@ err := provider.ReleaseDedicated(ctx, runtimeID)
 
 ## How Dedicated Logging Works
 
+### Two-Phase Reservation System
+
+The package implements a two-phase reservation system to prevent race conditions:
+
+1. **Phase 1 - Reserve** (in `sFnCreateShoot`):
+   - Adds `reserved-for-runtime-id` label to AuditLogCR (light lock)
+   - Prevents other runtimes from claiming this CR during provisioning
+   - Minimal resource commitment if provisioning fails
+
+2. **Phase 2 - Claim** (in `sFnMigrateToDedicatedAuditLog`):
+   - Sets `Spec.AssignedToRuntimeID` field (heavy lock)
+   - Only executed after successful runtime provisioning
+   - Full resource commitment
+
+3. **Release** (on runtime deletion):
+   - Sets `Spec.Orphaned = true`
+   - KALM maintains logs for retention period (default: 90 days)
+
 ### Pool-Based Provisioning
 
-The Kyma Audit Log Manager (KALM) maintains a pool of pre-provisioned AuditLog CRs in the `SiemApproved` state. When KIM needs dedicated logging:
-
-1. **Claim**: Find an available AuditLogCR and set `Spec.AssignedToRuntimeID`
-2. **Use**: Extract configuration from `Spec.Config` field
-3. **Release**: Set `Spec.Orphaned = true` when runtime is deleted
+The Kyma Audit Log Manager (KALM) maintains a pool of pre-provisioned AuditLog CRs. CRs are available when:
+- State is `RegistrationReady` or `SiemApproved`
+- `Spec.AssignedToRuntimeID` is empty
+- No reservation labels present
+- `Spec.Regions` contains the runtime's hyperscaler region
 
 ### Idempotent Operations
 
 All operations are designed to be idempotent:
 
-- **getOrClaimAuditLogCR**: Checks for existing claim before creating new one
-- **findAuditLogCRByRuntimeID**: Uses indexed field lookup for efficiency  
+- **reserveAuditLogCR**: Checks for existing reservation before creating new one
+- **getOrClaimAuditLogCR**: Checks for existing claim before upgrading reservation
+- **findAuditLogCRByRuntimeID**: Uses loop-based filtering (spec fields not indexed by default)
 - **releaseAuditLogCR**: Safe to call multiple times
 
 ### Optimistic Concurrency
@@ -133,23 +163,23 @@ cfg := fsm.RCCfg{
 
 ### FSM State Flow
 
-1. **sFnCreateShoot**: Create shoot with shared audit logging
-2. **sFnWaitForShootReady**: Wait for shoot to be ready
-3. **sFnMigrateToDedicatedAuditLog**: 
-   - Claim AuditLogCR (idempotent)
-   - Update shoot with dedicated config (idempotent)
-4. **sFnApply**: Continue with normal flow
+1. **sFnCreateShoot**: Reserve AuditLogCR (Phase 1), create shoot with shared audit logging
+2. **sFnWaitForShootCreation**: Wait for shoot to be ready
+3. **... full provisioning flow ...**
+4. **sFnMigrateToDedicatedAuditLog** (final step): 
+   - Claim AuditLogCR - Phase 2 (upgrade reservation to full claim)
+   - Patch shoot with dedicated config (only if configs differ)
+   - Complete provisioning
 
 ## Error Handling
 
-The provider implements graceful degradation:
+The two-phase approach provides fail-fast behavior:
 
-```go
-data, err := provider.GetAuditLogData(ctx, provider, region, runtimeID, true)
-// If dedicated logging fails (no available CRs, claim conflict, etc.),
-// it automatically falls back to shared configuration
-// Check data.IsDedicated to see which was used
-```
+- **Reservation fails**: Provisioning fails immediately, no resources wasted
+- **Claim fails**: Should never happen if reservation succeeded; fails provisioning with clear error
+- **Patch fails**: Requeues with claimed AuditLogCR (retries on next reconciliation)
+
+No automatic fallback to shared logging - explicit failure when dedicated is requested but unavailable.
 
 ## Testing
 

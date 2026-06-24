@@ -133,41 +133,6 @@ func TestDefaultDataProvider_GetDedicatedAuditLogData(t *testing.T) {
 	})
 }
 
-func TestDefaultDataProvider_IsDedicated(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, auditlogv1.AddToScheme(scheme))
-	logger := zap.New(zap.UseDevMode(true))
-
-	t.Run("returns true when CR is assigned to runtime", func(t *testing.T) {
-		auditLog := createAuditLogCR("al-1", auditlogv1.StateAssigned, "test-runtime", []string{"eu-central-1"}, nil)
-
-		fakeClient := fake.NewClientBuilder().
-			WithScheme(scheme).
-			WithRuntimeObjects(&auditLog).
-			WithIndex(&auditlogv1.AuditLog{}, "spec.assignedToRuntimeID", indexByAssignedRuntimeID).
-			Build()
-
-		provider := NewDataProvider(fakeClient, nil, logger)
-
-		isDedicated, err := provider.IsDedicated(context.Background(), "test-runtime")
-		require.NoError(t, err)
-		assert.True(t, isDedicated)
-	})
-
-	t.Run("returns false when no CR is assigned", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().
-			WithScheme(scheme).
-			WithIndex(&auditlogv1.AuditLog{}, "spec.assignedToRuntimeID", indexByAssignedRuntimeID).
-			Build()
-
-		provider := NewDataProvider(fakeClient, nil, logger)
-
-		isDedicated, err := provider.IsDedicated(context.Background(), "test-runtime")
-		require.NoError(t, err)
-		assert.False(t, isDedicated)
-	})
-}
-
 func TestDefaultDataProvider_ReleaseDedicated(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, auditlogv1.AddToScheme(scheme))

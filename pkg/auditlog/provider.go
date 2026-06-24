@@ -25,9 +25,6 @@ type DataProvider interface {
 	// GetSharedAuditLogData returns audit log configuration from shared configuration file
 	GetSharedAuditLogData(ctx context.Context, providerType, region string) (AuditLogData, error)
 
-	// IsDedicated checks if the runtime is using dedicated audit logging
-	IsDedicated(ctx context.Context, runtimeID string) (bool, error)
-
 	// ReleaseDedicated releases the claimed AuditLogCR for the runtime
 	ReleaseDedicated(ctx context.Context, runtimeID string) error
 }
@@ -120,15 +117,6 @@ func (p *DefaultDataProvider) GetSharedAuditLogData(ctx context.Context, provide
 		return AuditLogData{}, err
 	}
 	return data, nil
-}
-
-// IsDedicated checks if the runtime is using dedicated audit logging
-func (p *DefaultDataProvider) IsDedicated(ctx context.Context, runtimeID string) (bool, error) {
-	auditLogCR, err := p.findAuditLogCRByRuntimeID(ctx, runtimeID)
-	if err != nil {
-		return false, err
-	}
-	return auditLogCR != nil, nil
 }
 
 // ReleaseDedicated releases the claimed AuditLogCR for the runtime

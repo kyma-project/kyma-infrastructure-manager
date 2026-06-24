@@ -34,9 +34,6 @@ type DataProvider interface {
     // GetSharedAuditLogData returns audit log configuration from shared configuration file
     GetSharedAuditLogData(ctx context.Context, providerType, region string) (AuditLogData, error)
 
-    // IsDedicated checks if the runtime is using dedicated audit logging
-    IsDedicated(ctx context.Context, runtimeID string) (bool, error)
-
     // ReleaseDedicated releases the claimed AuditLogCR (marks as orphaned)
     ReleaseDedicated(ctx context.Context, runtimeID string) error
 }
@@ -293,14 +290,14 @@ KALM should be updated to respect reservations:
 
 ### Error Scenarios
 
-| Scenario | Handling |
-|----------|----------|
+| Scenario | Handling                                                                                                         |
+|----------|------------------------------------------------------------------------------------------------------------------|
 | No available CR for the region | Fail provisioning immediately in `sFnCreateShoot` with error: "no available AuditLogCR in the pool for region X" |
-| Conflict during reservation | Retry with different available CR from pool |
-| Reservation not found in Phase 2 | Should never happen if Phase 1 succeeded; fail provisioning with clear error |
-| Conflict during claim | Retry claim operation |
-| Provisioning fails after reservation | Label remains; cleaned up manually or by automated job |
-| Runtime deleted before migration | Label remains; cleaned up manually or by automated job |
+| Conflict during reservation | Retry with different available CR from pool                                                                      |
+| Reservation not found in Phase 2 | Should never happen if Phase 1 succeeded; fail provisioning with clear error; Runtime CR will set staus Failed   |
+| Conflict during claim | Retry claim operation                                                                                            |
+| Provisioning fails after reservation | Label remains; cleaned up manually or by automated job                                                           |
+| Runtime deleted before migration | Label remains; cleaned up manually or by automated job                                                           |
 
 ## Migration State Implementation
 
@@ -395,7 +392,7 @@ func sFnMigrateToDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState) 
 - **Uses dedicated condition type**: `ConditionTypeCustomAuditlogConfigured` for audit log specific status
 - **No fallback**: If dedicated config cannot be obtained, provisioning fails (not falls back to shared)
 - **Idempotent**: Safe to retry - claim is idempotent, patch is idempotent
-- **Clean completion**: Returns `updateStatusAndStop()` after success
+- **Two-reconciliation completion**: After successful patch, requeues with `ConditionUnknown`; next reconciliation detects equal configs and completes with `updateStatusAndStop()`
 
 ## Cleanup on Runtime Deletion
 
@@ -607,20 +604,7 @@ func init() {
 - If user requested dedicated logging: Provisioning fails with clear error
 - If user didn't request dedicated: Uses shared logging, unaffected
 
-## Monitoring and Observability
-
-Metrics to be implemented:
-
-- `kim_dedicated_audit_log_reservations_total` - Total reservation attempts (Phase 1)
-- `kim_dedicated_audit_log_reservations_success_total` - Successful reservations
-- `kim_dedicated_audit_log_reservations_conflict_total` - Conflict errors during reservation
-- `kim_dedicated_audit_log_claims_total` - Total claim attempts (Phase 2)
-- `kim_dedicated_audit_log_claims_success_total` - Successful claims
-- `kim_dedicated_audit_log_claims_conflict_total` - Conflict errors during claim
-- `kim_dedicated_audit_log_pool_available` - Available AuditLogCRs in pool (unreserved, unassigned)
-- `kim_dedicated_audit_log_pool_reserved` - AuditLogCRs with reservation labels
-- `kim_dedicated_audit_log_pool_claimed` - AuditLogCRs with assignedToRuntimeID set
-- `kim_dedicated_audit_log_migration_duration_seconds` - Time to migrate shoot
+## Logging
 
 Log events:
 - Reservation success/failure with RuntimeID
