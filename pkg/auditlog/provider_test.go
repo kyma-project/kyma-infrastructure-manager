@@ -53,7 +53,7 @@ func TestDefaultDataProvider_ReserveAuditLog(t *testing.T) {
 	require.NoError(t, auditlogv1.AddToScheme(scheme))
 	logger := zap.New(zap.UseDevMode(true))
 
-	t.Run("delegates to reserveAuditLogCR", func(t *testing.T) {
+	t.Run("successfully reserves available CR", func(t *testing.T) {
 		auditLog := createAuditLogCR("al-1", auditlogv1.StateSiemApproved, "", []string{"eu-central-1"}, nil)
 
 		fakeClient := fake.NewClientBuilder().
@@ -65,6 +65,46 @@ func TestDefaultDataProvider_ReserveAuditLog(t *testing.T) {
 
 		err := provider.ReserveAuditLog(context.Background(), "eu-central-1", "test-runtime")
 		require.NoError(t, err)
+
+		// Verify reservation labels were set
+		var updated auditlogv1.AuditLog
+		err = fakeClient.Get(context.Background(), namespacedName("al-1"), &updated)
+		require.NoError(t, err)
+		assert.Equal(t, "test-runtime", updated.Labels[LabelReservedForRuntimeID])
+		assert.NotEmpty(t, updated.Labels[LabelReservedAt])
+	})
+
+	t.Run("succeeds when CR already reserved for same runtime (idempotent)", func(t *testing.T) {
+		auditLog := createAuditLogCR("al-1", auditlogv1.StateSiemApproved, "", []string{"eu-central-1"}, map[string]string{
+			LabelReservedForRuntimeID: "test-runtime",
+			LabelReservedAt:           "1719238800",
+		})
+
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithRuntimeObjects(&auditLog).
+			Build()
+
+		provider := NewDataProvider(fakeClient, nil, logger)
+
+		err := provider.ReserveAuditLog(context.Background(), "eu-central-1", "test-runtime")
+		require.NoError(t, err)
+	})
+
+	t.Run("returns error when no available CR for region", func(t *testing.T) {
+		// CR exists but for different region
+		auditLog := createAuditLogCR("al-1", auditlogv1.StateSiemApproved, "", []string{"us-east-1"}, nil)
+
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithRuntimeObjects(&auditLog).
+			Build()
+
+		provider := NewDataProvider(fakeClient, nil, logger)
+
+		err := provider.ReserveAuditLog(context.Background(), "eu-central-1", "test-runtime")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "no available AuditLogCR in the pool for region eu-central-1")
 	})
 }
 
@@ -75,6 +115,35 @@ func TestDefaultDataProvider_GetDedicatedAuditLogData(t *testing.T) {
 
 	t.Run("claims and returns data when claim=true", func(t *testing.T) {
 		auditLog := createAuditLogCR("al-1", auditlogv1.StateSiemApproved, "", []string{"eu-central-1"}, map[string]string{
+			LabelReservedForRuntimeID: "test-runtime",
+		})
+		auditLog.Spec.SubaccountID = "dedicated-tenant"
+		auditLog.Spec.Config.ServiceURL = "https://dedicated.example.com"
+		auditLog.Spec.Config.GardenerSecretName = "dedicated-secret"
+
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithRuntimeObjects(&auditLog).
+			Build()
+
+		provider := NewDataProvider(fakeClient, nil, logger)
+
+		data, err := provider.GetDedicatedAuditLogData(context.Background(), "test-runtime", true)
+		require.NoError(t, err)
+		assert.Equal(t, "dedicated-tenant", data.TenantID)
+		assert.Equal(t, "https://dedicated.example.com", data.ServiceURL)
+		assert.Equal(t, "dedicated-secret", data.SecretName)
+
+		// Verify claim was set
+		var updated auditlogv1.AuditLog
+		err = fakeClient.Get(context.Background(), namespacedName("al-1"), &updated)
+		require.NoError(t, err)
+		assert.Equal(t, "test-runtime", updated.Spec.AssignedToRuntimeID)
+	})
+
+	t.Run("claims and returns data from RegistrationReady CR when claim=true", func(t *testing.T) {
+		// AuditLogCR in RegistrationReady state (not yet SiemApproved)
+		auditLog := createAuditLogCR("al-1", auditlogv1.StateRegistrationReady, "", []string{"eu-central-1"}, map[string]string{
 			LabelReservedForRuntimeID: "test-runtime",
 		})
 		auditLog.Spec.SubaccountID = "dedicated-tenant"
@@ -117,6 +186,37 @@ func TestDefaultDataProvider_GetDedicatedAuditLogData(t *testing.T) {
 		data, err := provider.GetDedicatedAuditLogData(context.Background(), "test-runtime", false)
 		require.NoError(t, err)
 		assert.Equal(t, "dedicated-tenant", data.TenantID)
+		assert.Equal(t, "https://dedicated.example.com", data.ServiceURL)
+		assert.Equal(t, "dedicated-secret", data.SecretName)
+
+		// Verify AssignedToRuntimeID was not modified (no claim operation)
+		var updated auditlogv1.AuditLog
+		err = fakeClient.Get(context.Background(), namespacedName("al-1"), &updated)
+		require.NoError(t, err)
+		assert.Equal(t, "test-runtime", updated.Spec.AssignedToRuntimeID)
+	})
+
+	t.Run("returns data when claim=true and CR already claimed (idempotent)", func(t *testing.T) {
+		// CR is already claimed for the same runtime
+		auditLog := createAuditLogCR("al-1", auditlogv1.StateSiemApproved, "test-runtime", []string{"eu-central-1"}, map[string]string{
+			LabelReservedForRuntimeID: "test-runtime",
+		})
+		auditLog.Spec.SubaccountID = "dedicated-tenant"
+		auditLog.Spec.Config.ServiceURL = "https://dedicated.example.com"
+		auditLog.Spec.Config.GardenerSecretName = "dedicated-secret"
+
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithRuntimeObjects(&auditLog).
+			Build()
+
+		provider := NewDataProvider(fakeClient, nil, logger)
+
+		data, err := provider.GetDedicatedAuditLogData(context.Background(), "test-runtime", true)
+		require.NoError(t, err)
+		assert.Equal(t, "dedicated-tenant", data.TenantID)
+		assert.Equal(t, "https://dedicated.example.com", data.ServiceURL)
+		assert.Equal(t, "dedicated-secret", data.SecretName)
 	})
 
 	t.Run("returns error when no reservation found with claim=true", func(t *testing.T) {
