@@ -64,7 +64,9 @@ func patchShootAuditLog(ctx context.Context, m *fsm, s *systemState, auditLogDat
 	}
 
 	// Patch the shoot resource
-	if err := m.GardenClient.Patch(ctx, patchedShoot, client.MergeFrom(s.shoot)); err != nil {
+	if err := m.GardenClient.Patch(ctx, patchedShoot, client.MergeFrom(s.shoot), &client.PatchOptions{
+		FieldManager: fieldManagerName,
+	}); err != nil {
 		return fmt.Errorf("failed to patch shoot: %w", err)
 	}
 
