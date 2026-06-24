@@ -130,27 +130,30 @@ func (p *DefaultDataProvider) getOrClaimAuditLogCR(ctx context.Context, runtimeI
 }
 
 // findAuditLogCRByRuntimeID finds an AuditLogCR that is assigned to the given runtime ID
+// This is used during runtime deletion to find the AuditLogCR to release
 func (p *DefaultDataProvider) findAuditLogCRByRuntimeID(ctx context.Context, runtimeID string) (*auditlogv1.AuditLog, error) {
 	var auditLogList auditlogv1.AuditLogList
-	err := p.client.List(ctx, &auditLogList, client.MatchingFields{
-		"spec.assignedToRuntimeID": runtimeID,
-	})
+	err := p.client.List(ctx, &auditLogList)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list AuditLog CRs: %w", err)
 	}
 
-	if len(auditLogList.Items) == 0 {
-		return nil, nil
+	// Filter by assignedToRuntimeID in loop (field selector indexing not available for this field)
+	var found *auditlogv1.AuditLog
+	for i := range auditLogList.Items {
+		if auditLogList.Items[i].Spec.AssignedToRuntimeID == runtimeID {
+			if found != nil {
+				p.logger.Info("Warning: multiple AuditLog CRs found for runtime, using first one",
+					"runtimeID", runtimeID)
+				break
+			}
+			// Return a copy to avoid dangling pointer after auditLogList goes out of scope
+			result := auditLogList.Items[i]
+			found = &result
+		}
 	}
 
-	if len(auditLogList.Items) > 1 {
-		p.logger.Info("Warning: multiple AuditLog CRs found for runtime, using first one",
-			"runtimeID", runtimeID, "count", len(auditLogList.Items))
-	}
-
-	// Return a copy to avoid dangling pointer after auditLogList goes out of scope
-	result := auditLogList.Items[0]
-	return &result, nil
+	return found, nil
 }
 
 // findAvailableAuditLogCR finds an available AuditLogCR from the pool that matches the given region
