@@ -69,6 +69,7 @@ const (
 	ConditionTypeRuntimeDeprovisioned     RuntimeConditionType = "Deprovisioned"
 	ConditionTypeRegistryCacheConfigured  RuntimeConditionType = "RegistryCacheConfigured"
 	ConditionTypeRuntimeBootstrapperReady RuntimeConditionType = "RuntimeBootstrapperReady"
+	ConditionTypeCustomAuditLogConfigured RuntimeConditionType = "CustomAuditLogConfigured"
 )
 
 type RuntimeConditionReason string
@@ -94,7 +95,9 @@ const (
 	ConditionReasonGardenerError           = RuntimeConditionReason("GardenerErr")
 	ConditionReasonKubernetesAPIErr        = RuntimeConditionReason("KubernetesErr")
 
-	ConditionReasonAuditLogError = RuntimeConditionReason("AuditLogErr")
+	ConditionReasonAuditLogError            = RuntimeConditionReason("AuditLogErr")
+	ConditionReasonCustomAuditLogError      = RuntimeConditionReason("CustomAuditLogErr")
+	ConditionReasonCustomAuditLogConfigured = RuntimeConditionReason("CustomAuditLogConfigured")
 
 	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
 	ConditionReasonOidcAndCMsConfigured     = RuntimeConditionReason("OidcAndConfigMapsConfigured")
@@ -146,12 +149,12 @@ type RuntimeList struct {
 
 // RuntimeSpec defines the desired state of Runtime
 type RuntimeSpec struct {
-	Shoot                 RuntimeShoot         `json:"shoot"`
-	Security              Security             `json:"security"`
-	Caching               []ImageRegistryCache `json:"imageRegistryCache,omitempty"`
+	Shoot    RuntimeShoot         `json:"shoot"`
+	Security Security             `json:"security"`
+	Caching  []ImageRegistryCache `json:"imageRegistryCache,omitempty"`
 
 	// AuditLogAccessEnabled indicates whether the client requires access to their audit log data
-	AuditLogAccessEnabled *bool                `json:"auditLogAccessEnabled,omitempty"`
+	AuditLogAccessEnabled *bool `json:"auditLogAccessEnabled,omitempty"`
 }
 
 type ImageRegistryCache struct {

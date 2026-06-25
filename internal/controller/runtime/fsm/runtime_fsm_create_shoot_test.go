@@ -5,9 +5,12 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
+	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
+	auditlogmocks "github.com/kyma-project/infrastructure-manager/pkg/auditlog/mocks"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
+	"github.com/stretchr/testify/mock"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -30,10 +33,31 @@ var _ = Describe("KIM sFnCreateShoot", func() {
 			var fakeClient = fake.NewClientBuilder().
 				WithScheme(scheme).
 				Build()
-			testFsm := &fsm{K8s: K8s{
-				GardenClient: fakeClient,
-				KcpClient:    fakeClient,
-			}}
+
+			// Create mock audit log provider
+			mockProvider := &auditlogmocks.DataProvider{}
+			mockProvider.On("ReserveAuditLog", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+			mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(auditlog.AuditLogData{
+				TenantID:   "test-tenant",
+				ServiceURL: "http://test-service",
+				SecretName: "test-secret",
+			}, nil)
+			mockProvider.On("GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(auditlog.AuditLogData{
+				TenantID:   "test-tenant",
+				ServiceURL: "http://test-service",
+				SecretName: "test-secret",
+			}, nil)
+			mockProvider.On("ReleaseDedicated", mock.Anything, mock.Anything).Return(nil)
+
+			testFsm := &fsm{
+				K8s: K8s{
+					GardenClient: fakeClient,
+					KcpClient:    fakeClient,
+				},
+				RCCfg: RCCfg{
+					AuditLogDataProvider: mockProvider,
+				},
+			}
 			testFsm.ConverterConfig.Provider.Worker = config.WorkerConfig{
 				DefaultMaxEvictRetries:     "2",
 				DefaultMachineDrainTimeout: "15m",
