@@ -10,6 +10,13 @@ const (
 	euAccessNodes  = "support.gardener.cloud/eu-access-for-cluster-nodes"
 )
 
+var regions = map[string]bool{
+	"cf-eu11": true,
+	"cf-ch20": true,
+	"cf-eu01": true,
+	"cf-eu02": true,
+	"cf-eu31": true}
+
 func ExtendWithAccessRestriction() func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		if isEuAccess(runtime.Spec.Shoot.PlatformRegion) {
@@ -32,12 +39,5 @@ func extendWithEuAccess(shoot *gardener.Shoot) {
 }
 
 func isEuAccess(platformRegion string) bool {
-	regions := map[string]bool{
-		"cf-eu11": true,
-		"cf-ch20": true,
-		"cf-eu01": true,
-		"cf-eu02": true,
-		"cf-eu31": true}
-
 	return regions[platformRegion]
 }
