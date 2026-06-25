@@ -4,14 +4,14 @@ go 1.26.3
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
-	github.com/gardener/gardener v1.140.1
+	github.com/gardener/gardener v1.142.1
 	github.com/gardener/gardener-extension-provider-alicloud v1.69.0
 	github.com/gardener/gardener-extension-provider-aws v1.68.3
-	github.com/gardener/gardener-extension-provider-gcp v1.50.0
+	github.com/gardener/gardener-extension-provider-gcp v1.52.0
 	github.com/gardener/gardener-extension-provider-openstack v1.53.1
 	github.com/gardener/gardener-extension-registry-cache v0.21.0
 	github.com/gardener/gardener-extension-runtime-gvisor v0.33.0
-	github.com/gardener/gardener/pkg/apis v1.140.1
+	github.com/gardener/gardener/pkg/apis v1.142.1
 	github.com/gardener/oidc-webhook-authenticator v0.42.0
 	github.com/go-logr/logr v1.4.3
 	github.com/go-playground/validator/v10 v10.30.3
@@ -47,7 +47,6 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
-	github.com/gardener/cert-management v0.22.0 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.23.1 // indirect
 	github.com/go-openapi/jsonreference v0.21.6 // indirect
