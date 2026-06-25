@@ -80,9 +80,10 @@ func (p *DefaultDataProvider) GetDedicatedAuditLogData(ctx context.Context, runt
 
 		// Return the data
 		return AuditLogData{
-			TenantID:   reserved.Spec.SubaccountID,
-			ServiceURL: reserved.Spec.Config.ServiceURL,
-			SecretName: reserved.Spec.Config.GardenerSecretName,
+			TenantID:            reserved.Spec.SubaccountID,
+			ServiceURL:          reserved.Spec.Config.ServiceURL,
+			SecretName:          reserved.Spec.Config.GardenerSecretName,
+			ReadCredsSecretName: reserved.Spec.Config.ReadCredsSecretName,
 		}, nil
 	}
 
@@ -104,9 +105,10 @@ func (p *DefaultDataProvider) GetDedicatedAuditLogData(ctx context.Context, runt
 	}
 
 	return AuditLogData{
-		TenantID:   auditLogCR.Spec.SubaccountID,
-		ServiceURL: auditLogCR.Spec.Config.ServiceURL,
-		SecretName: auditLogCR.Spec.Config.GardenerSecretName,
+		TenantID:            auditLogCR.Spec.SubaccountID,
+		ServiceURL:          auditLogCR.Spec.Config.ServiceURL,
+		SecretName:          auditLogCR.Spec.Config.GardenerSecretName,
+		ReadCredsSecretName: auditLogCR.Spec.Config.ReadCredsSecretName,
 	}, nil
 }
 

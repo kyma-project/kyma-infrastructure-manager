@@ -89,12 +89,8 @@ func sFnMigrateToDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState) 
 			"Custom AuditLog shoot configuration completed",
 		)
 
-		// Complete provisioning
-		if !s.instance.IsProvisioningCompletedStatusSet() {
-			s.instance.UpdateStateProvisioningCompleted()
-		}
-
-		return updateStatusAndStop()
+		// Chain to credentials copy state
+		return switchState(sFnCopyAuditLogReadCredentials)
 	}
 
 	m.log.Info("Shoot audit log configuration differs, patching shoot",
