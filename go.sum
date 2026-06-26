@@ -224,8 +224,8 @@ github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
 github.com/kyma-project/lifecycle-manager/api v1.0.0 h1:gUXHjaNMWSt2tskUHG3tijXmh4SdCs0X+SiEDC9hXGA=
 github.com/kyma-project/lifecycle-manager/api v1.0.0/go.mod h1:wbr1nMJFdpQo25JLle8oEub1SBpgClulxOPAPqjcm4c=
-github.com/kyma-project/registry-cache v0.0.0-20251023124504-71bc19cf102a h1:F9wkaorCIEJHY54kCLTIugAkRr7e3nnbfaowh3KoLHY=
-github.com/kyma-project/registry-cache v0.0.0-20251023124504-71bc19cf102a/go.mod h1:AySDsfchpllj095nuMzGkf2m+WccbIwbRv99JxRz4Bg=
+github.com/kyma-project/registry-cache v0.0.0-20260626103804-086ea2c84715 h1:e/mQsg1dy1ZFVKZT7n6HindrYx4Z7vhbrhVKYjC996Q=
+github.com/kyma-project/registry-cache v0.0.0-20260626103804-086ea2c84715/go.mod h1:c9cWbSewl8NYptiBz6Nw98HK9JnQRI4HnVrNQF03uwA=
 github.com/kyma-project/runtime-watcher/listener v1.4.0 h1:a9mt7RqS3pDnjkbi01Hjd0dzQY4MbmcWSPf6nuVHChs=
 github.com/kyma-project/runtime-watcher/listener v1.4.0/go.mod h1:x4yfxqlJQVH2qQx+CMsI/CY4MQ9okWGbD3AfTDT/lP0=
 github.com/labstack/echo/v4 v4.15.1 h1:S9keusg26gZpjMmPqB5hOEvNKnmd1lNmcHrbbH2lnFs=
