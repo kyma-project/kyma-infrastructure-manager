@@ -61,14 +61,16 @@ const (
 type RuntimeConditionType string
 
 const (
-	ConditionTypeRuntimeProvisioned       RuntimeConditionType = "Provisioned"
-	ConditionTypeRuntimeKubeconfigReady   RuntimeConditionType = "KubeconfigReady"
-	ConditionTypeOidcAndCMsConfigured     RuntimeConditionType = "OidcAndConfigMapConfigured"
-	ConditionTypeKymaSystemCreated        RuntimeConditionType = "KymaSystemNSCreated"
-	ConditionTypeRuntimeConfigured        RuntimeConditionType = "Configured"
-	ConditionTypeRuntimeDeprovisioned     RuntimeConditionType = "Deprovisioned"
-	ConditionTypeRegistryCacheConfigured  RuntimeConditionType = "RegistryCacheConfigured"
-	ConditionTypeRuntimeBootstrapperReady RuntimeConditionType = "RuntimeBootstrapperReady"
+	ConditionTypeRuntimeProvisioned        RuntimeConditionType = "Provisioned"
+	ConditionTypeRuntimeKubeconfigReady    RuntimeConditionType = "KubeconfigReady"
+	ConditionTypeOidcAndCMsConfigured      RuntimeConditionType = "OidcAndConfigMapConfigured"
+	ConditionTypeKymaSystemCreated         RuntimeConditionType = "KymaSystemNSCreated"
+	ConditionTypeRuntimeConfigured         RuntimeConditionType = "Configured"
+	ConditionTypeRuntimeDeprovisioned      RuntimeConditionType = "Deprovisioned"
+	ConditionTypeRegistryCacheConfigured   RuntimeConditionType = "RegistryCacheConfigured"
+	ConditionTypeRuntimeBootstrapperReady  RuntimeConditionType = "RuntimeBootstrapperReady"
+	ConditionTypeCustomAuditLogConfigured  RuntimeConditionType = "CustomAuditLogConfigured"
+	ConditionTypeAuditLogCredentialsCopied RuntimeConditionType = "AuditLogCredentialsCopied"
 )
 
 type RuntimeConditionReason string
@@ -94,7 +96,11 @@ const (
 	ConditionReasonGardenerError           = RuntimeConditionReason("GardenerErr")
 	ConditionReasonKubernetesAPIErr        = RuntimeConditionReason("KubernetesErr")
 
-	ConditionReasonAuditLogError = RuntimeConditionReason("AuditLogErr")
+	ConditionReasonAuditLogError            = RuntimeConditionReason("AuditLogErr")
+	ConditionReasonCustomAuditLogError      = RuntimeConditionReason("CustomAuditLogErr")
+	ConditionReasonCustomAuditLogConfigured = RuntimeConditionReason("CustomAuditLogConfigured")
+	ConditionReasonCredentialsCopyError     = RuntimeConditionReason("CredentialsCopyErr")
+	ConditionReasonCredentialsCopied        = RuntimeConditionReason("CredentialsCopied")
 
 	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
 	ConditionReasonOidcAndCMsConfigured     = RuntimeConditionReason("OidcAndConfigMapsConfigured")
@@ -146,12 +152,12 @@ type RuntimeList struct {
 
 // RuntimeSpec defines the desired state of Runtime
 type RuntimeSpec struct {
-	Shoot                 RuntimeShoot         `json:"shoot"`
-	Security              Security             `json:"security"`
-	Caching               []ImageRegistryCache `json:"imageRegistryCache,omitempty"`
+	Shoot    RuntimeShoot         `json:"shoot"`
+	Security Security             `json:"security"`
+	Caching  []ImageRegistryCache `json:"imageRegistryCache,omitempty"`
 
 	// AuditLogAccessEnabled indicates whether the client requires access to their audit log data
-	AuditLogAccessEnabled *bool                `json:"auditLogAccessEnabled,omitempty"`
+	AuditLogAccessEnabled *bool `json:"auditLogAccessEnabled,omitempty"`
 }
 
 type ImageRegistryCache struct {
