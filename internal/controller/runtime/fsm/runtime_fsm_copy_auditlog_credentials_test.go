@@ -125,7 +125,7 @@ func TestSFnCopyAuditLogReadCredentials(t *testing.T) {
 		runtimeClientGetter.AssertExpectations(t)
 	})
 
-	t.Run("should skip copy and complete when ReadCredsSecretName is empty", func(t *testing.T) {
+	t.Run("should requeue when ReadCredsSecretName is empty", func(t *testing.T) {
 		// given
 		instance := &imv1.Runtime{
 			ObjectMeta: metav1.ObjectMeta{
@@ -143,20 +143,22 @@ func TestSFnCopyAuditLogReadCredentials(t *testing.T) {
 				TenantID:            "test-tenant",
 				ServiceURL:          "https://auditlog.example.com",
 				SecretName:          "gardener-secret",
-				ReadCredsSecretName: "", // empty - no read credentials
+				ReadCredsSecretName: "", // empty - KALM hasn't populated it yet
 			}, nil)
 
 		mockMetrics := &mocks.Metrics{}
 		scheme, _ := newCreateTestScheme()
 		kcpClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 
+		requeueDuration := 5 * time.Second
 		testFsm := &fsm{
 			K8s: K8s{
 				KcpClient: kcpClient,
 			},
 			RCCfg: RCCfg{
-				AuditLogDataProvider: mockAuditLogProvider,
-				Metrics:              mockMetrics,
+				AuditLogDataProvider:        mockAuditLogProvider,
+				Metrics:                     mockMetrics,
+				ControlPlaneRequeueDuration: requeueDuration,
 			},
 		}
 
@@ -170,12 +172,14 @@ func TestSFnCopyAuditLogReadCredentials(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		require.Nil(t, result)
-		require.Contains(t, stateFn.name(), "updateStatusAndStop")
-		require.True(t, systemState.instance.IsProvisioningCompletedStatusSet())
+		require.Contains(t, stateFn.name(), "sFnUpdateStatus")
+		require.False(t, systemState.instance.IsProvisioningCompletedStatusSet())
 
-		// No condition should be set for credentials copy (skipped)
+		// Verify error condition is set
 		condition := meta.FindStatusCondition(systemState.instance.Status.Conditions, string(imv1.ConditionTypeAuditLogCredentialsCopied))
-		require.Nil(t, condition)
+		require.NotNil(t, condition)
+		require.Equal(t, metav1.ConditionFalse, condition.Status)
+		require.Equal(t, string(imv1.ConditionReasonCredentialsCopyError), condition.Reason)
 
 		mockAuditLogProvider.AssertExpectations(t)
 	})

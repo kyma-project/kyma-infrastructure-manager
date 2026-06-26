@@ -7,11 +7,10 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const auditLogReadCredentialsSecretName = "auditlog-read-credentials"
@@ -25,7 +24,6 @@ func sFnCopyAuditLogReadCredentials(ctx context.Context, m *fsm, s *systemState)
 
 	runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
 
-	// Get audit log data - uses cached client, essentially free
 	auditLogData, err := m.AuditLogDataProvider.GetDedicatedAuditLogData(ctx, runtimeID, false)
 	if err != nil {
 		m.log.Error(err, "Failed to get audit log data for credentials copy", "runtimeID", runtimeID)
@@ -38,14 +36,18 @@ func sFnCopyAuditLogReadCredentials(ctx context.Context, m *fsm, s *systemState)
 		return updateStatusAndRequeueAfter(m.ControlPlaneRequeueDuration)
 	}
 
-	// Skip if no read credentials configured
+	// Requeue if no read credentials configured - KALM may not have populated the secret yet
 	if auditLogData.ReadCredsSecretName == "" {
-		m.log.Info("No read credentials secret configured, skipping copy", "runtimeID", runtimeID)
-		completeProvisioning(&s.instance)
-		return updateStatusAndStop()
+		m.log.Info("No read credentials secret configured, waiting for KALM to populate", "runtimeID", runtimeID)
+		s.instance.UpdateStatePending(
+			imv1.ConditionTypeAuditLogCredentialsCopied,
+			imv1.ConditionReasonCredentialsCopyError,
+			metav1.ConditionFalse,
+			"Waiting for read credentials secret to be configured",
+		)
+		return updateStatusAndRequeueAfter(m.ControlPlaneRequeueDuration)
 	}
 
-	// Copy credentials to SKR
 	if err := copyReadCredentialsToSKR(ctx, m, s, auditLogData.ReadCredsSecretName); err != nil {
 		m.log.Error(err, "Failed to copy read credentials to SKR", "runtimeID", runtimeID)
 		s.instance.UpdateStatePending(
@@ -72,15 +74,13 @@ func sFnCopyAuditLogReadCredentials(ctx context.Context, m *fsm, s *systemState)
 }
 
 func copyReadCredentialsToSKR(ctx context.Context, m *fsm, s *systemState, sourceSecretName string) error {
-	// Get SKR client
 	runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 	if err != nil {
 		return fmt.Errorf("failed to get runtime client: %w", err)
 	}
 
-	// Read source secret from KCP namespace
 	var sourceSecret corev1.Secret
-	secretKey := types.NamespacedName{
+	secretKey := k8stypes.NamespacedName{
 		Name:      sourceSecretName,
 		Namespace: s.instance.Namespace,
 	}
@@ -88,32 +88,45 @@ func copyReadCredentialsToSKR(ctx context.Context, m *fsm, s *systemState, sourc
 		return fmt.Errorf("failed to get source secret %s: %w", secretKey, err)
 	}
 
-	// Create target secret for SKR
-	targetSecret := corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Secret",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      auditLogReadCredentialsSecretName,
-			Namespace: "kyma-system",
-			Labels: map[string]string{
-				imv1.LabelKymaManagedBy: "infrastructure-manager",
+	targetKey := k8stypes.NamespacedName{
+		Name:      auditLogReadCredentialsSecretName,
+		Namespace: "kyma-system",
+	}
+	var existingSecret corev1.Secret
+	err = runtimeClient.Get(ctx, targetKey, &existingSecret)
+
+	if err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to check existing secret: %w", err)
+	}
+
+	if apierrors.IsNotFound(err) {
+		newSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      auditLogReadCredentialsSecretName,
+				Namespace: "kyma-system",
+				Labels: map[string]string{
+					imv1.LabelKymaManagedBy: "infrastructure-manager",
+				},
 			},
-		},
-		Data: sourceSecret.Data,
-		Type: sourceSecret.Type,
+			Data: sourceSecret.Data,
+			Type: sourceSecret.Type,
+		}
+		if err := runtimeClient.Create(ctx, newSecret); err != nil {
+			return fmt.Errorf("failed to create secret in SKR: %w", err)
+		}
+		return nil
 	}
 
-	// Apply secret with server-side apply (idempotent)
-	//nolint:staticcheck // SA1019: client.Apply is used with Patch, which is the correct API for this version
-	if err := runtimeClient.Patch(ctx, &targetSecret, client.Apply, &client.PatchOptions{
-		FieldManager: fieldManagerName,
-		Force:        ptr.To(true),
-	}); err != nil {
-		return fmt.Errorf("failed to apply secret to SKR: %w", err)
+	existingSecret.Data = sourceSecret.Data
+	existingSecret.Type = sourceSecret.Type
+	if existingSecret.Labels == nil {
+		existingSecret.Labels = make(map[string]string)
 	}
+	existingSecret.Labels[imv1.LabelKymaManagedBy] = "infrastructure-manager"
 
+	if err := runtimeClient.Update(ctx, &existingSecret); err != nil {
+		return fmt.Errorf("failed to update secret in SKR: %w", err)
+	}
 	return nil
 }
 
