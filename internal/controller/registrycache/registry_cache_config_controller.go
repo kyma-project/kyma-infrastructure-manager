@@ -64,6 +64,16 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 
 	log := r.Log.WithValues("runtimeID", runtimeID, "secretName", request.Name)
 
+	var runtime imv1.Runtime
+	if err := r.KcpClient.Get(ctx, types.NamespacedName{Name: runtimeID, Namespace: r.KcpNamespace}, &runtime); err != nil {
+		return stopIfNotFound(err)
+	}
+
+	if !runtime.GetDeletionTimestamp().IsZero() || runtime.Status.State == imv1.RuntimeStateTerminating {
+		log.V(log_level.DEBUG).Info("Skipping reconciliation, runtime is being deleted")
+		return stop()
+	}
+
 	runtimeClient, err := r.RuntimeClientGetter(secret)
 	if err != nil {
 		log.Error(err, "Failed to get runtime client for runtime")
