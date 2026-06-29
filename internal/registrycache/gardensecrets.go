@@ -6,6 +6,7 @@ import (
 	"fmt"
 	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/google/uuid"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	v12 "k8s.io/api/core/v1"
@@ -227,4 +228,8 @@ func GardenSecretNeedToBeRemoved(currentExtensions []gardener.Extension, desired
 	}
 
 	return false, nil
+}
+
+func DefaultGardenSecretNameGenerator(runtimeID, cacheUID string) string {
+	return uuid.New().String()
 }

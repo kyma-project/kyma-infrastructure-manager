@@ -41,7 +41,11 @@ func sFnSyncRegistryCacheGardenSecrets(ctx context.Context, m *fsm, s *systemSta
 			return requeue()
 		}
 
-		secretSyncer := registrycache.NewGardenSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
+		secretSyncer := registrycache.NewGardenSecretSyncer(
+			m.GardenClient,
+			runtimeClient, registrycache.DefaultGardenSecretNameGenerator,
+			fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName),
+			s.instance.Name)
 
 		if registryCacheWithSecretsExist(s.instance) {
 			m.log.V(log_level.DEBUG).Info("Registry cache secrets creation", "instance", s.instance.Name)
