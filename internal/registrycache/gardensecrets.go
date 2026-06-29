@@ -231,5 +231,5 @@ func GardenSecretNeedToBeRemoved(currentExtensions []gardener.Extension, desired
 }
 
 func DefaultGardenSecretNameGenerator(_, _ string) string {
-	return uuid.New().String()
+	return fmt.Sprintf("reg-cache-%s", uuid.New().String())
 }
