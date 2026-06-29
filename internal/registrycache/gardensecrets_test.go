@@ -96,11 +96,11 @@ func TestGardenSecretSyncer(t *testing.T) {
 			registryCacheWithSecret1,
 			registryCacheWithSecret2,
 		}
-		labels1 := fixRegistryCacheGardenSecretLabels(runtimeID)
-		labels2 := fixRegistryCacheGardenSecretLabels(runtimeID)
+		labels1 := fixRegistryCacheGardenSecretLabels(runtimeID, registryCacheWithSecret1.UID)
+		labels2 := fixRegistryCacheGardenSecretLabels(runtimeID, registryCacheWithSecret2.UID)
 
-		annotations1 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret1.Name, registryCacheWithSecret1.Namespace, registryCacheWithSecret1.UID)
-		annotations2 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret2.Name, registryCacheWithSecret2.Namespace, registryCacheWithSecret2.UID)
+		annotations1 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret1.Name, registryCacheWithSecret1.Namespace)
+		annotations2 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret2.Name, registryCacheWithSecret2.Namespace)
 
 		gardenerSecret1 := fixRegistryCacheSecret(secretNameGenerator(runtimeID, registryCacheWithSecret1.UID), gardenNamespace, labels1, annotations1, "user1", "password1")
 		gardenerSecret2 := fixRegistryCacheSecret(secretNameGenerator(runtimeID, registryCacheWithSecret2.UID), gardenNamespace, labels2, annotations2, "user2", "password2")
@@ -158,10 +158,10 @@ func TestGardenSecretSyncer(t *testing.T) {
 			registryCacheWithSecret3,
 		}
 
-		labels1 := fixRegistryCacheGardenSecretLabels(runtimeID)
-		labels2 := fixRegistryCacheGardenSecretLabels(runtimeID)
-		annotations1 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret1.Name, registryCacheWithSecret1.Namespace, registryCacheWithSecret1.UID)
-		annotations2 := fixRegistryCacheGardenSecretAnnotations("config-with-secret-2", "test", "id2")
+		labels1 := fixRegistryCacheGardenSecretLabels(runtimeID, registryCacheWithSecret1.UID)
+		labels2 := fixRegistryCacheGardenSecretLabels(runtimeID, "id2")
+		annotations1 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret1.Name, registryCacheWithSecret1.Namespace)
+		annotations2 := fixRegistryCacheGardenSecretAnnotations("config-with-secret-2", "test")
 
 		gardenerSecret1 := fixRegistryCacheSecret(secretNameGenerator(runtimeID, registryCacheWithSecret1.UID), gardenNamespace, labels1, annotations1, "user1", "password1")
 		gardenerSecret2 := fixRegistryCacheSecret("reg-cache-id", gardenNamespace, labels2, annotations2, "user2", "password2")
@@ -254,7 +254,7 @@ func TestGardenSecretNeedToBeRemoved(t *testing.T) {
 
 func verifyGardenSecret(gardenSecret, registryCacheSecret *corev1.Secret, registryCache imv1.ImageRegistryCache, runtimeID string) {
 	Expect(gardenSecret.Labels[RuntimeSecretLabel]).To(Equal(runtimeID))
-	Expect(gardenSecret.Annotations[CacheIDAnnotation]).To(Equal(registryCache.UID))
+	Expect(gardenSecret.Labels[CacheIDLabel]).To(Equal(registryCache.UID))
 	Expect(gardenSecret.Annotations[CacheNameAnnotation]).To(Equal(registryCache.Name))
 	Expect(gardenSecret.Annotations[CacheNamespaceAnnotation]).To(Equal(registryCache.Namespace))
 
@@ -277,15 +277,15 @@ func fixRegistryCacheSecret(name, namespace string, labels map[string]string, an
 	}
 }
 
-func fixRegistryCacheGardenSecretLabels(runtimeID string) map[string]string {
+func fixRegistryCacheGardenSecretLabels(runtimeID, cacheID string) map[string]string {
 	return map[string]string{
 		RuntimeSecretLabel: runtimeID,
+		CacheIDLabel:       cacheID,
 	}
 }
 
-func fixRegistryCacheGardenSecretAnnotations(cacheName, cacheNamespace, registryCacheID string) map[string]string {
+func fixRegistryCacheGardenSecretAnnotations(cacheName, cacheNamespace string) map[string]string {
 	return map[string]string{
-		CacheIDAnnotation:        registryCacheID,
 		CacheNameAnnotation:      cacheName,
 		CacheNamespaceAnnotation: cacheNamespace,
 	}

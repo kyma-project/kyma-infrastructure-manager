@@ -17,7 +17,7 @@ import (
 )
 
 const RuntimeSecretLabel = "kyma-project.io/runtime-id"
-const CacheIDAnnotation = "kyma-project.io/registry-cache-id"
+const CacheIDLabel = "kyma-project.io/registry-cache-id"
 const CacheNameAnnotation = "kyma-project.io/registry-cache-name"
 const CacheNamespaceAnnotation = "kyma-project.io/registry-cache-namespace"
 
@@ -49,15 +49,20 @@ func (s GardenSecretSyncer) CreateOrUpdate(ctx context.Context, registryCaches [
 		return nil
 	}
 
-	var gardenSecrets v12.SecretList
-	err := s.GardenClient.List(ctx, &gardenSecrets, client.MatchingLabels{RuntimeSecretLabel: s.RuntimeID}, client.InNamespace(s.GardenNamespace))
-
-	if err != nil {
-		return fmt.Errorf("failed to list garden secrets: %w", err)
-	}
-
 	for _, cache := range cachesWithSecret {
-		gardenerSecret, err := findSecret(gardenSecrets.Items, cache.UID)
+		var gardenSecretsForCache v12.SecretList
+		err := s.GardenClient.List(ctx, &gardenSecretsForCache,
+			client.MatchingLabels{RuntimeSecretLabel: s.RuntimeID, CacheIDLabel: cache.UID},
+			client.InNamespace(s.GardenNamespace))
+
+		if err != nil {
+			return fmt.Errorf("failed to list garden secrets: %w", err)
+		}
+
+		var gardenerSecret *v12.Secret
+		if len(gardenSecretsForCache.Items) > 0 {
+			gardenerSecret = &gardenSecretsForCache.Items[0]
+		}
 
 		if gardenerSecret == nil {
 			err = s.copySecretFromRuntimeToGardenCluster(ctx, s.RuntimeID, cache)
@@ -75,16 +80,6 @@ func (s GardenSecretSyncer) CreateOrUpdate(ctx context.Context, registryCaches [
 	return nil
 }
 
-func findSecret(secrets []v12.Secret, cacheUUID string) (*v12.Secret, error) {
-	for _, secret := range secrets {
-		if secret.Annotations[CacheIDAnnotation] == cacheUUID {
-			return &secret, nil
-		}
-	}
-
-	return nil, nil
-}
-
 func (s GardenSecretSyncer) copySecretFromRuntimeToGardenCluster(ctx context.Context, runtimeID string, cacheConfig imv1.ImageRegistryCache) error {
 
 	var secret v12.Secret
@@ -100,9 +95,9 @@ func (s GardenSecretSyncer) copySecretFromRuntimeToGardenCluster(ctx context.Con
 			Namespace: s.GardenNamespace,
 			Labels: map[string]string{
 				RuntimeSecretLabel: s.RuntimeID,
+				CacheIDLabel:       cacheConfig.UID,
 			},
 			Annotations: map[string]string{
-				CacheIDAnnotation:        cacheConfig.UID,
 				CacheNameAnnotation:      cacheConfig.Name,
 				CacheNamespaceAnnotation: cacheConfig.Namespace,
 			},
@@ -139,7 +134,7 @@ func (s GardenSecretSyncer) Delete(ctx context.Context, registryCaches []imv1.Im
 	}
 
 	for _, gardenSecret := range gardenSecrets.Items {
-		registryCacheUID := gardenSecret.Annotations[CacheIDAnnotation]
+		registryCacheUID := gardenSecret.Labels[CacheIDLabel]
 
 		if registryCacheUID != "" && !registryCacheUidExists(registryCacheUID, cachesWithSecret) {
 			err = s.GardenClient.Delete(ctx, &gardenSecret)

@@ -47,9 +47,7 @@ func TestFnCleanupRegistryCacheGardenSecrets(t *testing.T) {
 			Namespace: "garden-",
 			Labels: map[string]string{
 				registrycache.RuntimeSecretLabel: "test-runtime",
-			},
-			Annotations: map[string]string{
-				registrycache.CacheIDAnnotation: "uid2",
+				registrycache.CacheIDLabel:       "uid2",
 			},
 		},
 		Immutable: ptr.To(true),
@@ -164,9 +162,7 @@ func TestFnCleanupRegistryCacheGardenSecrets_NoCachingAfterCleanup(t *testing.T)
 			Namespace: "garden-",
 			Labels: map[string]string{
 				registrycache.RuntimeSecretLabel: "test-runtime",
-			},
-			Annotations: map[string]string{
-				registrycache.CacheIDAnnotation: "old-uid",
+				registrycache.CacheIDLabel:       "old-uid",
 			},
 		},
 	}
