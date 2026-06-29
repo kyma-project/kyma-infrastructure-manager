@@ -53,7 +53,7 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 
 	var secret corev1.Secret
 	if err := r.KcpClient.Get(ctx, request.NamespacedName, &secret); err != nil {
-		return stopIfNotFound(err)
+		return stopIfNotFound(err, r.Log.WithValues("secretName", request.Name), "Failed to get secret", "Secret not found, skipping reconciliation")
 	}
 
 	if !secretControlledByKIM(secret) {
@@ -66,11 +66,11 @@ func (r *RegistryCacheConfigReconciler) Reconcile(ctx context.Context, request c
 
 	var runtime imv1.Runtime
 	if err := r.KcpClient.Get(ctx, types.NamespacedName{Name: runtimeID, Namespace: r.KcpNamespace}, &runtime); err != nil {
-		return stopIfNotFound(err)
+		return stopIfNotFound(err, log, "Failed to get runtime", "Runtime not found, skipping reconciliation")
 	}
 
 	if !runtime.GetDeletionTimestamp().IsZero() || runtime.Status.State == imv1.RuntimeStateTerminating {
-		log.V(log_level.DEBUG).Info("Skipping reconciliation, runtime is being deleted")
+		log.Info("Skipping reconciliation, runtime is being deleted")
 		return stop()
 	}
 
@@ -92,14 +92,12 @@ func (r *RegistryCacheConfigReconciler) applyRegistryCacheConfig(ctx context.Con
 	var runtimeToUpdate imv1.Runtime
 	err = r.KcpClient.Get(ctx, types.NamespacedName{Name: runtimeID, Namespace: r.KcpNamespace}, &runtimeToUpdate)
 	if err != nil {
-		log.Error(err, "Failed to get runtime")
-		return stopIfNotFound(err)
+		return stopIfNotFound(err, log, "Failed to get runtime", "Runtime not found, skipping reconciliation")
 	}
 
 	err = r.updateRuntime(ctx, log, runtimeToUpdate, newRegistryCacheConfig)
 	if err != nil {
-		log.Error(err, "Failed to update runtime with registry cache config")
-		return stopIfNotFound(err)
+		return stopIfNotFound(err, log, "Failed to update runtime with registry cache config", "Runtime not found, skipping reconciliation")
 	}
 
 	return ctrl.Result{
@@ -185,11 +183,14 @@ func stop() (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
-func stopIfNotFound(err error) (ctrl.Result, error) {
+func stopIfNotFound(err error, log logr.Logger, errMsg, infoMsg string) (ctrl.Result, error) {
 
 	if err != nil && apierrors.IsNotFound(err) {
+		log.Info(infoMsg)
 		return ctrl.Result{}, nil
 	}
+
+	log.Error(err, errMsg)
 
 	return ctrl.Result{}, err
 }
