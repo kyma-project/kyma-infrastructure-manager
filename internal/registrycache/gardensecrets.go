@@ -22,18 +22,22 @@ const CacheNameAnnotation = "kyma-project.io/registry-cache-name"
 const CacheNamespaceAnnotation = "kyma-project.io/registry-cache-namespace"
 
 type GardenSecretSyncer struct {
-	GardenClient    client.Client
-	RuntimeClient   client.Client
-	RuntimeID       string
-	GardenNamespace string
+	GardenClient        client.Client
+	RuntimeClient       client.Client
+	RuntimeID           string
+	GardenNamespace     string
+	SecretNameGenerator SecretNameGenerator
 }
 
-func NewGardenSecretSyncer(gardenClient, runtimeClient client.Client, gardenNamespace, runtimeID string) GardenSecretSyncer {
+type SecretNameGenerator func(string, string) string
+
+func NewGardenSecretSyncer(gardenClient, runtimeClient client.Client, secretNameGenerator SecretNameGenerator, gardenNamespace, runtimeID string) GardenSecretSyncer {
 	return GardenSecretSyncer{
-		GardenClient:    gardenClient,
-		RuntimeClient:   runtimeClient,
-		RuntimeID:       runtimeID,
-		GardenNamespace: gardenNamespace,
+		GardenClient:        gardenClient,
+		RuntimeClient:       runtimeClient,
+		RuntimeID:           runtimeID,
+		GardenNamespace:     gardenNamespace,
+		SecretNameGenerator: secretNameGenerator,
 	}
 }
 
@@ -41,23 +45,29 @@ func (s GardenSecretSyncer) CreateOrUpdate(ctx context.Context, registryCaches [
 
 	cachesWithSecret := getRegistryCachesWithSecret(registryCaches)
 
+	if len(cachesWithSecret) == 0 {
+		return nil
+	}
+
+	var gardenSecrets v12.SecretList
+	err := s.GardenClient.List(ctx, &gardenSecrets, client.MatchingLabels{RuntimeSecretLabel: s.RuntimeID}, client.InNamespace(s.GardenNamespace))
+
+	if err != nil {
+		return fmt.Errorf("failed to list garden secrets: %w", err)
+	}
+
 	for _, cache := range cachesWithSecret {
-		var gardenerSecret v12.Secret
-		err := s.GardenClient.Get(ctx, client.ObjectKey{Name: fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, cache.UID), Namespace: s.GardenNamespace}, &gardenerSecret)
+		gardenerSecret, err := findSecret(gardenSecrets.Items, cache.UID)
 
-		if err != nil && !errors.IsNotFound(err) {
-			return err
-		}
-
-		if err == nil {
-			err = s.updateSecretInGardenCluster(ctx, cache, gardenerSecret)
-			if err != nil {
-				return fmt.Errorf("failed to update secret for registry cache %s: %w", cache.Name, err)
-			}
-		} else {
-			err = s.copySecretFromRuntimeToGardenCluster(ctx, cache)
+		if gardenerSecret == nil {
+			err = s.copySecretFromRuntimeToGardenCluster(ctx, s.RuntimeID, cache)
 			if err != nil {
 				return fmt.Errorf("failed to copy secret for registry cache %s: %w", cache.Name, err)
+			}
+		} else {
+			err = s.updateSecretInGardenCluster(ctx, cache, *gardenerSecret)
+			if err != nil {
+				return fmt.Errorf("failed to update secret for registry cache %s: %w", cache.Name, err)
 			}
 		}
 	}
@@ -65,7 +75,17 @@ func (s GardenSecretSyncer) CreateOrUpdate(ctx context.Context, registryCaches [
 	return nil
 }
 
-func (s GardenSecretSyncer) copySecretFromRuntimeToGardenCluster(ctx context.Context, cacheConfig imv1.ImageRegistryCache) error {
+func findSecret(secrets []v12.Secret, cacheUUID string) (*v12.Secret, error) {
+	for _, secret := range secrets {
+		if secret.Annotations[CacheIDAnnotation] == cacheUUID {
+			return &secret, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func (s GardenSecretSyncer) copySecretFromRuntimeToGardenCluster(ctx context.Context, runtimeID string, cacheConfig imv1.ImageRegistryCache) error {
 
 	var secret v12.Secret
 	err := s.RuntimeClient.Get(ctx, client.ObjectKey{Name: *cacheConfig.Config.SecretReferenceName, Namespace: cacheConfig.Namespace}, &secret)
@@ -76,7 +96,7 @@ func (s GardenSecretSyncer) copySecretFromRuntimeToGardenCluster(ctx context.Con
 
 	newSecret := v12.Secret{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, cacheConfig.UID),
+			Name:      s.SecretNameGenerator(runtimeID, cacheConfig.UID),
 			Namespace: s.GardenNamespace,
 			Labels: map[string]string{
 				RuntimeSecretLabel: s.RuntimeID,
