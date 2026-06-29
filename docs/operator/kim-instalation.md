@@ -14,7 +14,7 @@ The KIM image consists of three controllers:
 
 Those three controllers are the inseparable components of KIM.
 
-> **Note:** For restricted markets, KIM automatically installs and configures the Runtime Bootstrapper on each Kyma runtime (SKR). The Runtime Bootstrapper is pre-configured per restricted market by KIM — no manual installation or configuration is required.
+> **Note:** For restricted markets, when the Runtime Bootstrapper is enabled (`runtime-bootstrapper-enabled: true`), KIM automatically installs and configures it on each Kyma runtime (SKR). The Runtime Bootstrapper is pre-configured per restricted market by KIM — no manual installation or configuration is required.
 
 With Kyma Environment Broker (KEB) and Lifecycle Manager, KIM builds the foundation for the Kyma runtime, with all backend services running within KCP.
 
