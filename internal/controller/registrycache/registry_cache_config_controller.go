@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"slices"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"sync/atomic"
 	"time"
 
@@ -109,7 +109,7 @@ func (r *RegistryCacheConfigReconciler) applyRegistryCacheConfig(ctx context.Con
 
 func (r *RegistryCacheConfigReconciler) updateRuntime(ctx context.Context, log logr.Logger, runtimeToUpdate imv1.Runtime, newRegistryCacheConfig []imv1.ImageRegistryCache) error {
 
-	if slices.Equal(newRegistryCacheConfig, runtimeToUpdate.Spec.Caching) {
+	if apiequality.Semantic.DeepEqual(newRegistryCacheConfig, runtimeToUpdate.Spec.Caching) {
 		return nil
 	}
 
