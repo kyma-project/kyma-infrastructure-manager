@@ -3,8 +3,8 @@ package fsm
 import (
 	"context"
 	"fmt"
-	"time"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"

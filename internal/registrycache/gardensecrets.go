@@ -230,6 +230,6 @@ func GardenSecretNeedToBeRemoved(currentExtensions []gardener.Extension, desired
 	return false, nil
 }
 
-func DefaultGardenSecretNameGenerator(runtimeID, cacheUID string) string {
+func DefaultGardenSecretNameGenerator(_, _ string) string {
 	return uuid.New().String()
 }
