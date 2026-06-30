@@ -3,7 +3,6 @@ package extensions
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 
 	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
@@ -157,7 +156,8 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 				},
 			}
 
-			extender := NewExtensionsExtenderForCreate(context.Background(), fakeClient, config, testcase.inputAuditLogData, testcase.registryCache, testcase.apiServerACLEnabled)
+			registryCacheGardenSecretNames := map[string]string{"id1": "garden-id-1"}
+			extender := NewExtensionsExtenderForCreate(context.Background(), fakeClient, config, testcase.inputAuditLogData, testcase.registryCache, testcase.apiServerACLEnabled, registryCacheGardenSecretNames)
 
 			err := extender(testRuntime, shoot)
 			assert.NoError(t, err)
@@ -185,7 +185,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 					verifyOIDCExtension(t, ext)
 
 				case RegistryCacheExtensionType:
-					verifyRegistryCacheExtension(t, &ext, testcase.registryCache)
+					verifyRegistryCacheExtension(t, &ext, testcase.registryCache, registryCacheGardenSecretNames)
 				case ApiServerACLExtensionType:
 					mergedACL := testcase.apiServerACL
 					mergedACL = append(mergedACL, "2.2.2.2/29", "3.3.3.3/29", "4.4.4.4/29")
@@ -455,7 +455,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			kubeApiServerACLEnabled := AclNeedsToBeEnabled(testCase.apiServerACLEnabled, testRuntime)
 			nvidiaOpenshellExistsInOutput := isNvidiaOpenshellEnabled(testRuntime) || existingExtension(NvidiaOpenshellExtensionType, prevShoot) != nil
 
-			extender := NewExtensionsExtenderForPatch(context.Background(), fakeClient, config, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled)
+			extender := NewExtensionsExtenderForPatch(context.Background(), fakeClient, config, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled, map[string]string{})
 			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided, kubeApiServerACLEnabled, nvidiaOpenshellExistsInOutput)
 
 			err := extender(testRuntime, shoot)
@@ -489,7 +489,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 					verifyAuditLogExtension(t, ext, testCase.expectedAuditLogData)
 
 				case RegistryCacheExtensionType:
-					verifyRegistryCacheExtension(t, &ext, testCase.registryCaches)
+					verifyRegistryCacheExtension(t, &ext, testCase.registryCaches, map[string]string{})
 				case ApiServerACLExtensionType:
 					mergedACL := make([]string, 0)
 					if len(testCase.apiServerACL) != 0 {
@@ -758,7 +758,7 @@ func verifyNetworkFilterExtension(t *testing.T, ext gardener.Extension, isEnable
 	assert.Equal(t, !isEnabled, *ext.Disabled)
 }
 
-func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches []imv1.ImageRegistryCache) {
+func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches []imv1.ImageRegistryCache, registryCacheGardenSecretNames map[string]string) {
 	if len(caches) == 0 {
 		assert.True(t, ext != nil && (ext.ProviderConfig != nil && *ext.Disabled))
 
@@ -779,7 +779,7 @@ func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches 
 	assert.Nil(t, caches[0].Config.GarbageCollection)
 
 	if caches[0].Config.SecretReferenceName != nil {
-		assert.Equal(t, ptr.To(fmt.Sprintf(RegistryCacheSecretNameFmt, caches[0].UID)), registryConfig.Caches[0].SecretReferenceName)
+		assert.Equal(t, ptr.To(registryCacheGardenSecretNames[caches[0].UID]), registryConfig.Caches[0].SecretReferenceName)
 	} else {
 		assert.Nil(t, registryConfig.Caches[0].SecretReferenceName)
 	}

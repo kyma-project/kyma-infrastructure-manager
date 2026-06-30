@@ -14,7 +14,6 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"slices"
 )
 
 const RuntimeSecretLabel = "kyma-project.io/runtime-id"
@@ -189,7 +188,7 @@ func getRegistryCachesWithSecret(caches []imv1.ImageRegistryCache) []imv1.ImageR
 	return cachesWithSecret
 }
 
-func GardenSecretNeedToBeRemoved(currentExtensions []gardener.Extension, desiredRegistryCacheConfig []imv1.ImageRegistryCache) (bool, error) {
+func SecretRegistryCacheCountChanged(currentExtensions []gardener.Extension, desiredRegistryCacheConfig []imv1.ImageRegistryCache) (bool, error) {
 	var registryCacheExt *gardener.Extension
 
 	for _, ext := range currentExtensions {
@@ -204,8 +203,6 @@ func GardenSecretNeedToBeRemoved(currentExtensions []gardener.Extension, desired
 		return false, nil
 	}
 
-	imageRegistryConfigWithSecrets := getRegistryCachesWithSecret(desiredRegistryCacheConfig)
-
 	var registryConfig registrycacheext.RegistryConfig
 
 	err := json.Unmarshal(registryCacheExt.ProviderConfig.Raw, &registryConfig)
@@ -213,21 +210,16 @@ func GardenSecretNeedToBeRemoved(currentExtensions []gardener.Extension, desired
 		return false, fmt.Errorf("failed to unmarshal registry cache config: %w", err)
 	}
 
-	for _, cache := range registryConfig.Caches {
-		if cache.SecretReferenceName == nil {
-			continue
-		}
+	imageRegistryConfigWithSecrets := getRegistryCachesWithSecret(desiredRegistryCacheConfig)
 
-		secretNotReferencedInRuntimeCR := slices.ContainsFunc(imageRegistryConfigWithSecrets, func(c imv1.ImageRegistryCache) bool {
-			return *cache.SecretReferenceName == fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, c.UID)
-		})
-
-		if !secretNotReferencedInRuntimeCR {
-			return true, nil
+	var gardenerCachesWithSecrets []registrycacheext.RegistryCache
+	for _, gardenerRegistryCache := range registryConfig.Caches {
+		if gardenerRegistryCache.SecretReferenceName != nil && *gardenerRegistryCache.SecretReferenceName != "" {
+			gardenerCachesWithSecrets = append(gardenerCachesWithSecrets, gardenerRegistryCache)
 		}
 	}
 
-	return false, nil
+	return len(imageRegistryConfigWithSecrets) != len(gardenerCachesWithSecrets), nil
 }
 
 func DefaultGardenSecretNameGenerator(_, _ string) string {

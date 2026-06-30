@@ -199,11 +199,11 @@ func TestGardenSecretNeedToBeRemoved(t *testing.T) {
 
 	t.Run("Should return true if one secret is not referenced in the desired state", func(t *testing.T) {
 		// given
-		registryCacheExtension, err := extensions.NewRegistryCacheExtension([]imv1.ImageRegistryCache{registryCacheWithSecret1, registryCacheWithSecret2}, nil)
+		registryCacheExtension, err := extensions.NewRegistryCacheExtension([]imv1.ImageRegistryCache{registryCacheWithSecret1, registryCacheWithSecret2}, map[string]string{}, nil)
 		Expect(err).To(BeNil())
 
 		// when
-		remove, err := GardenSecretNeedToBeRemoved([]gardener.Extension{*registryCacheExtension}, []imv1.ImageRegistryCache{registryCacheWithSecret1})
+		remove, err := SecretRegistryCacheCountChanged([]gardener.Extension{*registryCacheExtension}, []imv1.ImageRegistryCache{registryCacheWithSecret1})
 
 		// then
 		Expect(remove).To(Equal(true))
@@ -212,7 +212,7 @@ func TestGardenSecretNeedToBeRemoved(t *testing.T) {
 
 	t.Run("Should return false if registry cache extension is not currently added", func(t *testing.T) {
 		// when
-		remove, err := GardenSecretNeedToBeRemoved([]gardener.Extension{}, []imv1.ImageRegistryCache{registryCacheWithSecret1})
+		remove, err := SecretRegistryCacheCountChanged([]gardener.Extension{}, []imv1.ImageRegistryCache{registryCacheWithSecret1})
 
 		// then
 		Expect(remove).To(Equal(false))
@@ -221,7 +221,7 @@ func TestGardenSecretNeedToBeRemoved(t *testing.T) {
 
 	t.Run("Should return false if registry cache extension is currently disabled", func(t *testing.T) {
 		// given
-		registryCacheExtension, err := extensions.NewRegistryCacheExtension(nil, &gardener.Extension{
+		registryCacheExtension, err := extensions.NewRegistryCacheExtension(nil, map[string]string{}, &gardener.Extension{
 			Type:     extensions.RegistryCacheExtensionType,
 			Disabled: ptr.To(true),
 			ProviderConfig: &runtime.RawExtension{
@@ -231,20 +231,7 @@ func TestGardenSecretNeedToBeRemoved(t *testing.T) {
 		Expect(err).To(BeNil())
 
 		// when
-		remove, err := GardenSecretNeedToBeRemoved([]gardener.Extension{*registryCacheExtension}, []imv1.ImageRegistryCache{registryCacheWithSecret1})
-
-		// then
-		Expect(remove).To(Equal(false))
-		Expect(err).To(BeNil())
-	})
-
-	t.Run("Should return false if all secrets referenced in the current extension config exist  ", func(t *testing.T) {
-		// given
-		registryCacheExtension, err := extensions.NewRegistryCacheExtension([]imv1.ImageRegistryCache{registryCacheWithSecret1}, nil)
-		Expect(err).To(BeNil())
-
-		// when
-		remove, err := GardenSecretNeedToBeRemoved([]gardener.Extension{*registryCacheExtension}, []imv1.ImageRegistryCache{registryCacheWithSecret1, registryCacheWithSecret2})
+		remove, err := SecretRegistryCacheCountChanged([]gardener.Extension{*registryCacheExtension}, []imv1.ImageRegistryCache{registryCacheWithSecret1})
 
 		// then
 		Expect(remove).To(Equal(false))
