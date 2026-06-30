@@ -58,36 +58,43 @@ func (p *DefaultDataProvider) ReserveAuditLog(ctx context.Context, providerRegio
 // When claim=true, performs Phase 2 of two-phase claim (upgrades reservation to full claim)
 func (p *DefaultDataProvider) GetDedicatedAuditLogData(ctx context.Context, runtimeID string, claim bool) (AuditLogData, error) {
 	if claim {
-		// Phase 2: Find the reserved AuditLogCR and upgrade to claim
-		reserved, err := p.findAuditLogCRByReservation(ctx, runtimeID)
-		if err != nil {
-			return AuditLogData{}, fmt.Errorf("failed to find reserved AuditLogCR: %w", err)
-		}
-		if reserved == nil {
-			return AuditLogData{}, fmt.Errorf("no reservation found for runtime %s", runtimeID)
-		}
+		return p.claimAndGetDedicatedAuditLogData(ctx, runtimeID)
+	}
+	return p.getDedicatedAuditLogDataWithoutClaim(ctx, runtimeID)
+}
 
-		// Upgrade to claim if not already claimed (idempotent)
-		if reserved.Spec.AssignedToRuntimeID != runtimeID {
-			reserved.Spec.AssignedToRuntimeID = runtimeID
-			if err := p.client.Update(ctx, reserved); err != nil {
-				return AuditLogData{}, fmt.Errorf("failed to claim AuditLogCR: %w", err)
-			}
-			p.logger.Info("Successfully claimed AuditLogCR", "runtimeID", runtimeID, "auditLogCR", reserved.Name)
-		} else {
-			p.logger.Info("AuditLogCR already claimed", "runtimeID", runtimeID)
-		}
-
-		// Return the data
-		return AuditLogData{
-			TenantID:            reserved.Spec.SubaccountID,
-			ServiceURL:          reserved.Spec.Config.ServiceURL,
-			SecretName:          reserved.Spec.Config.GardenerSecretName,
-			ReadCredsSecretName: reserved.Spec.Config.ReadCredsSecretName,
-		}, nil
+// claimAndGetDedicatedAuditLogData performs Phase 2 of two-phase claim: upgrades reservation to full claim
+// and returns the audit log configuration
+func (p *DefaultDataProvider) claimAndGetDedicatedAuditLogData(ctx context.Context, runtimeID string) (AuditLogData, error) {
+	reserved, err := p.findAuditLogCRByReservation(ctx, runtimeID)
+	if err != nil {
+		return AuditLogData{}, fmt.Errorf("failed to find reserved AuditLogCR: %w", err)
+	}
+	if reserved == nil {
+		return AuditLogData{}, fmt.Errorf("no reservation found for runtime %s", runtimeID)
 	}
 
-	// claim=false: just retrieve data from already claimed/reserved resource
+	// Upgrade to claim if not already claimed (idempotent)
+	if reserved.Spec.AssignedToRuntimeID != runtimeID {
+		reserved.Spec.AssignedToRuntimeID = runtimeID
+		if err := p.client.Update(ctx, reserved); err != nil {
+			return AuditLogData{}, fmt.Errorf("failed to claim AuditLogCR: %w", err)
+		}
+		p.logger.Info("Successfully claimed AuditLogCR", "runtimeID", runtimeID, "auditLogCR", reserved.Name)
+	} else {
+		p.logger.Info("AuditLogCR already claimed", "runtimeID", runtimeID)
+	}
+
+	return AuditLogData{
+		TenantID:            reserved.Spec.SubaccountID,
+		ServiceURL:          reserved.Spec.Config.ServiceURL,
+		SecretName:          reserved.Spec.Config.GardenerSecretName,
+		ReadCredsSecretName: reserved.Spec.Config.ReadCredsSecretName,
+	}, nil
+}
+
+// getDedicatedAuditLogDataWithoutClaim retrieves audit log data from already claimed/reserved resource
+func (p *DefaultDataProvider) getDedicatedAuditLogDataWithoutClaim(ctx context.Context, runtimeID string) (AuditLogData, error) {
 	// First try to find by claim
 	auditLogCR, err := p.findAuditLogCRByRuntimeID(ctx, runtimeID)
 	if err != nil {
