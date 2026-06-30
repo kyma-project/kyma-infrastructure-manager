@@ -143,7 +143,12 @@ var _ = BeforeSuite(func() {
 	// Create a mock audit log data provider for tests
 	mockAuditLogProvider := &auditlogmocks.DataProvider{}
 	mockAuditLogProvider.On("ReserveAuditLog", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	mockAuditLogProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(auditlog.AuditLogData{
+	mockAuditLogProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything).Return(auditlog.AuditLogData{
+		TenantID:   "test-tenant",
+		ServiceURL: "http://test-service",
+		SecretName: "test-secret",
+	}, nil)
+	mockAuditLogProvider.On("ClaimDedicatedAuditLogData", mock.Anything, mock.Anything).Return(auditlog.AuditLogData{
 		TenantID:   "test-tenant",
 		ServiceURL: "http://test-service",
 		SecretName: "test-secret",

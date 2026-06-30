@@ -37,7 +37,12 @@ var _ = Describe("KIM sFnCreateShoot", func() {
 			// Create mock audit log provider
 			mockProvider := &auditlogmocks.DataProvider{}
 			mockProvider.On("ReserveAuditLog", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-			mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(auditlog.AuditLogData{
+			mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything).Return(auditlog.AuditLogData{
+				TenantID:   "test-tenant",
+				ServiceURL: "http://test-service",
+				SecretName: "test-secret",
+			}, nil)
+			mockProvider.On("ClaimDedicatedAuditLogData", mock.Anything, mock.Anything).Return(auditlog.AuditLogData{
 				TenantID:   "test-tenant",
 				ServiceURL: "http://test-service",
 				SecretName: "test-secret",
