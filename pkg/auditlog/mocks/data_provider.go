@@ -29,20 +29,41 @@ func (m *DataProvider) ReserveAuditLog(ctx context.Context, providerRegion strin
 	return r0
 }
 
-// GetDedicatedAuditLogData provides a mock function with given fields: ctx, runtimeID, claim
-func (m *DataProvider) GetDedicatedAuditLogData(ctx context.Context, runtimeID string, claim bool) (auditlog.AuditLogData, error) {
-	ret := m.Called(ctx, runtimeID, claim)
+// GetDedicatedAuditLogData provides a mock function with given fields: ctx, runtimeID
+func (m *DataProvider) GetDedicatedAuditLogData(ctx context.Context, runtimeID string) (auditlog.AuditLogData, error) {
+	ret := m.Called(ctx, runtimeID)
 
 	var r0 auditlog.AuditLogData
-	if rf, ok := ret.Get(0).(func(context.Context, string, bool) auditlog.AuditLogData); ok {
-		r0 = rf(ctx, runtimeID, claim)
+	if rf, ok := ret.Get(0).(func(context.Context, string) auditlog.AuditLogData); ok {
+		r0 = rf(ctx, runtimeID)
 	} else {
 		r0 = ret.Get(0).(auditlog.AuditLogData)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, bool) error); ok {
-		r1 = rf(ctx, runtimeID, claim)
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, runtimeID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ClaimDedicatedAuditLogData provides a mock function with given fields: ctx, runtimeID
+func (m *DataProvider) ClaimDedicatedAuditLogData(ctx context.Context, runtimeID string) (auditlog.AuditLogData, error) {
+	ret := m.Called(ctx, runtimeID)
+
+	var r0 auditlog.AuditLogData
+	if rf, ok := ret.Get(0).(func(context.Context, string) auditlog.AuditLogData); ok {
+		r0 = rf(ctx, runtimeID)
+	} else {
+		r0 = ret.Get(0).(auditlog.AuditLogData)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, runtimeID)
 	} else {
 		r1 = ret.Error(1)
 	}

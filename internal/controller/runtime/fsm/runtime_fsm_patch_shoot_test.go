@@ -582,7 +582,8 @@ func Test_SFnPatchExistingShoot_CredentialsBindingPatched(t *testing.T) {
 func newMockAuditLogDataProvider(data auditlog.AuditLogData) *auditlogmocks.DataProvider {
 	mockProvider := &auditlogmocks.DataProvider{}
 	mockProvider.On("ReserveAuditLog", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(data, nil)
+	mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything).Return(data, nil)
+	mockProvider.On("ClaimDedicatedAuditLogData", mock.Anything, mock.Anything).Return(data, nil)
 	mockProvider.On("GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(data, nil)
 	mockProvider.On("ReleaseDedicated", mock.Anything, mock.Anything).Return(nil)
 	return mockProvider
@@ -592,7 +593,8 @@ func newMockAuditLogDataProvider(data auditlog.AuditLogData) *auditlogmocks.Data
 func newMockAuditLogDataProviderWithError() *auditlogmocks.DataProvider {
 	mockProvider := &auditlogmocks.DataProvider{}
 	mockProvider.On("ReserveAuditLog", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("mock audit log reservation error"))
-	mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(auditlog.AuditLogData{}, fmt.Errorf("mock audit log error"))
+	mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything).Return(auditlog.AuditLogData{}, fmt.Errorf("mock audit log error"))
+	mockProvider.On("ClaimDedicatedAuditLogData", mock.Anything, mock.Anything).Return(auditlog.AuditLogData{}, fmt.Errorf("mock audit log error"))
 	mockProvider.On("GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(auditlog.AuditLogData{}, fmt.Errorf("mock audit log error"))
 	mockProvider.On("ReleaseDedicated", mock.Anything, mock.Anything).Return(nil)
 	return mockProvider

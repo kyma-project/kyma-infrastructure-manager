@@ -132,6 +132,102 @@ KUBECONFIG_K3D=<path> go test ./test/e2e -v -timeout 30m
 - New shoot spec concerns go into `pkg/gardener/shoot/extender/` as a new extender file.
 - Avoid adding direct `k8s.io/client-go` rest calls — use `controller-runtime` client abstractions.
 
+### Line of Sight
+
+Keep the happy path at the **leftmost indent level**. Every function body should read top-to-bottom without the reader having to track open braces across multiple nesting levels.
+
+Apply these three techniques in order:
+
+**1. Guard clause — invert `if` and exit early**
+
+Replace a positive `if` that wraps the entire body with a negative guard that skips or exits immediately.
+
+```go
+// ❌ body buried inside a positive if
+for i := range items {
+    if items[i].Type == target {
+        // entire body nested here
+    }
+}
+
+// ✅ guard skips non-matching entries; body stays at loop level
+for i := range items {
+    if items[i].Type != target {
+        continue
+    }
+    // body here, one indent level shallower
+}
+```
+
+The same applies to `if/else` — when the `if` branch always exits (`return`, `continue`, `break`), drop the `else` and dedent its body:
+
+```go
+// ❌ unnecessary else
+if condition {
+    doA()
+    return
+} else {
+    doB()
+}
+
+// ✅ else removed
+if condition {
+    doA()
+    return
+}
+doB()
+```
+
+**2. Extract function — separate I/O from pure logic**
+
+A function that both mutates data *and* performs I/O has two independent responsibilities. Extract the pure mutation into its own function; the original becomes a thin orchestrator.
+
+```go
+// ❌ mutation and I/O mixed
+func patchThing(ctx context.Context, client Client, obj *Thing) error {
+    // ... mutate obj ...
+    return client.Patch(ctx, obj)
+}
+
+// ✅ separated
+func applyMutation(obj *Thing) error { /* pure, no I/O, trivially testable */ }
+
+func patchThing(ctx context.Context, client Client, obj *Thing) error {
+    if err := applyMutation(obj); err != nil {
+        return err
+    }
+    return client.Patch(ctx, obj)
+}
+```
+
+**3. Extract function — one responsibility per function**
+
+If a function contains internal `// Part 1` / `// Part 2` comments it is doing too much. Each part becomes its own named function; the parent becomes a sequencing orchestrator with no logic of its own.
+
+```go
+// ❌ two concerns in one function flagged by section comments
+func applyConfig(obj *Thing, data Data) error {
+    // Part 1: update extension
+    ...
+    // Part 2: upsert reference
+    ...
+}
+
+// ✅ each concern is a named function
+func updateExtensionConfig(obj *Thing, data Data) error { ... }
+func upsertSecretReference(obj *Thing, name string)     { ... }
+
+func applyConfig(obj *Thing, data Data) error {
+    if err := updateExtensionConfig(obj, data); err != nil {
+        return err
+    }
+    upsertSecretReference(obj, data.SecretName)
+    return nil
+}
+```
+
+Note: a function may contain two sub-steps when both are **cohesive sub-tasks of a single logical intent** and neither sub-step would be called independently. Extract only when the parts are independently meaningful or testable.
+
 ---
 
 ## Dependencies

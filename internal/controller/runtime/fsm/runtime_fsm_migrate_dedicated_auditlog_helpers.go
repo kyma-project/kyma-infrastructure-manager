@@ -15,64 +15,69 @@ import (
 
 const dedicatedAuditlogSecretReference = "dedicated-auditlog-credentials"
 
-// patchShootAuditLog patches the shoot with dedicated audit log configuration
-// This is a two-part operation:
-// 1. Updates the AuditlogExtension's secretReferenceName to use "dedicated-auditlog-credentials"
-// 2. Adds/updates a NamedResourceReference that maps "dedicated-auditlog-credentials" to the actual Gardener secret
-func patchShootAuditLog(ctx context.Context, m *fsm, s *systemState, auditLogData auditlog.AuditLogData) error {
-	// Create a copy of the shoot to modify
-	patchedShoot := s.shoot.DeepCopy()
+// applyDedicatedAuditLogToShoot mutates a shoot with the dedicated audit log configuration.
+// It is a pure function (no I/O) that can be unit-tested in isolation.
+func applyDedicatedAuditLogToShoot(shoot *gardener.Shoot, auditLogData auditlog.AuditLogData) error {
+	if err := updateAuditLogExtensionConfig(shoot, auditLogData); err != nil {
+		return err
+	}
+	upsertAuditLogSecretReference(shoot, auditLogData.SecretName)
+	return nil
+}
 
-	// Part 1: Find and update the audit log extension
-	found := false
-	for i := range patchedShoot.Spec.Extensions {
-		if patchedShoot.Spec.Extensions[i].Type == extensions.AuditlogExtensionType {
-			// Update the audit log configuration with dedicated settings
-			if err := updateAuditLogExtension(&patchedShoot.Spec.Extensions[i], auditLogData); err != nil {
-				return fmt.Errorf("failed to update audit log extension: %w", err)
-			}
-			found = true
-			break
+// updateAuditLogExtensionConfig finds the audit log extension in the shoot and updates
+// its provider config with the dedicated audit log settings.
+func updateAuditLogExtensionConfig(shoot *gardener.Shoot, auditLogData auditlog.AuditLogData) error {
+	for i := range shoot.Spec.Extensions {
+		if shoot.Spec.Extensions[i].Type != extensions.AuditlogExtensionType {
+			continue
 		}
+		if err := updateAuditLogExtension(&shoot.Spec.Extensions[i], auditLogData); err != nil {
+			return fmt.Errorf("failed to update audit log extension: %w", err)
+		}
+		return nil
 	}
+	return fmt.Errorf("audit log extension not found in shoot spec")
+}
 
-	if !found {
-		return fmt.Errorf("audit log extension not found in shoot spec")
-	}
-
-	// Part 2: Add or update the secret resource reference
+// upsertAuditLogSecretReference adds or updates the NamedResourceReference that maps
+// dedicatedAuditlogSecretReference to the actual Gardener secret.
+func upsertAuditLogSecretReference(shoot *gardener.Shoot, secretName string) {
 	resource := gardener.NamedResourceReference{
 		Name: dedicatedAuditlogSecretReference,
 		ResourceRef: v1.CrossVersionObjectReference{
-			Name:       auditLogData.SecretName,
+			Name:       secretName,
 			Kind:       "Secret",
 			APIVersion: "v1",
 		},
 	}
-
-	// Find if the resource reference already exists
-	index := slices.IndexFunc(patchedShoot.Spec.Resources, func(r gardener.NamedResourceReference) bool {
+	index := slices.IndexFunc(shoot.Spec.Resources, func(r gardener.NamedResourceReference) bool {
 		return r.Name == dedicatedAuditlogSecretReference
 	})
-
 	if index == -1 {
-		// Add new resource reference
-		patchedShoot.Spec.Resources = append(patchedShoot.Spec.Resources, resource)
-	} else {
-		// Update existing resource reference
-		patchedShoot.Spec.Resources[index] = resource
+		shoot.Spec.Resources = append(shoot.Spec.Resources, resource)
+		return
+	}
+	shoot.Spec.Resources[index] = resource
+}
+
+// patchShootAuditLog patches the shoot with dedicated audit log configuration.
+// It delegates all data mutations to applyDedicatedAuditLogToShoot and then
+// persists the result via the Gardener client.
+func patchShootAuditLog(ctx context.Context, m *fsm, s *systemState, auditLogData auditlog.AuditLogData) error {
+	patchedShoot := s.shoot.DeepCopy()
+
+	if err := applyDedicatedAuditLogToShoot(patchedShoot, auditLogData); err != nil {
+		return err
 	}
 
-	// Patch the shoot resource
 	if err := m.GardenClient.Patch(ctx, patchedShoot, client.MergeFrom(s.shoot), &client.PatchOptions{
 		FieldManager: fieldManagerName,
 	}); err != nil {
 		return fmt.Errorf("failed to patch shoot: %w", err)
 	}
 
-	// Update the systemState with the patched shoot
 	s.shoot = patchedShoot
-
 	return nil
 }
 
@@ -115,30 +120,31 @@ func getShootAuditLogConfig(shoot *gardener.Shoot) (*auditlog.AuditLogData, erro
 
 	// Find the audit log extension
 	for i := range shoot.Spec.Extensions {
-		if shoot.Spec.Extensions[i].Type == extensions.AuditlogExtensionType {
-			if shoot.Spec.Extensions[i].ProviderConfig == nil {
-				return nil, fmt.Errorf("audit log extension has nil provider config")
-			}
-
-			// Parse the extension config
-			var config extensions.AuditlogExtensionConfig
-			if err := json.Unmarshal(shoot.Spec.Extensions[i].ProviderConfig.Raw, &config); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal audit log config: %w", err)
-			}
-
-			// Look up the actual secret name from shoot.Spec.Resources using the SecretReferenceName
-			secretName, err := getSecretNameFromResources(shoot, config.SecretReferenceName)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get secret name from resources: %w", err)
-			}
-
-			// Return the audit log data
-			return &auditlog.AuditLogData{
-				TenantID:   config.TenantID,
-				ServiceURL: config.ServiceURL,
-				SecretName: secretName,
-			}, nil
+		if shoot.Spec.Extensions[i].Type != extensions.AuditlogExtensionType {
+			continue
 		}
+
+		if shoot.Spec.Extensions[i].ProviderConfig == nil {
+			return nil, fmt.Errorf("audit log extension has nil provider config")
+		}
+
+		// Parse the extension config
+		var config extensions.AuditlogExtensionConfig
+		if err := json.Unmarshal(shoot.Spec.Extensions[i].ProviderConfig.Raw, &config); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal audit log config: %w", err)
+		}
+
+		// Look up the actual secret name from shoot.Spec.Resources using the SecretReferenceName
+		secretName, err := getSecretNameFromResources(shoot, config.SecretReferenceName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get secret name from resources: %w", err)
+		}
+
+		return &auditlog.AuditLogData{
+			TenantID:   config.TenantID,
+			ServiceURL: config.ServiceURL,
+			SecretName: secretName,
+		}, nil
 	}
 
 	return nil, fmt.Errorf("audit log extension not found in shoot spec")

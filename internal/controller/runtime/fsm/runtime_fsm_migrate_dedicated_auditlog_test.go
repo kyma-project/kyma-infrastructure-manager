@@ -149,7 +149,7 @@ func TestSFnMigrateToDedicatedAuditLog(t *testing.T) {
 		}
 
 		mockAuditLogProvider := &auditlogmocks.DataProvider{}
-		mockAuditLogProvider.On("GetDedicatedAuditLogData", ctx, runtimeID, true).
+		mockAuditLogProvider.On("ClaimDedicatedAuditLogData", ctx, runtimeID).
 			Return(auditlog.AuditLogData{}, errors.New("failed to claim audit log"))
 
 		mockMetrics := &mocks.Metrics{}
@@ -249,7 +249,7 @@ func TestSFnMigrateToDedicatedAuditLog(t *testing.T) {
 		}
 
 		mockAuditLogProvider := &auditlogmocks.DataProvider{}
-		mockAuditLogProvider.On("GetDedicatedAuditLogData", ctx, runtimeID, true).
+		mockAuditLogProvider.On("ClaimDedicatedAuditLogData", ctx, runtimeID).
 			Return(desiredAuditLogData, nil)
 
 		mockMetrics := &mocks.Metrics{}
@@ -346,7 +346,7 @@ func TestSFnMigrateToDedicatedAuditLog(t *testing.T) {
 		}
 
 		mockAuditLogProvider := &auditlogmocks.DataProvider{}
-		mockAuditLogProvider.On("GetDedicatedAuditLogData", ctx, runtimeID, true).
+		mockAuditLogProvider.On("ClaimDedicatedAuditLogData", ctx, runtimeID).
 			Return(desiredAuditLogData, nil)
 
 		mockMetrics := &mocks.Metrics{}
@@ -440,7 +440,7 @@ func TestSFnMigrateToDedicatedAuditLog(t *testing.T) {
 		}
 
 		mockAuditLogProvider := &auditlogmocks.DataProvider{}
-		mockAuditLogProvider.On("GetDedicatedAuditLogData", ctx, runtimeID, true).
+		mockAuditLogProvider.On("ClaimDedicatedAuditLogData", ctx, runtimeID).
 			Return(desiredAuditLogData, nil)
 
 		mockMetrics := &mocks.Metrics{}

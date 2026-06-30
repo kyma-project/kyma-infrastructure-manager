@@ -44,11 +44,7 @@ func sFnMigrateToDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState) 
 
 	// Step 1: Get desired audit log data and claim the resource
 	// This performs Phase 2 of the two-phase claim (upgrade from light lock to heavy lock)
-	auditLogData, err := m.AuditLogDataProvider.GetDedicatedAuditLogData(
-		ctx,
-		runtimeID,
-		true, // claim=true to upgrade reservation to full claim
-	)
+	auditLogData, err := m.AuditLogDataProvider.ClaimDedicatedAuditLogData(ctx, runtimeID)
 	if err != nil {
 		msg := fmt.Sprintf("Failed to get and claim dedicated audit log configuration: %v", err)
 		m.log.Error(err, "Cannot complete runtime provisioning - failed to claim reserved audit log")
