@@ -56,22 +56,40 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 		logDeletedClusterRoleBindings(removed, m, s)
 	}
 
+	m.log.Info("Finished configuring shoot")
+
+	// Only proceed to audit log migration if both flags are enabled
+	if m.DedicatedAuditLoggingEnabled &&
+		s.instance.Spec.AuditLogAccessEnabled != nil &&
+		*s.instance.Spec.AuditLogAccessEnabled {
+
+		s.instance.UpdateStatePending(
+			imv1.ConditionTypeRuntimeConfigured,
+			imv1.ConditionReasonAdministratorsConfigured,
+			metav1.ConditionTrue,
+			"Cluster admin configuration completed",
+		)
+
+		m.log.Info("Proceeding to dedicated audit log infrastructure configuration")
+		return switchState(sFnMigrateToDedicatedAuditLog)
+	}
+
 	s.instance.UpdateStateReady(
 		imv1.ConditionTypeRuntimeConfigured,
 		imv1.ConditionReasonAdministratorsConfigured,
-		"Cluster admin configuration complete",
+		"Cluster admin configuration completed",
 	)
 
+	// Complete provisioning without migration
 	if !s.instance.IsProvisioningCompletedStatusSet() {
 		s.instance.UpdateStateProvisioningCompleted()
 	}
 
-	m.log.Info("Finished configuring shoot")
-
+	m.log.Info("Finished configuring shoot without audit log migration")
 	return updateStatusAndStop()
 }
 
-func logDeletedClusterRoleBindings(removed []rbacv1.ClusterRoleBinding, m *fsm, s *systemState) {
+func logDeletedClusterRoleBindings(removed []rbacv1.ClusterRoleBinding, m *fsm, _ *systemState) {
 	if len(removed) > 0 {
 		var crbsNames []string
 		for _, binding := range removed {

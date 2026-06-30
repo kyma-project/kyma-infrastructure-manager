@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -57,10 +56,11 @@ import (
 	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
 	runtimecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
+	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
+	auditlogv1 "github.com/kyma-project/infrastructure-manager/pkg/auditlog/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
@@ -76,6 +76,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(infrastructuremanagerv1.AddToScheme(scheme))
 	utilruntime.Must(rbacv1.AddToScheme(scheme))
+	utilruntime.Must(auditlogv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -115,6 +116,7 @@ func main() {
 	var gardenerClusterCtrlWorkersCnt int
 	var converterConfigFilepath string
 	var auditLogMandatory bool
+	var dedicatedAuditLoggingEnabled bool
 	var registryCacheConfigControllerEnabled bool
 	var registryCacheListenerPort string
 	var apiServerAclEnabled bool
@@ -163,6 +165,7 @@ func main() {
 
 	//Feature flags:
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration. When enabled this feature, a Shoot cluster will only be created when an auditlog tenant exists (this is defined in the auditlog mapping configuration file)")
+	flag.BoolVar(&dedicatedAuditLoggingEnabled, "dedicated-audit-logging-enabled", false, "Feature flag to enable dedicated BTP audit logging infrastructure for provisioned Kyma Runtime. When enabled, this feature integrates with the Kyma Audit Log Manager to provide self-service access to runtime audit logs")
 	flag.BoolVar(&registryCacheConfigControllerEnabled, "registry-cache-config-controller-enabled", false, "Feature flag to enable registry cache config controller")
 	flag.BoolVar(&runtimeBootstrapperEnabled, "runtime-bootstrapper-enabled", false, "Feature flag to enable runtime bootstrapper")
 	flag.BoolVar(&apiServerAclEnabled, "api-server-acl-enabled", false, "Feature flag to enable the shoot API server ACL extender which restricts access to the API server to a defined set of CIDRs")
@@ -274,11 +277,18 @@ func main() {
 		}
 	}
 
-	auditLogDataMap, err := loadAuditLogDataMap(config.ConverterConfig.AuditLog.TenantConfigPath)
+	auditLogSharedConfig, err := auditlog.LoadConfiguration(config.ConverterConfig.AuditLog.TenantConfigPath)
 	if err != nil {
 		setupLog.Error(err, "invalid audit log tenant configuration")
 		os.Exit(1)
 	}
+
+	// Create audit log data provider
+	auditLogDataProvider := auditlog.NewDataProvider(
+		mgr.GetClient(),
+		auditLogSharedConfig,
+		logger,
+	)
 
 	_, err = token.ValidateTokenExpirationTime(config.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
 	if err != nil {
@@ -400,9 +410,10 @@ func main() {
 		ShootNamesapace:                      gardenerNamespace,
 		Config:                               config,
 		AuditLogMandatory:                    auditLogMandatory,
+		DedicatedAuditLoggingEnabled:         dedicatedAuditLoggingEnabled,
 		ApiServerAclEnabled:                  apiServerAclEnabled,
 		Metrics:                              metrics,
-		AuditLogging:                         auditLogDataMap,
+		AuditLogDataProvider:                 auditLogDataProvider,
 		RegistryCacheConfigControllerEnabled: registryCacheConfigControllerEnabled,
 		RuntimeBootstrapperEnabled:           runtimeBootstrapperEnabled,
 		RuntimeBootstrapperInstaller:         runtimeBootstrapperInstaller,
@@ -497,29 +508,6 @@ func initGardenerClients(kubeconfigPath string, namespace string, timeout time.D
 	dynamicKubeconfigAPI := gardenerClient.SubResource("adminkubeconfig")
 
 	return gardenerClient, shootClient, dynamicKubeconfigAPI, nil
-}
-
-func loadAuditLogDataMap(p string) (auditlogs.Configuration, error) {
-	file, err := os.Open(p)
-	if err != nil {
-		return nil, err
-	}
-
-	var data auditlogs.Configuration
-	if err := json.NewDecoder(file).Decode(&data); err != nil {
-		return nil, err
-	}
-	validate := validator.New(validator.WithRequiredStructEnabled())
-
-	for _, nestedMap := range data {
-		for _, auditLogData := range nestedMap {
-			if err := validate.Struct(auditLogData); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	return data, nil
 }
 
 func refreshRuntimeMetrics(restConfig *rest.Config, logger logr.Logger, metrics metrics.Metrics) {
