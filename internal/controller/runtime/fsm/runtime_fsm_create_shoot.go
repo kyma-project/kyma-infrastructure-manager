@@ -77,7 +77,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 			return updateStateFailedWithErrorAndStop(
 				&s.instance,
 				imv1.ConditionTypeRuntimeProvisioned,
-				imv1.ConditionReasonAuditLogError,
+				imv1.ConditionReasonCustomAuditLogError,
 				msg)
 		}
 

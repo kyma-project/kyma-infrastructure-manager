@@ -2,8 +2,9 @@ package fsm
 
 import (
 	"context"
-	core_v1 "k8s.io/api/core/v1"
 	"time"
+
+	core_v1 "k8s.io/api/core/v1"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -35,10 +36,14 @@ var _ = Describe("KIM sFnInitialise", func() {
 		}
 	}
 
+	labels := make(map[string]string)
+	labels[imv1.LabelKymaRuntimeID] = "test-runtime-id"
+
 	testRt := imv1.Runtime{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-instance",
 			Namespace: "default",
+			Labels:    labels,
 		},
 	}
 
@@ -47,6 +52,7 @@ var _ = Describe("KIM sFnInitialise", func() {
 			Name:       "test-instance",
 			Namespace:  "default",
 			Finalizers: []string{"test-me-plz"},
+			Labels:     labels,
 		},
 	}
 
@@ -55,6 +61,7 @@ var _ = Describe("KIM sFnInitialise", func() {
 			Name:       "test-instance",
 			Namespace:  "default",
 			Finalizers: []string{"test-me-plz"},
+			Labels:     labels,
 		},
 	}
 
@@ -70,6 +77,7 @@ var _ = Describe("KIM sFnInitialise", func() {
 	testRtWithDeletionTimestamp := imv1.Runtime{
 		ObjectMeta: metav1.ObjectMeta{
 			DeletionTimestamp: &now,
+			Labels:            labels,
 		},
 	}
 
@@ -77,6 +85,7 @@ var _ = Describe("KIM sFnInitialise", func() {
 		ObjectMeta: metav1.ObjectMeta{
 			DeletionTimestamp: &now,
 			Finalizers:        []string{"test-me-plz"},
+			Labels:            labels,
 		},
 	}
 

@@ -61,15 +61,16 @@ const (
 type RuntimeConditionType string
 
 const (
-	ConditionTypeRuntimeProvisioned       RuntimeConditionType = "Provisioned"
-	ConditionTypeRuntimeKubeconfigReady   RuntimeConditionType = "KubeconfigReady"
-	ConditionTypeOidcAndCMsConfigured     RuntimeConditionType = "OidcAndConfigMapConfigured"
-	ConditionTypeKymaSystemCreated        RuntimeConditionType = "KymaSystemNSCreated"
-	ConditionTypeRuntimeConfigured        RuntimeConditionType = "Configured"
-	ConditionTypeRuntimeDeprovisioned     RuntimeConditionType = "Deprovisioned"
-	ConditionTypeRegistryCacheConfigured  RuntimeConditionType = "RegistryCacheConfigured"
-	ConditionTypeRuntimeBootstrapperReady RuntimeConditionType = "RuntimeBootstrapperReady"
-	ConditionTypeCustomAuditLogConfigured RuntimeConditionType = "CustomAuditLogConfigured"
+	ConditionTypeRuntimeProvisioned        RuntimeConditionType = "Provisioned"
+	ConditionTypeRuntimeKubeconfigReady    RuntimeConditionType = "KubeconfigReady"
+	ConditionTypeOidcAndCMsConfigured      RuntimeConditionType = "OidcAndConfigMapConfigured"
+	ConditionTypeKymaSystemCreated         RuntimeConditionType = "KymaSystemNSCreated"
+	ConditionTypeRuntimeConfigured         RuntimeConditionType = "Configured"
+	ConditionTypeRuntimeDeprovisioned      RuntimeConditionType = "Deprovisioned"
+	ConditionTypeRegistryCacheConfigured   RuntimeConditionType = "RegistryCacheConfigured"
+	ConditionTypeRuntimeBootstrapperReady  RuntimeConditionType = "RuntimeBootstrapperReady"
+	ConditionTypeCustomAuditLogConfigured  RuntimeConditionType = "CustomAuditLogConfigured"
+	ConditionTypeAuditLogCredentialsCopied RuntimeConditionType = "AuditLogCredentialsCopied"
 )
 
 type RuntimeConditionReason string
@@ -98,6 +99,8 @@ const (
 	ConditionReasonAuditLogError            = RuntimeConditionReason("AuditLogErr")
 	ConditionReasonCustomAuditLogError      = RuntimeConditionReason("CustomAuditLogErr")
 	ConditionReasonCustomAuditLogConfigured = RuntimeConditionReason("CustomAuditLogConfigured")
+	ConditionReasonCredentialsCopyError     = RuntimeConditionReason("CredentialsCopyErr")
+	ConditionReasonCredentialsCopied        = RuntimeConditionReason("CredentialsCopied")
 
 	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
 	ConditionReasonOidcAndCMsConfigured     = RuntimeConditionReason("OidcAndConfigMapsConfigured")

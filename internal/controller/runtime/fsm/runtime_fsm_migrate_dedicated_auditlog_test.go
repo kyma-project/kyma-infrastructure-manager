@@ -278,8 +278,8 @@ func TestSFnMigrateToDedicatedAuditLog(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		require.Nil(t, result)
-		require.Contains(t, stateFn.name(), "updateStatusAndStop")
-		require.True(t, systemState.instance.IsProvisioningCompletedStatusSet())
+		// Should transition to credentials copy state
+		require.Contains(t, stateFn.name(), "sFnCopyAuditLogReadCredentials")
 
 		// Verify condition is set to ready (true status)
 		condition := meta.FindStatusCondition(systemState.instance.Status.Conditions, string(imv1.ConditionTypeCustomAuditLogConfigured))
