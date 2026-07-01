@@ -485,7 +485,7 @@ spec:
                             controlPlane:
                               description: |-
                                 ControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.
-                                This is only relevant for autonomous shoot clusters.
+                                This is only relevant for self-hosted shoot clusters.
                               properties:
                                 backup:
                                   description: |-
@@ -554,6 +554,33 @@ spec:
                                       type: string
                                   required:
                                   - provider
+                                  type: object
+                                exposure:
+                                  description: Exposure holds the exposure configuration
+                                    for the shoot (either `extension` or `dns` or
+                                    omitted/empty).
+                                  properties:
+                                    dns:
+                                      description: |-
+                                        DNS specifies that this shoot will be exposed by DNS.
+                                        Mutually exclusive with Extension.
+                                      type: object
+                                    extension:
+                                      description: |-
+                                        Extension holds the type and provider config of the exposure extension.
+                                        Mutually exclusive with DNS.
+                                      properties:
+                                        providerConfig:
+                                          description: ProviderConfig holds the extension
+                                            specific configuration.
+                                          type: object
+                                          x-kubernetes-preserve-unknown-fields: true
+                                        type:
+                                          description: |-
+                                            Type defines the type of the extension exposure.
+                                            Defaults to `.spec.provider.type`
+                                          type: string
+                                      type: object
                                   type: object
                               type: object
                             cri:
@@ -909,7 +936,7 @@ spec:
                                       properties:
                                         swapBehavior:
                                           description: |-
-                                            SwapBehavior configures swap memory available to container workloads. May be one of {"LimitedSwap", "UnlimitedSwap"}
+                                            SwapBehavior configures swap memory available to container workloads. May be one of {"NoSwap", "LimitedSwap"}
                                             defaults to: LimitedSwap
                                           type: string
                                       type: object
@@ -1281,7 +1308,7 @@ spec:
                             controlPlane:
                               description: |-
                                 ControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.
-                                This is only relevant for autonomous shoot clusters.
+                                This is only relevant for self-hosted shoot clusters.
                               properties:
                                 backup:
                                   description: |-
@@ -1350,6 +1377,33 @@ spec:
                                       type: string
                                   required:
                                   - provider
+                                  type: object
+                                exposure:
+                                  description: Exposure holds the exposure configuration
+                                    for the shoot (either `extension` or `dns` or
+                                    omitted/empty).
+                                  properties:
+                                    dns:
+                                      description: |-
+                                        DNS specifies that this shoot will be exposed by DNS.
+                                        Mutually exclusive with Extension.
+                                      type: object
+                                    extension:
+                                      description: |-
+                                        Extension holds the type and provider config of the exposure extension.
+                                        Mutually exclusive with DNS.
+                                      properties:
+                                        providerConfig:
+                                          description: ProviderConfig holds the extension
+                                            specific configuration.
+                                          type: object
+                                          x-kubernetes-preserve-unknown-fields: true
+                                        type:
+                                          description: |-
+                                            Type defines the type of the extension exposure.
+                                            Defaults to `.spec.provider.type`
+                                          type: string
+                                      type: object
                                   type: object
                               type: object
                             cri:
@@ -1705,7 +1759,7 @@ spec:
                                       properties:
                                         swapBehavior:
                                           description: |-
-                                            SwapBehavior configures swap memory available to container workloads. May be one of {"LimitedSwap", "UnlimitedSwap"}
+                                            SwapBehavior configures swap memory available to container workloads. May be one of {"NoSwap", "LimitedSwap"}
                                             defaults to: LimitedSwap
                                           type: string
                                       type: object

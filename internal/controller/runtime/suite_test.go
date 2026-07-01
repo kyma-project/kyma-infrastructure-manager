@@ -30,9 +30,10 @@ import (
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
 	fsm_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
+	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
+	auditlogmocks "github.com/kyma-project/infrastructure-manager/pkg/auditlog/mocks"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
@@ -139,11 +140,26 @@ var _ = BeforeSuite(func() {
 
 	runtimeClientGetterMock.On("Get", mock.Anything, mock.Anything).Return(fakeClient, nil)
 
+	// Create a mock audit log data provider for tests
+	mockAuditLogProvider := &auditlogmocks.DataProvider{}
+	mockAuditLogProvider.On("ReserveAuditLog", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mockAuditLogProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(auditlog.AuditLogData{
+		TenantID:   "test-tenant",
+		ServiceURL: "http://test-service",
+		SecretName: "test-secret",
+	}, nil)
+	mockAuditLogProvider.On("GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(auditlog.AuditLogData{
+		TenantID:   "test-tenant",
+		ServiceURL: "http://test-service",
+		SecretName: "test-secret",
+	}, nil)
+	mockAuditLogProvider.On("ReleaseDedicated", mock.Anything, mock.Anything).Return(nil)
+
 	fsmCfg := fsm.RCCfg{
 		Finalizer:                     imv1.Finalizer,
 		Config:                        convConfig,
 		Metrics:                       mm,
-		AuditLogging:                  map[string]map[string]auditlogs.AuditLogData{},
+		AuditLogDataProvider:          mockAuditLogProvider,
 		GardenerRequeueDuration:       3 * time.Second,
 		ControlPlaneRequeueDuration:   3 * time.Second,
 		RequeueDurationShootReconcile: 3 * time.Second,
