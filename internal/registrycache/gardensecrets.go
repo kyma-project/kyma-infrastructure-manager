@@ -81,15 +81,29 @@ func (s GardenSecretSyncer) CreateOrUpdate(ctx context.Context, registryCaches [
 }
 
 func (s GardenSecretSyncer) copySecretFromRuntimeToGardenCluster(ctx context.Context, runtimeID string, cacheConfig imv1.ImageRegistryCache) error {
-
 	var secret v12.Secret
-	err := s.RuntimeClient.Get(ctx, client.ObjectKey{Name: *cacheConfig.Config.SecretReferenceName, Namespace: cacheConfig.Namespace}, &secret)
-
-	if err != nil {
+	if err := s.RuntimeClient.Get(ctx, client.ObjectKey{Name: *cacheConfig.Config.SecretReferenceName, Namespace: cacheConfig.Namespace}, &secret); err != nil {
 		return err
 	}
 
-	newSecret := v12.Secret{
+	return s.GardenClient.Create(ctx, s.newGardenSecret(runtimeID, cacheConfig, secret.Data))
+}
+
+func (s GardenSecretSyncer) updateSecretInGardenCluster(ctx context.Context, cacheConfig imv1.ImageRegistryCache, gardenerSecret v12.Secret) error {
+	var runtimeSecret v12.Secret
+	if err := s.RuntimeClient.Get(ctx, client.ObjectKey{Name: *cacheConfig.Config.SecretReferenceName, Namespace: cacheConfig.Namespace}, &runtimeSecret); err != nil {
+		return err
+	}
+
+	if err := s.GardenClient.Delete(ctx, &gardenerSecret); err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+
+	return s.GardenClient.Create(ctx, s.newGardenSecret(s.RuntimeID, cacheConfig, runtimeSecret.Data))
+}
+
+func (s GardenSecretSyncer) newGardenSecret(runtimeID string, cacheConfig imv1.ImageRegistryCache, data map[string][]byte) *v12.Secret {
+	return &v12.Secret{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      s.SecretNameGenerator(runtimeID, cacheConfig.UID),
 			Namespace: s.GardenNamespace,
@@ -103,23 +117,8 @@ func (s GardenSecretSyncer) copySecretFromRuntimeToGardenCluster(ctx context.Con
 			},
 		},
 		Immutable: ptr.To(true),
-		Data:      secret.Data,
+		Data:      data,
 	}
-
-	return s.GardenClient.Create(ctx, &newSecret)
-}
-
-func (s GardenSecretSyncer) updateSecretInGardenCluster(ctx context.Context, cacheConfig imv1.ImageRegistryCache, gardenerSecret v12.Secret) error {
-	var runtimeSecret v12.Secret
-	err := s.RuntimeClient.Get(ctx, client.ObjectKey{Name: *cacheConfig.Config.SecretReferenceName, Namespace: cacheConfig.Namespace}, &runtimeSecret)
-
-	if err != nil {
-		return err
-	}
-
-	gardenerSecret.Data = runtimeSecret.Data
-
-	return s.GardenClient.Update(ctx, &gardenerSecret)
 }
 
 func (s GardenSecretSyncer) Delete(ctx context.Context, registryCaches []imv1.ImageRegistryCache) error {
