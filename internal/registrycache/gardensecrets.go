@@ -121,6 +121,22 @@ func (s GardenSecretSyncer) newGardenSecret(runtimeID string, cacheConfig imv1.I
 	}
 }
 
+func (s GardenSecretSyncer) GetCacheUIDToSecretNameMap(ctx context.Context) (map[string]string, error) {
+	var gardenSecrets v12.SecretList
+	err := s.GardenClient.List(ctx, &gardenSecrets, client.MatchingLabels{RuntimeSecretLabel: s.RuntimeID}, client.InNamespace(s.GardenNamespace))
+	if err != nil {
+		return nil, fmt.Errorf("failed to list garden secrets: %w", err)
+	}
+
+	result := make(map[string]string, len(gardenSecrets.Items))
+	for _, secret := range gardenSecrets.Items {
+		if cacheUID := secret.Labels[CacheIDLabel]; cacheUID != "" {
+			result[cacheUID] = secret.Name
+		}
+	}
+	return result, nil
+}
+
 func (s GardenSecretSyncer) Delete(ctx context.Context, registryCaches []imv1.ImageRegistryCache) error {
 
 	cachesWithSecret := getRegistryCachesWithSecret(registryCaches)

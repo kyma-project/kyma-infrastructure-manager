@@ -135,6 +135,56 @@ func TestGardenSecretSyncer(t *testing.T) {
 		verifyGardenSecret(updatedGardenerSecret2, secret2, registryCacheWithSecret2, runtimeID)
 	})
 
+	t.Run("Should return map of cache UUID to secret name", func(t *testing.T) {
+		// given
+		runtimeID := "test-runtime-id-map"
+		gardenNamespace := "garden-dev"
+		secretNameGenerator := fixSecretNameGenerator()
+
+		labels1 := fixRegistryCacheGardenSecretLabels(runtimeID, "id1")
+		labels2 := fixRegistryCacheGardenSecretLabels(runtimeID, "id2")
+		labelsOtherRuntime := fixRegistryCacheGardenSecretLabels("other-runtime", "id3")
+
+		secret1 := fixRegistryCacheSecret(secretNameGenerator(runtimeID, "id1"), gardenNamespace, labels1, map[string]string{}, "user1", "password1")
+		secret2 := fixRegistryCacheSecret(secretNameGenerator(runtimeID, "id2"), gardenNamespace, labels2, map[string]string{}, "user2", "password2")
+		secretOtherRuntime := fixRegistryCacheSecret(secretNameGenerator("other-runtime", "id3"), gardenNamespace, labelsOtherRuntime, map[string]string{}, "user3", "password3")
+		secretNoLabel := fixRegistryCacheSecret("no-label-secret", gardenNamespace, map[string]string{}, map[string]string{}, "user4", "password4")
+
+		gardenClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			secret1,
+			secret2,
+			secretOtherRuntime,
+			secretNoLabel,
+		).Build()
+
+		secretSyncer := NewGardenSecretSyncer(gardenClient, nil, secretNameGenerator, gardenNamespace, runtimeID)
+
+		// when
+		result, err := secretSyncer.GetCacheUIDToSecretNameMap(ctx)
+
+		// then
+		Expect(err).To(BeNil())
+		Expect(result).To(HaveLen(2))
+		Expect(result["id1"]).To(Equal(secret1.Name))
+		Expect(result["id2"]).To(Equal(secret2.Name))
+	})
+
+	t.Run("Should return empty map when no secrets exist for runtime", func(t *testing.T) {
+		// given
+		runtimeID := "test-runtime-id-empty"
+		gardenNamespace := "garden-dev"
+
+		gardenClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+		secretSyncer := NewGardenSecretSyncer(gardenClient, nil, fixSecretNameGenerator(), gardenNamespace, runtimeID)
+
+		// when
+		result, err := secretSyncer.GetCacheUIDToSecretNameMap(ctx)
+
+		// then
+		Expect(err).To(BeNil())
+		Expect(result).To(BeEmpty())
+	})
+
 	t.Run("Should remove unneeded secrets", func(t *testing.T) {
 		// given
 		runtimeID := "test-runtime-id-3"
