@@ -96,8 +96,8 @@ github.com/gardener/etcd-druid/api v0.36.2 h1:KUDICgAGUcu3xbPyejVMhgID9mq3kFUOP+
 github.com/gardener/etcd-druid/api v0.36.2/go.mod h1:RwZzKp8K415AS0zg8VoODjBxYepCAUYyLgXnZc1bmbo=
 github.com/gardener/gardener v1.140.1 h1:fGLhsvHOx0eflVkm/+GzI5awz9Bzc9ixannumMIavK0=
 github.com/gardener/gardener v1.140.1/go.mod h1:9ZvYBSTtFPYoXhN7Ad9/Jebaih+bq7Y2TrdRLJlaxQY=
-github.com/gardener/gardener-extension-provider-alicloud v1.69.0 h1:lEfjNhuAp76vxDaGf3gxaeLof4/cD22eL6KrUtvBq4g=
-github.com/gardener/gardener-extension-provider-alicloud v1.69.0/go.mod h1:L8BoG2uGLWWWJ7Du2ntjC/M02rGpcelZ+wmDkZph0y0=
+github.com/gardener/gardener-extension-provider-alicloud v1.71.0 h1:ye8p7kU1EPsgbgtsEQMOFSKV3i0WH7hh+3QxaEgY8Rk=
+github.com/gardener/gardener-extension-provider-alicloud v1.71.0/go.mod h1:pD4xTTuxW+Xw5MtmEos222y1DP18dkpXj9Zkt2lXJkE=
 github.com/gardener/gardener-extension-provider-aws v1.68.3 h1:AEDyczZycAqYmQASI/soZfkyUOcWbk+g8lnylVnvGH4=
 github.com/gardener/gardener-extension-provider-aws v1.68.3/go.mod h1:ZcrTrielsv6kSd6qsgL4hkfZFAghhhS05cBI6U2eY9k=
 github.com/gardener/gardener-extension-provider-gcp v1.50.0 h1:Y9dxEx/M6A95jc7Rn/GuT4LizQlSl60zYMJC4yw+BdI=

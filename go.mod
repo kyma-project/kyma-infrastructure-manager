@@ -5,7 +5,7 @@ go 1.26.3
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/gardener/gardener v1.140.1
-	github.com/gardener/gardener-extension-provider-alicloud v1.69.0
+	github.com/gardener/gardener-extension-provider-alicloud v1.71.0
 	github.com/gardener/gardener-extension-provider-aws v1.68.3
 	github.com/gardener/gardener-extension-provider-gcp v1.50.0
 	github.com/gardener/gardener-extension-provider-openstack v1.53.1
