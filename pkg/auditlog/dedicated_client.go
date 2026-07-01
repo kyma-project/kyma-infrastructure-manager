@@ -71,9 +71,11 @@ func (p *DefaultDataProvider) reserveAuditLogCR(ctx context.Context, runtimeID s
 // findAuditLogCRByReservation finds an AuditLogCR that is reserved for the given runtime ID
 func (p *DefaultDataProvider) findAuditLogCRByReservation(ctx context.Context, runtimeID string) (*auditlogv1.AuditLog, error) {
 	var auditLogList auditlogv1.AuditLogList
-	err := p.client.List(ctx, &auditLogList, client.MatchingLabels{
-		LabelReservedForRuntimeID: runtimeID,
-	})
+	err := p.client.List(ctx, &auditLogList,
+		client.InNamespace(p.namespace),
+		client.MatchingLabels{
+			LabelReservedForRuntimeID: runtimeID,
+		})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list AuditLog CRs by reservation label: %w", err)
 	}
@@ -133,7 +135,7 @@ func (p *DefaultDataProvider) getOrClaimAuditLogCR(ctx context.Context, runtimeI
 // This is used during runtime deletion to find the AuditLogCR to release
 func (p *DefaultDataProvider) findAuditLogCRByRuntimeID(ctx context.Context, runtimeID string) (*auditlogv1.AuditLog, error) {
 	var auditLogList auditlogv1.AuditLogList
-	err := p.client.List(ctx, &auditLogList)
+	err := p.client.List(ctx, &auditLogList, client.InNamespace(p.namespace))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list AuditLog CRs: %w", err)
 	}
@@ -164,7 +166,7 @@ func (p *DefaultDataProvider) findAuditLogCRByRuntimeID(ctx context.Context, run
 // not reserved, and has the specified region in its spec.regions list
 func (p *DefaultDataProvider) findAvailableAuditLogCR(ctx context.Context, region string) (*auditlogv1.AuditLog, error) {
 	var auditLogList auditlogv1.AuditLogList
-	err := p.client.List(ctx, &auditLogList)
+	err := p.client.List(ctx, &auditLogList, client.InNamespace(p.namespace))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list AuditLog CRs: %w", err)
 	}

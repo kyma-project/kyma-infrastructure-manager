@@ -160,8 +160,9 @@ func TestFindAvailableAuditLogCR(t *testing.T) {
 				Build()
 
 			provider := &DefaultDataProvider{
-				client: fakeClient,
-				logger: logger,
+				client:    fakeClient,
+				logger:    logger,
+				namespace: "kcp-system",
 			}
 
 			result, err := provider.findAvailableAuditLogCR(context.Background(), tc.region)
@@ -191,8 +192,9 @@ func TestReserveAuditLogCR(t *testing.T) {
 			Build()
 
 		provider := &DefaultDataProvider{
-			client: fakeClient,
-			logger: logger,
+			client:    fakeClient,
+			logger:    logger,
+			namespace: "kcp-system",
 		}
 
 		err := provider.reserveAuditLogCR(context.Background(), "test-runtime", "eu-central-1")
@@ -219,8 +221,9 @@ func TestReserveAuditLogCR(t *testing.T) {
 			Build()
 
 		provider := &DefaultDataProvider{
-			client: fakeClient,
-			logger: logger,
+			client:    fakeClient,
+			logger:    logger,
+			namespace: "kcp-system",
 		}
 
 		err := provider.reserveAuditLogCR(context.Background(), "test-runtime", "eu-central-1")
@@ -236,8 +239,9 @@ func TestReserveAuditLogCR(t *testing.T) {
 			Build()
 
 		provider := &DefaultDataProvider{
-			client: fakeClient,
-			logger: logger,
+			client:    fakeClient,
+			logger:    logger,
+			namespace: "kcp-system",
 		}
 
 		err := provider.reserveAuditLogCR(context.Background(), "test-runtime", "eu-central-1")
@@ -262,8 +266,9 @@ func TestFindAuditLogCRByReservation(t *testing.T) {
 			Build()
 
 		provider := &DefaultDataProvider{
-			client: fakeClient,
-			logger: logger,
+			client:    fakeClient,
+			logger:    logger,
+			namespace: "kcp-system",
 		}
 
 		result, err := provider.findAuditLogCRByReservation(context.Background(), "test-runtime")
@@ -281,8 +286,9 @@ func TestFindAuditLogCRByReservation(t *testing.T) {
 			Build()
 
 		provider := &DefaultDataProvider{
-			client: fakeClient,
-			logger: logger,
+			client:    fakeClient,
+			logger:    logger,
+			namespace: "kcp-system",
 		}
 
 		result, err := provider.findAuditLogCRByReservation(context.Background(), "test-runtime")
@@ -307,8 +313,9 @@ func TestGetOrClaimAuditLogCR(t *testing.T) {
 			Build()
 
 		provider := &DefaultDataProvider{
-			client: fakeClient,
-			logger: logger,
+			client:    fakeClient,
+			logger:    logger,
+			namespace: "kcp-system",
 		}
 
 		result, err := provider.getOrClaimAuditLogCR(context.Background(), "test-runtime")
@@ -326,8 +333,9 @@ func TestGetOrClaimAuditLogCR(t *testing.T) {
 			Build()
 
 		provider := &DefaultDataProvider{
-			client: fakeClient,
-			logger: logger,
+			client:    fakeClient,
+			logger:    logger,
+			namespace: "kcp-system",
 		}
 
 		result, err := provider.getOrClaimAuditLogCR(context.Background(), "test-runtime")
@@ -342,8 +350,9 @@ func TestGetOrClaimAuditLogCR(t *testing.T) {
 			Build()
 
 		provider := &DefaultDataProvider{
-			client: fakeClient,
-			logger: logger,
+			client:    fakeClient,
+			logger:    logger,
+			namespace: "kcp-system",
 		}
 
 		result, err := provider.getOrClaimAuditLogCR(context.Background(), "test-runtime")
@@ -367,8 +376,9 @@ func TestReleaseAuditLogCR(t *testing.T) {
 			Build()
 
 		provider := &DefaultDataProvider{
-			client: fakeClient,
-			logger: logger,
+			client:    fakeClient,
+			logger:    logger,
+			namespace: "kcp-system",
 		}
 
 		err := provider.releaseAuditLogCR(context.Background(), &auditLog)
@@ -390,8 +400,9 @@ func TestReleaseAuditLogCR(t *testing.T) {
 			Build()
 
 		provider := &DefaultDataProvider{
-			client: fakeClient,
-			logger: logger,
+			client:    fakeClient,
+			logger:    logger,
+			namespace: "kcp-system",
 		}
 
 		err := provider.releaseAuditLogCR(context.Background(), &auditLog)
@@ -411,7 +422,7 @@ func createAuditLogCR(name string, state auditlogv1.State, assignedTo string, re
 	return auditlogv1.AuditLog{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: "default",
+			Namespace: "kcp-system",
 			Labels:    labels,
 		},
 		Spec: auditlogv1.AuditLogSpec{
@@ -431,5 +442,5 @@ func createAuditLogCR(name string, state auditlogv1.State, assignedTo string, re
 }
 
 func namespacedName(name string) types.NamespacedName {
-	return types.NamespacedName{Name: name, Namespace: "default"}
+	return types.NamespacedName{Name: name, Namespace: "kcp-system"}
 }

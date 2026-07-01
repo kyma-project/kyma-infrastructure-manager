@@ -288,6 +288,7 @@ func main() {
 		mgr.GetClient(),
 		auditLogSharedConfig,
 		logger,
+		"kcp-system",
 	)
 
 	_, err = token.ValidateTokenExpirationTime(config.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
@@ -557,6 +558,11 @@ func restrictWatchedNamespace() cache.Options {
 				},
 			},
 			&infrastructuremanagerv1.GardenerCluster{}: {
+				Namespaces: map[string]cache.Config{
+					"kcp-system": {},
+				},
+			},
+			&auditlogv1.AuditLog{}: {
 				Namespaces: map[string]cache.Config{
 					"kcp-system": {},
 				},
