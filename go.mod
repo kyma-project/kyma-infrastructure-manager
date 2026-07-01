@@ -1,6 +1,6 @@
 module github.com/kyma-project/infrastructure-manager
 
-go 1.26.3
+go 1.26.4
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
@@ -17,7 +17,7 @@ require (
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/kyma-project/lifecycle-manager/api v1.0.0
 	github.com/kyma-project/registry-cache v0.0.0-20251023124504-71bc19cf102a
-	github.com/kyma-project/runtime-watcher/listener v1.4.0
+	github.com/kyma-project/runtime-watcher/listener v1.4.2
 	github.com/onsi/ginkgo/v2 v2.31.0
 	github.com/onsi/gomega v1.42.0
 	github.com/pkg/errors v0.9.1
@@ -25,7 +25,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	k8s.io/api v0.36.0
 	k8s.io/apiextensions-apiserver v0.36.0
-	k8s.io/apimachinery v0.36.0
+	k8s.io/apimachinery v0.36.1
 	k8s.io/client-go v0.36.0
 	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5
 	sigs.k8s.io/controller-runtime v0.24.0
