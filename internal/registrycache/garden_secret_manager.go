@@ -42,7 +42,7 @@ func (m GardenSecretManager) GetCacheUIDToSecretNameMap(ctx context.Context) (ma
 	return result, nil
 }
 
-func (m GardenSecretManager) Delete(ctx context.Context, registryCaches []imv1.ImageRegistryCache) error {
+func (m GardenSecretManager) DeleteUnused(ctx context.Context, registryCaches []imv1.ImageRegistryCache) error {
 	cachesWithSecret := getRegistryCachesWithSecret(registryCaches)
 
 	var gardenSecrets v12.SecretList
@@ -53,8 +53,10 @@ func (m GardenSecretManager) Delete(ctx context.Context, registryCaches []imv1.I
 
 	for _, gardenSecret := range gardenSecrets.Items {
 		registryCacheUID := gardenSecret.Labels[CacheIDLabel]
+		dirty := gardenSecret.Labels[DirtyLabel] == "true"
+		orphaned := registryCacheUID != "" && !registryCacheUidExists(registryCacheUID, cachesWithSecret)
 
-		if registryCacheUID != "" && !registryCacheUidExists(registryCacheUID, cachesWithSecret) {
+		if dirty || orphaned {
 			err = m.GardenClient.Delete(ctx, &gardenSecret)
 
 			if err != nil && !errors.IsNotFound(err) {
@@ -78,24 +80,6 @@ func (m GardenSecretManager) DeleteAll(ctx context.Context) error {
 
 		if err != nil && !errors.IsNotFound(err) {
 			return fmt.Errorf("failed to delete garden secret %s: %w", gardenSecret.Name, err)
-		}
-	}
-
-	return nil
-}
-
-func (m GardenSecretManager) DeleteDirty(ctx context.Context) error {
-	var gardenSecrets v12.SecretList
-	err := m.GardenClient.List(ctx, &gardenSecrets, client.MatchingLabels{RuntimeSecretLabel: m.RuntimeID, ManagedByLabel: ManagedByValue, DirtyLabel: "true"}, client.InNamespace(m.GardenNamespace))
-	if err != nil {
-		return fmt.Errorf("failed to list dirty garden secrets: %w", err)
-	}
-
-	for _, gardenSecret := range gardenSecrets.Items {
-		err = m.GardenClient.Delete(ctx, &gardenSecret)
-
-		if err != nil && !errors.IsNotFound(err) {
-			return fmt.Errorf("failed to delete dirty garden secret %s: %w", gardenSecret.Name, err)
 		}
 	}
 

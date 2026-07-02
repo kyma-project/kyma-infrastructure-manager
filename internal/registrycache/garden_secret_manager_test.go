@@ -71,7 +71,7 @@ func TestGardenSecretManager(t *testing.T) {
 		Expect(result).To(BeEmpty())
 	})
 
-	t.Run("Should remove unneeded secrets", func(t *testing.T) {
+	t.Run("Should delete orphaned and dirty secrets", func(t *testing.T) {
 		// given
 		runtimeID := "test-runtime-id-3"
 		secretNameGenerator := fixSecretNameGenerator()
@@ -88,33 +88,36 @@ func TestGardenSecretManager(t *testing.T) {
 
 		labels1 := fixRegistryCacheGardenSecretLabels(runtimeID, registryCacheWithSecret1.UID)
 		labels2 := fixRegistryCacheGardenSecretLabels(runtimeID, "id2")
+		labelsDirty := fixRegistryCacheGardenSecretLabels(runtimeID, registryCacheWithSecret3.UID)
+		labelsDirty[DirtyLabel] = "true"
 		annotations1 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret1.Name, registryCacheWithSecret1.Namespace)
 		annotations2 := fixRegistryCacheGardenSecretAnnotations("config-with-secret-2", "test")
 
-		gardenerSecret1 := fixRegistryCacheSecret(secretNameGenerator(runtimeID, registryCacheWithSecret1.UID), gardenNamespace, labels1, annotations1, "user1", "password1")
-		gardenerSecret2 := fixRegistryCacheSecret("reg-cache-id", gardenNamespace, labels2, annotations2, "user2", "password2")
-		gardenerSecret3 := fixRegistryCacheSecret("some-secret", "somens", labels2, annotations2, "user3", "password3")
+		keptSecret := fixRegistryCacheSecret(secretNameGenerator(runtimeID, registryCacheWithSecret1.UID), gardenNamespace, labels1, annotations1, "user1", "password1")
+		orphanedSecret := fixRegistryCacheSecret("reg-cache-id", gardenNamespace, labels2, annotations2, "user2", "password2")
+		dirtySecret := fixRegistryCacheSecret("old-reg-cache-id3", gardenNamespace, labelsDirty, annotations2, "user3", "password3")
 
 		gardenClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			gardenerSecret1,
-			gardenerSecret2,
-			gardenerSecret3,
+			keptSecret,
+			orphanedSecret,
+			dirtySecret,
 		).Build()
 
 		// when
 		secretManager := NewGardenSecretManager(gardenClient, gardenNamespace, runtimeID)
-		err := secretManager.Delete(context.Background(), registryCacheConfigs)
+		err := secretManager.DeleteUnused(context.Background(), registryCacheConfigs)
 
 		// then
 		Expect(err).To(BeNil())
 
 		secrets, err := getGardenSecrets(ctx, gardenClient, runtimeID)
 		Expect(err).To(BeNil())
-		Expect(len(secrets)).To(Equal(2))
+		Expect(len(secrets)).To(Equal(1))
 
 		remainingSecret, err := getGardenSecret(ctx, gardenClient, runtimeID, registryCacheWithSecret1.UID, gardenNamespace)
 		Expect(err).To(BeNil())
 		Expect(remainingSecret).To(Not(BeNil()))
+		Expect(remainingSecret).To(Equal(keptSecret))
 	})
 
 	t.Run("Should exclude dirty secrets from cache UID map", func(t *testing.T) {
@@ -141,34 +144,6 @@ func TestGardenSecretManager(t *testing.T) {
 		Expect(result).To(HaveLen(1))
 		Expect(result["id1"]).To(Equal(cleanSecret.Name))
 		Expect(result).NotTo(HaveKey("id2"))
-	})
-
-	t.Run("Should delete dirty secrets", func(t *testing.T) {
-		// given
-		runtimeID := "test-runtime-id-delete-dirty"
-		gardenNamespace := "garden-dev"
-		secretNameGenerator := fixSecretNameGenerator()
-
-		labelsClean := fixRegistryCacheGardenSecretLabels(runtimeID, "id1")
-		labelsDirty := fixRegistryCacheGardenSecretLabels(runtimeID, "id2")
-		labelsDirty[DirtyLabel] = "true"
-
-		cleanSecret := fixRegistryCacheSecret(secretNameGenerator(runtimeID, "id1"), gardenNamespace, labelsClean, map[string]string{}, "user1", "password1")
-		dirtySecret := fixRegistryCacheSecret(secretNameGenerator(runtimeID, "id2"), gardenNamespace, labelsDirty, map[string]string{}, "user2", "password2")
-
-		gardenClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(cleanSecret, dirtySecret).Build()
-		secretManager := NewGardenSecretManager(gardenClient, gardenNamespace, runtimeID)
-
-		// when
-		err := secretManager.DeleteDirty(ctx)
-
-		// then
-		Expect(err).To(BeNil())
-
-		remaining, err := getGardenSecrets(ctx, gardenClient, runtimeID)
-		Expect(err).To(BeNil())
-		Expect(remaining).To(HaveLen(1))
-		Expect(remaining[0].Name).To(Equal(cleanSecret.Name))
 	})
 }
 
