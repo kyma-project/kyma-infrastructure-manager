@@ -341,9 +341,9 @@ func getPatchOptions(ctx context.Context, m *fsm, s *systemState, auditLogConfig
 	}
 
 	if m.RegistryCacheConfigControllerEnabled {
-		secretSyncer := registrycache.NewGardenSecretSyncer(m.GardenClient, nil, registrycache.DefaultGardenSecretNameGenerator, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Labels[imv1.LabelKymaRuntimeID])
+		secretManager := registrycache.NewGardenSecretManager(m.GardenClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Labels[imv1.LabelKymaRuntimeID])
 
-		registryCacheGardenSecretNames, err := secretSyncer.GetCacheUIDToSecretNameMap(ctx)
+		registryCacheGardenSecretNames, err := secretManager.GetCacheUIDToSecretNameMap(ctx)
 		if err != nil {
 			return patchOptions, err
 		}

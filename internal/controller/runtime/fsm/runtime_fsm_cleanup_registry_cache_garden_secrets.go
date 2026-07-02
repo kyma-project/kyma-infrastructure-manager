@@ -30,15 +30,13 @@ func sFnCleanupRegistryCacheGardenSecrets(ctx context.Context, m *fsm, s *system
 		return updateStatusAndRequeueAfter(m.StatusRequeueDelay)
 	}
 
-	secretSyncer := registrycache.NewGardenSecretSyncer(
+	secretManager := registrycache.NewGardenSecretManager(
 		m.GardenClient,
-		runtimeClient,
-		registrycache.DefaultGardenSecretNameGenerator,
 		fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName),
 		s.instance.Name)
 
 	m.log.V(log_level.DEBUG).Info("Registry cache secrets deletion", "instance", s.instance.Name)
-	err = secretSyncer.Delete(ctx, s.instance.Spec.Caching)
+	err = secretManager.Delete(ctx, s.instance.Spec.Caching)
 	if err != nil {
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRegistryCacheConfigured,
