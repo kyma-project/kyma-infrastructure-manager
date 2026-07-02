@@ -98,6 +98,7 @@ const (
 	defaultStatusRequeueDelay                 = 1 * time.Second
 	defaultRegistryCacheListenerComponentName = "infrastructure-manager-registry-cache"
 	defaultRegistryCacheReconcilePeriod       = 60 * time.Minute
+	defaultControlPlaneSystemNamespace        = "kcp-system"
 )
 
 func main() {
@@ -288,6 +289,7 @@ func main() {
 		mgr.GetClient(),
 		auditLogSharedConfig,
 		logger,
+		defaultControlPlaneSystemNamespace,
 	)
 
 	_, err = token.ValidateTokenExpirationTime(config.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
@@ -349,11 +351,11 @@ func main() {
 
 			rtBootstrapperCfgNN := types.NamespacedName{
 				Name:      runtimeBootstrapperKCPConfigName,
-				Namespace: "kcp-system",
+				Namespace: defaultControlPlaneSystemNamespace,
 			}
 			rtBootstrapperManifestsNN := types.NamespacedName{
 				Name:      runtimeBootstrapperManifestsConfigMapName,
-				Namespace: "kcp-system",
+				Namespace: defaultControlPlaneSystemNamespace,
 			}
 
 			configMapPredicates = append(configMapPredicates,
@@ -369,7 +371,7 @@ func main() {
 			if runtimeBootstrapperKCPPullSecretName != "" {
 				secretPredicates = append(secretPredicates, configctrl.ObjectUpdatedPredicate{NamespacedName: types.NamespacedName{
 					Name:      runtimeBootstrapperKCPPullSecretName,
-					Namespace: "kcp-system",
+					Namespace: defaultControlPlaneSystemNamespace,
 				}})
 			}
 		}
@@ -377,13 +379,13 @@ func main() {
 		if apiServerAclEnabled {
 			configMapPredicates = append(configMapPredicates, configctrl.ObjectUpdatedPredicate{NamespacedName: types.NamespacedName{
 				Name:      config.ConverterConfig.Kubernetes.KubeApiServer.ACL.ConfigMapName,
-				Namespace: "kcp-system",
+				Namespace: defaultControlPlaneSystemNamespace,
 			}})
 		}
 
 		if err = (&configctrl.ConfigReloadWatcher{
 			KcpClient:                   kcpClient,
-			Namespace:                   "kcp-system",
+			Namespace:                   defaultControlPlaneSystemNamespace,
 			ConfigMapPredicates:         configMapPredicates,
 			SecretPredicates:            secretPredicates,
 			ClusterTrustBundlePredicate: clusterTrustBundlePredicate,
@@ -454,7 +456,7 @@ func main() {
 			return gardener.GetRuntimeClientWithScheme(secret, prebuiltRuntimeScheme)
 		}
 
-		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, "kcp-system", runtimeClientClosure, registryCacheReconcilePeriod)
+		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, defaultControlPlaneSystemNamespace, runtimeClientClosure, registryCacheReconcilePeriod)
 		if err = registryCacheConfigReconciler.SetupWithManager(ctx, mgr, 1, registryCacheListenerPort, defaultRegistryCacheListenerComponentName); err != nil {
 			setupLog.Error(err, "unable to setup registry cache config controller with Manager", "controller", "Runtime")
 			os.Exit(1)
@@ -542,23 +544,28 @@ func restrictWatchedNamespace() cache.Options {
 			&corev1.ConfigMap{}: {
 				Label: k8slabels.Everything(),
 				Namespaces: map[string]cache.Config{
-					"kcp-system": {},
+					defaultControlPlaneSystemNamespace: {},
 				},
 			},
 			&corev1.Secret{}: {
 				Label: k8slabels.Everything(),
 				Namespaces: map[string]cache.Config{
-					"kcp-system": {},
+					defaultControlPlaneSystemNamespace: {},
 				},
 			},
 			&infrastructuremanagerv1.Runtime{}: {
 				Namespaces: map[string]cache.Config{
-					"kcp-system": {},
+					defaultControlPlaneSystemNamespace: {},
 				},
 			},
 			&infrastructuremanagerv1.GardenerCluster{}: {
 				Namespaces: map[string]cache.Config{
-					"kcp-system": {},
+					defaultControlPlaneSystemNamespace: {},
+				},
+			},
+			&auditlogv1.AuditLog{}: {
+				Namespaces: map[string]cache.Config{
+					defaultControlPlaneSystemNamespace: {},
 				},
 			},
 		},

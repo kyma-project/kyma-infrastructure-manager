@@ -29,6 +29,11 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 		return addFinalizerAndRequeue(ctx, m, s)
 	}
 
+	if s.instance.Labels[imv1.LabelKymaRuntimeID] == "" {
+		m.log.Error(fmt.Errorf("runtime ID label is missing"), "Runtime ID label is missing on the instance", "instance", s.instance.Name)
+		return updateStatusAndStopWithError(fmt.Errorf("runtime ID label is missing on the instance"))
+	}
+
 	// instance is being deleted
 	if instanceIsBeingDeleted {
 		if s.shoot != nil {

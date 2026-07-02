@@ -25,7 +25,7 @@ func TestDefaultDataProvider_GetSharedAuditLogData(t *testing.T) {
 		},
 	}
 
-	provider := NewDataProvider(nil, sharedConfig, logger)
+	provider := NewDataProvider(nil, sharedConfig, logger, "kcp-system")
 
 	t.Run("returns shared config for existing provider and region", func(t *testing.T) {
 		data, err := provider.GetSharedAuditLogData(context.Background(), "aws", "eu-central-1")
@@ -61,7 +61,7 @@ func TestDefaultDataProvider_ReserveAuditLog(t *testing.T) {
 			WithRuntimeObjects(&auditLog).
 			Build()
 
-		provider := NewDataProvider(fakeClient, nil, logger)
+		provider := NewDataProvider(fakeClient, nil, logger, "kcp-system")
 
 		err := provider.ReserveAuditLog(context.Background(), "eu-central-1", "test-runtime")
 		require.NoError(t, err)
@@ -85,7 +85,7 @@ func TestDefaultDataProvider_ReserveAuditLog(t *testing.T) {
 			WithRuntimeObjects(&auditLog).
 			Build()
 
-		provider := NewDataProvider(fakeClient, nil, logger)
+		provider := NewDataProvider(fakeClient, nil, logger, "kcp-system")
 
 		err := provider.ReserveAuditLog(context.Background(), "eu-central-1", "test-runtime")
 		require.NoError(t, err)
@@ -100,7 +100,7 @@ func TestDefaultDataProvider_ReserveAuditLog(t *testing.T) {
 			WithRuntimeObjects(&auditLog).
 			Build()
 
-		provider := NewDataProvider(fakeClient, nil, logger)
+		provider := NewDataProvider(fakeClient, nil, logger, "kcp-system")
 
 		err := provider.ReserveAuditLog(context.Background(), "eu-central-1", "test-runtime")
 		require.Error(t, err)
@@ -126,7 +126,7 @@ func TestDefaultDataProvider_GetDedicatedAuditLogData(t *testing.T) {
 			WithRuntimeObjects(&auditLog).
 			Build()
 
-		provider := NewDataProvider(fakeClient, nil, logger)
+		provider := NewDataProvider(fakeClient, nil, logger, "kcp-system")
 
 		data, err := provider.GetDedicatedAuditLogData(context.Background(), "test-runtime", true)
 		require.NoError(t, err)
@@ -155,7 +155,7 @@ func TestDefaultDataProvider_GetDedicatedAuditLogData(t *testing.T) {
 			WithRuntimeObjects(&auditLog).
 			Build()
 
-		provider := NewDataProvider(fakeClient, nil, logger)
+		provider := NewDataProvider(fakeClient, nil, logger, "kcp-system")
 
 		data, err := provider.GetDedicatedAuditLogData(context.Background(), "test-runtime", true)
 		require.NoError(t, err)
@@ -181,7 +181,7 @@ func TestDefaultDataProvider_GetDedicatedAuditLogData(t *testing.T) {
 			WithRuntimeObjects(&auditLog).
 			Build()
 
-		provider := NewDataProvider(fakeClient, nil, logger)
+		provider := NewDataProvider(fakeClient, nil, logger, "kcp-system")
 
 		data, err := provider.GetDedicatedAuditLogData(context.Background(), "test-runtime", false)
 		require.NoError(t, err)
@@ -210,7 +210,7 @@ func TestDefaultDataProvider_GetDedicatedAuditLogData(t *testing.T) {
 			WithRuntimeObjects(&auditLog).
 			Build()
 
-		provider := NewDataProvider(fakeClient, nil, logger)
+		provider := NewDataProvider(fakeClient, nil, logger, "kcp-system")
 
 		data, err := provider.GetDedicatedAuditLogData(context.Background(), "test-runtime", true)
 		require.NoError(t, err)
@@ -224,7 +224,7 @@ func TestDefaultDataProvider_GetDedicatedAuditLogData(t *testing.T) {
 			WithScheme(scheme).
 			Build()
 
-		provider := NewDataProvider(fakeClient, nil, logger)
+		provider := NewDataProvider(fakeClient, nil, logger, "kcp-system")
 
 		_, err := provider.GetDedicatedAuditLogData(context.Background(), "test-runtime", true)
 		require.Error(t, err)
@@ -245,7 +245,7 @@ func TestDefaultDataProvider_ReleaseDedicated(t *testing.T) {
 			WithRuntimeObjects(&auditLog).
 			Build()
 
-		provider := NewDataProvider(fakeClient, nil, logger)
+		provider := NewDataProvider(fakeClient, nil, logger, "kcp-system")
 
 		err := provider.ReleaseDedicated(context.Background(), "test-runtime")
 		require.NoError(t, err)
@@ -262,7 +262,7 @@ func TestDefaultDataProvider_ReleaseDedicated(t *testing.T) {
 			WithScheme(scheme).
 			Build()
 
-		provider := NewDataProvider(fakeClient, nil, logger)
+		provider := NewDataProvider(fakeClient, nil, logger, "kcp-system")
 
 		err := provider.ReleaseDedicated(context.Background(), "test-runtime")
 		require.NoError(t, err)
@@ -272,7 +272,7 @@ func TestDefaultDataProvider_ReleaseDedicated(t *testing.T) {
 		// Create a client without proper scheme setup to simulate List failure
 		fakeClient := fake.NewClientBuilder().Build()
 
-		provider := NewDataProvider(fakeClient, nil, logger)
+		provider := NewDataProvider(fakeClient, nil, logger, "kcp-system")
 
 		err := provider.ReleaseDedicated(context.Background(), "test-runtime")
 		require.Error(t, err)

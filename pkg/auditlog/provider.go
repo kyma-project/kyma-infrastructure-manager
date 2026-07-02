@@ -34,6 +34,7 @@ type DefaultDataProvider struct {
 	client       client.Client
 	sharedConfig Configuration
 	logger       logr.Logger
+	namespace    string // Namespace where AuditLog CRs are located (typically kcp-system)
 }
 
 // NewDataProvider creates a new DataProvider instance
@@ -41,11 +42,13 @@ func NewDataProvider(
 	client client.Client,
 	sharedConfig Configuration,
 	logger logr.Logger,
+	namespace string,
 ) DataProvider {
 	return &DefaultDataProvider{
 		client:       client,
 		sharedConfig: sharedConfig,
 		logger:       logger,
+		namespace:    namespace,
 	}
 }
 
@@ -86,9 +89,10 @@ func (p *DefaultDataProvider) claimAndGetDedicatedAuditLogData(ctx context.Conte
 	}
 
 	return AuditLogData{
-		TenantID:   reserved.Spec.SubaccountID,
-		ServiceURL: reserved.Spec.Config.ServiceURL,
-		SecretName: reserved.Spec.Config.GardenerSecretName,
+		TenantID:            reserved.Spec.SubaccountID,
+		ServiceURL:          reserved.Spec.Config.ServiceURL,
+		SecretName:          reserved.Spec.Config.GardenerSecretName,
+		ReadCredsSecretName: reserved.Spec.Config.ReadCredsSecretName,
 	}, nil
 }
 
@@ -111,9 +115,10 @@ func (p *DefaultDataProvider) getDedicatedAuditLogDataWithoutClaim(ctx context.C
 	}
 
 	return AuditLogData{
-		TenantID:   auditLogCR.Spec.SubaccountID,
-		ServiceURL: auditLogCR.Spec.Config.ServiceURL,
-		SecretName: auditLogCR.Spec.Config.GardenerSecretName,
+		TenantID:            auditLogCR.Spec.SubaccountID,
+		ServiceURL:          auditLogCR.Spec.Config.ServiceURL,
+		SecretName:          auditLogCR.Spec.Config.GardenerSecretName,
+		ReadCredsSecretName: auditLogCR.Spec.Config.ReadCredsSecretName,
 	}, nil
 }
 
