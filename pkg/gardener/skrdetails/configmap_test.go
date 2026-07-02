@@ -58,8 +58,16 @@ func TestToKymaProvisioningInfo(t *testing.T) {
 			},
 		}
 
+		seed := gardener.Seed{
+			Spec: gardener.SeedSpec{
+				Provider: gardener.SeedProvider{
+					Region: "eu-west-1",
+				},
+			},
+		}
+
 		// when
-		result := ToKymaProvisioningInfo(runtimeCR, shoot)
+		result := ToKymaProvisioningInfo(runtimeCR, shoot, seed)
 
 		// then
 		assert.Equal(t, "test-instance-id", result.EnvironmentInstanceID)
@@ -68,6 +76,7 @@ func TestToKymaProvisioningInfo(t *testing.T) {
 		assert.Equal(t, "test-subaccount-id", result.SubaccountID)
 		assert.Equal(t, "eu-central-1", result.Region)
 		assert.Equal(t, "cf-eu12", result.PlatformRegion)
+		assert.Equal(t, "eu-west-1", result.SeedRegion)
 	})
 
 	t.Run("Should handle missing labels gracefully", func(t *testing.T) {
@@ -99,14 +108,23 @@ func TestToKymaProvisioningInfo(t *testing.T) {
 			},
 		}
 
+		seed := gardener.Seed{
+			Spec: gardener.SeedSpec{
+				Provider: gardener.SeedProvider{
+					Region: "",
+				},
+			},
+		}
+
 		// when
-		result := ToKymaProvisioningInfo(runtimeCR, shoot)
+		result := ToKymaProvisioningInfo(runtimeCR, shoot, seed)
 
 		// then
 		assert.Empty(t, result.EnvironmentInstanceID)
 		assert.Empty(t, result.InstanceName)
 		assert.Empty(t, result.GlobalAccountID)
 		assert.Empty(t, result.SubaccountID)
+		assert.Empty(t, result.SeedRegion)
 	})
 }
 
@@ -152,8 +170,15 @@ func TestToKymaProvisioningInfoWithACL(t *testing.T) {
 			},
 		}
 
+		seed := gardener.Seed{
+			Spec: gardener.SeedSpec{
+				Provider: gardener.SeedProvider{
+					Region: "eu-west-1",
+				},
+			},
+		}
 		// when
-		result := ToKymaProvisioningInfo(runtimeCR, shoot)
+		result := ToKymaProvisioningInfo(runtimeCR, shoot, seed)
 
 		// then
 		assert.Equal(t, []string{"10.0.0.0/8", "192.168.0.0/16"}, result.NetworkDetails.KubeAPIServer.ACL)
@@ -200,8 +225,16 @@ func TestToKymaProvisioningInfoWithACL(t *testing.T) {
 			},
 		}
 
+		seed := gardener.Seed{
+			Spec: gardener.SeedSpec{
+				Provider: gardener.SeedProvider{
+					Region: "eu-west-1",
+				},
+			},
+		}
+
 		// when
-		result := ToKymaProvisioningInfo(runtimeCR, shoot)
+		result := ToKymaProvisioningInfo(runtimeCR, shoot, seed)
 
 		// then
 		assert.Nil(t, result.NetworkDetails.KubeAPIServer.ACL)
@@ -247,8 +280,16 @@ func TestToKymaProvisioningInfoWithACL(t *testing.T) {
 			},
 		}
 
+		seed := gardener.Seed{
+			Spec: gardener.SeedSpec{
+				Provider: gardener.SeedProvider{
+					Region: "eu-west-1",
+				},
+			},
+		}
+
 		// when
-		result := ToKymaProvisioningInfo(runtimeCR, shoot)
+		result := ToKymaProvisioningInfo(runtimeCR, shoot, seed)
 
 		// then
 		assert.Nil(t, result.NetworkDetails.KubeAPIServer.ACL)
@@ -303,8 +344,16 @@ func TestToKymaProvisioningInfoConfigMap(t *testing.T) {
 			},
 		}
 
+		seed := gardener.Seed{
+			Spec: gardener.SeedSpec{
+				Provider: gardener.SeedProvider{
+					Region: "eu-west-1",
+				},
+			},
+		}
+
 		// when
-		cm, err := ToKymaProvisioningInfoConfigMap(runtimeCR, shoot)
+		cm, err := ToKymaProvisioningInfoConfigMap(runtimeCR, shoot, seed)
 
 		// then
 		require.NoError(t, err)

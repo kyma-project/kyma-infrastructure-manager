@@ -291,6 +291,7 @@ func TestSkrConfigState(t *testing.T) {
 			Disabled: ptr.To(false),
 		}
 		shootStub.Spec.Extensions = append(shootStub.Spec.Extensions, oidcService)
+		shootStub.Spec.SeedName = new("aws-jj-10")
 
 		fakeClient, testFsm := setupFakeClient()
 
@@ -314,7 +315,8 @@ func TestSkrConfigState(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, detailsCM.Data)
 		assert.NotNil(t, detailsCM.Data["details"])
-		assert.Equal(t, detailsCM.Data["details"], "environmentInstanceID: instance-id\nglobalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\ninstanceName: kyma-name\nnetworkDetails:\n  dualStackIPEnabled: false\n  kubeAPIServer:\n    acl:\n    - 1.2.3.4/32\n    - 5.6.7.8/16\nregion: region\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
+		// details to change
+		assert.Equal(t, detailsCM.Data["details"], "environmentInstanceID: instance-id\nglobalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\ninstanceID: instance-id\ninstanceName: kyma-name\nnetworkDetails:\n  dualStackIPEnabled: false\n  kubeAPIServer:\n    acl:\n    - 1.2.3.4/32\n    - 5.6.7.8/16\nregion: region\nruntimeID: runtime-id\nseedRegion: eu-central-5\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
 		assert.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
 		assertSuccesfullStatusConditions(t, systemState)
 	})
@@ -380,7 +382,7 @@ func TestSkrConfigState(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, detailsCM.Data)
 		assert.NotNil(t, detailsCM.Data["details"])
-		assert.Equal(t, detailsCM.Data["details"], "environmentInstanceID: instance-id\nglobalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\ninstanceName: kyma-name\nnetworkDetails:\n  dualStackIPEnabled: false\nregion: region\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
+		assert.Equal(t, detailsCM.Data["details"], "environmentInstanceID: instance-id\nglobalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\ninstanceID: instance-id\ninstanceName: kyma-name\nnetworkDetails:\n  dualStackIPEnabled: false\nregion: region\nruntimeID: runtime-id\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
 		assert.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
 		assertSuccesfullStatusConditions(t, systemState)
 	})
@@ -510,6 +512,7 @@ func setupFakeClient() (client.WithWatch, *fsm) {
 	var fakeClient = fake.NewClientBuilder().
 		WithInterceptorFuncs(interceptor.Funcs{
 			Patch: fsm_testing.GetFakePatchInterceptorForShootsAndConfigMaps(true),
+			Get:   fsm_testing.GetFakeGetInterceptroForSeed(),
 		}).
 		WithScheme(scheme).
 		Build()

@@ -3,6 +3,7 @@ package testing
 import (
 	"context"
 	"errors"
+
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	core_v1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -25,6 +26,16 @@ func GetFakePatchInterceptorFn(incShootGeneration bool) func(ctx context.Context
 			shoot.Generation++
 		}
 		return nil
+	}
+}
+
+func GetFakeGetInterceptroForSeed() func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	return func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+		if seed, isSeed := obj.(*gardener_api.Seed); isSeed {
+			seed.Spec.Provider.Region = "eu-central-5"
+			return nil
+		}
+		return client.Get(ctx, key, obj, opts...)
 	}
 }
 

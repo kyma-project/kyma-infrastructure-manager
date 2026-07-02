@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -199,7 +200,18 @@ func updateConditionFailed(rt *imv1.Runtime, reason imv1.RuntimeConditionReason,
 }
 
 func applyKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) error {
-	configMap, conversionErr := skrdetails.ToKymaProvisioningInfoConfigMap(s.instance, s.shoot)
+	seedName := s.shoot.Spec.SeedName
+	var seed gardener.Seed
+
+	if seedName != nil {
+		err := m.GardenClient.Get(ctx, types.NamespacedName{Name: *seedName, Namespace: s.shoot.Namespace}, &seed)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	configMap, conversionErr := skrdetails.ToKymaProvisioningInfoConfigMap(s.instance, s.shoot, seed)
 	if conversionErr != nil {
 		return errors.Wrap(conversionErr, "failed to convert RuntimeCR and Shoot spec to ToKymaProvisioningInfo config map")
 	}
