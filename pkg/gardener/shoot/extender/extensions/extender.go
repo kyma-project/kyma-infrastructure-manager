@@ -20,7 +20,7 @@ type Extension struct {
 	Create CreateExtensionFunc
 }
 
-func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, registryCache []imv1.ImageRegistryCache, apiServerAclEnabled bool, registryCacheGardenSecretNames map[string]string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			Type: NetworkFilterType,
@@ -54,16 +54,6 @@ func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client
 				}
 
 				return NewAuditLogExtension(auditLogData)
-			},
-		},
-		{
-			Type: RegistryCacheExtensionType,
-			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-				if len(registryCache) == 0 {
-					return nil, nil
-				}
-
-				return NewRegistryCacheExtension(registryCache, registryCacheGardenSecretNames, nil)
 			},
 		},
 		{

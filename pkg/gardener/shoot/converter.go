@@ -53,9 +53,8 @@ type CreateOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
-	KcpClient                      client.Client
-	ApiServerAclEnabled            bool
-	RegistryCacheGardenSecretNames map[string]string
+	KcpClient           client.Client
+	ApiServerAclEnabled bool
 }
 
 type PatchOpts struct {
@@ -91,7 +90,7 @@ func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
 	if !opts.DNS.IsGardenerInternal() {
 		extendersForCreate = append(extendersForCreate, extender2.NewDNSExtenderForCreate(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType))
 	}
-	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(ctx, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, nil, opts.ApiServerAclEnabled, opts.RegistryCacheGardenSecretNames))
+	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(ctx, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, opts.ApiServerAclEnabled))
 	extendersForCreate = append(extendersForCreate,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
 

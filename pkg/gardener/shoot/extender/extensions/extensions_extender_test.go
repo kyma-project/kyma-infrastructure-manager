@@ -49,20 +49,10 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 		SecretName: "doesnt matter",
 	}
 
-	registryCache := []imv1.ImageRegistryCache{
-		{
-			UID: "id1",
-			Config: registrycache.RegistryCacheConfigSpec{
-				Upstream: "ghcr.io",
-			},
-		},
-	}
-
 	for _, testcase := range []struct {
 		name                  string
 		inputAuditLogData     auditlogs.AuditLogData
 		enableNetworkFilter   bool
-		registryCache         []imv1.ImageRegistryCache
 		apiServerACL          []string
 		apiServerACLEnabled   bool
 		enableNvidiaOpenshell *bool
@@ -73,7 +63,6 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 			name:                  "Should create all extensions for new Shoot in the right order, network filter is enabled",
 			inputAuditLogData:     newAuditLogData,
 			enableNetworkFilter:   true,
-			registryCache:         registryCache,
 			apiServerACL:          []string{"1.1.1.1/32", "2.2.2.2/32"},
 			apiServerACLEnabled:   true,
 			enableNvidiaOpenshell: nil,
@@ -84,7 +73,6 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 			name:                  "Should create all extensions for new Shoot in the right order, network filter is disabled",
 			inputAuditLogData:     newAuditLogData,
 			enableNetworkFilter:   false,
-			registryCache:         registryCache,
 			apiServerACL:          []string{"1.1.1.1/32", "2.2.2.2/32"},
 			apiServerACLEnabled:   true,
 			enableNvidiaOpenshell: nil,
@@ -145,7 +133,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			providerType := testcase.providerType
-			testRuntime := fixRuntimeCRForExtensionExtenderTests(testcase.enableNetworkFilter, testcase.registryCache, testcase.apiServerACL, providerType, testcase.enableNvidiaOpenshell)
+			testRuntime := fixRuntimeCRForExtensionExtenderTests(testcase.enableNetworkFilter, nil, testcase.apiServerACL, providerType, testcase.enableNvidiaOpenshell)
 
 			configMapGetCalled := false
 			fakeClient := buildFakeClientWithACLConfigMap(t, &configMapGetCalled)
@@ -156,8 +144,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 				},
 			}
 
-			registryCacheGardenSecretNames := map[string]string{"id1": "garden-id-1"}
-			extender := NewExtensionsExtenderForCreate(context.Background(), fakeClient, config, testcase.inputAuditLogData, testcase.registryCache, testcase.apiServerACLEnabled, registryCacheGardenSecretNames)
+			extender := NewExtensionsExtenderForCreate(context.Background(), fakeClient, config, testcase.inputAuditLogData, testcase.apiServerACLEnabled)
 
 			err := extender(testRuntime, shoot)
 			assert.NoError(t, err)
@@ -184,8 +171,6 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 				case OidcExtensionType:
 					verifyOIDCExtension(t, ext)
 
-				case RegistryCacheExtensionType:
-					verifyRegistryCacheExtension(t, &ext, testcase.registryCache, registryCacheGardenSecretNames)
 				case ApiServerACLExtensionType:
 					mergedACL := testcase.apiServerACL
 					mergedACL = append(mergedACL, "2.2.2.2/29", "3.3.3.3/29", "4.4.4.4/29")
@@ -659,8 +644,7 @@ func getExpectedExtensionsOrderMapForCreate() map[string]int {
 	extensionOrderMap[DNSExtensionType] = 2
 	extensionOrderMap[OidcExtensionType] = 3
 	extensionOrderMap[AuditlogExtensionType] = 4
-	extensionOrderMap[RegistryCacheExtensionType] = 5
-	extensionOrderMap[ApiServerACLExtensionType] = 6
+	extensionOrderMap[ApiServerACLExtensionType] = 5
 
 	return extensionOrderMap
 }
