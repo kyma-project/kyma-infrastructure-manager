@@ -1,0 +1,249 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: auditlogs.auditlogmanager.kyma-project.io
+spec:
+  group: auditlogmanager.kyma-project.io
+  names:
+    kind: AuditLog
+    listKind: AuditLogList
+    plural: auditlogs
+    singular: auditlog
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: State of the AuditLog
+      jsonPath: .status.state
+      name: State
+      type: string
+    - description: BTP Platform Region
+      jsonPath: .spec.platformRegion
+      name: PlatformRegion
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: AuditLog is the Schema for the auditlogs API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AuditLogSpec defines the desired state of AuditLog
+            properties:
+              assignedToRuntimeID:
+                description: AssignedToRuntimeID contains ID of the Kyma Runtime that
+                  owns this Auditlog resource. Can be initially empty, but once set
+                  it cannot be changed or deleted
+                maxLength: 128
+                type: string
+                x-kubernetes-validations:
+                - message: AssignedToRuntimeID is immutable once set
+                  rule: self == oldSelf
+              config:
+                description: Config contains configuration for audit log service
+                properties:
+                  gardenerSecretName:
+                    description: GardenerSecretName is the name of Gardener secret
+                      with write credentials. Once set it cannot be changed
+                    maxLength: 128
+                    type: string
+                    x-kubernetes-validations:
+                    - message: GardenerSecretName is immutable
+                      rule: self == oldSelf
+                  readCredsSecretName:
+                    description: |-
+                      ReadCredsSecretName is the name of the secret containing OAuth read credentials
+                      This secret will be copied to SKR to allow users to access their audit logs. Once set it cannot be changed
+                    maxLength: 128
+                    type: string
+                    x-kubernetes-validations:
+                    - message: ReadCredsSecretName is immutable
+                      rule: self == oldSelf
+                  serviceURL:
+                    description: ServiceURL is the Audit Log Service URL for Gardener
+                      shoot configuration. Once set it cannot be changed
+                    maxLength: 128
+                    type: string
+                    x-kubernetes-validations:
+                    - message: ServiceURL is immutable
+                      rule: self == oldSelf
+                type: object
+              orphaned:
+                description: |-
+                  Orphaned indicates that the Kyma Runtime associated with this AuditLog has been deleted.
+                  When set to true by KIM, KALM will transition the AuditLog to Orphaned state.
+                  Once set to true, this field cannot be changed back to false.
+                  Can only be set to true when the AuditLog is in Assigned state (enforced by controller).
+                type: boolean
+                x-kubernetes-validations:
+                - message: Orphaned cannot be unset once true
+                  rule: '!oldSelf || self'
+              platformRegion:
+                description: |-
+                  PlatformRegion is the BTP region where the audit log subaccount is provisioned. Cannot be empty and cannot be changed.
+                  The region must be configured in the controller's region-config.json file.
+                maxLength: 64
+                type: string
+                x-kubernetes-validations:
+                - message: PlatformRegion is immutable
+                  rule: self == oldSelf
+              regions:
+                description: |-
+                  Regions contains the hyperscaler regions (e.g. ap-northeast-1, westeurope, us-central1) that are
+                  geographically close to the platform region and will be served by this audit log subaccount.
+                  At least one region must be specified. Cannot be empty and cannot be changed.
+                items:
+                  type: string
+                minItems: 1
+                type: array
+                x-kubernetes-validations:
+                - message: Regions is immutable
+                  rule: self == oldSelf
+              retentionDays:
+                default: 90
+                description: 'RetentionDays is the retention period in days (default:
+                  90)'
+                type: integer
+              subaccountID:
+                description: SubaccountID is the BTP subaccount ID (provisioned by
+                  controller). Can be initially empty, but once set it cannot be changed
+                  or deleted
+                maxLength: 128
+                type: string
+                x-kubernetes-validations:
+                - message: SubaccountID is immutable once set
+                  rule: self == oldSelf
+            required:
+            - platformRegion
+            - regions
+            type: object
+          status:
+            description: status defines the observed state of AuditLog
+            properties:
+              assignedAt:
+                description: assignedAt is the timestamp when the AuditLog was assigned
+                  to a runtime
+                format: date-time
+                type: string
+              conditions:
+                description: conditions represent the current state of the AuditLog
+                  resource.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              createdAt:
+                description: createdAt is the timestamp when the AuditLog was created
+                format: date-time
+                type: string
+              orphanedAt:
+                description: orphanedAt is the timestamp when the AuditLog became
+                  orphaned
+                format: date-time
+                type: string
+              state:
+                allOf:
+                - enum:
+                  - Pending
+                  - RegistrationReady
+                  - SiemApproved
+                  - Assigned
+                  - Orphaned
+                  - PendingDelete
+                  - UnrecoverableError
+                - enum:
+                  - Pending
+                  - RegistrationReady
+                  - SiemApproved
+                  - Assigned
+                  - Orphaned
+                  - PendingDelete
+                  - UnrecoverableError
+                default: Pending
+                description: state represents the current state of the AuditLog resource.
+                type: string
+            required:
+            - state
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
