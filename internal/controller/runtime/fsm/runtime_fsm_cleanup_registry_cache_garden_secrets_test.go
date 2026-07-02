@@ -48,6 +48,7 @@ func TestFnCleanupRegistryCacheGardenSecrets(t *testing.T) {
 			Labels: map[string]string{
 				registrycache.RuntimeSecretLabel: "test-runtime",
 				registrycache.CacheIDLabel:       "uid2",
+				registrycache.ManagedByLabel:     registrycache.ManagedByValue,
 			},
 		},
 		Immutable: ptr.To(true),
@@ -163,6 +164,7 @@ func TestFnCleanupRegistryCacheGardenSecrets_NoCachingAfterCleanup(t *testing.T)
 			Labels: map[string]string{
 				registrycache.RuntimeSecretLabel: "test-runtime",
 				registrycache.CacheIDLabel:       "old-uid",
+				registrycache.ManagedByLabel:     registrycache.ManagedByValue,
 			},
 		},
 	}
