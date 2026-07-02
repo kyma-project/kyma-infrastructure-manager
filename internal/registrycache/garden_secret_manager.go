@@ -25,7 +25,7 @@ func NewGardenSecretManager(gardenClient client.Client, gardenNamespace, runtime
 
 func (m GardenSecretManager) GetCacheUIDToSecretNameMap(ctx context.Context) (map[string]string, error) {
 	var gardenSecrets v12.SecretList
-	err := m.GardenClient.List(ctx, &gardenSecrets, client.MatchingLabels{RuntimeSecretLabel: m.RuntimeID}, client.InNamespace(m.GardenNamespace))
+	err := m.GardenClient.List(ctx, &gardenSecrets, client.MatchingLabels{RuntimeSecretLabel: m.RuntimeID, ManagedByLabel: ManagedByValue}, client.InNamespace(m.GardenNamespace))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list garden secrets: %w", err)
 	}
@@ -43,7 +43,7 @@ func (m GardenSecretManager) Delete(ctx context.Context, registryCaches []imv1.I
 	cachesWithSecret := getRegistryCachesWithSecret(registryCaches)
 
 	var gardenSecrets v12.SecretList
-	err := m.GardenClient.List(ctx, &gardenSecrets, client.MatchingLabels{RuntimeSecretLabel: m.RuntimeID}, client.InNamespace(m.GardenNamespace))
+	err := m.GardenClient.List(ctx, &gardenSecrets, client.MatchingLabels{RuntimeSecretLabel: m.RuntimeID, ManagedByLabel: ManagedByValue}, client.InNamespace(m.GardenNamespace))
 	if err != nil {
 		return fmt.Errorf("failed to list garden secrets: %w", err)
 	}
@@ -65,7 +65,7 @@ func (m GardenSecretManager) Delete(ctx context.Context, registryCaches []imv1.I
 
 func (m GardenSecretManager) DeleteAll(ctx context.Context) error {
 	var gardenSecrets v12.SecretList
-	err := m.GardenClient.List(ctx, &gardenSecrets, client.MatchingLabels{RuntimeSecretLabel: m.RuntimeID}, client.InNamespace(m.GardenNamespace))
+	err := m.GardenClient.List(ctx, &gardenSecrets, client.MatchingLabels{RuntimeSecretLabel: m.RuntimeID, ManagedByLabel: ManagedByValue}, client.InNamespace(m.GardenNamespace))
 	if err != nil {
 		return fmt.Errorf("failed to list garden secrets: %w", err)
 	}

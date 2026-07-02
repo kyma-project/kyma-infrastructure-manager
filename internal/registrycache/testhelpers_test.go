@@ -15,6 +15,7 @@ import (
 func verifyGardenSecret(gardenSecret, registryCacheSecret *corev1.Secret, registryCache imv1.ImageRegistryCache, runtimeID string) {
 	Expect(gardenSecret.Labels[RuntimeSecretLabel]).To(Equal(runtimeID))
 	Expect(gardenSecret.Labels[CacheIDLabel]).To(Equal(registryCache.UID))
+	Expect(gardenSecret.Labels[ManagedByLabel]).To(Equal(ManagedByValue))
 	Expect(gardenSecret.Annotations[CacheNameAnnotation]).To(Equal(registryCache.Name))
 	Expect(gardenSecret.Annotations[CacheNamespaceAnnotation]).To(Equal(registryCache.Namespace))
 
@@ -41,6 +42,7 @@ func fixRegistryCacheGardenSecretLabels(runtimeID, cacheID string) map[string]st
 	return map[string]string{
 		RuntimeSecretLabel: runtimeID,
 		CacheIDLabel:       cacheID,
+		ManagedByLabel:     ManagedByValue,
 	}
 }
 

@@ -16,6 +16,8 @@ const RuntimeSecretLabel = "kyma-project.io/runtime-id"
 const CacheIDLabel = "kyma-project.io/registry-cache-id"
 const CacheNameAnnotation = "kyma-project.io/registry-cache-name"
 const CacheNamespaceAnnotation = "kyma-project.io/registry-cache-namespace"
+const ManagedByLabel = "app.kubernetes.io/managed-by"
+const ManagedByValue = "infrastructure-manager"
 
 type SecretNameGenerator func(string, string) string
 
@@ -101,6 +103,7 @@ func (s GardenSecretSyncer) newGardenSecret(cacheConfig imv1.ImageRegistryCache,
 			Labels: map[string]string{
 				RuntimeSecretLabel: s.RuntimeID,
 				CacheIDLabel:       cacheConfig.UID,
+				ManagedByLabel:     ManagedByValue,
 			},
 			Annotations: map[string]string{
 				CacheNameAnnotation:      cacheConfig.Name,
