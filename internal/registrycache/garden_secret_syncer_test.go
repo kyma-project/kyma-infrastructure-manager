@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 )
@@ -92,12 +93,13 @@ func TestGardenSecretSyncer(t *testing.T) {
 		annotations1 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret1.Name, registryCacheWithSecret1.Namespace)
 		annotations2 := fixRegistryCacheGardenSecretAnnotations(registryCacheWithSecret2.Name, registryCacheWithSecret2.Namespace)
 
-		gardenerSecret1 := fixRegistryCacheSecret(secretNameGenerator(runtimeID, registryCacheWithSecret1.UID), gardenNamespace, labels1, annotations1, "user1", "password1")
-		gardenerSecret2 := fixRegistryCacheSecret(secretNameGenerator(runtimeID, registryCacheWithSecret2.UID), gardenNamespace, labels2, annotations2, "user2", "password2")
+		// old secrets have different names to simulate a prior reconciliation cycle
+		oldGardenerSecret1 := fixRegistryCacheSecret("old-secret-id1", gardenNamespace, labels1, annotations1, "user1", "password1")
+		oldGardenerSecret2 := fixRegistryCacheSecret("old-secret-id2", gardenNamespace, labels2, annotations2, "user2", "password2")
 
 		gardenClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			gardenerSecret1,
-			gardenerSecret2,
+			oldGardenerSecret1,
+			oldGardenerSecret2,
 		).Build()
 
 		// when
@@ -107,18 +109,29 @@ func TestGardenSecretSyncer(t *testing.T) {
 		// then
 		Expect(err).To(BeNil())
 
+		// old secrets should be marked dirty and new ones created — 4 total
 		secrets, err := getGardenSecrets(ctx, gardenClient, runtimeID)
 		Expect(err).To(BeNil())
-		Expect(len(secrets)).To(Equal(2))
+		Expect(len(secrets)).To(Equal(4))
 
-		updatedGardenerSecret1, err := getGardenSecret(ctx, gardenClient, runtimeID, registryCacheWithSecret1.UID, gardenNamespace)
+		// new secrets exist with correct data
+		newGardenerSecret1, err := getGardenSecret(ctx, gardenClient, runtimeID, registryCacheWithSecret1.UID, gardenNamespace)
 		Expect(err).To(BeNil())
-		Expect(updatedGardenerSecret1).To(Not(BeNil()))
-		verifyGardenSecret(updatedGardenerSecret1, secret1, registryCacheWithSecret1, runtimeID)
+		Expect(newGardenerSecret1).To(Not(BeNil()))
+		verifyGardenSecret(newGardenerSecret1, secret1, registryCacheWithSecret1, runtimeID)
 
-		updatedGardenerSecret2, err := getGardenSecret(ctx, gardenClient, runtimeID, registryCacheWithSecret2.UID, gardenNamespace)
+		newGardenerSecret2, err := getGardenSecret(ctx, gardenClient, runtimeID, registryCacheWithSecret2.UID, gardenNamespace)
 		Expect(err).To(BeNil())
-		Expect(updatedGardenerSecret2).To(Not(BeNil()))
-		verifyGardenSecret(updatedGardenerSecret2, secret2, registryCacheWithSecret2, runtimeID)
+		Expect(newGardenerSecret2).To(Not(BeNil()))
+		verifyGardenSecret(newGardenerSecret2, secret2, registryCacheWithSecret2, runtimeID)
+
+		// old secrets should be marked dirty
+		var dirtySecret1 corev1.Secret
+		Expect(gardenClient.Get(ctx, types.NamespacedName{Name: oldGardenerSecret1.Name, Namespace: gardenNamespace}, &dirtySecret1)).To(BeNil())
+		Expect(dirtySecret1.Labels[DirtyLabel]).To(Equal("true"))
+
+		var dirtySecret2 corev1.Secret
+		Expect(gardenClient.Get(ctx, types.NamespacedName{Name: oldGardenerSecret2.Name, Namespace: gardenNamespace}, &dirtySecret2)).To(BeNil())
+		Expect(dirtySecret2.Labels[DirtyLabel]).To(Equal("true"))
 	})
 }

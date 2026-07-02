@@ -49,6 +49,20 @@ func sFnCleanupRegistryCacheGardenSecrets(ctx context.Context, m *fsm, s *system
 		return updateStatusAndRequeueAfter(m.StatusRequeueDelay)
 	}
 
+	m.log.V(log_level.DEBUG).Info("Registry cache dirty secrets deletion", "instance", s.instance.Name)
+	err = secretManager.DeleteDirty(ctx)
+	if err != nil {
+		s.instance.UpdateStatePending(
+			imv1.ConditionTypeRegistryCacheConfigured,
+			imv1.ConditionReasonRegistryCacheGardenClusterCleanupFailed,
+			metav1.ConditionFalse,
+			err.Error(),
+		)
+		m.log.Error(err, "Failed to delete dirty registry cache secrets")
+
+		return updateStatusAndRequeueAfter(m.StatusRequeueDelay)
+	}
+
 	if len(s.instance.Spec.Caching) > 0 {
 		m.log.V(log_level.DEBUG).Info("Registry cache configuration exists", "instance", s.instance.Name)
 		statusManager := registrycache.NewStatusManager(runtimeClient)

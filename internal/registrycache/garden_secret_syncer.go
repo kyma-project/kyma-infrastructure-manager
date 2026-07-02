@@ -18,6 +18,7 @@ const CacheNameAnnotation = "kyma-project.io/registry-cache-name"
 const CacheNamespaceAnnotation = "kyma-project.io/registry-cache-namespace"
 const ManagedByLabel = "app.kubernetes.io/managed-by"
 const ManagedByValue = "infrastructure-manager"
+const DirtyLabel = "kyma-project.io/dirty"
 
 type SecretNameGenerator func(string, string) string
 
@@ -88,7 +89,9 @@ func (s GardenSecretSyncer) replaceSecretInGardenCluster(ctx context.Context, ca
 		return err
 	}
 
-	if err := s.GardenClient.Delete(ctx, &gardenerSecret); err != nil && !errors.IsNotFound(err) {
+	patch := client.MergeFrom(gardenerSecret.DeepCopy())
+	gardenerSecret.Labels[DirtyLabel] = "true"
+	if err := s.GardenClient.Patch(ctx, &gardenerSecret, patch); err != nil && !errors.IsNotFound(err) {
 		return err
 	}
 

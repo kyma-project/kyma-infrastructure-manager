@@ -116,6 +116,60 @@ func TestGardenSecretManager(t *testing.T) {
 		Expect(err).To(BeNil())
 		Expect(remainingSecret).To(Not(BeNil()))
 	})
+
+	t.Run("Should exclude dirty secrets from cache UID map", func(t *testing.T) {
+		// given
+		runtimeID := "test-runtime-id-dirty-map"
+		gardenNamespace := "garden-dev"
+		secretNameGenerator := fixSecretNameGenerator()
+
+		labelsClean := fixRegistryCacheGardenSecretLabels(runtimeID, "id1")
+		labelsDirty := fixRegistryCacheGardenSecretLabels(runtimeID, "id2")
+		labelsDirty[DirtyLabel] = "true"
+
+		cleanSecret := fixRegistryCacheSecret(secretNameGenerator(runtimeID, "id1"), gardenNamespace, labelsClean, map[string]string{}, "user1", "password1")
+		dirtySecret := fixRegistryCacheSecret(secretNameGenerator(runtimeID, "id2"), gardenNamespace, labelsDirty, map[string]string{}, "user2", "password2")
+
+		gardenClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(cleanSecret, dirtySecret).Build()
+		secretManager := NewGardenSecretManager(gardenClient, gardenNamespace, runtimeID)
+
+		// when
+		result, err := secretManager.GetCacheUIDToSecretNameMap(ctx)
+
+		// then
+		Expect(err).To(BeNil())
+		Expect(result).To(HaveLen(1))
+		Expect(result["id1"]).To(Equal(cleanSecret.Name))
+		Expect(result).NotTo(HaveKey("id2"))
+	})
+
+	t.Run("Should delete dirty secrets", func(t *testing.T) {
+		// given
+		runtimeID := "test-runtime-id-delete-dirty"
+		gardenNamespace := "garden-dev"
+		secretNameGenerator := fixSecretNameGenerator()
+
+		labelsClean := fixRegistryCacheGardenSecretLabels(runtimeID, "id1")
+		labelsDirty := fixRegistryCacheGardenSecretLabels(runtimeID, "id2")
+		labelsDirty[DirtyLabel] = "true"
+
+		cleanSecret := fixRegistryCacheSecret(secretNameGenerator(runtimeID, "id1"), gardenNamespace, labelsClean, map[string]string{}, "user1", "password1")
+		dirtySecret := fixRegistryCacheSecret(secretNameGenerator(runtimeID, "id2"), gardenNamespace, labelsDirty, map[string]string{}, "user2", "password2")
+
+		gardenClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(cleanSecret, dirtySecret).Build()
+		secretManager := NewGardenSecretManager(gardenClient, gardenNamespace, runtimeID)
+
+		// when
+		err := secretManager.DeleteDirty(ctx)
+
+		// then
+		Expect(err).To(BeNil())
+
+		remaining, err := getGardenSecrets(ctx, gardenClient, runtimeID)
+		Expect(err).To(BeNil())
+		Expect(remaining).To(HaveLen(1))
+		Expect(remaining[0].Name).To(Equal(cleanSecret.Name))
+	})
 }
 
 func TestGardenSecretNeedToBeRemoved(t *testing.T) {
