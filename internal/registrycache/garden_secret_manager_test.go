@@ -147,31 +147,57 @@ func TestGardenSecretManager(t *testing.T) {
 	})
 }
 
-func TestGardenSecretNeedToBeRemoved(t *testing.T) {
+func TestHasRegistryCacheCountChanged(t *testing.T) {
 	RegisterTestingT(t)
 
-	registryCacheWithSecret1 := fixRegistryCacheConfigWithSecret("config-with-secret-1", "test", "id1", "quay.io", "secret-1")
-	registryCacheWithSecret2 := fixRegistryCacheConfigWithSecret("config-with-secret-2", "test", "id2", "quay.io", "secret-2")
+	cache1 := fixRegistryCacheConfigWithoutSecret("cache-1", "test", "id1", "quay.io")
+	cache2 := fixRegistryCacheConfigWithoutSecret("cache-2", "test", "id2", "docker.io")
 
-	t.Run("Should return true if one secret is not referenced in the desired state", func(t *testing.T) {
+	t.Run("Should return true if desired cache count differs from current", func(t *testing.T) {
 		// given
-		registryCacheExtension, err := extensions.NewRegistryCacheExtension([]imv1.ImageRegistryCache{registryCacheWithSecret1, registryCacheWithSecret2}, map[string]string{}, nil)
+		registryCacheExtension, err := extensions.NewRegistryCacheExtension([]imv1.ImageRegistryCache{cache1, cache2}, map[string]string{}, nil)
 		Expect(err).To(BeNil())
 
 		// when
-		remove, err := SecretRegistryCacheCountChanged([]gardener.Extension{*registryCacheExtension}, []imv1.ImageRegistryCache{registryCacheWithSecret1})
+		changed, err := HasRegistryCacheCountChanged([]gardener.Extension{*registryCacheExtension}, []imv1.ImageRegistryCache{cache1})
 
 		// then
-		Expect(remove).To(Equal(true))
+		Expect(changed).To(Equal(true))
+		Expect(err).To(BeNil())
+	})
+
+	t.Run("Should return false if desired cache count matches current", func(t *testing.T) {
+		// given
+		registryCacheExtension, err := extensions.NewRegistryCacheExtension([]imv1.ImageRegistryCache{cache1, cache2}, map[string]string{}, nil)
+		Expect(err).To(BeNil())
+
+		// when
+		changed, err := HasRegistryCacheCountChanged([]gardener.Extension{*registryCacheExtension}, []imv1.ImageRegistryCache{cache1, cache2})
+
+		// then
+		Expect(changed).To(Equal(false))
+		Expect(err).To(BeNil())
+	})
+
+	t.Run("Should return false if desired cache list is empty", func(t *testing.T) {
+		// given
+		registryCacheExtension, err := extensions.NewRegistryCacheExtension([]imv1.ImageRegistryCache{cache1}, map[string]string{}, nil)
+		Expect(err).To(BeNil())
+
+		// when
+		changed, err := HasRegistryCacheCountChanged([]gardener.Extension{*registryCacheExtension}, []imv1.ImageRegistryCache{})
+
+		// then
+		Expect(changed).To(Equal(false))
 		Expect(err).To(BeNil())
 	})
 
 	t.Run("Should return false if registry cache extension is not currently added", func(t *testing.T) {
 		// when
-		remove, err := SecretRegistryCacheCountChanged([]gardener.Extension{}, []imv1.ImageRegistryCache{registryCacheWithSecret1})
+		changed, err := HasRegistryCacheCountChanged([]gardener.Extension{}, []imv1.ImageRegistryCache{cache1})
 
 		// then
-		Expect(remove).To(Equal(false))
+		Expect(changed).To(Equal(false))
 		Expect(err).To(BeNil())
 	})
 
@@ -187,10 +213,10 @@ func TestGardenSecretNeedToBeRemoved(t *testing.T) {
 		Expect(err).To(BeNil())
 
 		// when
-		remove, err := SecretRegistryCacheCountChanged([]gardener.Extension{*registryCacheExtension}, []imv1.ImageRegistryCache{registryCacheWithSecret1})
+		changed, err := HasRegistryCacheCountChanged([]gardener.Extension{*registryCacheExtension}, []imv1.ImageRegistryCache{cache1})
 
 		// then
-		Expect(remove).To(Equal(false))
+		Expect(changed).To(Equal(false))
 		Expect(err).To(BeNil())
 	})
 }

@@ -135,7 +135,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	m.log.V(log_level.DEBUG).Info("Shoot converted successfully", "Name", updatedShoot.Name, "Namespace", updatedShoot.Namespace)
 
-	registryCacheSecretShouldBeRemoved, err := registrycache.SecretRegistryCacheCountChanged(s.shoot.Spec.Extensions, s.instance.Spec.Caching)
+	hasRegistryCacheCountChanged, err := registrycache.HasRegistryCacheCountChanged(s.shoot.Spec.Extensions, s.instance.Spec.Caching)
 	if err != nil {
 		m.log.Error(err, "Failed to check if registry cache secret should be removed")
 
@@ -150,7 +150,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	// The client is able to add an item to the collection, but not to remove it.
 	// More info: https://github.com/kyma-project/infrastructure-manager/issues/640
 
-	if workersShouldBeUpdated || registryCacheSecretShouldBeRemoved {
+	if workersShouldBeUpdated || hasRegistryCacheCountChanged {
 		copyShoot := s.shoot.DeepCopy()
 
 		if workersShouldBeUpdated {
@@ -159,7 +159,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 			copyShoot.Spec.Provider.InfrastructureConfig = updatedShoot.Spec.Provider.InfrastructureConfig
 		}
 
-		if registryCacheSecretShouldBeRemoved {
+		if hasRegistryCacheCountChanged {
 			copyShoot.Spec.Extensions = updatedShoot.Spec.Extensions
 			copyShoot.Spec.Resources = updatedShoot.Spec.Resources
 		}

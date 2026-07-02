@@ -9,7 +9,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 )
 
-func SecretRegistryCacheCountChanged(currentExtensions []gardener.Extension, desiredRegistryCacheConfig []imv1.ImageRegistryCache) (bool, error) {
+func HasRegistryCacheCountChanged(currentExtensions []gardener.Extension, desiredRegistryCacheConfig []imv1.ImageRegistryCache) (bool, error) {
 	var registryCacheExt *gardener.Extension
 
 	for _, ext := range currentExtensions {
@@ -31,14 +31,5 @@ func SecretRegistryCacheCountChanged(currentExtensions []gardener.Extension, des
 		return false, fmt.Errorf("failed to unmarshal registry cache config: %w", err)
 	}
 
-	imageRegistryConfigWithSecrets := getRegistryCachesWithSecret(desiredRegistryCacheConfig)
-
-	var gardenerCachesWithSecrets []registrycacheext.RegistryCache
-	for _, gardenerRegistryCache := range registryConfig.Caches {
-		if gardenerRegistryCache.SecretReferenceName != nil && *gardenerRegistryCache.SecretReferenceName != "" {
-			gardenerCachesWithSecrets = append(gardenerCachesWithSecrets, gardenerRegistryCache)
-		}
-	}
-
-	return len(imageRegistryConfigWithSecrets) != len(gardenerCachesWithSecrets), nil
+	return len(desiredRegistryCacheConfig) != 0 && len(desiredRegistryCacheConfig) != len(registryConfig.Caches), nil
 }
