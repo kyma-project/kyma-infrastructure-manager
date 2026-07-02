@@ -1,6 +1,7 @@
 package registrycache
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/google/uuid"
@@ -89,6 +90,10 @@ func (s GardenSecretSyncer) replaceSecretInGardenCluster(ctx context.Context, ca
 		return err
 	}
 
+	if secretDataEqual(gardenerSecret.Data, runtimeSecret.Data) {
+		return nil
+	}
+
 	patch := client.MergeFrom(gardenerSecret.DeepCopy())
 	gardenerSecret.Labels[DirtyLabel] = "true"
 	if err := s.GardenClient.Patch(ctx, &gardenerSecret, patch); err != nil && !errors.IsNotFound(err) {
@@ -96,6 +101,19 @@ func (s GardenSecretSyncer) replaceSecretInGardenCluster(ctx context.Context, ca
 	}
 
 	return s.GardenClient.Create(ctx, s.newGardenSecret(cacheConfig, runtimeSecret.Data))
+}
+
+func secretDataEqual(a, b map[string][]byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for key, valA := range a {
+		valB, ok := b[key]
+		if !ok || !bytes.Equal(valA, valB) {
+			return false
+		}
+	}
+	return true
 }
 
 func (s GardenSecretSyncer) newGardenSecret(cacheConfig imv1.ImageRegistryCache, data map[string][]byte) *v12.Secret {
