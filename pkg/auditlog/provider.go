@@ -34,6 +34,7 @@ type DefaultDataProvider struct {
 	client       client.Client
 	sharedConfig Configuration
 	logger       logr.Logger
+	namespace    string // Namespace where AuditLog CRs are located (typically kcp-system)
 }
 
 // NewDataProvider creates a new DataProvider instance
@@ -41,11 +42,13 @@ func NewDataProvider(
 	client client.Client,
 	sharedConfig Configuration,
 	logger logr.Logger,
+	namespace string,
 ) DataProvider {
 	return &DefaultDataProvider{
 		client:       client,
 		sharedConfig: sharedConfig,
 		logger:       logger,
+		namespace:    namespace,
 	}
 }
 
