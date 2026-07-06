@@ -216,6 +216,11 @@ func makeInputRuntimeWithAnnotation(annotations map[string]string) *imv1.Runtime
 				},
 			},
 		},
+		Status: imv1.RuntimeStatus{
+			ShootLastOperation: &gardener.LastOperation{
+				LastUpdateTime: metav1.NewTime(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)),
+			},
+		},
 	}
 }
 

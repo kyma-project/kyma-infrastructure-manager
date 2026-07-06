@@ -2,6 +2,7 @@ package skrdetails
 
 import (
 	"testing"
+	"time"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -12,6 +13,7 @@ import (
 )
 
 func TestToKymaProvisioningInfo(t *testing.T) {
+	var lastReconcileTime metav1.Time = metav1.Now()
 	t.Run("Should include environmentInstanceID and instanceName from labels", func(t *testing.T) {
 		// given
 		runtimeCR := imv1.Runtime{
@@ -46,6 +48,11 @@ func TestToKymaProvisioningInfo(t *testing.T) {
 					},
 				},
 			},
+			Status: imv1.RuntimeStatus{
+				ShootLastOperation: &gardener.LastOperation{
+					LastUpdateTime: lastReconcileTime,
+				},
+			},
 		}
 
 		shoot := &gardener.Shoot{
@@ -77,9 +84,11 @@ func TestToKymaProvisioningInfo(t *testing.T) {
 		assert.Equal(t, "eu-central-1", result.Region)
 		assert.Equal(t, "cf-eu12", result.PlatformRegion)
 		assert.Equal(t, "eu-west-1", result.SeedRegion)
+		assert.Equal(t, lastReconcileTime, result.LastReconcileTime)
 	})
 
 	t.Run("Should handle missing labels gracefully", func(t *testing.T) {
+
 		// given
 		runtimeCR := imv1.Runtime{
 			ObjectMeta: metav1.ObjectMeta{
@@ -94,6 +103,11 @@ func TestToKymaProvisioningInfo(t *testing.T) {
 						Type:    "aws",
 						Workers: []gardener.Worker{},
 					},
+				},
+			},
+			Status: imv1.RuntimeStatus{
+				ShootLastOperation: &gardener.LastOperation{
+					LastUpdateTime: metav1.Time{},
 				},
 			},
 		}
@@ -125,6 +139,7 @@ func TestToKymaProvisioningInfo(t *testing.T) {
 		assert.Empty(t, result.GlobalAccountID)
 		assert.Empty(t, result.SubaccountID)
 		assert.Empty(t, result.SeedRegion)
+		assert.Empty(t, result.LastReconcileTime)
 	})
 }
 
@@ -156,6 +171,11 @@ func TestToKymaProvisioningInfoWithACL(t *testing.T) {
 							},
 						},
 					},
+				},
+			},
+			Status: imv1.RuntimeStatus{
+				ShootLastOperation: &gardener.LastOperation{
+					LastUpdateTime: metav1.Time{time.Now()},
 				},
 			},
 		}
@@ -213,6 +233,11 @@ func TestToKymaProvisioningInfoWithACL(t *testing.T) {
 					},
 				},
 			},
+			Status: imv1.RuntimeStatus{
+				ShootLastOperation: &gardener.LastOperation{
+					LastUpdateTime: metav1.Time{time.Now()},
+				},
+			},
 		}
 
 		shoot := &gardener.Shoot{
@@ -268,6 +293,11 @@ func TestToKymaProvisioningInfoWithACL(t *testing.T) {
 					},
 				},
 			},
+			Status: imv1.RuntimeStatus{
+				ShootLastOperation: &gardener.LastOperation{
+					LastUpdateTime: metav1.Time{time.Now()},
+				},
+			},
 		}
 
 		shoot := &gardener.Shoot{
@@ -298,6 +328,7 @@ func TestToKymaProvisioningInfoWithACL(t *testing.T) {
 }
 
 func TestToKymaProvisioningInfoConfigMap(t *testing.T) {
+	lastReconcileTime := metav1.Now()
 	t.Run("Should create ConfigMap with all fields including environmentInstanceID and instanceName", func(t *testing.T) {
 		// given
 		runtimeCR := imv1.Runtime{
@@ -330,6 +361,11 @@ func TestToKymaProvisioningInfoConfigMap(t *testing.T) {
 							},
 						},
 					},
+				},
+			},
+			Status: imv1.RuntimeStatus{
+				ShootLastOperation: &gardener.LastOperation{
+					LastUpdateTime: lastReconcileTime,
 				},
 			},
 		}
@@ -365,5 +401,6 @@ func TestToKymaProvisioningInfoConfigMap(t *testing.T) {
 		assert.Contains(t, cm.Data["details"], "subaccountID: sub-acc-789")
 		assert.Contains(t, cm.Data["details"], "region: eu-central-1")
 		assert.Contains(t, cm.Data["details"], "platformRegion: cf-eu12")
+		assert.Contains(t, cm.Data["details"], "lastReconcileTime", lastReconcileTime)
 	})
 }
