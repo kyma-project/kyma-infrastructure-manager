@@ -200,6 +200,14 @@ func TestFSMPatchShoot(t *testing.T) {
 				entry.expected.status.Conditions[i].LastTransitionTime = metav1.Time{}
 			}
 		}
+		if entry.systemState.instance.Status.ShootLastOperation != nil {
+			entry.systemState.instance.Status.ShootLastOperation = &gardener.LastOperation{
+				LastUpdateTime: metav1.NewTime(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)),
+			}
+			entry.expected.status.ShootLastOperation = &gardener.LastOperation{
+				LastUpdateTime: metav1.NewTime(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)),
+			}
+		}
 
 		Expect(entry.systemState.instance.Status).To(Equal(entry.expected.status))
 		Expect(sFn).To(entry.expected.nextStep)
