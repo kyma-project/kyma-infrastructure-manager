@@ -31,5 +31,5 @@ func HasRegistryCacheCountChanged(currentExtensions []gardener.Extension, desire
 		return false, fmt.Errorf("failed to unmarshal registry cache config: %w", err)
 	}
 
-	return len(desiredRegistryCacheConfig) != 0 && len(desiredRegistryCacheConfig) != len(registryConfig.Caches), nil
+	return len(desiredRegistryCacheConfig) != len(registryConfig.Caches), nil
 }
