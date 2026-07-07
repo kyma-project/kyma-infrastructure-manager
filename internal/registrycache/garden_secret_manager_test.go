@@ -179,7 +179,7 @@ func TestHasRegistryCacheCountChanged(t *testing.T) {
 		Expect(err).To(BeNil())
 	})
 
-	t.Run("Should return false if desired cache list is empty", func(t *testing.T) {
+	t.Run("Should return true if desired cache list is empty", func(t *testing.T) {
 		// given
 		registryCacheExtension, err := extensions.NewRegistryCacheExtension([]imv1.ImageRegistryCache{cache1}, map[string]string{}, nil)
 		Expect(err).To(BeNil())
@@ -188,7 +188,7 @@ func TestHasRegistryCacheCountChanged(t *testing.T) {
 		changed, err := HasRegistryCacheCountChanged([]gardener.Extension{*registryCacheExtension}, []imv1.ImageRegistryCache{})
 
 		// then
-		Expect(changed).To(Equal(false))
+		Expect(changed).To(Equal(true))
 		Expect(err).To(BeNil())
 	})
 
