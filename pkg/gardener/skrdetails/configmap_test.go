@@ -13,7 +13,7 @@ import (
 )
 
 func TestToKymaProvisioningInfo(t *testing.T) {
-	var lastReconcileTime metav1.Time = metav1.Now()
+	lastReconcileTime := metav1.Time{Time: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}
 	t.Run("Should include environmentInstanceID and instanceName from labels", func(t *testing.T) {
 		// given
 		runtimeCR := imv1.Runtime{
@@ -175,7 +175,7 @@ func TestToKymaProvisioningInfoWithACL(t *testing.T) {
 			},
 			Status: imv1.RuntimeStatus{
 				ShootLastOperation: &gardener.LastOperation{
-					LastUpdateTime: metav1.Time{time.Now()},
+					LastUpdateTime: metav1.Time{Time: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)},
 				},
 			},
 		}
@@ -235,7 +235,7 @@ func TestToKymaProvisioningInfoWithACL(t *testing.T) {
 			},
 			Status: imv1.RuntimeStatus{
 				ShootLastOperation: &gardener.LastOperation{
-					LastUpdateTime: metav1.Time{time.Now()},
+					LastUpdateTime: metav1.Time{Time: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)},
 				},
 			},
 		}
@@ -295,7 +295,7 @@ func TestToKymaProvisioningInfoWithACL(t *testing.T) {
 			},
 			Status: imv1.RuntimeStatus{
 				ShootLastOperation: &gardener.LastOperation{
-					LastUpdateTime: metav1.Time{time.Now()},
+					LastUpdateTime: metav1.Time{Time: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)},
 				},
 			},
 		}
@@ -328,7 +328,7 @@ func TestToKymaProvisioningInfoWithACL(t *testing.T) {
 }
 
 func TestToKymaProvisioningInfoConfigMap(t *testing.T) {
-	lastReconcileTime := metav1.Now()
+	lastReconcileTime := metav1.Time{Time: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}
 	t.Run("Should create ConfigMap with all fields including environmentInstanceID and instanceName", func(t *testing.T) {
 		// given
 		runtimeCR := imv1.Runtime{
@@ -389,7 +389,7 @@ func TestToKymaProvisioningInfoConfigMap(t *testing.T) {
 		}
 
 		// when
-		cm, err := ToKymaProvisioningInfoConfigMap(runtimeCR, shoot, seed)
+		cm, err := ToKymaProvisioningInfoConfigMap(runtimeCR, shoot, &seed)
 
 		// then
 		require.NoError(t, err)

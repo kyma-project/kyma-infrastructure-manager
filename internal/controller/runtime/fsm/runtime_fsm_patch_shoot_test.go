@@ -201,8 +201,6 @@ func TestFSMPatchShoot(t *testing.T) {
 			}
 		}
 		if entry.systemState.instance.Status.ShootLastOperation != nil {
-
-			//current_timezone,_=time.LoadLocation("Europe/Warsaw")
 			entry.systemState.instance.Status.ShootLastOperation = &gardener.LastOperation{
 				LastUpdateTime: metav1.NewTime(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)),
 			}

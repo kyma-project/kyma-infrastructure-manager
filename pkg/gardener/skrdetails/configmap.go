@@ -104,11 +104,9 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot, seed ga
 	}
 }
 
-func ToKymaProvisioningInfoConfigMap(runtime imv1.Runtime, shoot *gardener.Shoot, seed gardener.Seed) (v1.ConfigMap, error) {
-	details := ToKymaProvisioningInfo(runtime, shoot, seed)
+func ToKymaProvisioningInfoConfigMap(runtime imv1.Runtime, shoot *gardener.Shoot, seed *gardener.Seed) (v1.ConfigMap, error) {
+	details := ToKymaProvisioningInfo(runtime, shoot, *seed)
 	authConfigBytes, err := yaml.Marshal(details)
-
-	//seed.Spec.Provider.Region
 
 	if err != nil {
 		return v1.ConfigMap{}, err

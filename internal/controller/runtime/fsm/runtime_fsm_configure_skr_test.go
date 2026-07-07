@@ -512,7 +512,7 @@ func setupFakeClient() (client.WithWatch, *fsm) {
 	var fakeClient = fake.NewClientBuilder().
 		WithInterceptorFuncs(interceptor.Funcs{
 			Patch: fsm_testing.GetFakePatchInterceptorForShootsAndConfigMaps(true),
-			Get:   fsm_testing.GetFakeGetInterceptroForSeed(),
+			Get:   fsm_testing.GetFakeGetInterceptorForSeed(),
 		}).
 		WithScheme(scheme).
 		Build()
@@ -624,7 +624,7 @@ func runtimeForTest() imv1.Runtime {
 		},
 		Status: imv1.RuntimeStatus{
 			ShootLastOperation: &gardener.LastOperation{
-				LastUpdateTime: metav1.Time{time.Now()},
+				LastUpdateTime: metav1.NewTime(time.Now()),
 			},
 		},
 	}

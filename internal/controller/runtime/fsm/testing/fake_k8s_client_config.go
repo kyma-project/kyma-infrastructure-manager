@@ -29,7 +29,7 @@ func GetFakePatchInterceptorFn(incShootGeneration bool) func(ctx context.Context
 	}
 }
 
-func GetFakeGetInterceptroForSeed() func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+func GetFakeGetInterceptorForSeed() func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	return func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 		if seed, isSeed := obj.(*gardener_api.Seed); isSeed {
 			seed.Spec.Provider.Region = "eu-central-5"

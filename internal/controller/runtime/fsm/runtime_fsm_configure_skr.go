@@ -204,14 +204,14 @@ func applyKymaProvisioningInfoCM(ctx context.Context, m *fsm, s *systemState) er
 	var seed gardener.Seed
 
 	if seedName != nil {
-		err := m.GardenClient.Get(ctx, types.NamespacedName{Name: *seedName, Namespace: s.shoot.Namespace}, &seed)
+		err := m.GardenClient.Get(ctx, types.NamespacedName{Name: *seedName}, &seed)
 
 		if err != nil {
 			return err
 		}
 	}
 
-	configMap, conversionErr := skrdetails.ToKymaProvisioningInfoConfigMap(s.instance, s.shoot, seed)
+	configMap, conversionErr := skrdetails.ToKymaProvisioningInfoConfigMap(s.instance, s.shoot, &seed)
 	if conversionErr != nil {
 		return errors.Wrap(conversionErr, "failed to convert RuntimeCR and Shoot spec to ToKymaProvisioningInfo config map")
 	}
