@@ -744,7 +744,7 @@ func verifyNetworkFilterExtension(t *testing.T, ext gardener.Extension, isEnable
 
 func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches []imv1.ImageRegistryCache, registryCacheGardenSecretNames map[string]string) {
 	if len(caches) == 0 {
-		assert.True(t, ext != nil && (ext.ProviderConfig != nil && *ext.Disabled))
+		assert.True(t, ext != nil && (ext.ProviderConfig == nil && *ext.Disabled))
 
 		return
 	}
