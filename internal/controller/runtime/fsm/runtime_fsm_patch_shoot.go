@@ -158,21 +158,22 @@ func continueWithAuditLogData(ctx context.Context, m *fsm, s *systemState, data 
 		SecretName: data.SecretName,
 	}
 
+	patchOptions, err := getPatchOptions(ctx, m, s, auditLogConfig)
+	if err != nil {
+		m.log.Error(err, "Failed to check if registry cache secret should be removed")
+
+		s.instance.UpdateStatePending(
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonProcessing,
+			metav1.ConditionFalse,
+			"Failed to get patch options",
+		)
+
+		return updateStatusAndRequeueAfter(m.StatusRequeueDelay)
+	}
+
 	// NOTE: In the future we want to pass the whole shoot object here
-	updatedShoot, err := convertPatch(ctx, &s.instance, gardener_shoot.PatchOpts{
-		KcpClient:             m.KcpClient,
-		ConverterConfig:       m.ConverterConfig,
-		AuditLogData:          auditLogConfig,
-		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
-		Workers:               s.shoot.Spec.Provider.Workers,
-		ShootK8SVersion:       s.shoot.Spec.Kubernetes.Version,
-		Extensions:            s.shoot.Spec.Extensions,
-		Resources:             s.shoot.Spec.Resources,
-		InfrastructureConfig:  s.shoot.Spec.Provider.InfrastructureConfig,
-		ControlPlaneConfig:    s.shoot.Spec.Provider.ControlPlaneConfig,
-		ApiServerAclEnabled:   m.ApiServerAclEnabled,
-		ExistingDNS:           s.shoot.Spec.DNS,
-	})
+	updatedShoot, err := convertPatch(ctx, &s.instance, patchOptions)
 
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object, exiting with no retry")
@@ -194,7 +195,7 @@ func continueWithAuditLogData(ctx context.Context, m *fsm, s *systemState, data 
 
 	m.log.V(log_level.DEBUG).Info("Shoot converted successfully", "Name", updatedShoot.Name, "Namespace", updatedShoot.Namespace)
 
-	registryCacheSecretShouldBeRemoved, err := registrycache.GardenSecretNeedToBeRemoved(s.shoot.Spec.Extensions, s.instance.Spec.Caching)
+	hasRegistryCacheCountChanged, err := registrycache.HasRegistryCacheCountChanged(s.shoot.Spec.Extensions, s.instance.Spec.Caching)
 	if err != nil {
 		m.log.Error(err, "Failed to check if registry cache secret should be removed")
 
@@ -209,7 +210,7 @@ func continueWithAuditLogData(ctx context.Context, m *fsm, s *systemState, data 
 	// The client is able to add an item to the collection, but not to remove it.
 	// More info: https://github.com/kyma-project/infrastructure-manager/issues/640
 
-	if workersShouldBeUpdated || registryCacheSecretShouldBeRemoved {
+	if workersShouldBeUpdated || hasRegistryCacheCountChanged {
 		copyShoot := s.shoot.DeepCopy()
 
 		if workersShouldBeUpdated {
@@ -218,7 +219,7 @@ func continueWithAuditLogData(ctx context.Context, m *fsm, s *systemState, data 
 			copyShoot.Spec.Provider.InfrastructureConfig = updatedShoot.Spec.Provider.InfrastructureConfig
 		}
 
-		if registryCacheSecretShouldBeRemoved {
+		if hasRegistryCacheCountChanged {
 			copyShoot.Spec.Extensions = updatedShoot.Spec.Extensions
 			copyShoot.Spec.Resources = updatedShoot.Spec.Resources
 		}
@@ -381,4 +382,34 @@ func updateStateFailedWithErrorAndStop(instance *imv1.Runtime,
 	c imv1.RuntimeConditionType, r imv1.RuntimeConditionReason, msg string) (stateFn, *ctrl.Result, error) {
 	instance.UpdateStateFailed(c, r, msg)
 	return updateStatusAndStop()
+}
+
+func getPatchOptions(ctx context.Context, m *fsm, s *systemState, auditLogConfig auditlogs.AuditLogData) (gardener_shoot.PatchOpts, error) {
+	patchOptions := gardener_shoot.PatchOpts{
+		KcpClient:             m.KcpClient,
+		ConverterConfig:       m.ConverterConfig,
+		AuditLogData:          auditLogConfig,
+		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
+		Workers:               s.shoot.Spec.Provider.Workers,
+		ShootK8SVersion:       s.shoot.Spec.Kubernetes.Version,
+		Extensions:            s.shoot.Spec.Extensions,
+		Resources:             s.shoot.Spec.Resources,
+		InfrastructureConfig:  s.shoot.Spec.Provider.InfrastructureConfig,
+		ControlPlaneConfig:    s.shoot.Spec.Provider.ControlPlaneConfig,
+		ApiServerAclEnabled:   m.ApiServerAclEnabled,
+		ExistingDNS:           s.shoot.Spec.DNS,
+	}
+
+	if m.RegistryCacheConfigControllerEnabled {
+		secretManager := registrycache.NewGardenSecretManager(m.GardenClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Labels[imv1.LabelKymaRuntimeID])
+
+		registryCacheGardenSecretNames, err := secretManager.GetCacheUIDToSecretNameMap(ctx)
+		if err != nil {
+			return patchOptions, err
+		}
+
+		patchOptions.RegistryCacheGardenSecretNames = registryCacheGardenSecretNames
+	}
+
+	return patchOptions, nil
 }

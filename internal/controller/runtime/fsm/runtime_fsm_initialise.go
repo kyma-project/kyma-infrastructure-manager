@@ -41,8 +41,11 @@ func sFnInitialize(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.
 		}
 
 		m.log.V(log_level.DEBUG).Info("Deleting registry cache secrets for a runtime", "instance", s.instance.Name)
-		secretSyncer := registrycache.NewGardenSecretSyncer(m.GardenClient, nil, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
-		err := secretSyncer.DeleteAll(ctx)
+		secretManager := registrycache.NewGardenSecretManager(
+			m.GardenClient,
+			fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName),
+			s.instance.Name)
+		err := secretManager.DeleteAll(ctx)
 		if err != nil {
 			m.log.Error(err, "Failed to delete registry cache secrets during runtime deletion")
 

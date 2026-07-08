@@ -49,7 +49,7 @@ func TestNewRegistryCacheExtension(t *testing.T) {
 		}
 
 		// when
-		registryCacheExtension, err := NewRegistryCacheExtension(caches, nil)
+		registryCacheExtension, err := NewRegistryCacheExtension(caches, map[string]string{"id1": "garden-name-1"}, nil)
 
 		// then
 		require.NoError(t, err)
@@ -68,7 +68,7 @@ func TestNewRegistryCacheExtension(t *testing.T) {
 		assert.Equal(t, "RegistryConfig", providerConfig.Kind)
 		assert.Equal(t, "ghcr.io", providerConfig.Caches[0].Upstream)
 		assert.Equal(t, metav1.Duration{Duration: time.Hour * 24}, providerConfig.Caches[0].GarbageCollection.TTL)
-		assert.Equal(t, "reg-cache-id1", *providerConfig.Caches[0].SecretReferenceName)
+		assert.Equal(t, "garden-name-1", *providerConfig.Caches[0].SecretReferenceName)
 		assert.Nil(t, providerConfig.Caches[0].Proxy)
 		assert.Equal(t, ptr.To("storageClass"), providerConfig.Caches[0].Volume.StorageClassName)
 

@@ -2,7 +2,6 @@ package extensions
 
 import (
 	"encoding/json"
-	"fmt"
 	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -14,11 +13,10 @@ import (
 
 const RegistryCacheExtensionType = "registry-cache"
 const RegistryCacheSecretPrefix = "reg-cache-"
-const RegistryCacheSecretNameFmt = RegistryCacheSecretPrefix + "%s"
 
-func NewRegistryCacheExtension(caches []imv1.ImageRegistryCache, existingRegistryCacheExt *gardener.Extension) (*gardener.Extension, error) {
+func NewRegistryCacheExtension(caches []imv1.ImageRegistryCache, registryCacheGardenSecretNames map[string]string, existingRegistryCacheExt *gardener.Extension) (*gardener.Extension, error) {
 	if len(caches) > 0 {
-		return extension(caches)
+		return extension(caches, registryCacheGardenSecretNames)
 	}
 
 	if existingRegistryCacheExt != nil {
@@ -28,14 +26,14 @@ func NewRegistryCacheExtension(caches []imv1.ImageRegistryCache, existingRegistr
 	return nil, nil
 }
 
-func extension(caches []imv1.ImageRegistryCache) (*gardener.Extension, error) {
+func extension(caches []imv1.ImageRegistryCache, registryCacheGardenSecretNames map[string]string) (*gardener.Extension, error) {
 
 	registryConfig := registrycacheext.RegistryConfig{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: "registry.extensions.gardener.cloud/v1alpha3",
 			Kind:       "RegistryConfig",
 		},
-		Caches: ToRegistryCacheExtension(caches),
+		Caches: ToRegistryCacheExtension(caches, registryCacheGardenSecretNames),
 	}
 
 	providerConfigBytes, err := json.Marshal(registryConfig)
@@ -81,7 +79,7 @@ func disabledExtension(existingRegistryCacheExt *gardener.Extension) (*gardener.
 	}, nil
 }
 
-func ToRegistryCacheExtension(caches []imv1.ImageRegistryCache) []registrycacheext.RegistryCache {
+func ToRegistryCacheExtension(caches []imv1.ImageRegistryCache, registryCacheGardenSecretNames map[string]string) []registrycacheext.RegistryCache {
 
 	volumeToCacheExtension := func(volume *registrycache.Volume) *registrycacheext.Volume {
 
@@ -121,7 +119,8 @@ func ToRegistryCacheExtension(caches []imv1.ImageRegistryCache) []registrycachee
 			return nil
 		}
 
-		return ptr.To(fmt.Sprintf(RegistryCacheSecretNameFmt, cache.UID))
+		secretName := registryCacheGardenSecretNames[cache.UID]
+		return &secretName
 	}
 
 	// Convert the registry cache to the internal format
