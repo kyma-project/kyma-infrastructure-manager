@@ -61,15 +61,16 @@ type PatchOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
-	KcpClient            client.Client
-	ShootK8SVersion      string
-	Workers              []gardener.Worker
-	Extensions           []gardener.Extension
-	Resources            []gardener.NamedResourceReference
-	InfrastructureConfig *runtime.RawExtension
-	ControlPlaneConfig   *runtime.RawExtension
-	ApiServerAclEnabled  bool
-	ExistingDNS          *gardener.DNS
+	KcpClient                      client.Client
+	ShootK8SVersion                string
+	Workers                        []gardener.Worker
+	Extensions                     []gardener.Extension
+	Resources                      []gardener.NamedResourceReference
+	InfrastructureConfig           *runtime.RawExtension
+	ControlPlaneConfig             *runtime.RawExtension
+	ApiServerAclEnabled            bool
+	ExistingDNS                    *gardener.DNS
+	RegistryCacheGardenSecretNames map[string]string
 }
 
 func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
@@ -89,7 +90,7 @@ func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
 	if !opts.DNS.IsGardenerInternal() {
 		extendersForCreate = append(extendersForCreate, extender2.NewDNSExtenderForCreate(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType))
 	}
-	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(ctx, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, nil, opts.ApiServerAclEnabled))
+	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(ctx, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, opts.ApiServerAclEnabled))
 	extendersForCreate = append(extendersForCreate,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
 
@@ -122,8 +123,8 @@ func NewConverterPatch(ctx context.Context, opts PatchOpts) Converter {
 	extendersForPatch = append(extendersForPatch, extender2.ExtendWithGVisorNetRawDefault)
 
 	extendersForPatch = append(extendersForPatch,
-		extender2.NewResourcesExtenderForPatch(opts.Resources),
-		extensions.NewExtensionsExtenderForPatch(ctx, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, opts.Extensions, opts.ApiServerAclEnabled))
+		extender2.NewResourcesExtenderForPatch(opts.Resources, opts.RegistryCacheGardenSecretNames),
+		extensions.NewExtensionsExtenderForPatch(ctx, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, opts.Extensions, opts.ApiServerAclEnabled, opts.RegistryCacheGardenSecretNames))
 
 	if !opts.DNS.IsGardenerInternal() {
 		extendersForPatch = append(extendersForPatch, extender2.NewDNSExtenderForPatch(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType, opts.ExistingDNS))

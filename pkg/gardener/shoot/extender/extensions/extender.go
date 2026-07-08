@@ -20,7 +20,7 @@ type Extension struct {
 	Create CreateExtensionFunc
 }
 
-func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, registryCache []imv1.ImageRegistryCache, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			Type: NetworkFilterType,
@@ -57,16 +57,6 @@ func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client
 			},
 		},
 		{
-			Type: RegistryCacheExtensionType,
-			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-				if len(registryCache) == 0 {
-					return nil, nil
-				}
-
-				return NewRegistryCacheExtension(registryCache, nil)
-			},
-		},
-		{
 			Type: ApiServerACLExtensionType,
 			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
 				if !AclNeedsToBeEnabled(apiServerAclEnabled, runtime) {
@@ -93,7 +83,7 @@ func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client
 	}, nil)
 }
 
-func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension, apiServerAclEnabled bool, registryCacheGardenSecretNames map[string]string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			AuditlogExtensionType,
@@ -146,7 +136,7 @@ func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client,
 		{
 			Type: RegistryCacheExtensionType,
 			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
-				return NewRegistryCacheExtension(runtime.Spec.Caching, existingExtension(RegistryCacheExtensionType, shoot))
+				return NewRegistryCacheExtension(runtime.Spec.Caching, registryCacheGardenSecretNames, existingExtension(RegistryCacheExtensionType, shoot))
 			},
 		},
 		{
