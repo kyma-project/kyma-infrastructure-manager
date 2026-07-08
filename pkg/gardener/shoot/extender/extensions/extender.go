@@ -207,13 +207,10 @@ func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensi
 			}
 
 			if index != -1 {
-
 				if gardenerExtension != nil {
 					shoot.Spec.Extensions[index] = *gardenerExtension
-				}
-
-				if ext.Strategy == StrategyRemove {
-					shoot.Spec.Extensions = slices.Delete(shoot.Spec.Extensions, index, index)
+				} else if ext.Strategy == StrategyRemove {
+					shoot.Spec.Extensions = slices.Delete(shoot.Spec.Extensions, index, index+1)
 				}
 			}
 		}

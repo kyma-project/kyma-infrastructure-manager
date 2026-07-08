@@ -816,6 +816,62 @@ func getExpectedExtensionsOrderMapForCreateWithNvidiaOpenshell() map[string]int 
 	return extensionOrderMap
 }
 
+func TestStrategyRemove(t *testing.T) {
+	const removedType = "to-be-removed"
+	const keptType = "kept"
+
+	existingExtensions := []gardener.Extension{
+		{Type: keptType},
+		{Type: removedType},
+	}
+
+	extender := newExtensionsExtender([]Extension{
+		{
+			Type: removedType,
+			Create: func(_ imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
+				return nil, nil
+			},
+			Strategy: StrategyRemove,
+		},
+	}, existingExtensions)
+
+	shoot := &gardener.Shoot{}
+	err := extender(imv1.Runtime{}, shoot)
+	assert.NoError(t, err)
+	require.Len(t, shoot.Spec.Extensions, 1)
+	assert.Equal(t, keptType, shoot.Spec.Extensions[0].Type)
+}
+
+func TestStrategyRemoveDoesNotRemoveWhenExtensionReturnsNonNil(t *testing.T) {
+	const updatedType = "updated"
+	const keptType = "kept"
+
+	updated := &gardener.Extension{Type: updatedType, Disabled: ptr.To(false)}
+
+	existingExtensions := []gardener.Extension{
+		{Type: keptType},
+		{Type: updatedType, Disabled: ptr.To(true)},
+	}
+
+	extender := newExtensionsExtender([]Extension{
+		{
+			Type: updatedType,
+			Create: func(_ imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
+				return updated, nil
+			},
+			Strategy: StrategyRemove,
+		},
+	}, existingExtensions)
+
+	shoot := &gardener.Shoot{}
+	err := extender(imv1.Runtime{}, shoot)
+	assert.NoError(t, err)
+	require.Len(t, shoot.Spec.Extensions, 2)
+	assert.Equal(t, keptType, shoot.Spec.Extensions[0].Type)
+	assert.Equal(t, updatedType, shoot.Spec.Extensions[1].Type)
+	assert.Equal(t, false, *shoot.Spec.Extensions[1].Disabled)
+}
+
 func buildFakeClientWithACLConfigMap(t *testing.T, configMapGetCalled *bool) client.Client {
 	ipData, err := os.ReadFile("testdata/config-map-ips.yaml")
 	require.NoError(t, err)
