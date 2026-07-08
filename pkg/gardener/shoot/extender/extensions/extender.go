@@ -198,19 +198,24 @@ func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensi
 				return err
 			}
 
-			index := slices.IndexFunc(currentGardenerExtensions, func(e gardener.Extension) bool {
+			existsInCurrent := slices.ContainsFunc(currentGardenerExtensions, func(e gardener.Extension) bool {
 				return e.Type == ext.Type
 			})
 
-			if index == -1 && gardenerExtension != nil {
+			if !existsInCurrent && gardenerExtension != nil {
 				shoot.Spec.Extensions = append(shoot.Spec.Extensions, *gardenerExtension)
 			}
 
-			if index != -1 {
-				if gardenerExtension != nil {
-					shoot.Spec.Extensions[index] = *gardenerExtension
-				} else if ext.Strategy == StrategyRemove {
-					shoot.Spec.Extensions = slices.Delete(shoot.Spec.Extensions, index, index+1)
+			if existsInCurrent {
+				liveIndex := slices.IndexFunc(shoot.Spec.Extensions, func(e gardener.Extension) bool {
+					return e.Type == ext.Type
+				})
+				if liveIndex != -1 {
+					if gardenerExtension != nil {
+						shoot.Spec.Extensions[liveIndex] = *gardenerExtension
+					} else if ext.Strategy == StrategyRemove {
+						shoot.Spec.Extensions = slices.Delete(shoot.Spec.Extensions, liveIndex, liveIndex+1)
+					}
 				}
 			}
 		}

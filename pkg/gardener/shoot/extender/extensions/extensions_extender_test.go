@@ -237,6 +237,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		enableNvidiaOpenshell *bool
 		providerType          string
 		expectedInternalDNS   bool
+		removedExtensionTypes []string
 	}{
 		{
 			name:                 "Should add AuditLog extension at the end without changing order and data of other extensions",
@@ -312,7 +313,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 		},
 		{
 			name:                 "Should update RegistryCache extension without changing order and data of other extensions",
-			previousExtensions:   fixAllExtensionsOnTheShoot(true),
+			previousExtensions:   []gardener.Extension{fixAuditLogExtensions(), fixDNSExtension(), fixCertExtension(), fixNetworkExtension(), fixOIDCExtensions()},
 			inputAuditLogData:    oldAuditLogData,
 			expectedAuditLogData: oldAuditLogData,
 			registryCaches:       newCaches,
@@ -327,12 +328,13 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			enableNetworkFilter:  false,
 		},
 		{
-			name:                 "Should disable RegistryCache extension when cache is not enabled on Runtime CR without changing order and data of other extensions",
-			previousExtensions:   fixAllExtensionsOnTheShoot(true),
-			inputAuditLogData:    oldAuditLogData,
-			expectedAuditLogData: oldAuditLogData,
-			registryCaches:       []imv1.ImageRegistryCache{},
-			enableNetworkFilter:  false,
+			name:                  "Should remove RegistryCache extension when cache list is empty on Runtime CR without changing order and data of other extensions",
+			previousExtensions:    fixAllExtensionsOnTheShoot(true),
+			inputAuditLogData:     oldAuditLogData,
+			expectedAuditLogData:  oldAuditLogData,
+			registryCaches:        []imv1.ImageRegistryCache{},
+			enableNetworkFilter:   false,
+			removedExtensionTypes: []string{RegistryCacheExtensionType},
 		},
 		{
 			name:                 "Should not update existing AuditLog extension when input auditLogData is empty",
@@ -441,7 +443,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			nvidiaOpenshellExistsInOutput := isNvidiaOpenshellEnabled(testRuntime) || existingExtension(NvidiaOpenshellExtensionType, prevShoot) != nil
 
 			extender := NewExtensionsExtenderForPatch(context.Background(), fakeClient, config, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled, map[string]string{})
-			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided, kubeApiServerACLEnabled, nvidiaOpenshellExistsInOutput)
+			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided, kubeApiServerACLEnabled, nvidiaOpenshellExistsInOutput, testCase.removedExtensionTypes)
 
 			err := extender(testRuntime, shoot)
 			assert.NoError(t, err)
@@ -588,11 +590,20 @@ func fixNvidiaOpenshellExtensionEnabled() gardener.Extension {
 	}
 }
 
-func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extension, networkExtAdded bool, auditLogExtAdded bool, registryCacheExtAdded bool, kubeApiServerACLEnabled bool, nvidiaOpenshellInOutput bool) map[string]int {
-	extensionOrderMap := make(map[string]int)
+func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extension, networkExtAdded bool, auditLogExtAdded bool, registryCacheExtAdded bool, kubeApiServerACLEnabled bool, nvidiaOpenshellInOutput bool, removedExtensionTypes []string) map[string]int {
+	removed := make(map[string]bool, len(removedExtensionTypes))
+	for _, t := range removedExtensionTypes {
+		removed[t] = true
+	}
 
-	for idx, ext := range previousExtensions {
+	extensionOrderMap := make(map[string]int)
+	idx := 0
+	for _, ext := range previousExtensions {
+		if removed[ext.Type] {
+			continue
+		}
 		extensionOrderMap[ext.Type] = idx
+		idx++
 	}
 
 	if auditLogExtAdded {
