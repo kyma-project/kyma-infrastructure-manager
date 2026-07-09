@@ -8,6 +8,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/workers/machinecontroller"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/workers/maxpods"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/gdch"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
@@ -244,6 +245,10 @@ func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, enableDualStack b
 	case hyperscaler.TypeAlicloud:
 		{
 			return getConfigForProvider(runtimeShoot, alicloud.GetInfrastructureConfig, alicloud.GetControlPlaneConfig)
+		}
+	case hyperscaler.TypeGDCH:
+		{
+			return getConfigForProvider(runtimeShoot, gdch.GetInfrastructureConfig, gdch.GetControlPlaneConfig)
 		}
 	default:
 		return nil, nil, errors.New("provider not supported")
