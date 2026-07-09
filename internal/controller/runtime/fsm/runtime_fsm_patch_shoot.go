@@ -31,85 +31,9 @@ const fieldManagerName = "kim"
 
 func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 
-	var data auditlog.AuditLogData
-	var err error
-
-	if !m.DedicatedAuditLoggingEnabled {
-		// Global feature disabled → use shared config
-		data, err = m.AuditLogDataProvider.GetSharedAuditLogData(
-			ctx,
-			s.instance.Spec.Shoot.Provider.Type,
-			s.instance.Spec.Shoot.Region,
-		)
-	} else {
-		runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
-		dedicatedFlagEnabled := s.instance.Spec.AuditLogAccessEnabled != nil &&
-			*s.instance.Spec.AuditLogAccessEnabled
-
-		// Check if AuditLog is already assigned to this runtime
-		existingData, existingErr := m.AuditLogDataProvider.GetDedicatedAuditLogData(ctx, runtimeID, false)
-		hasExistingAuditLog := existingErr == nil
-
-		if hasExistingAuditLog {
-			// Already has dedicated → use it (irreversibility enforced)
-			if !dedicatedFlagEnabled {
-				m.log.Info("Dedicated audit logging is irreversible - ignoring attempt to disable",
-					"runtimeID", runtimeID)
-			}
-			data = existingData
-		} else if !dedicatedFlagEnabled {
-			// No existing dedicated, flag not set → use shared
-			data, err = m.AuditLogDataProvider.GetSharedAuditLogData(
-				ctx,
-				s.instance.Spec.Shoot.Provider.Type,
-				s.instance.Spec.Shoot.Region,
-			)
-		} else {
-			// UPGRADE: flag is set but no AuditLog assigned → claim directly
-			m.log.Info("Upgrading to dedicated audit logging",
-				"runtimeID", runtimeID,
-				"region", s.instance.Spec.Shoot.Region)
-
-			data, err = m.AuditLogDataProvider.ClaimAuditLog(
-				ctx,
-				s.instance.Spec.Shoot.Region,
-				runtimeID,
-			)
-			if err != nil {
-				msg := fmt.Sprintf("Dedicated audit logging requested but no available configuration found: %v", err)
-				m.log.Error(err, "Cannot upgrade runtime to dedicated audit logging")
-				m.Metrics.IncRuntimeFSMStopCounter()
-				return updateStateFailedWithErrorAndStop(
-					&s.instance,
-					imv1.ConditionTypeRuntimeProvisioned,
-					imv1.ConditionReasonCustomAuditLogError,
-					msg)
-			}
-
-			m.log.Info("Successfully claimed dedicated audit log for runtime upgrade",
-				"runtimeID", runtimeID,
-				"tenantID", data.TenantID)
-
-			s.instance.UpdateStatePending(
-				imv1.ConditionTypeCustomAuditLogConfigured,
-				imv1.ConditionReasonCustomAuditLogConfigured,
-				metav1.ConditionUnknown,
-				"Dedicated audit logging claimed, configuring shoot",
-			)
-		}
-	}
-
-	if err != nil {
-		m.log.Error(err, msgFailedToConfigureAuditlogs)
-	}
-
-	if err != nil && m.AuditLogMandatory {
-		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStateFailedWithErrorAndStop(
-			&s.instance,
-			imv1.ConditionTypeRuntimeProvisioned,
-			imv1.ConditionReasonAuditLogError,
-			msgFailedToConfigureAuditlogs)
+	auditLogConfig, nextState, res, err := resolveAuditLogData(ctx, m, s)
+	if nextState != nil {
+		return nextState, res, err
 	}
 
 	oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
@@ -133,13 +57,6 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 
 	timeBoundaries, _ := token.ValidateTokenExpirationTime(m.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
 	logTokenExpirationInfo(m.log, timeBoundaries)
-
-	// Convert auditlog.AuditLogData to extender auditlogs.AuditLogData
-	auditLogConfig := auditlogs.AuditLogData{
-		TenantID:   data.TenantID,
-		ServiceURL: data.ServiceURL,
-		SecretName: data.SecretName,
-	}
 
 	patchOptions, err := getPatchOptions(ctx, m, s, auditLogConfig)
 	if err != nil {
@@ -243,10 +160,10 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
 	})
-	nextState, res, err := handleUpdateError(patchErr, m, s, "Failed to patch shoot object, exiting with no retry", "Gardener API shoot patch error")
+	nextState, res, patchErr = handleUpdateError(patchErr, m, s, "Failed to patch shoot object, exiting with no retry", "Gardener API shoot patch error")
 
 	if nextState != nil {
-		return nextState, res, err
+		return nextState, res, patchErr
 	}
 
 	err = handleForceReconciliationAnnotation(&s.instance, m, ctx)
@@ -395,4 +312,121 @@ func getPatchOptions(ctx context.Context, m *fsm, s *systemState, auditLogConfig
 	}
 
 	return patchOptions, nil
+}
+
+// resolveAuditLogData determines which audit log configuration to use based on:
+// - Global feature flag (DedicatedAuditLoggingEnabled)
+// - Runtime flag (spec.auditLogAccessEnabled)
+// - Existing AuditLog assignment
+// Returns the audit log data in extender format and optional state transition in case of error
+func resolveAuditLogData(ctx context.Context, m *fsm, s *systemState) (auditlogs.AuditLogData, stateFn, *ctrl.Result, error) {
+	var data auditlog.AuditLogData
+	var err error
+
+	if !m.DedicatedAuditLoggingEnabled {
+		// Global feature disabled → use shared config
+		data, err = m.AuditLogDataProvider.GetSharedAuditLogData(
+			ctx,
+			s.instance.Spec.Shoot.Provider.Type,
+			s.instance.Spec.Shoot.Region,
+		)
+		if err != nil {
+			m.log.Error(err, msgFailedToConfigureAuditlogs)
+		}
+
+		if err != nil && m.AuditLogMandatory {
+			m.Metrics.IncRuntimeFSMStopCounter()
+			nextState, res, stateErr := updateStateFailedWithErrorAndStop(
+				&s.instance,
+				imv1.ConditionTypeRuntimeProvisioned,
+				imv1.ConditionReasonAuditLogError,
+				msgFailedToConfigureAuditlogs)
+			return auditlogs.AuditLogData{}, nextState, res, stateErr
+		}
+		return toExtenderAuditLogData(data), nil, nil, err
+	}
+
+	runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
+	dedicatedFlagEnabled := s.instance.Spec.AuditLogAccessEnabled != nil &&
+		*s.instance.Spec.AuditLogAccessEnabled
+
+	// Check if AuditLog is already assigned to this runtime
+	existingData, existingErr := m.AuditLogDataProvider.GetDedicatedAuditLogData(ctx, runtimeID, false)
+	hasExistingAuditLog := existingErr == nil
+
+	if hasExistingAuditLog {
+		// Already has dedicated → use it (irreversibility enforced)
+		if !dedicatedFlagEnabled {
+			m.log.Info("Dedicated audit logging is irreversible - ignoring attempt to disable",
+				"runtimeID", runtimeID)
+		}
+		return toExtenderAuditLogData(existingData), nil, nil, nil
+	}
+
+	if !dedicatedFlagEnabled {
+		// No existing dedicated, flag not set → use shared
+		data, err = m.AuditLogDataProvider.GetSharedAuditLogData(
+			ctx,
+			s.instance.Spec.Shoot.Provider.Type,
+			s.instance.Spec.Shoot.Region,
+		)
+		if err != nil {
+			m.log.Error(err, msgFailedToConfigureAuditlogs)
+		}
+
+		if err != nil && m.AuditLogMandatory {
+			m.Metrics.IncRuntimeFSMStopCounter()
+			nextState, res, stateErr := updateStateFailedWithErrorAndStop(
+				&s.instance,
+				imv1.ConditionTypeRuntimeProvisioned,
+				imv1.ConditionReasonAuditLogError,
+				msgFailedToConfigureAuditlogs)
+			return auditlogs.AuditLogData{}, nextState, res, stateErr
+		}
+		return toExtenderAuditLogData(data), nil, nil, err
+	}
+
+	// UPGRADE: flag is set but no AuditLog assigned → claim directly
+	m.log.Info("Upgrading shared to dedicated audit logging",
+		"runtimeID", runtimeID,
+		"region", s.instance.Spec.Shoot.Region)
+
+	data, err = m.AuditLogDataProvider.ClaimAuditLog(
+		ctx,
+		s.instance.Spec.Shoot.Region,
+		runtimeID,
+	)
+	if err != nil {
+		msg := fmt.Sprintf("Dedicated audit logging requested but no available configuration found: %v", err)
+		m.log.Error(err, "Cannot upgrade runtime to dedicated audit logging")
+		m.Metrics.IncRuntimeFSMStopCounter()
+		nextState, res, stateErr := updateStateFailedWithErrorAndStop(
+			&s.instance,
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonCustomAuditLogError,
+			msg)
+		return auditlogs.AuditLogData{}, nextState, res, stateErr
+	}
+
+	m.log.Info("Successfully claimed dedicated audit log for runtime upgrade",
+		"runtimeID", runtimeID,
+		"tenantID", data.TenantID)
+
+	s.instance.UpdateStatePending(
+		imv1.ConditionTypeCustomAuditLogConfigured,
+		imv1.ConditionReasonCustomAuditLogConfigured,
+		metav1.ConditionUnknown,
+		"Dedicated audit logging claimed, configuring shoot",
+	)
+
+	return toExtenderAuditLogData(data), nil, nil, nil
+}
+
+// toExtenderAuditLogData converts auditlog.AuditLogData to extender auditlogs.AuditLogData
+func toExtenderAuditLogData(data auditlog.AuditLogData) auditlogs.AuditLogData {
+	return auditlogs.AuditLogData{
+		TenantID:   data.TenantID,
+		ServiceURL: data.ServiceURL,
+		SecretName: data.SecretName,
+	}
 }
