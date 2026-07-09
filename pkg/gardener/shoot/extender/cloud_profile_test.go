@@ -42,6 +42,11 @@ func TestExtendWithCloudProfile(t *testing.T) {
 			providerType:    hyperscaler.TypeAlicloud,
 			expectedProfile: CreateCloudProfileReference(DefaultAlicloudCloudProfileName),
 		},
+		{
+			name:            "Set cloud profile for gdch",
+			providerType:    hyperscaler.TypeGDCH,
+			expectedProfile: CreateCloudProfileReference(DefaultGDCHCloudProfileName),
+		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			// given

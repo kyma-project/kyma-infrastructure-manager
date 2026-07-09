@@ -7,20 +7,34 @@ import (
 )
 
 const (
-	zoneCount       = 3
-	subnetBitsShift = 2
+	minZoneCount = 1
+	maxZoneCount = 3
 )
 
 var (
 	errInvalidCIDR      = errors.New("invalid nodeCIDR: must be a parseable IPv4 CIDR")
-	errInvalidZoneCount = errors.New("exactly 3 zone names required")
+	errInvalidZoneCount = errors.New("zone count must be between 1 and 3")
 	errDuplicateZone    = errors.New("zone names must be unique")
-	errCIDRTooSmall     = errors.New("nodeCIDR prefix length must be <= 30")
+	errCIDRTooSmall     = errors.New("nodeCIDR prefix too small for requested zone count")
 )
 
-func generateGDCHZones(nodeCIDR string, zoneNames []string) ([]Zones, error) {
-	if len(zoneNames) != zoneCount {
-		return nil, fmt.Errorf("got %d: %w", len(zoneNames), errInvalidZoneCount)
+func subnetShiftForZoneCount(n int) int {
+	switch n {
+	case 1:
+		return 0
+	case 2:
+		return 1
+	case 3:
+		return 2
+	}
+
+	return 0
+}
+
+func generateGDCHZones(nodeCIDR string, zoneNames []string) ([]Zone, error) {
+	n := len(zoneNames)
+	if n < minZoneCount || n > maxZoneCount {
+		return nil, fmt.Errorf("got %d: %w", n, errInvalidZoneCount)
 	}
 
 	prefix, err := netip.ParsePrefix(nodeCIDR)
@@ -31,23 +45,24 @@ func generateGDCHZones(nodeCIDR string, zoneNames []string) ([]Zones, error) {
 		return nil, fmt.Errorf("%s is not IPv4: %w", nodeCIDR, errInvalidCIDR)
 	}
 
-	newBits := prefix.Bits() + subnetBitsShift
+	shift := subnetShiftForZoneCount(n)
+	newBits := prefix.Bits() + shift
 	if newBits > 32 {
-		return nil, fmt.Errorf("prefix /%d too small: %w", prefix.Bits(), errCIDRTooSmall)
+		return nil, fmt.Errorf("prefix /%d too small for %d zones: %w", prefix.Bits(), n, errCIDRTooSmall)
 	}
 
 	step := uint32(1) << (32 - newBits)
 	addr := prefix.Masked().Addr()
 
-	zones := make([]Zones, 0, zoneCount)
-	processed := make(map[string]struct{}, zoneCount)
+	zones := make([]Zone, 0, n)
+	processed := make(map[string]struct{}, n)
 	for _, name := range zoneNames {
 		if _, dup := processed[name]; dup {
 			return nil, fmt.Errorf("%q repeated: %w", name, errDuplicateZone)
 		}
 		processed[name] = struct{}{}
 
-		zones = append(zones, Zones{
+		zones = append(zones, Zone{
 			Name: name,
 			CIDR: netip.PrefixFrom(addr, newBits).String(),
 		})

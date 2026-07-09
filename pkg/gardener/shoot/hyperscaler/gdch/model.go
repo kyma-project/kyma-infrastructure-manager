@@ -13,11 +13,11 @@ type ControlPlaneConfig struct {
 }
 
 type NetworkConfig struct {
-	NodeCIDR string  `json:"nodeCIDR"`
-	Zones    []Zones `json:"zones"`
+	NodeCIDR string `json:"nodeCIDR"`
+	Zones    []Zone `json:"zones"`
 }
 
-type Zones struct {
+type Zone struct {
 	Name string `json:"name"`
 	CIDR string `json:"CIDR"`
 }

@@ -23,7 +23,7 @@ func TestProviderExtenderForCreateGDCH(t *testing.T) {
 		DefaultMachineImageName     string
 		ExpectedMachineImageName    string
 		ExpectedNodeCIDR            string
-		ExpectedZones               []gdch.Zones
+		ExpectedZones               []gdch.Zone
 	}{
 		"Create provider specific config for GDCH with three zones (doc example /24 -> three /26)": {
 			Runtime: imv1.Runtime{
@@ -42,7 +42,7 @@ func TestProviderExtenderForCreateGDCH(t *testing.T) {
 			ExpectedMachineImageVersion: "1312.2.0",
 			ExpectedMachineImageName:    "gardenlinux",
 			ExpectedNodeCIDR:            "10.72.0.0/24",
-			ExpectedZones: []gdch.Zones{
+			ExpectedZones: []gdch.Zone{
 				{Name: "us-west16-b", CIDR: "10.72.0.0/26"},
 				{Name: "us-west16-c", CIDR: "10.72.0.64/26"},
 				{Name: "us-west16-d", CIDR: "10.72.0.128/26"},
@@ -65,10 +65,53 @@ func TestProviderExtenderForCreateGDCH(t *testing.T) {
 			ExpectedMachineImageVersion: "1312.2.0",
 			ExpectedMachineImageName:    "gardenlinux",
 			ExpectedNodeCIDR:            "10.180.0.0/16",
-			ExpectedZones: []gdch.Zones{
+			ExpectedZones: []gdch.Zone{
 				{Name: "us-west16-a", CIDR: "10.180.0.0/18"},
 				{Name: "us-west16-b", CIDR: "10.180.64.0/18"},
 				{Name: "us-west16-c", CIDR: "10.180.128.0/18"},
+			},
+		},
+		"Create provider specific config for GDCH with a single zone (landscape /19)": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProvider(hyperscaler.TypeGDCH, "gardenlinux", "1312.2.0", []string{"us-west16-a"}),
+						Networking: imv1.Networking{
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.72.0.0/19",
+							Services: "100.104.0.0/13",
+						},
+					},
+				},
+			},
+			DefaultMachineImageVersion:  "1312.3.0",
+			ExpectedMachineImageVersion: "1312.2.0",
+			ExpectedMachineImageName:    "gardenlinux",
+			ExpectedNodeCIDR:            "10.72.0.0/19",
+			ExpectedZones: []gdch.Zone{
+				{Name: "us-west16-a", CIDR: "10.72.0.0/19"},
+			},
+		},
+		"Create provider specific config for GDCH with two zones (landscape /19 -> two /20)": {
+			Runtime: imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Provider: fixProvider(hyperscaler.TypeGDCH, "gardenlinux", "1312.2.0", []string{"us-west16-a", "us-west16-b"}),
+						Networking: imv1.Networking{
+							Pods:     "100.64.0.0/22",
+							Nodes:    "10.72.0.0/19",
+							Services: "100.104.0.0/13",
+						},
+					},
+				},
+			},
+			DefaultMachineImageVersion:  "1312.3.0",
+			ExpectedMachineImageVersion: "1312.2.0",
+			ExpectedMachineImageName:    "gardenlinux",
+			ExpectedNodeCIDR:            "10.72.0.0/19",
+			ExpectedZones: []gdch.Zone{
+				{Name: "us-west16-a", CIDR: "10.72.0.0/20"},
+				{Name: "us-west16-b", CIDR: "10.72.16.0/20"},
 			},
 		},
 	} {
@@ -92,11 +135,11 @@ func TestProviderExtenderForCreateGDCHErrors(t *testing.T) {
 	for tname, tc := range map[string]struct {
 		Runtime imv1.Runtime
 	}{
-		"Fail when fewer than three zones are provided": {
+		"Fail when zero zones are provided": {
 			Runtime: imv1.Runtime{
 				Spec: imv1.RuntimeSpec{
 					Shoot: imv1.RuntimeShoot{
-						Provider: fixProvider(hyperscaler.TypeGDCH, "gardenlinux", "1312.2.0", []string{"us-west16-b", "us-west16-c"}),
+						Provider: fixProvider(hyperscaler.TypeGDCH, "gardenlinux", "1312.2.0", []string{}),
 						Networking: imv1.Networking{
 							Pods:     "100.64.0.0/22",
 							Nodes:    "10.72.0.0/24",
@@ -164,7 +207,7 @@ func TestProviderExtenderForPatchWorkersUpdateGDCH(t *testing.T) {
 		ExistingControlPlaneConfig *runtime.RawExtension
 		ExpectedShootWorkers       []gardener.Worker
 		ExpectedNodeCIDR           string
-		ExpectedZones              []gdch.Zones
+		ExpectedZones              []gdch.Zone
 	}{
 		"Update machine type and image name and version in multiple workers separately": {
 			Runtime: imv1.Runtime{
@@ -193,7 +236,7 @@ func TestProviderExtenderForPatchWorkersUpdateGDCH(t *testing.T) {
 			ExistingInfraConfig:        fixGDCHInfrastructureConfig(t, "10.72.0.0/24", gdchZones),
 			ExistingControlPlaneConfig: fixGDCHControlPlaneConfig(t),
 			ExpectedNodeCIDR:           "10.72.0.0/24",
-			ExpectedZones: []gdch.Zones{
+			ExpectedZones: []gdch.Zone{
 				{Name: "us-west16-b", CIDR: "10.72.0.0/26"},
 				{Name: "us-west16-c", CIDR: "10.72.0.64/26"},
 				{Name: "us-west16-d", CIDR: "10.72.0.128/26"},
@@ -229,7 +272,7 @@ func fixGDCHControlPlaneConfig(t *testing.T) *runtime.RawExtension {
 	return &runtime.RawExtension{Raw: controlPlaneConfig}
 }
 
-func assertProviderSpecificConfigGDCH(t *testing.T, shoot gardener.Shoot, expectedNodeCIDR string, expectedZones []gdch.Zones) {
+func assertProviderSpecificConfigGDCH(t *testing.T, shoot gardener.Shoot, expectedNodeCIDR string, expectedZones []gdch.Zone) {
 	var infraConfig gdch.InfrastructureConfig
 	err := json.Unmarshal(shoot.Spec.Provider.InfrastructureConfig.Raw, &infraConfig)
 	require.NoError(t, err)

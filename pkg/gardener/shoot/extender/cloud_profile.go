@@ -11,6 +11,7 @@ const (
 	DefaultAWSCloudProfileName       = "aws"
 	DefaultAzureCloudProfileName     = "az"
 	DefaultGCPCloudProfileName       = "gcp"
+	DefaultGDCHCloudProfileName      = "cat"
 	DefaultOpenStackCloudProfileName = "converged-cloud-kyma"
 	DefaultAlicloudCloudProfileName  = "alicloud"
 	CloudProfileKind                 = "CloudProfile"
@@ -43,6 +44,8 @@ func getCloudProfileName(runtime imv1.Runtime) (string, error) {
 		return DefaultGCPCloudProfileName, nil
 	case hyperscaler.TypeAzure:
 		return DefaultAzureCloudProfileName, nil
+	case hyperscaler.TypeGDCH:
+		return DefaultGDCHCloudProfileName, nil
 	case hyperscaler.TypeOpenStack:
 		return DefaultOpenStackCloudProfileName, nil
 	case hyperscaler.TypeAlicloud:
