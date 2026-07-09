@@ -618,22 +618,20 @@ func TestSFnPatchExistingShoot_DedicatedAuditLogUpgrade(t *testing.T) {
 
 	RegisterTestingT(t)
 
-	t.Run("should reserve AuditLogCR when upgrading to dedicated and no reservation exists", func(t *testing.T) {
-		// Given: Runtime with auditLogAccessEnabled=true, no existing reservation
+	t.Run("should claim AuditLogCR when upgrading to dedicated and no existing claim", func(t *testing.T) {
+		// Given: Runtime with auditLogAccessEnabled=true, no existing claim
 		inputRuntime := makeInputRuntimeWithDedicatedAuditLog(true)
 		mockProvider := &auditlogmocks.DataProvider{}
 
-		// GetDedicatedAuditLogData returns error (no existing reservation)
+		// GetDedicatedAuditLogData returns error (no existing claim)
 		mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, false).
 			Return(auditlog.AuditLogData{}, fmt.Errorf("no AuditLogCR found"))
-		// ReserveAuditLog succeeds
-		mockProvider.On("ReserveAuditLog", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-		// GetSharedAuditLogData returns shared config for this patch cycle
-		mockProvider.On("GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything).
+		// ClaimAuditLog succeeds and returns dedicated config
+		mockProvider.On("ClaimAuditLog", mock.Anything, mock.Anything, mock.Anything).
 			Return(auditlog.AuditLogData{
-				TenantID:   "shared-tenant",
-				ServiceURL: "http://shared-service",
-				SecretName: "shared-secret",
+				TenantID:   "dedicated-tenant",
+				ServiceURL: "http://dedicated-service",
+				SecretName: "dedicated-secret",
 			}, nil)
 
 		f := must(newFakeFSM,
@@ -658,21 +656,20 @@ func TestSFnPatchExistingShoot_DedicatedAuditLogUpgrade(t *testing.T) {
 		// Then
 		Expect(err).To(BeNil())
 		Expect(sFn).To(haveName("sFnUpdateStatus"))
-		mockProvider.AssertCalled(t, "ReserveAuditLog", mock.Anything, "region", mock.Anything)
-		mockProvider.AssertCalled(t, "GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything)
+		mockProvider.AssertCalled(t, "ClaimAuditLog", mock.Anything, "region", mock.Anything)
 
-		// Verify condition is set to Unknown (migration pending)
+		// Verify condition is set to Unknown (configuring shoot)
 		condition := findCondition(state.instance.Status.Conditions, imv1.ConditionTypeCustomAuditLogConfigured)
 		Expect(condition).NotTo(BeNil())
 		Expect(condition.Status).To(Equal(metav1.ConditionUnknown))
 	})
 
-	t.Run("should not reserve when dedicated AuditLog already exists", func(t *testing.T) {
-		// Given: Runtime with auditLogAccessEnabled=true, existing reservation
+	t.Run("should use existing dedicated config when already claimed", func(t *testing.T) {
+		// Given: Runtime with auditLogAccessEnabled=true, existing claim
 		inputRuntime := makeInputRuntimeWithDedicatedAuditLog(true)
 		mockProvider := &auditlogmocks.DataProvider{}
 
-		// GetDedicatedAuditLogData returns existing data (reservation exists)
+		// GetDedicatedAuditLogData returns existing data (already claimed)
 		mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, false).
 			Return(auditlog.AuditLogData{
 				TenantID:   "dedicated-tenant",
@@ -701,7 +698,7 @@ func TestSFnPatchExistingShoot_DedicatedAuditLogUpgrade(t *testing.T) {
 		// Then
 		Expect(err).To(BeNil())
 		Expect(sFn).To(haveName("sFnUpdateStatus"))
-		mockProvider.AssertNotCalled(t, "ReserveAuditLog", mock.Anything, mock.Anything, mock.Anything)
+		mockProvider.AssertNotCalled(t, "ClaimAuditLog", mock.Anything, mock.Anything, mock.Anything)
 	})
 
 	t.Run("should fail when pool exhausted and dedicated logging requested", func(t *testing.T) {
@@ -709,12 +706,12 @@ func TestSFnPatchExistingShoot_DedicatedAuditLogUpgrade(t *testing.T) {
 		inputRuntime := makeInputRuntimeWithDedicatedAuditLog(true)
 		mockProvider := &auditlogmocks.DataProvider{}
 
-		// GetDedicatedAuditLogData returns error (no existing reservation)
+		// GetDedicatedAuditLogData returns error (no existing claim)
 		mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, false).
 			Return(auditlog.AuditLogData{}, fmt.Errorf("no AuditLogCR found"))
-		// ReserveAuditLog fails (pool exhausted)
-		mockProvider.On("ReserveAuditLog", mock.Anything, mock.Anything, mock.Anything).
-			Return(fmt.Errorf("no available AuditLogCR in the pool"))
+		// ClaimAuditLog fails (pool exhausted)
+		mockProvider.On("ClaimAuditLog", mock.Anything, mock.Anything, mock.Anything).
+			Return(auditlog.AuditLogData{}, fmt.Errorf("no available AuditLogCR in the pool"))
 
 		f := must(newFakeFSM,
 			withMockedMetrics(),
@@ -775,8 +772,9 @@ func TestSFnPatchExistingShoot_DedicatedAuditLogUpgrade(t *testing.T) {
 		// Then: Should continue with dedicated config (downgrade ignored)
 		Expect(err).To(BeNil())
 		Expect(sFn).To(haveName("sFnUpdateStatus"))
-		// Should NOT call GetSharedAuditLogData since we're using dedicated
+		// Should NOT call GetSharedAuditLogData or ClaimAuditLog since we're using existing dedicated
 		mockProvider.AssertNotCalled(t, "GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything)
+		mockProvider.AssertNotCalled(t, "ClaimAuditLog", mock.Anything, mock.Anything, mock.Anything)
 	})
 
 	t.Run("should use shared config when no previous dedicated config exists and auditLogAccessEnabled is false", func(t *testing.T) {
@@ -817,7 +815,7 @@ func TestSFnPatchExistingShoot_DedicatedAuditLogUpgrade(t *testing.T) {
 		Expect(err).To(BeNil())
 		Expect(sFn).To(haveName("sFnUpdateStatus"))
 		mockProvider.AssertCalled(t, "GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything)
-		mockProvider.AssertNotCalled(t, "ReserveAuditLog", mock.Anything, mock.Anything, mock.Anything)
+		mockProvider.AssertNotCalled(t, "ClaimAuditLog", mock.Anything, mock.Anything, mock.Anything)
 	})
 
 	t.Run("should use shared config when global dedicated feature is disabled", func(t *testing.T) {

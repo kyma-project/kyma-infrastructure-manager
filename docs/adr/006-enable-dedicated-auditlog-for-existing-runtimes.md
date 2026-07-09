@@ -35,14 +35,28 @@ Existing runtimes provisioned with shared audit logging cannot upgrade to dedica
 
 # Decision
 
-## Architectural Approach
+## Architectural Approach: Direct Claim in sFnPatchExistingShoot
 
-We extend the update flow to support enabling dedicated audit logging using the same two-phase reservation algorithm as creation:
+For upgrades, we use a **direct claim approach** instead of the two-phase reservation used for new runtime creation. This is because the risk profile for upgrades is fundamentally different:
 
-1. **Detection**: In `sFnPatchExistingShoot`, detect when dedicated audit logging flag is set on Runtime CR but no AuditLog is assigned. This means we need to make a new reservation.
-2. **Phase 1 (Reserve)**: Reserve an available AuditLogCR for this runtime
-3. **Continue with shared**: Patch the shoot using shared audit log config (same as creation flow)
-4. **Phase 2 & 3**: After provisioning completes, `sFnMigrateToDedicatedAuditLog` and `sFnCopyAuditLogReadCredentials` handle the migration
+| Concern | New Runtime Creation | Existing Runtime Upgrade |
+|---------|---------------------|-------------------------|
+| **Shoot exists?** | No - needs to be created | Yes - already running |
+| **Provisioning can fail?** | Yes - quota, config, infrastructure | Minimal - shoot already proven |
+| **Risk of resource waste?** | High - entire provisioning may fail | Low - shoot is stable |
+| **States to traverse?** | Many (create → kubeconfig → namespace → ...) | Few (patch shoot only) |
+
+### Why Direct Claim is Safe for Upgrades
+
+The two-phase reservation in ADR 004 was designed to prevent wasting dedicated AuditLogCR resources when shoot creation might fail. For upgrades:
+
+1. **The shoot already exists and is running** - no risk of creation failure
+2. **If patch fails, the claim persists** - next reconciliation retries with same dedicated config
+3. **Same recovery behavior as `sFnMigrateToDedicatedAuditLog`** - claim first, patch can retry
+
+### Detection Logic
+
+In `sFnPatchExistingShoot`, detect when dedicated audit logging flag is set on Runtime CR but no AuditLog is assigned. This means we need to claim and configure dedicated logging.
 
 ### FSM State Flow for Upgrade
 
@@ -51,7 +65,7 @@ sFnSelectShootProcessing (detects Runtime CR change)
     ↓
 sFnSyncRegistryCacheGardenSecrets
     ↓
-sFnPatchExistingShoot (NEW: reserves AuditLogCR if upgrade, patches with shared config)
+sFnPatchExistingShoot (NEW: claims AuditLogCR and patches with dedicated config directly)
     ↓
 sFnWaitForShootReconcile
     ↓
@@ -67,79 +81,65 @@ sFnConfigureSKR
     ↓
 sFnApplyClusterRoleBindings
     ↓
-sFnMigrateToDedicatedAuditLog (claims reserved AuditLogCR, patches shoot with dedicated config)
+sFnMigrateToDedicatedAuditLog (no-op: already configured in sFnPatchExistingShoot)
     ↓
 sFnCopyAuditLogReadCredentials (copies read credentials to SKR)
     ↓
 Complete (updateStatusAndStop)
 ```
 
-**Key Insight**: After `sFnPatchExistingShoot` patches with shared config and Gardener reconciles, the flow continues through all states. When it reaches `sFnMigrateToDedicatedAuditLog`:
-1. It finds the reservation made in `sFnPatchExistingShoot`
-2. Claims the resource (upgrades from light lock to heavy lock)
-3. Patches the shoot AGAIN with dedicated config
-4. Gardener reconciles the shoot with new audit log config
+**Key Insight**: Unlike new runtime creation, `sFnPatchExistingShoot` handles the complete dedicated audit logging configuration in a single step. When the flow reaches `sFnMigrateToDedicatedAuditLog`, it detects that the shoot already has the correct dedicated config and becomes a no-op.
+
+### Benefits of Direct Claim for Upgrades
+
+1. **Single shoot reconciliation** - no double Gardener reconciliation cycles
+2. **No "brief shared logging period"** - dedicated config applied immediately
+3. **Faster upgrade** - saves ~10 minutes compared to two-phase approach
+4. **Simpler code path** - all upgrade logic in one state
 
 ## Rejected Alternatives
 
-### Alternative 1: Single-Phase Claim in sFnPatchExistingShoot
+### Alternative 1: Reuse Two-Phase Reservation (Original Proposal)
 
-**Approach**: Claim AuditLogCR directly in `sFnPatchExistingShoot` and patch shoot with dedicated config immediately.
-
-**Rejected because**:
-- If shoot patch fails, the AuditLogCR is wasted (fully claimed but runtime not using it)
-- Inconsistent with creation flow which uses two-phase approach
-- No validation that the rest of provisioning will succeed
-
-### Alternative 2: Skip Shared Config Phase During Upgrade
-
-**Approach**: When upgrading, reserve and immediately use dedicated config in `sFnPatchExistingShoot`.
+**Approach**: Use the same reserve-then-claim pattern as creation:
+1. Reserve in `sFnPatchExistingShoot`
+2. Continue with shared config
+3. Claim in `sFnMigrateToDedicatedAuditLog`
 
 **Rejected because**:
-- Violates the "test before claiming" principle from ADR 004
-- If upgrade fails for other reasons (kubeconfig, RBAC), dedicated resource is wasted
-- Inconsistent behavior between creation and upgrade paths
+- Unnecessary for upgrades - the shoot already exists and is stable
+- Causes double Gardener reconciliation (~10-15 minutes extra)
+- Creates "brief shared logging period" during upgrade
+- The protection that two-phase provides (against wasted resources on failed creation) doesn't apply to upgrades
 
-### Alternative 3: New Dedicated Upgrade State
+### Alternative 2: New Dedicated Upgrade State
 
 **Approach**: Create a new FSM state `sFnUpgradeToDedicatedAuditLog` specifically for upgrades.
 
 **Rejected because**:
-- Duplicates logic already in `sFnMigrateToDedicatedAuditLog`
+- Duplicates logic that can be handled in `sFnPatchExistingShoot`
 - Increases FSM complexity unnecessarily
-- The existing states can handle upgrade with minimal modification
+- The upgrade is essentially a patch operation - keep it in the patch state
 
 # Problem Analysis
 
-## Problem 1: Double Shoot Patch
+## Problem 1: What if Claim Succeeds but Patch Fails?
 
-**Issue**: The shoot gets patched twice during upgrade:
-1. First in `sFnPatchExistingShoot` with shared audit log config
-2. Second in `sFnMigrateToDedicatedAuditLog` with dedicated audit log config
+**Issue**: The AuditLogCR is claimed but the shoot patch fails.
 
-**Impact**:
-- Two Gardener reconciliation cycles (~5-10 minutes each)
-- Brief period where shoot has shared config before dedicated config is applied
-- Increased load on Gardener API
+**Solution**: This is handled correctly:
+- The claim persists (AuditLogCR has `AssignedToRuntimeID` set)
+- On next reconciliation, `GetDedicatedAuditLogData(ctx, runtimeID, false)` finds the claimed CR
+- Code retries the patch with the same dedicated config
+- This is **identical** to how `sFnMigrateToDedicatedAuditLog` handles patch failures today
 
-**Mitigation**:
-- This is consistent with the creation flow design (ADR 004) which explicitly chose this approach
-- The rationale from ADR 004 applies: "Allows shoot to be created and tested before claiming expensive dedicated resources"
-- Audit logs generated during the brief shared period remain accessible via SRE support
-
-## Problem 2: Race Condition Window During Upgrade
-
-**Issue**: Between reservation in `sFnPatchExistingShoot` and claim in `sFnMigrateToDedicatedAuditLog`, the reconciliation could be interrupted.
-
-**Conclusion**: Handled correctly by existing idempotent design - reservation labels persist and are found on retry.
-
-## Problem 3: Pool Exhaustion During Upgrade
+## Problem 2: Pool Exhaustion During Upgrade
 
 **Issue**: What if no AuditLogCR is available when user requests upgrade?
 
-**Decision**: **Always fail when dedicated logging is explicitly requested but unavailable**, regardless of `AuditLogMandatory` flag. User explicitly requested the feature - silent fallback violates no-implicit-fallback principle from ADR 004.
+**Decision**: **Always fail when dedicated logging is explicitly requested but unavailable**, regardless of `AuditLogMandatory` flag. User explicitly requested the feature - silent fallback violates the no-implicit-fallback principle from ADR 004.
 
-## Problem 4: Downgrade Scenario
+## Problem 3: Downgrade Scenario
 
 **Issue**: What if user disables dedicated audit logging after upgrade?
 
@@ -153,39 +153,43 @@ Complete (updateStatusAndStop)
 
 **Implementation**: The `auditLogAccessEnabled` field change from `true` to `false` should be ignored. If a user attempts to disable dedicated logging after it was enabled, the reconciliation should log a warning and continue with dedicated logging.
 
-## Problem 5: Condition Status During Upgrade
+## Problem 4: Interaction with sFnMigrateToDedicatedAuditLog
 
-**Issue**: The `ConditionTypeCustomAuditLogConfigured` condition needs proper status during upgrade.
+**Issue**: How does this interact with the existing migration state?
 
-**Decision**: Set condition to `Unknown` after successful reservation to indicate migration is pending.
+**Solution**: `sFnMigrateToDedicatedAuditLog` already handles the case where the shoot is already configured with dedicated logging - it compares configs and skips the patch if they match. For upgrades, when the flow reaches this state, it will:
+1. Find the already-claimed AuditLogCR
+2. Compare shoot config with desired config
+3. Find they match (because `sFnPatchExistingShoot` already configured it)
+4. Skip to `sFnCopyAuditLogReadCredentials`
 
 # Consequences
 
 ## Positive
 
 1. **Enables migration path**: Existing customers can opt-in to dedicated audit logging
-2. **Reuses existing algorithm**: Two-phase reservation ensures no wasted resources
-3. **Consistent with creation flow**: Same guarantees about idempotency and failure handling
-4. **Minimal code changes**: Extends existing `sFnPatchExistingShoot` logic
+2. **Single reconciliation**: No double Gardener shoot reconciliation
+3. **Immediate dedicated logging**: No "brief shared logging period" during upgrade
+4. **Faster upgrades**: Saves ~10 minutes compared to two-phase approach
+5. **Simpler implementation**: All upgrade logic in one place
 
 ## Negative
 
-1. **Double reconciliation**: Upgrade requires two Gardener shoot reconciliations
-2. **Brief shared logging period**: ~5-15 minutes of logs go to shared infrastructure during upgrade
-3. **No log migration**: Historical logs remain in shared infrastructure
-4. **Irreversible**: Once dedicated audit logging is enabled, it cannot be disabled
+1. **Claim-before-patch risk**: If patch fails, AuditLogCR remains claimed
+   - Mitigated by: Retry behavior identical to existing `sFnMigrateToDedicatedAuditLog`
+2. **No log migration**: Historical logs remain in shared infrastructure
+3. **Irreversible**: Once dedicated audit logging is enabled, it cannot be disabled
 
 ## Neutral
 
 1. **Same pool dependency**: Requires KALM pool to have available capacity
-2. **Same cleanup requirements**: Stale reservations need manual/automated cleanup
-3. **Feature flag dependency**: Both global and per-runtime flags must be set
+2. **Feature flag dependency**: Both global and per-runtime flags must be set
 
 # Implementation
 
 See [Implementation Details](./006-enable-dedicated-auditlog-for-existing-runtimes-implementation.md) for comprehensive implementation guidance including:
 
-- Modified `sFnPatchExistingShoot` logic
+- Modified `sFnPatchExistingShoot` logic with direct claim
 - Irreversibility enforcement (downgrade prevention)
 - Condition status updates
 - Error handling and edge cases

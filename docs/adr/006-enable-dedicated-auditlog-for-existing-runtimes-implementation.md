@@ -1,117 +1,119 @@
-# Enable Dedicated Audit Logging for Existing Runtimes - Implementation Details
+# Implementation Details: Enable Dedicated Audit Logging for Existing Runtimes
 
-This document provides detailed implementation guidance for enabling dedicated audit logging on existing runtimes as described in [ADR 006: Enable Dedicated Audit Logging for Existing Runtimes](./006-enable-dedicated-auditlog-for-existing-runtimes.md).
+This document provides detailed implementation guidance for [ADR 006](./006-enable-dedicated-auditlog-for-existing-runtimes.md).
 
-## Table of Contents
+## Overview
 
-- [Modified sFnPatchExistingShoot](#modified-sfnpatchexistingshoot)
-- [Upgrade Detection Logic](#upgrade-detection-logic)
-- [Irreversibility Enforcement](#irreversibility-enforcement)
-- [Condition Status Updates](#condition-status-updates)
-- [Error Handling and Edge Cases](#error-handling-and-edge-cases)
-- [Complete Flow Diagram](#complete-flow-diagram)
-- [Testing](#testing)
+The implementation uses a **direct claim approach** in `sFnPatchExistingShoot` to enable dedicated audit logging for existing runtimes. This is simpler and faster than the two-phase reservation used for new runtime creation.
 
-## Modified sFnPatchExistingShoot
-
-The `sFnPatchExistingShoot` function is extended to handle the upgrade scenario by detecting when the dedicated audit logging flag is set on Runtime CR but no AuditLog is assigned, and then reserving an AuditLogCR.
+## Modified sFnPatchExistingShoot Logic
 
 ### File Location
 
 `internal/controller/runtime/fsm/runtime_fsm_patch_shoot.go`
 
+### Decision Matrix
+
+```
+┌─────────────────────────────┬──────────────────────┬──────────────────────┬──────────────┐
+│ Global Feature Flag         │ Runtime Flag         │ Existing AuditLog    │ Action       │
+│ DedicatedAuditLoggingEnabled│ AuditLogAccessEnabled│ Assigned?            │              │
+├─────────────────────────────┼──────────────────────┼──────────────────────┼──────────────┤
+│ false                       │ any                  │ any                  │ Use shared   │
+├─────────────────────────────┼──────────────────────┼──────────────────────┼──────────────┤
+│ true                        │ true                 │ yes                  │ Use existing │
+│                             │                      │                      │ dedicated    │
+├─────────────────────────────┼──────────────────────┼──────────────────────┼──────────────┤
+│ true                        │ false                │ yes (irreversible)   │ Use existing │
+│                             │                      │                      │ dedicated    │
+│                             │                      │                      │ (log warning)│
+├─────────────────────────────┼──────────────────────┼──────────────────────┼──────────────┤
+│ true                        │ false                │ no                   │ Use shared   │
+├─────────────────────────────┼──────────────────────┼──────────────────────┼──────────────┤
+│ true                        │ true                 │ no                   │ UPGRADE:     │
+│                             │                      │                      │ Claim &      │
+│                             │                      │                      │ configure    │
+└─────────────────────────────┴──────────────────────┴──────────────────────┴──────────────┘
+```
+
 ### Updated Implementation
+
+The modification replaces the original audit log data resolution block (lines 34-57) with upgrade-aware logic:
 
 ```go
 func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 
+    // ========== BEGIN: Modified audit log data resolution ==========
     var data auditlog.AuditLogData
     var err error
 
-    // Fast path: if dedicated audit logging feature is disabled globally, use shared config
     if !m.DedicatedAuditLoggingEnabled {
+        // Global feature disabled → use shared config
         data, err = m.AuditLogDataProvider.GetSharedAuditLogData(
             ctx,
             s.instance.Spec.Shoot.Provider.Type,
             s.instance.Spec.Shoot.Region,
         )
-        return continueWithAuditLogData(ctx, m, s, data, err)
-    }
+    } else {
+        runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
+        dedicatedFlagEnabled := s.instance.Spec.AuditLogAccessEnabled != nil &&
+            *s.instance.Spec.AuditLogAccessEnabled
 
-    runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
-    dedicatedFlagEnabled := s.instance.Spec.AuditLogAccessEnabled != nil && *s.instance.Spec.AuditLogAccessEnabled
+        // Check if AuditLog is already assigned to this runtime
+        existingData, existingErr := m.AuditLogDataProvider.GetDedicatedAuditLogData(ctx, runtimeID, false)
+        hasExistingAuditLog := existingErr == nil
 
-    // Check if AuditLog is already assigned to this runtime (reserved or claimed)
-    existingData, existingErr := m.AuditLogDataProvider.GetDedicatedAuditLogData(ctx, runtimeID, false)
-    hasExistingAuditLog := existingErr == nil
+        if hasExistingAuditLog {
+            // Already has dedicated → use it (irreversibility enforced)
+            if !dedicatedFlagEnabled {
+                m.log.Info("Dedicated audit logging is irreversible - ignoring attempt to disable",
+                    "runtimeID", runtimeID)
+            }
+            data = existingData
+        } else if !dedicatedFlagEnabled {
+            // No existing dedicated, flag not set → use shared
+            data, err = m.AuditLogDataProvider.GetSharedAuditLogData(
+                ctx,
+                s.instance.Spec.Shoot.Provider.Type,
+                s.instance.Spec.Shoot.Region,
+            )
+        } else {
+            // UPGRADE: flag is set but no AuditLog assigned → claim directly
+            m.log.Info("Upgrading to dedicated audit logging",
+                "runtimeID", runtimeID,
+                "region", s.instance.Spec.Shoot.Region)
 
-    // Irreversibility: once dedicated is configured, it cannot be disabled
-    if hasExistingAuditLog {
-        if !dedicatedFlagEnabled {
-            m.log.Info("Dedicated audit logging is irreversible - ignoring attempt to disable",
-                "runtimeID", runtimeID)
+            data, err = m.AuditLogDataProvider.ClaimAuditLog(
+                ctx,
+                s.instance.Spec.Shoot.Region,
+                runtimeID,
+            )
+            if err != nil {
+                msg := fmt.Sprintf("Dedicated audit logging requested but no available configuration found: %v", err)
+                m.log.Error(err, "Cannot upgrade runtime to dedicated audit logging")
+                m.Metrics.IncRuntimeFSMStopCounter()
+                return updateStateFailedWithErrorAndStop(
+                    &s.instance,
+                    imv1.ConditionTypeRuntimeProvisioned,
+                    imv1.ConditionReasonCustomAuditLogError,
+                    msg)
+            }
+
+            m.log.Info("Successfully claimed dedicated audit log for runtime upgrade",
+                "runtimeID", runtimeID,
+                "tenantID", data.TenantID)
+
+            s.instance.UpdateStatePending(
+                imv1.ConditionTypeCustomAuditLogConfigured,
+                imv1.ConditionReasonCustomAuditLogConfigured,
+                metav1.ConditionUnknown,
+                "Dedicated audit logging claimed, configuring shoot",
+            )
         }
-        data = existingData
-        return continueWithAuditLogData(ctx, m, s, data, nil)
     }
+    // ========== END: Modified audit log data resolution ==========
 
-    // No existing AuditLog assigned - check if user wants dedicated logging
-    if !dedicatedFlagEnabled {
-        // User doesn't want dedicated logging and none is assigned - use shared
-        data, err = m.AuditLogDataProvider.GetSharedAuditLogData(
-            ctx,
-            s.instance.Spec.Shoot.Provider.Type,
-            s.instance.Spec.Shoot.Region,
-        )
-        return continueWithAuditLogData(ctx, m, s, data, err)
-    }
-
-    // Upgrade scenario: dedicated flag is set but no AuditLog is assigned
-    // Phase 1: Reserve an AuditLogCR for this runtime
-    m.log.Info("No existing dedicated audit log found, attempting to reserve for upgrade",
-        "runtimeID", runtimeID,
-        "region", s.instance.Spec.Shoot.Region)
-
-    reserveErr := m.AuditLogDataProvider.ReserveAuditLog(
-        ctx,
-        s.instance.Spec.Shoot.Region,
-        runtimeID,
-    )
-    if reserveErr != nil {
-        msg := fmt.Sprintf("Dedicated audit logging requested but no available configuration found: %v", reserveErr)
-        m.log.Error(reserveErr, "Cannot upgrade runtime to dedicated audit logging")
-        m.Metrics.IncRuntimeFSMStopCounter()
-        return updateStateFailedWithErrorAndStop(
-            &s.instance,
-            imv1.ConditionTypeRuntimeProvisioned,
-            imv1.ConditionReasonCustomAuditLogError,
-            msg)
-    }
-
-    m.log.Info("Successfully reserved dedicated audit log for runtime upgrade",
-        "runtimeID", runtimeID)
-
-    // Set condition to indicate migration is pending
-    s.instance.UpdateStatePending(
-        imv1.ConditionTypeCustomAuditLogConfigured,
-        imv1.ConditionReasonCustomAuditLogConfigured,
-        metav1.ConditionUnknown,
-        "Dedicated audit logging reserved, migration pending",
-    )
-
-    // Use shared config for this patch cycle
-    // Migration to dedicated will happen in sFnMigrateToDedicatedAuditLog
-    data, err = m.AuditLogDataProvider.GetSharedAuditLogData(
-        ctx,
-        s.instance.Spec.Shoot.Provider.Type,
-        s.instance.Spec.Shoot.Region,
-    )
-
-    return continueWithAuditLogData(ctx, m, s, data, err)
-}
-
-// continueWithAuditLogData continues the patch flow with the resolved audit log data
-func continueWithAuditLogData(ctx context.Context, m *fsm, s *systemState, data auditlog.AuditLogData, err error) (stateFn, *ctrl.Result, error) {
+    // Original error handling for shared config errors (unchanged)
     if err != nil {
         m.log.Error(err, msgFailedToConfigureAuditlogs)
     }
@@ -125,67 +127,96 @@ func continueWithAuditLogData(ctx context.Context, m *fsm, s *systemState, data 
             msgFailedToConfigureAuditlogs)
     }
 
-    // ... rest of the patch logic (OIDC, shoot conversion, patch, etc.) ...
+    // ... rest of the function unchanged (OIDC, shoot conversion, patch, etc.) ...
 }
 ```
 
-### Decision Flow Summary
+**Key points:**
+- No helper function needed - all logic stays inline
+- Error handling for upgrade failure is explicit and returns immediately
+- Error handling for shared config failure uses existing pattern (lines 59-70 in original)
+- The `err` variable is only set for shared config retrieval or upgrade claim failure
 
-The refactored code follows this decision flow:
+### Key Differences from Two-Phase Approach
 
-1. **Global feature disabled?** → Use shared config
-2. **AuditLog already assigned?** → Use existing dedicated config (irreversibility enforced)
-3. **Dedicated flag not set?** → Use shared config
-4. **Dedicated flag set, no AuditLog?** → Reserve new AuditLog, use shared config for this cycle
+| Aspect | Two-Phase (Creation) | Direct Claim (Upgrade) |
+|--------|---------------------|------------------------|
+| **First step** | Reserve with labels | Claim with `AssignedToRuntimeID` |
+| **Shoot config** | Shared initially | Dedicated immediately |
+| **Migration state** | Patches shoot | No-op (already configured) |
+| **Gardener reconciliations** | Two | One |
 
-## Upgrade Detection Logic
+## New DataProvider Method: ClaimAuditLog
 
-The upgrade scenario is detected when the dedicated audit logging flag is set on Runtime CR but no AuditLog is assigned. This is determined by the failure of `GetDedicatedAuditLogData(claim=false)`:
+### Interface Addition
+
+Add a new method to the `DataProvider` interface:
 
 ```go
-data, err = m.AuditLogDataProvider.GetDedicatedAuditLogData(ctx, runtimeID, false)
-if err != nil {
-    // This means no AuditLog is assigned to this runtime:
-    // 1. No AuditLogCR is claimed for this runtime (spec.assignedToRuntimeID != runtimeID)
-    // 2. No AuditLogCR is reserved for this runtime (no "reserved-for-runtime-id" label)
-    // Therefore, we need to make a new reservation
+// DataProvider provides audit logging configuration data
+type DataProvider interface {
+    // ... existing methods ...
+
+    // ClaimAuditLog finds an available AuditLogCR for the region and claims it directly
+    // This is used for upgrade scenarios where we don't need two-phase reservation
+    // Returns the audit log data and sets AssignedToRuntimeID on the CR
+    ClaimAuditLog(ctx context.Context, providerRegion string, runtimeID string) (AuditLogData, error)
 }
 ```
-
-### Detection Matrix
-
-| Scenario | GetDedicatedAuditLogData Result | Action |
-|----------|--------------------------------|--------|
-| New runtime, dedicated flag enabled | Error (no AuditLog assigned) | Reserve in `sFnCreateShoot` (existing flow) |
-| Existing runtime, dedicated flag enabled, no AuditLog assigned | Error (no AuditLog assigned) | Reserve in `sFnPatchExistingShoot` (new flow) |
-| Existing runtime, dedicated flag enabled, AuditLog reserved | Success (returns data) | Use existing reservation, no new reserve |
-| Existing runtime, dedicated flag enabled, AuditLog claimed | Success (returns data) | Use existing claim, no action needed |
-
-## Irreversibility Enforcement
-
-**Important**: Enabling dedicated audit logging is an irreversible operation. Once a runtime has dedicated audit logging configured, it cannot be downgraded back to shared logging.
 
 ### Implementation
 
-When `auditLogAccessEnabled` is set to `false` but dedicated logging was previously configured:
-
 ```go
-// In sFnPatchExistingShoot, when dedicatedAuditLogs is false
-if m.DedicatedAuditLoggingEnabled {
-    runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
-    existingData, existingErr := m.AuditLogDataProvider.GetDedicatedAuditLogData(ctx, runtimeID, false)
-    
-    if existingErr == nil {
-        // Dedicated logging was previously configured - downgrade not allowed
-        m.log.Info("Dedicated audit logging is irreversible - ignoring attempt to disable",
-            "runtimeID", runtimeID)
-        
-        // Continue with dedicated config instead
-        data = existingData
-        dedicatedAuditLogs = true // Override the flag
+// ClaimAuditLog finds an available AuditLogCR for the region and claims it directly
+func (p *DefaultDataProvider) ClaimAuditLog(ctx context.Context, providerRegion string, runtimeID string) (AuditLogData, error) {
+    // First check if already claimed (idempotent)
+    existingData, err := p.getDedicatedAuditLogDataWithoutClaim(ctx, runtimeID)
+    if err == nil {
+        p.logger.Info("AuditLogCR already claimed for runtime", "runtimeID", runtimeID)
+        return existingData, nil
     }
+
+    // Find an available AuditLogCR
+    auditLogCR, err := p.findAvailableAuditLogCR(ctx, providerRegion)
+    if err != nil {
+        return AuditLogData{}, fmt.Errorf("failed to find available AuditLogCR: %w", err)
+    }
+    if auditLogCR == nil {
+        return AuditLogData{}, fmt.Errorf("no available AuditLogCR for region %s", providerRegion)
+    }
+
+    // Claim it directly by setting AssignedToRuntimeID
+    auditLogCR.Spec.AssignedToRuntimeID = runtimeID
+    if err := p.client.Update(ctx, auditLogCR); err != nil {
+        return AuditLogData{}, fmt.Errorf("failed to claim AuditLogCR: %w", err)
+    }
+
+    p.logger.Info("Successfully claimed AuditLogCR for upgrade",
+        "name", auditLogCR.Name,
+        "runtimeID", runtimeID,
+        "region", providerRegion)
+
+    return AuditLogData{
+        TenantID:            auditLogCR.Spec.SubaccountID,
+        ServiceURL:          auditLogCR.Spec.Config.ServiceURL,
+        SecretName:          auditLogCR.Spec.Config.GardenerSecretName,
+        ReadCredsSecretName: auditLogCR.Spec.Config.ReadCredsSecretName,
+    }, nil
 }
 ```
+
+## Interaction with sFnMigrateToDedicatedAuditLog
+
+For upgrades, when the flow reaches `sFnMigrateToDedicatedAuditLog`, the shoot is already configured with dedicated audit logging. The existing logic handles this correctly:
+
+1. Calls `GetDedicatedAuditLogData(ctx, runtimeID, true)` - finds already-claimed CR
+2. Gets current shoot audit log config
+3. Compares configs - **they match** because `sFnPatchExistingShoot` already configured it
+4. Skips patch, proceeds to `sFnCopyAuditLogReadCredentials`
+
+No changes needed to `sFnMigrateToDedicatedAuditLog`.
+
+## Irreversibility Enforcement
 
 ### Behavior
 
@@ -201,53 +232,14 @@ if m.DedicatedAuditLoggingEnabled {
 1. **Resource commitment**: Dedicated AuditLogCR resources are provisioned specifically for the runtime
 2. **Compliance**: Audit log continuity is critical for compliance requirements
 3. **Simplicity**: Avoiding downgrade eliminates complex state transitions and edge cases
-4. **Cost**: Dedicated resources have associated costs that should not be wasted
 
-## Condition Status Updates
+## Error Handling
 
-### During Upgrade (after reservation)
-
-```go
-s.instance.UpdateStatePending(
-    imv1.ConditionTypeCustomAuditLogConfigured,
-    imv1.ConditionReasonCustomAuditLogConfigured,
-    metav1.ConditionUnknown,
-    "Dedicated audit logging reserved, migration pending",
-)
-```
-
-### After Migration Complete (in sFnMigrateToDedicatedAuditLog)
+### Claim Failure (Pool Exhausted)
 
 ```go
-s.instance.UpdateStateReady(
-    imv1.ConditionTypeCustomAuditLogConfigured,
-    imv1.ConditionReasonCustomAuditLogConfigured,
-    "Custom AuditLog shoot configuration completed",
-)
-```
-
-### Condition Progression
-
-| State | ConditionTypeCustomAuditLogConfigured |
-|-------|--------------------------------------|
-| Before upgrade | Not present |
-| After reservation in `sFnPatchExistingShoot` | Unknown: "migration pending" |
-| After shoot patch in `sFnMigrateToDedicatedAuditLog` | Unknown: "configuration completed" |
-| After next reconciliation (configs equal) | True: "configuration completed" |
-| After `sFnCopyAuditLogReadCredentials` | True (unchanged) |
-
-## Error Handling and Edge Cases
-
-### Upgrade Fails - No Available AuditLogCR
-
-**Scenario**: User requests dedicated logging but pool is exhausted.
-
-**Handling**:
-```go
-if reserveErr != nil {
-    msg := fmt.Sprintf("Dedicated audit logging requested but no available configuration found: %v", reserveErr)
-    m.log.Error(reserveErr, "Cannot upgrade runtime to dedicated audit logging")
-    m.Metrics.IncRuntimeFSMStopCounter()
+if claimErr != nil {
+    // Always fail - user explicitly requested dedicated logging
     return updateStateFailedWithErrorAndStop(
         &s.instance,
         imv1.ConditionTypeRuntimeProvisioned,
@@ -256,241 +248,107 @@ if reserveErr != nil {
 }
 ```
 
-**Result**: Runtime CR status shows clear error, user can retry when pool has capacity.
+**No fallback to shared** - the user explicitly requested dedicated logging.
 
-### Upgrade Interrupted After Reservation
+### Patch Failure After Claim
 
-**Scenario**: Controller restarts after reservation but before claim.
+If the shoot patch fails after claiming:
+1. The claim persists (AuditLogCR has `AssignedToRuntimeID` set)
+2. Function returns with requeue
+3. On next reconciliation:
+   - `GetDedicatedAuditLogData(ctx, runtimeID, false)` finds the claimed CR
+   - Code uses the dedicated config for the patch retry
 
-**Handling**:
-1. Next reconciliation calls `GetDedicatedAuditLogData(claim=false)`
-2. Finds existing reservation via label
-3. Returns data successfully
-4. No duplicate reservation attempted
-5. Flow continues normally
-
-### Concurrent Upgrade Requests
-
-**Scenario**: Two reconciliation loops try to reserve simultaneously.
-
-**Handling**:
-- Kubernetes optimistic concurrency prevents double-reservation
-- One succeeds, other gets conflict error and retries
-- Retry finds existing reservation
-
-### Shared Config Unavailable After Reservation
-
-**Scenario**: Reservation succeeds but `GetSharedAuditLogData` fails.
-
-**Handling**:
-```go
-data, err = m.AuditLogDataProvider.GetSharedAuditLogData(...)
-if err != nil && m.AuditLogMandatory {
-    // Fail - but reservation remains
-    // On retry, we'll find the reservation and try shared again
-    return updateStateFailedWithErrorAndStop(...)
-}
-```
-
-**Note**: Reservation is not rolled back. It will either be:
-- Used on successful retry
-- Cleaned up by automated job after 1-hour timeout
+This is **identical** to how `sFnMigrateToDedicatedAuditLog` handles patch failures.
 
 ## Complete Flow Diagram
 
 ```
-sFnSelectShootProcessing (Runtime CR changed)
-    │
-    ├─── shouldPatchShoot() returns true ────────────────────────────────────┐
-    │                                                                         │
-    ▼                                                                         │
-sFnSyncRegistryCacheGardenSecrets                                            │
-    │                                                                         │
-    ▼                                                                         │
-sFnPatchExistingShoot                                                        │
-    │                                                                         │
-    ├─── dedicatedAuditLogs=true ───────────────────────────────┐            │
-    │                                                            │            │
-    │                                                            ▼            │
-    │                                          GetDedicatedAuditLogData(claim=false)
-    │                                                            │            │
-    │                                    ┌───────────────────────┼───────────┐│
-    │                                    │                       │           ││
-    │                              (success)                  (error)        ││
-    │                                    │                       │           ││
-    │                                    │                       ▼           ││
-    │                                    │               ReserveAuditLog     ││
-    │                                    │                       │           ││
-    │                                    │           ┌───────────┼──────────┐││
-    │                                    │           │           │          │││
-    │                                    │      (success)    (error)        │││
-    │                                    │           │           │          │││
-    │                                    │           │           ▼          │││
-    │                                    │           │    FAIL + STOP       │││
-    │                                    │           │                      │││
-    │                                    │           ▼                      │││
-    │                                    │   GetSharedAuditLogData          │││
-    │                                    │           │                      │││
-    │                                    └─────┬─────┴──────────────────────┘││
-    │                                          │                             ││
-    ├─── dedicatedAuditLogs=false ─────────────┤                             ││
-    │           │                              │                             ││
-    │           ▼                              │                             ││
-    │   Check for existing dedicated           │                             ││
-    │   (irreversibility check)                │                             ││
-    │           │                              │                             ││
-    │    ┌──────┴──────┐                       │                             ││
-    │    │             │                       │                             ││
-    │ (exists)    (not exists)                 │                             ││
-    │    │             │                       │                             ││
-    │    ▼             ▼                       │                             ││
-    │ Use dedicated  GetSharedAuditLogData     │                             ││
-    │ (ignore flag)    │                       │                             ││
-    │    │             │                       │                             ││
-    │    └──────┬──────┘                       │                             ││
-    │           │                              │                             ││
-    │           └──────────────────────────────┤                             ││
-    │                                          │                             ││
-    │                                          ▼                             ││
-    │                                   Patch Shoot                          ││
-    │                                          │                             ││
-    │                                          ▼                             ││
-    │                             sFnWaitForShootReconcile                   ││
-    │                                          │                             ││
-    │                                          ▼                             ││
-    │                               sFnHandleKubeconfig                      ││
-    │                                          │                             ││
-    │                                          ▼                             ││
-    │                             sFnCreateKymaNamespace                     ││
-    │                                          │                             ││
-    │                                          ▼                             ││
-    │                        sFnInitializeRuntimeBootstrapper                ││
-    │                                          │                             ││
-    │                                          ▼                             ││
-    │                     sFnCleanupRegistryCacheGardenSecrets               ││
-    │                                          │                             ││
-    │                                          ▼                             ││
-    │                               sFnConfigureSKR                          ││
-    │                                          │                             ││
-    │                                          ▼                             ││
-    │                        sFnApplyClusterRoleBindings                     ││
-    │                                          │                             ││
-    │            ┌─────────────────────────────┼────────────────────────────┐││
-    │            │                             │                            │││
-    │    (dedicated enabled)           (dedicated disabled)                 │││
-    │            │                             │                            │││
-    │            ▼                             ▼                            │││
-    │   sFnMigrateToDedicatedAuditLog   Complete Provisioning               │││
-    │            │                                                          │││
-    │            ▼                                                          │││
-    │   GetDedicatedAuditLogData(claim=true)                               │││
-    │            │                                                          │││
-    │            ▼                                                          │││
-    │   Compare shoot config                                                │││
-    │            │                                                          │││
-    │    ┌───────┼────────┐                                                 │││
-    │    │       │        │                                                 │││
-    │ (equal) (differ)    │                                                 │││
-    │    │       │        │                                                 │││
-    │    │       ▼        │                                                 │││
-    │    │  Patch shoot   │                                                 │││
-    │    │       │        │                                                 │││
-    │    │       ▼        │                                                 │││
-    │    │   Requeue      │                                                 │││
-    │    │       │        │                                                 │││
-    │    │       └────────┤ (next reconciliation)                           │││
-    │    │                │                                                 │││
-    │    └────────────────┤                                                 │││
-    │                     │                                                 │││
-    │                     ▼                                                 │││
-    │   sFnCopyAuditLogReadCredentials                                      │││
-    │                     │                                                 │││
-    │                     ▼                                                 │││
-    │           Complete Provisioning                                       │││
-    │                     │                                                 │││
-    └─────────────────────┴─────────────────────────────────────────────────┘││
-                                                                             ││
-                          updateStatusAndStop()                              ││
-                                                                             ││
+                    sFnPatchExistingShoot
+                            │
+                            ▼
+              ┌─────────────────────────────┐
+              │ Global feature enabled?     │
+              └─────────────────────────────┘
+                     │              │
+                    no             yes
+                     │              │
+                     ▼              ▼
+              ┌───────────┐  ┌─────────────────────────────┐
+              │Use shared │  │ Check existing AuditLog     │
+              │   config  │  │ GetDedicatedAuditLogData    │
+              └───────────┘  └─────────────────────────────┘
+                                    │
+                        ┌───────────┴───────────┐
+                      found                   not found
+                        │                         │
+                        ▼                         ▼
+              ┌───────────────────┐    ┌─────────────────────┐
+              │ Use existing      │    │ Flag enabled?       │
+              │ dedicated config  │    └─────────────────────┘
+              │ (log warning if   │           │         │
+              │  flag is false)   │          no        yes
+              └───────────────────┘           │         │
+                                              ▼         ▼
+                                    ┌───────────┐ ┌─────────────────┐
+                                    │Use shared │ │ UPGRADE:        │
+                                    │  config   │ │ ClaimAuditLog   │
+                                    └───────────┘ │ Use dedicated   │
+                                                  └─────────────────┘
+                                                          │
+                                              ┌───────────┴───────────┐
+                                           success                  failure
+                                              │                         │
+                                              ▼                         ▼
+                                    ┌─────────────────┐       ┌─────────────────┐
+                                    │ Continue with   │       │ FAIL runtime    │
+                                    │ dedicated config│       │ (pool exhausted)│
+                                    └─────────────────┘       └─────────────────┘
 ```
 
 ## Testing
 
-### Unit Tests
+### Unit Tests for sFnPatchExistingShoot
 
 File: `internal/controller/runtime/fsm/runtime_fsm_patch_shoot_test.go`
 
-#### Test Cases
-
 ```go
-func TestSFnPatchExistingShoot_UpgradeScenarios(t *testing.T) {
-    t.Run("should reserve AuditLogCR when upgrading to dedicated and no reservation exists", func(t *testing.T) {
-        // Given: Runtime with auditLogAccessEnabled=true, no existing reservation
+func TestSFnPatchExistingShoot_DedicatedAuditLogUpgrade(t *testing.T) {
+    t.Run("should claim AuditLogCR and use dedicated config when upgrading", func(t *testing.T) {
+        // Given: Runtime with auditLogAccessEnabled=true, no existing AuditLog
         // When: sFnPatchExistingShoot is called
-        // Then: ReserveAuditLog is called, GetSharedAuditLogData is used for patch
+        // Then: ClaimAuditLog is called, dedicated config used for patch
     })
 
-    t.Run("should not reserve when dedicated reservation already exists", func(t *testing.T) {
-        // Given: Runtime with auditLogAccessEnabled=true, existing reservation
+    t.Run("should use existing dedicated config when already assigned", func(t *testing.T) {
+        // Given: Runtime with auditLogAccessEnabled=true, existing AuditLog claimed
         // When: sFnPatchExistingShoot is called
-        // Then: ReserveAuditLog is NOT called, existing data is used
+        // Then: ClaimAuditLog NOT called, existing config used
     })
 
     t.Run("should fail when pool exhausted and dedicated logging requested", func(t *testing.T) {
-        // Given: Runtime with auditLogAccessEnabled=true, no pool capacity
+        // Given: Runtime with auditLogAccessEnabled=true, ClaimAuditLog returns error
         // When: sFnPatchExistingShoot is called
-        // Then: Returns failed state with CustomAuditLogError reason
+        // Then: State set to Failed with CustomAuditLogError
     })
 
-    t.Run("should ignore downgrade attempt when dedicated logging already configured", func(t *testing.T) {
-        // Given: Runtime with auditLogAccessEnabled=false, existing dedicated claim
+    t.Run("should ignore downgrade attempt (irreversibility)", func(t *testing.T) {
+        // Given: Runtime with auditLogAccessEnabled=false, existing AuditLog claimed
         // When: sFnPatchExistingShoot is called
-        // Then: Dedicated config is used (downgrade ignored), warning logged
+        // Then: Warning logged, dedicated config still used
     })
 
-    t.Run("should set condition to Unknown after successful reservation", func(t *testing.T) {
-        // Given: Runtime upgrading to dedicated
-        // When: Reservation succeeds
-        // Then: ConditionTypeCustomAuditLogConfigured is Unknown with "migration pending"
-    })
-    
-    t.Run("should use shared config when no previous dedicated config exists and auditLogAccessEnabled is false", func(t *testing.T) {
-        // Given: Runtime with auditLogAccessEnabled=false, no existing dedicated claim
+    t.Run("should use shared config when flag not set and no existing dedicated", func(t *testing.T) {
+        // Given: Runtime with auditLogAccessEnabled=false, no existing AuditLog
         // When: sFnPatchExistingShoot is called
-        // Then: GetSharedAuditLogData is called, shared config is used
+        // Then: GetSharedAuditLogData called, shared config used
     })
-}
-```
 
-### Integration Tests
-
-```go
-func TestUpgradeToDedicatedAuditLogging(t *testing.T) {
-    // 1. Create runtime without dedicated audit logging
-    runtime := createRuntimeWithoutDedicatedAuditLog()
-    
-    // 2. Wait for initial provisioning to complete
-    waitForProvisioningComplete(runtime)
-    
-    // 3. Update runtime to enable dedicated audit logging
-    runtime.Spec.AuditLogAccessEnabled = ptr.To(true)
-    updateRuntime(runtime)
-    
-    // 4. Wait for upgrade to complete
-    waitForCondition(runtime, imv1.ConditionTypeCustomAuditLogConfigured, metav1.ConditionTrue)
-    
-    // 5. Verify AuditLogCR is claimed
-    auditLogCR := getAuditLogCRForRuntime(runtime)
-    assert.Equal(t, runtime.Labels[imv1.LabelKymaRuntimeID], auditLogCR.Spec.AssignedToRuntimeID)
-    
-    // 6. Verify shoot has dedicated audit log config
-    shoot := getShootForRuntime(runtime)
-    auditLogConfig := getAuditLogConfigFromShoot(shoot)
-    assert.Equal(t, auditLogCR.Spec.SubaccountID, auditLogConfig.TenantID)
-    
-    // 7. Verify read credentials copied to SKR
-    secret := getSKRSecret(runtime, "kyma-system", "auditlog-read-credentials")
-    assert.NotNil(t, secret)
+    t.Run("should use shared config when global feature disabled", func(t *testing.T) {
+        // Given: DedicatedAuditLoggingEnabled=false
+        // When: sFnPatchExistingShoot is called
+        // Then: Dedicated check skipped, shared config used
+    })
 }
 ```
 
@@ -499,23 +357,40 @@ func TestUpgradeToDedicatedAuditLogging(t *testing.T) {
 Key log events for observability:
 
 ```go
-// Upgrade detection
-m.log.Info("No existing dedicated audit log found, attempting to reserve for upgrade",
+// Upgrade detection and claim
+m.log.Info("Upgrading to dedicated audit logging",
     "runtimeID", runtimeID,
     "region", s.instance.Spec.Shoot.Region)
 
-// Successful reservation
-m.log.Info("Successfully reserved dedicated audit log for runtime upgrade",
-    "runtimeID", runtimeID)
+// Successful claim
+m.log.Info("Successfully claimed dedicated audit log for runtime upgrade",
+    "runtimeID", runtimeID,
+    "tenantID", auditLogData.TenantID)
 
-// Reservation failure
-m.log.Error(reserveErr, "Cannot upgrade runtime to dedicated audit logging",
+// Claim failure
+m.log.Error(claimErr, "Cannot upgrade runtime to dedicated audit logging",
     "runtimeID", runtimeID)
 
 // Downgrade attempt (ignored due to irreversibility)
 m.log.Info("Dedicated audit logging is irreversible - ignoring attempt to disable",
     "runtimeID", runtimeID)
 ```
+
+## Summary
+
+The direct claim approach for upgrades:
+
+1. **Detects** upgrade scenario: flag enabled, no existing AuditLog
+2. **Claims** AuditLogCR directly (no reservation phase)
+3. **Patches** shoot with dedicated config immediately
+4. **Relies on** existing `sFnMigrateToDedicatedAuditLog` for idempotency (it becomes a no-op)
+5. **Copies credentials** via existing `sFnCopyAuditLogReadCredentials`
+
+Benefits over two-phase approach:
+- Single Gardener reconciliation (saves ~10 minutes)
+- No "brief shared logging period" during upgrade
+- Simpler code path
+- Same robustness (claim persists through failures)
 
 ## References
 

@@ -34,93 +34,76 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	var data auditlog.AuditLogData
 	var err error
 
-	// Fast path: if dedicated audit logging feature is disabled globally, use shared config
 	if !m.DedicatedAuditLoggingEnabled {
+		// Global feature disabled → use shared config
 		data, err = m.AuditLogDataProvider.GetSharedAuditLogData(
 			ctx,
 			s.instance.Spec.Shoot.Provider.Type,
 			s.instance.Spec.Shoot.Region,
 		)
-		return continueWithAuditLogData(ctx, m, s, data, err)
-	}
+	} else {
+		runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
+		dedicatedFlagEnabled := s.instance.Spec.AuditLogAccessEnabled != nil &&
+			*s.instance.Spec.AuditLogAccessEnabled
 
-	runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
-	dedicatedFlagEnabled := s.instance.Spec.AuditLogAccessEnabled != nil && *s.instance.Spec.AuditLogAccessEnabled
+		// Check if AuditLog is already assigned to this runtime
+		existingData, existingErr := m.AuditLogDataProvider.GetDedicatedAuditLogData(ctx, runtimeID, false)
+		hasExistingAuditLog := existingErr == nil
 
-	// Check if AuditLog is already assigned to this runtime (reserved or claimed)
-	existingData, existingErr := m.AuditLogDataProvider.GetDedicatedAuditLogData(ctx, runtimeID, false)
-	hasExistingAuditLog := existingErr == nil
+		if hasExistingAuditLog {
+			// Already has dedicated → use it (irreversibility enforced)
+			if !dedicatedFlagEnabled {
+				m.log.Info("Dedicated audit logging is irreversible - ignoring attempt to disable",
+					"runtimeID", runtimeID)
+			}
+			data = existingData
+		} else if !dedicatedFlagEnabled {
+			// No existing dedicated, flag not set → use shared
+			data, err = m.AuditLogDataProvider.GetSharedAuditLogData(
+				ctx,
+				s.instance.Spec.Shoot.Provider.Type,
+				s.instance.Spec.Shoot.Region,
+			)
+		} else {
+			// UPGRADE: flag is set but no AuditLog assigned → claim directly
+			m.log.Info("Upgrading to dedicated audit logging",
+				"runtimeID", runtimeID,
+				"region", s.instance.Spec.Shoot.Region)
 
-	// Irreversibility: once dedicated is configured, it cannot be disabled
-	if hasExistingAuditLog {
-		if !dedicatedFlagEnabled {
-			m.log.Info("Dedicated audit logging is irreversible - ignoring attempt to disable",
-				"runtimeID", runtimeID)
+			data, err = m.AuditLogDataProvider.ClaimAuditLog(
+				ctx,
+				s.instance.Spec.Shoot.Region,
+				runtimeID,
+			)
+			if err != nil {
+				msg := fmt.Sprintf("Dedicated audit logging requested but no available configuration found: %v", err)
+				m.log.Error(err, "Cannot upgrade runtime to dedicated audit logging")
+				m.Metrics.IncRuntimeFSMStopCounter()
+				return updateStateFailedWithErrorAndStop(
+					&s.instance,
+					imv1.ConditionTypeRuntimeProvisioned,
+					imv1.ConditionReasonCustomAuditLogError,
+					msg)
+			}
+
+			m.log.Info("Successfully claimed dedicated audit log for runtime upgrade",
+				"runtimeID", runtimeID,
+				"tenantID", data.TenantID)
+
+			s.instance.UpdateStatePending(
+				imv1.ConditionTypeCustomAuditLogConfigured,
+				imv1.ConditionReasonCustomAuditLogConfigured,
+				metav1.ConditionUnknown,
+				"Dedicated audit logging claimed, configuring shoot",
+			)
 		}
-		return continueWithAuditLogData(ctx, m, s, existingData, nil)
 	}
 
-	// No existing AuditLog assigned - check if user wants dedicated logging
-	if !dedicatedFlagEnabled {
-		// User doesn't want dedicated logging and none is assigned - use shared
-		data, err = m.AuditLogDataProvider.GetSharedAuditLogData(
-			ctx,
-			s.instance.Spec.Shoot.Provider.Type,
-			s.instance.Spec.Shoot.Region,
-		)
-		return continueWithAuditLogData(ctx, m, s, data, err)
+	if err != nil {
+		m.log.Error(err, msgFailedToConfigureAuditlogs)
 	}
 
-	// Upgrade scenario: dedicated flag is set but no AuditLog is assigned
-	// Phase 1: Reserve an AuditLogCR for this runtime
-	m.log.Info("No existing dedicated audit log found, attempting to reserve for upgrade",
-		"runtimeID", runtimeID,
-		"region", s.instance.Spec.Shoot.Region)
-
-	reserveErr := m.AuditLogDataProvider.ReserveAuditLog(
-		ctx,
-		s.instance.Spec.Shoot.Region,
-		runtimeID,
-	)
-	if reserveErr != nil {
-		msg := fmt.Sprintf("Dedicated audit logging requested but no available configuration found: %v", reserveErr)
-		m.log.Error(reserveErr, "Cannot upgrade runtime to dedicated audit logging")
-		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStateFailedWithErrorAndStop(
-			&s.instance,
-			imv1.ConditionTypeRuntimeProvisioned,
-			imv1.ConditionReasonCustomAuditLogError,
-			msg)
-	}
-
-	m.log.Info("Successfully reserved dedicated audit log for runtime upgrade",
-		"runtimeID", runtimeID)
-
-	// Set condition to indicate migration is pending
-	s.instance.UpdateStatePending(
-		imv1.ConditionTypeCustomAuditLogConfigured,
-		imv1.ConditionReasonCustomAuditLogConfigured,
-		metav1.ConditionUnknown,
-		"Dedicated audit logging reserved, migration pending",
-	)
-
-	// Use shared config for this patch cycle
-	// Migration to dedicated will happen in sFnMigrateToDedicatedAuditLog
-	data, err = m.AuditLogDataProvider.GetSharedAuditLogData(
-		ctx,
-		s.instance.Spec.Shoot.Provider.Type,
-		s.instance.Spec.Shoot.Region,
-	)
-
-	return continueWithAuditLogData(ctx, m, s, data, err)
-}
-
-func continueWithAuditLogData(ctx context.Context, m *fsm, s *systemState, data auditlog.AuditLogData, auditLogErr error) (stateFn, *ctrl.Result, error) {
-	if auditLogErr != nil {
-		m.log.Error(auditLogErr, msgFailedToConfigureAuditlogs)
-	}
-
-	if auditLogErr != nil && m.AuditLogMandatory {
+	if err != nil && m.AuditLogMandatory {
 		m.Metrics.IncRuntimeFSMStopCounter()
 		return updateStateFailedWithErrorAndStop(
 			&s.instance,
@@ -132,7 +115,7 @@ func continueWithAuditLogData(ctx context.Context, m *fsm, s *systemState, data 
 	oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
 
 	cmName := fmt.Sprintf(extender.StructuredAuthConfigFmt, s.instance.Spec.Shoot.Name)
-	err := structuredauth.CreateOrUpdateStructuredAuthConfigMap(
+	err = structuredauth.CreateOrUpdateStructuredAuthConfigMap(
 		ctx,
 		m.GardenClient,
 		types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace},
