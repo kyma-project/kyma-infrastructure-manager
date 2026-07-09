@@ -18,7 +18,7 @@ type CreateExtensionFunc func(runtime imv1.Runtime, shoot gardener.Shoot) (*gard
 type Strategy int
 
 const (
-	StrategySkip Strategy = iota
+	StrategyKeep Strategy = iota
 	StrategyRemove
 )
 
@@ -198,24 +198,19 @@ func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensi
 				return err
 			}
 
-			alreadyExists := slices.ContainsFunc(shoot.Spec.Extensions, func(e gardener.Extension) bool {
+			index := slices.IndexFunc(shoot.Spec.Extensions, func(e gardener.Extension) bool {
 				return e.Type == ext.Type
 			})
 
-			if !alreadyExists && updatedGardenerExtension != nil {
-				shoot.Spec.Extensions = append(shoot.Spec.Extensions, *updatedGardenerExtension)
-			}
-
-			if alreadyExists {
-				index := slices.IndexFunc(shoot.Spec.Extensions, func(e gardener.Extension) bool {
-					return e.Type == ext.Type
-				})
-				if index != -1 {
-					if updatedGardenerExtension != nil {
-						shoot.Spec.Extensions[index] = *updatedGardenerExtension
-					} else if ext.Strategy == StrategyRemove {
-						shoot.Spec.Extensions = slices.Delete(shoot.Spec.Extensions, index, index+1)
-					}
+			if index == -1 {
+				if updatedGardenerExtension != nil {
+					shoot.Spec.Extensions = append(shoot.Spec.Extensions, *updatedGardenerExtension)
+				}
+			} else {
+				if updatedGardenerExtension != nil {
+					shoot.Spec.Extensions[index] = *updatedGardenerExtension
+				} else if ext.Strategy == StrategyRemove {
+					shoot.Spec.Extensions = slices.Delete(shoot.Spec.Extensions, index, index+1)
 				}
 			}
 		}

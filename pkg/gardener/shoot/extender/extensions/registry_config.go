@@ -19,10 +19,6 @@ func NewRegistryCacheExtension(caches []imv1.ImageRegistryCache, registryCacheGa
 		return extension(caches, registryCacheGardenSecretNames)
 	}
 
-	if existingRegistryCacheExt != nil {
-		return disabledExtension(existingRegistryCacheExt)
-	}
-
 	return nil, nil
 }
 
@@ -48,10 +44,6 @@ func extension(caches []imv1.ImageRegistryCache, registryCacheGardenSecretNames 
 		},
 		Disabled: ptr.To(false),
 	}, nil
-}
-
-func disabledExtension(_ *gardener.Extension) (*gardener.Extension, error) {
-	return nil, nil
 }
 
 func ToRegistryCacheExtension(caches []imv1.ImageRegistryCache, registryCacheGardenSecretNames map[string]string) []registrycacheext.RegistryCache {
