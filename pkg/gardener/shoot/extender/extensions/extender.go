@@ -193,28 +193,28 @@ func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensi
 		}
 
 		for _, ext := range extensionsToApply {
-			gardenerExtension, err := ext.Create(runtime, *shoot)
+			updatedGardenerExtension, err := ext.Create(runtime, *shoot)
 			if err != nil {
 				return err
 			}
 
-			existsInCurrent := slices.ContainsFunc(currentGardenerExtensions, func(e gardener.Extension) bool {
+			alreadyExists := slices.ContainsFunc(shoot.Spec.Extensions, func(e gardener.Extension) bool {
 				return e.Type == ext.Type
 			})
 
-			if !existsInCurrent && gardenerExtension != nil {
-				shoot.Spec.Extensions = append(shoot.Spec.Extensions, *gardenerExtension)
+			if !alreadyExists && updatedGardenerExtension != nil {
+				shoot.Spec.Extensions = append(shoot.Spec.Extensions, *updatedGardenerExtension)
 			}
 
-			if existsInCurrent {
-				liveIndex := slices.IndexFunc(shoot.Spec.Extensions, func(e gardener.Extension) bool {
+			if alreadyExists {
+				index := slices.IndexFunc(shoot.Spec.Extensions, func(e gardener.Extension) bool {
 					return e.Type == ext.Type
 				})
-				if liveIndex != -1 {
-					if gardenerExtension != nil {
-						shoot.Spec.Extensions[liveIndex] = *gardenerExtension
+				if index != -1 {
+					if updatedGardenerExtension != nil {
+						shoot.Spec.Extensions[index] = *updatedGardenerExtension
 					} else if ext.Strategy == StrategyRemove {
-						shoot.Spec.Extensions = slices.Delete(shoot.Spec.Extensions, liveIndex, liveIndex+1)
+						shoot.Spec.Extensions = slices.Delete(shoot.Spec.Extensions, index, index+1)
 					}
 				}
 			}
