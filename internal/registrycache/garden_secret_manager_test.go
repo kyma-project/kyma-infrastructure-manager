@@ -203,17 +203,16 @@ func TestHasRegistryCacheCountChanged(t *testing.T) {
 
 	t.Run("Should return false if registry cache extension is currently disabled", func(t *testing.T) {
 		// given
-		registryCacheExtension, err := extensions.NewRegistryCacheExtension(nil, map[string]string{}, &gardener.Extension{
+		registryCacheExtension := gardener.Extension{
 			Type:     extensions.RegistryCacheExtensionType,
 			Disabled: ptr.To(true),
 			ProviderConfig: &runtime.RawExtension{
 				Raw: []byte("{}"),
 			},
-		})
-		Expect(err).To(BeNil())
+		}
 
 		// when
-		changed, err := HasRegistryCacheCountChanged([]gardener.Extension{*registryCacheExtension}, []imv1.ImageRegistryCache{cache1})
+		changed, err := HasRegistryCacheCountChanged([]gardener.Extension{registryCacheExtension}, []imv1.ImageRegistryCache{cache1})
 
 		// then
 		Expect(changed).To(Equal(false))
