@@ -1257,6 +1257,7 @@ spec:
                         - aws
                         - azure
                         - gcp
+                        - gdch
                         - openstack
                         - alicloud
                         type: string
