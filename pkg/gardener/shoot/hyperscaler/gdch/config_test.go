@@ -85,9 +85,9 @@ func TestGetInfrastructureConfig(t *testing.T) {
 			"networks": {
 				"nodeCIDR": "10.72.0.0/24",
 				"zones": [
-					{"name": "us-west16-b", "cidr": "10.72.0.0/26"},
-					{"name": "us-west16-c", "cidr": "10.72.0.64/26"},
-					{"name": "us-west16-d", "cidr": "10.72.0.128/26"}
+					{"name": "us-west16-b", "CIDR": "10.72.0.0/26"},
+					{"name": "us-west16-c", "CIDR": "10.72.0.64/26"},
+					{"name": "us-west16-d", "CIDR": "10.72.0.128/26"}
 				]
 			}
 		}`, string(raw))
@@ -144,7 +144,7 @@ func TestGetInfrastructureConfig_VariableZones(t *testing.T) {
 			"networks": {
 				"nodeCIDR": "10.72.0.0/19",
 				"zones": [
-					{"name": "a", "cidr": "10.72.0.0/19"}
+					{"name": "a", "CIDR": "10.72.0.0/19"}
 				]
 			}
 		}`, string(raw))
@@ -161,8 +161,8 @@ func TestGetInfrastructureConfig_VariableZones(t *testing.T) {
 			"networks": {
 				"nodeCIDR": "10.72.0.0/19",
 				"zones": [
-					{"name": "a", "cidr": "10.72.0.0/20"},
-					{"name": "b", "cidr": "10.72.16.0/20"}
+					{"name": "a", "CIDR": "10.72.0.0/20"},
+					{"name": "b", "CIDR": "10.72.16.0/20"}
 				]
 			}
 		}`, string(raw))
