@@ -249,6 +249,15 @@ func (p *DefaultDataProvider) ClaimAuditLog(ctx context.Context, providerRegion 
 
     // Claim it directly by setting AssignedToRuntimeID
     auditLogCR.Spec.AssignedToRuntimeID = runtimeID
+
+    // Add reservation labels as workaround for sFnMigrateToDedicatedAuditLog compatibility
+    // sFnMigrateToDedicatedAuditLog looks for reservation labels first when calling GetDedicatedAuditLogData
+    if auditLogCR.Labels == nil {
+        auditLogCR.Labels = make(map[string]string)
+    }
+    auditLogCR.Labels[LabelReservedForRuntimeID] = runtimeID
+    auditLogCR.Labels[LabelReservedAt] = fmt.Sprintf("%d", time.Now().UTC().Unix())
+
     if err := p.client.Update(ctx, auditLogCR); err != nil {
         return AuditLogData{}, fmt.Errorf("failed to claim AuditLogCR: %w", err)
     }
@@ -266,6 +275,17 @@ func (p *DefaultDataProvider) ClaimAuditLog(ctx context.Context, providerRegion 
     }, nil
 }
 ```
+
+### Reservation Labels Workaround
+
+The `ClaimAuditLog` implementation adds reservation labels (`reserved-for-runtime-id` and `reserved-for-runtime-at`) in addition to setting `AssignedToRuntimeID`. This is a workaround to ensure compatibility with `sFnMigrateToDedicatedAuditLog`.
+
+**Why this is needed:**
+- `GetDedicatedAuditLogData` first tries to find by `AssignedToRuntimeID`, then falls back to reservation labels
+- In two-phase claim, reservation labels are set first (Phase 1), then `AssignedToRuntimeID` (Phase 2)
+- For direct claim upgrades, both are set together to ensure `GetDedicatedAuditLogData` can find the CR via either path
+
+This ensures consistent behavior between new runtime creation (two-phase) and existing runtime upgrades (direct claim).
 
 ## Interaction with sFnMigrateToDedicatedAuditLog
 

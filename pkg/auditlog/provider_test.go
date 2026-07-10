@@ -263,6 +263,9 @@ func TestDefaultDataProvider_ClaimAuditLog(t *testing.T) {
 		err = fakeClient.Get(context.Background(), namespacedName("al-1"), &updated)
 		require.NoError(t, err)
 		assert.Equal(t, "test-runtime", updated.Spec.AssignedToRuntimeID)
+		// Verify reservation labels were also set (workaround for sFnMigrateToDedicatedAuditLog)
+		assert.Equal(t, "test-runtime", updated.Labels[LabelReservedForRuntimeID])
+		assert.NotEmpty(t, updated.Labels[LabelReservedAt])
 	})
 
 	t.Run("returns existing data when already claimed (idempotent)", func(t *testing.T) {
@@ -375,6 +378,9 @@ func TestDefaultDataProvider_ClaimAuditLog(t *testing.T) {
 		err = fakeClient.Get(context.Background(), namespacedName("al-1"), &updated)
 		require.NoError(t, err)
 		assert.Equal(t, "test-runtime", updated.Spec.AssignedToRuntimeID)
+		// Verify reservation labels were also set (workaround for sFnMigrateToDedicatedAuditLog)
+		assert.Equal(t, "test-runtime", updated.Labels[LabelReservedForRuntimeID])
+		assert.NotEmpty(t, updated.Labels[LabelReservedAt])
 	})
 }
 

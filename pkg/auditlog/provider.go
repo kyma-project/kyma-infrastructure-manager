@@ -3,6 +3,7 @@ package auditlog
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -157,6 +158,15 @@ func (p *DefaultDataProvider) ClaimAuditLog(ctx context.Context, providerRegion 
 
 	// Claim it directly by setting AssignedToRuntimeID
 	auditLogCR.Spec.AssignedToRuntimeID = runtimeID
+
+	// Add reservation labels as workaround for sFnMigrateToDedicatedAuditLog compatibility
+	// sFnMigrateToDedicatedAuditLog looks for reservation labels first when calling GetDedicatedAuditLogData
+	if auditLogCR.Labels == nil {
+		auditLogCR.Labels = make(map[string]string)
+	}
+	auditLogCR.Labels[LabelReservedForRuntimeID] = runtimeID
+	auditLogCR.Labels[LabelReservedAt] = fmt.Sprintf("%d", time.Now().UTC().Unix())
+
 	if err := p.client.Update(ctx, auditLogCR); err != nil {
 		return AuditLogData{}, fmt.Errorf("failed to claim AuditLogCR: %w", err)
 	}
