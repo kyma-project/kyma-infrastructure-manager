@@ -208,7 +208,7 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "f1c68560.kyma-project.io",
-		Cache:                  restrictWatchedNamespace(),
+		Cache:                  restrictWatchedNamespace(dedicatedAuditLoggingEnabled),
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -538,8 +538,8 @@ func refreshRuntimeMetrics(restConfig *rest.Config, logger logr.Logger, metrics 
 	}
 }
 
-func restrictWatchedNamespace() cache.Options {
-	return cache.Options{
+func restrictWatchedNamespace(dedicatedAuditLoggingEnabled bool) cache.Options {
+	cacheOptions := cache.Options{
 		ByObject: map[client.Object]cache.ByObject{
 			&corev1.ConfigMap{}: {
 				Label: k8slabels.Everything(),
@@ -563,13 +563,18 @@ func restrictWatchedNamespace() cache.Options {
 					defaultControlPlaneSystemNamespace: {},
 				},
 			},
-			&auditlogv1.AuditLog{}: {
-				Namespaces: map[string]cache.Config{
-					defaultControlPlaneSystemNamespace: {},
-				},
-			},
 		},
 	}
+
+	if dedicatedAuditLoggingEnabled {
+		cacheOptions.ByObject[&auditlogv1.AuditLog{}] = cache.ByObject{
+			Namespaces: map[string]cache.Config{
+				defaultControlPlaneSystemNamespace: {},
+			},
+		}
+	}
+
+	return cacheOptions
 }
 
 func configureRuntimeBootstrapper(config rtbootstrapper.Config, runtimeClientGetter fsm.RuntimeClientGetter, kcpClient client.Client) (*rtbootstrapper.Installer, error) {
