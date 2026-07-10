@@ -320,61 +320,42 @@ func getPatchOptions(ctx context.Context, m *fsm, s *systemState, auditLogConfig
 // - Existing AuditLog assignment
 // Returns the audit log data in extender format and optional state transition in case of error
 func resolveAuditLogData(ctx context.Context, m *fsm, s *systemState) (auditlogs.AuditLogData, stateFn, *ctrl.Result, error) {
-	var data auditlog.AuditLogData
-	var err error
-
+	// Global feature disabled → use shared config
 	if !m.DedicatedAuditLoggingEnabled {
-		// Global feature disabled → use shared config
-		data, err = m.AuditLogDataProvider.GetSharedAuditLogData(
-			ctx,
-			s.instance.Spec.Shoot.Provider.Type,
-			s.instance.Spec.Shoot.Region,
-		)
-		if err != nil {
-			m.log.Error(err, msgFailedToConfigureAuditlogs)
-		}
-
-		if err != nil && m.AuditLogMandatory {
-			m.Metrics.IncRuntimeFSMStopCounter()
-			nextState, res, stateErr := updateStateFailedWithErrorAndStop(
-				&s.instance,
-				imv1.ConditionTypeRuntimeProvisioned,
-				imv1.ConditionReasonAuditLogError,
-				msgFailedToConfigureAuditlogs)
-			return auditlogs.AuditLogData{}, nextState, res, stateErr
-		}
-		return toExtenderAuditLogData(data), nil, nil, err
+		return getSharedAuditLogDataWithErrorHandling(ctx, m, s)
 	}
 
 	runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
-	dedicatedFlagEnabled := s.instance.Spec.AuditLogAccessEnabled != nil &&
-		*s.instance.Spec.AuditLogAccessEnabled
 
-	// Check if AuditLog is already assigned to this runtime
+	// Check if AuditLog is already assigned (irreversibility check)
 	existingData, existingErr := m.AuditLogDataProvider.GetDedicatedAuditLogData(ctx, runtimeID, false)
-	hasExistingAuditLog := existingErr == nil
-
-	if hasExistingAuditLog {
-		// Already has dedicated → use it (irreversibility enforced)
-		if !dedicatedFlagEnabled {
+	if existingErr == nil {
+		if !s.instance.IsDedicatedAuditLogEnabled() {
 			m.log.Info("Dedicated audit logging is irreversible - ignoring attempt to disable",
 				"runtimeID", runtimeID)
 		}
 		return toExtenderAuditLogData(existingData), nil, nil, nil
 	}
 
-	if !dedicatedFlagEnabled {
-		// No existing dedicated, flag not set → use shared
-		data, err = m.AuditLogDataProvider.GetSharedAuditLogData(
-			ctx,
-			s.instance.Spec.Shoot.Provider.Type,
-			s.instance.Spec.Shoot.Region,
-		)
-		if err != nil {
-			m.log.Error(err, msgFailedToConfigureAuditlogs)
-		}
+	if !s.instance.IsDedicatedAuditLogEnabled() {
+		return getSharedAuditLogDataWithErrorHandling(ctx, m, s)
+	}
 
-		if err != nil && m.AuditLogMandatory {
+	return claimDedicatedAuditLog(ctx, m, s, runtimeID)
+}
+
+// getSharedAuditLogDataWithErrorHandling retrieves shared config and handles errors
+func getSharedAuditLogDataWithErrorHandling(ctx context.Context, m *fsm, s *systemState) (auditlogs.AuditLogData, stateFn, *ctrl.Result, error) {
+	data, err := m.AuditLogDataProvider.GetSharedAuditLogData(
+		ctx,
+		s.instance.Spec.Shoot.Provider.Type,
+		s.instance.Spec.Shoot.Region,
+	)
+
+	if err != nil {
+		m.log.Error(err, msgFailedToConfigureAuditlogs)
+
+		if m.AuditLogMandatory {
 			m.Metrics.IncRuntimeFSMStopCounter()
 			nextState, res, stateErr := updateStateFailedWithErrorAndStop(
 				&s.instance,
@@ -383,19 +364,23 @@ func resolveAuditLogData(ctx context.Context, m *fsm, s *systemState) (auditlogs
 				msgFailedToConfigureAuditlogs)
 			return auditlogs.AuditLogData{}, nextState, res, stateErr
 		}
-		return toExtenderAuditLogData(data), nil, nil, err
 	}
 
-	// UPGRADE: flag is set but no AuditLog assigned → claim directly
+	return toExtenderAuditLogData(data), nil, nil, err
+}
+
+// claimDedicatedAuditLog claims an AuditLogCR for upgrade scenario
+func claimDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState, runtimeID string) (auditlogs.AuditLogData, stateFn, *ctrl.Result, error) {
 	m.log.Info("Upgrading shared to dedicated audit logging",
 		"runtimeID", runtimeID,
 		"region", s.instance.Spec.Shoot.Region)
 
-	data, err = m.AuditLogDataProvider.ClaimAuditLog(
+	data, err := m.AuditLogDataProvider.ClaimAuditLog(
 		ctx,
 		s.instance.Spec.Shoot.Region,
 		runtimeID,
 	)
+
 	if err != nil {
 		msg := fmt.Sprintf("Dedicated audit logging requested but no available configuration found: %v", err)
 		m.log.Error(err, "Cannot upgrade runtime to dedicated audit logging")
