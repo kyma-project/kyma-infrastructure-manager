@@ -29,7 +29,7 @@ func baseExtenders(converterConfig config.ConverterConfig) []Extend {
 		extender2.ExtendWithLabels,
 		extender2.ExtendWithSeedSelector,
 		extender2.NewOidcExtender(),
-		extender2.ExtendWithCloudProfile,
+		extender2.ExtendWithCloudProfile(converterConfig.Provider.GDCH.CloudProfileName),
 		extender2.ExtendWithExposureClassName,
 		restrictions.ExtendWithAccessRestriction(),
 		extender2.NewFeatureGatesExtender(converterConfig.Kubernetes.KubeApiServer.FeatureGates, converterConfig.Kubernetes.Kubelet.FeatureGates),
