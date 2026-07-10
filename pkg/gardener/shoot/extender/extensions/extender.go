@@ -15,9 +15,17 @@ import (
 
 type CreateExtensionFunc func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error)
 
+type Strategy int
+
+const (
+	StrategyKeep Strategy = iota
+	StrategyRemove
+)
+
 type Extension struct {
-	Type   string
-	Create CreateExtensionFunc
+	Type     string
+	Create   CreateExtensionFunc
+	Strategy Strategy
 }
 
 func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
@@ -86,8 +94,9 @@ func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client
 func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension, apiServerAclEnabled bool, registryCacheGardenSecretNames map[string]string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
-			AuditlogExtensionType,
-			func(_ imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+			Type: AuditlogExtensionType,
+			Create: func(_ imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
+
 				if auditLogData == (auditlogs.AuditLogData{}) {
 					return nil, nil
 				}
@@ -138,6 +147,7 @@ func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client,
 			Create: func(runtime imv1.Runtime, shoot gardener.Shoot) (*gardener.Extension, error) {
 				return NewRegistryCacheExtension(runtime.Spec.Caching, registryCacheGardenSecretNames, existingExtension(RegistryCacheExtensionType, shoot))
 			},
+			Strategy: StrategyRemove,
 		},
 		{
 			Type: ApiServerACLExtensionType,
@@ -183,24 +193,25 @@ func newExtensionsExtender(extensionsToApply []Extension, currentGardenerExtensi
 		}
 
 		for _, ext := range extensionsToApply {
-			gardenerExtension, err := ext.Create(runtime, *shoot)
+			updatedGardenerExtension, err := ext.Create(runtime, *shoot)
 			if err != nil {
 				return err
 			}
 
-			// If the extension should not be applied we skip it
-			if gardenerExtension == nil {
-				continue
-			}
-
-			index := slices.IndexFunc(currentGardenerExtensions, func(e gardener.Extension) bool {
+			index := slices.IndexFunc(shoot.Spec.Extensions, func(e gardener.Extension) bool {
 				return e.Type == ext.Type
 			})
 
 			if index == -1 {
-				shoot.Spec.Extensions = append(shoot.Spec.Extensions, *gardenerExtension)
+				if updatedGardenerExtension != nil {
+					shoot.Spec.Extensions = append(shoot.Spec.Extensions, *updatedGardenerExtension)
+				}
 			} else {
-				shoot.Spec.Extensions[index] = *gardenerExtension
+				if updatedGardenerExtension != nil {
+					shoot.Spec.Extensions[index] = *updatedGardenerExtension
+				} else if ext.Strategy == StrategyRemove {
+					shoot.Spec.Extensions = slices.Delete(shoot.Spec.Extensions, index, index+1)
+				}
 			}
 		}
 

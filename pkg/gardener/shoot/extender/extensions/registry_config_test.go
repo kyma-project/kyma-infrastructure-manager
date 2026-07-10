@@ -16,6 +16,92 @@ import (
 
 func TestNewRegistryCacheExtension(t *testing.T) {
 
+	t.Run("should return nil when caches list is empty", func(t *testing.T) {
+		registryCacheExtension, err := NewRegistryCacheExtension([]imv1.ImageRegistryCache{}, nil, nil)
+
+		require.NoError(t, err)
+		require.Nil(t, registryCacheExtension)
+	})
+
+	t.Run("should return nil when caches is nil", func(t *testing.T) {
+		registryCacheExtension, err := NewRegistryCacheExtension(nil, nil, nil)
+
+		require.NoError(t, err)
+		require.Nil(t, registryCacheExtension)
+	})
+
+	t.Run("should omit secret reference when SecretReferenceName is nil", func(t *testing.T) {
+		caches := []imv1.ImageRegistryCache{
+			{
+				UID: "id1",
+				Config: registrycache.RegistryCacheConfigSpec{
+					Upstream:            "ghcr.io",
+					SecretReferenceName: nil,
+				},
+			},
+		}
+
+		registryCacheExtension, err := NewRegistryCacheExtension(caches, map[string]string{"id1": "garden-name-1"}, nil)
+
+		require.NoError(t, err)
+		require.NotNil(t, registryCacheExtension)
+
+		var providerConfig registrycacheext.RegistryConfig
+		err = yaml.Unmarshal(registryCacheExtension.ProviderConfig.Raw, &providerConfig)
+		require.NoError(t, err)
+
+		assert.Nil(t, providerConfig.Caches[0].SecretReferenceName)
+	})
+
+	t.Run("should omit secret reference when SecretReferenceName is empty string", func(t *testing.T) {
+		caches := []imv1.ImageRegistryCache{
+			{
+				UID: "id1",
+				Config: registrycache.RegistryCacheConfigSpec{
+					Upstream:            "ghcr.io",
+					SecretReferenceName: ptr.To(""),
+				},
+			},
+		}
+
+		registryCacheExtension, err := NewRegistryCacheExtension(caches, map[string]string{"id1": "garden-name-1"}, nil)
+
+		require.NoError(t, err)
+		require.NotNil(t, registryCacheExtension)
+
+		var providerConfig registrycacheext.RegistryConfig
+		err = yaml.Unmarshal(registryCacheExtension.ProviderConfig.Raw, &providerConfig)
+		require.NoError(t, err)
+
+		assert.Nil(t, providerConfig.Caches[0].SecretReferenceName)
+	})
+
+	t.Run("should create extension with all optional fields nil", func(t *testing.T) {
+		caches := []imv1.ImageRegistryCache{
+			{
+				Config: registrycache.RegistryCacheConfigSpec{
+					Upstream: "docker.io",
+				},
+			},
+		}
+
+		registryCacheExtension, err := NewRegistryCacheExtension(caches, nil, nil)
+
+		require.NoError(t, err)
+		require.NotNil(t, registryCacheExtension)
+
+		var providerConfig registrycacheext.RegistryConfig
+		err = yaml.Unmarshal(registryCacheExtension.ProviderConfig.Raw, &providerConfig)
+		require.NoError(t, err)
+
+		assert.Equal(t, "docker.io", providerConfig.Caches[0].Upstream)
+		assert.Nil(t, providerConfig.Caches[0].Volume)
+		assert.Nil(t, providerConfig.Caches[0].GarbageCollection)
+		assert.Nil(t, providerConfig.Caches[0].Proxy)
+		assert.Nil(t, providerConfig.Caches[0].SecretReferenceName)
+		assert.Nil(t, providerConfig.Caches[0].RemoteURL)
+	})
+
 	t.Run("should create registry cache extension", func(t *testing.T) {
 
 		// given
