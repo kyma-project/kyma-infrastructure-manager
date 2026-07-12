@@ -1,4 +1,7 @@
+# ADR 006: Enable Dedicated Audit Logging for Existing Runtimes
+
 # Context
+
 
 This document defines the architecture for enabling dedicated audit logging on existing Kyma Runtimes that were initially provisioned without this feature. This extends the dedicated audit logging implementation described in [ADR 004](./004-dedicated-audit-logging.md).
 
