@@ -168,8 +168,12 @@ func (p *DefaultDataProvider) ClaimAuditLog(ctx context.Context, providerRegion 
 	auditLogCR.Labels[LabelReservedAt] = fmt.Sprintf("%d", time.Now().UTC().Unix())
 
 	if err := p.client.Update(ctx, auditLogCR); err != nil {
+		if apierrors.IsConflict(err) {
+			return AuditLogData{}, fmt.Errorf("conflict claiming AuditLogCR %s: another runtime claimed it concurrently", auditLogCR.Name)
+		}
 		return AuditLogData{}, fmt.Errorf("failed to claim AuditLogCR: %w", err)
 	}
+
 
 	p.logger.Info("Successfully claimed AuditLogCR for upgrade",
 		"name", auditLogCR.Name,
