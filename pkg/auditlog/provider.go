@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -173,7 +174,6 @@ func (p *DefaultDataProvider) ClaimAuditLog(ctx context.Context, providerRegion 
 		}
 		return AuditLogData{}, fmt.Errorf("failed to claim AuditLogCR: %w", err)
 	}
-
 
 	p.logger.Info("Successfully claimed AuditLogCR for upgrade",
 		"name", auditLogCR.Name,
