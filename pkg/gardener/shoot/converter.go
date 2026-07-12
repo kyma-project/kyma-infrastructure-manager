@@ -98,7 +98,7 @@ func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
 
 	if opts.AuditLogData != (auditlogs.AuditLogData{}) {
 		extendersForCreate = append(extendersForCreate,
-			auditlogs.NewAuditlogExtenderForCreate(
+			auditlogs.NewAuditlogExtender(
 				opts.AuditLog.PolicyConfigMapName,
 				opts.AuditLogData))
 	}
@@ -136,7 +136,10 @@ func NewConverterPatch(ctx context.Context, opts PatchOpts) Converter {
 
 	if opts.AuditLogData != (auditlogs.AuditLogData{}) {
 		extendersForPatch = append(extendersForPatch,
-			auditlogs.NewAuditlogExtenderForPatch(opts.AuditLog.PolicyConfigMapName))
+			auditlogs.NewAuditlogExtender(
+				opts.AuditLog.PolicyConfigMapName,
+				opts.AuditLogData))
+		//auditlogs.NewAuditlogExtenderForPatch(opts.AuditLog.PolicyConfigMapName))
 	}
 
 	return newConverter(opts.ConverterConfig, extendersForPatch...)
