@@ -139,7 +139,6 @@ func NewConverterPatch(ctx context.Context, opts PatchOpts) Converter {
 			auditlogs.NewAuditlogExtender(
 				opts.AuditLog.PolicyConfigMapName,
 				opts.AuditLogData))
-		//auditlogs.NewAuditlogExtenderForPatch(opts.AuditLog.PolicyConfigMapName))
 	}
 
 	return newConverter(opts.ConverterConfig, extendersForPatch...)
