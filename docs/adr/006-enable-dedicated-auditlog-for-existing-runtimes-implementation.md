@@ -298,6 +298,186 @@ For upgrades, when the flow reaches `sFnMigrateToDedicatedAuditLog`, the shoot i
 
 No changes needed to `sFnMigrateToDedicatedAuditLog`.
 
+## Converter Fix: Complete Audit Log Configuration
+
+### Problem
+
+Runtimes created in regions without shared audit log configuration had no audit log secret reference in `shoot.spec.resources`. When upgrading to dedicated audit logging, the Gardener `shoot-auditlog-service` extension would fail because:
+
+1. The extension expects a secret reference named `auditlog-credentials` in `shoot.spec.resources`
+2. The converter was using `NewAuditlogExtenderForPatch` which **only updated the policy configmap**
+3. The secret reference was never added, causing the extension to fail
+
+### Root Cause Analysis
+
+The `NewAuditlogExtenderForPatch` function (lines 42-47 in `extender.go`) had limited scope:
+
+```go
+func NewAuditlogExtenderForPatch(policyConfigMapName string) Extend {
+    return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+        policyConfigMapName := fixPolicyConfigMapName(rt.Annotations, policyConfigMapName)
+        return oSetPolicyConfigmap(policyConfigMapName)(shoot)  // ONLY sets policy
+    }
+}
+```
+
+It only set the policy configmap reference, missing the secret reference entirely.
+
+### Solution
+
+Changed the converter to use `NewAuditlogExtender` for **both create and patch operations**:
+
+**File**: `pkg/gardener/shoot/converter.go`
+
+**Before** (line 139):
+```go
+if opts.AuditLogData != (auditlogs.AuditLogData{}) {
+    extendersForPatch = append(extendersForPatch,
+        auditlogs.NewAuditlogExtenderForPatch(opts.AuditLog.PolicyConfigMapName))
+        // PROBLEM: Only updates policy, doesn't touch secret reference
+}
+```
+
+**After** (line 139):
+```go
+if opts.AuditLogData != (auditlogs.AuditLogData{}) {
+    extendersForPatch = append(extendersForPatch,
+        auditlogs.NewAuditlogExtender(
+            opts.AuditLog.PolicyConfigMapName,
+            opts.AuditLogData))
+        // SOLUTION: Updates both secret reference AND policy
+}
+```
+
+### What NewAuditlogExtender Does
+
+```go
+func NewAuditlogExtender(policyConfigMapName string, data AuditLogData) Extend {
+    return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+        policyConfigMapName := fixPolicyConfigMapName(rt.Annotations, policyConfigMapName)
+        for _, f := range []operation{
+            oSetSecret(data.SecretName),           // ← Adds/updates secret reference
+            oSetPolicyConfigmap(policyConfigMapName), // ← Adds/updates policy
+        } {
+            if err := f(shoot); err != nil {
+                return err
+            }
+        }
+        return nil
+    }
+}
+```
+
+**Sets both**:
+1. **Secret reference** in `shoot.spec.resources`:
+   ```yaml
+   resources:
+     - name: auditlog-credentials
+       resourceRef:
+         name: dedicated-audit-secret  # From AuditLogData.SecretName
+         kind: Secret
+         apiVersion: v1
+   ```
+
+2. **Policy configmap** in `shoot.spec.kubernetes.kubeAPIServer.auditConfig`:
+   ```yaml
+   kubernetes:
+     kubeAPIServer:
+       auditConfig:
+         auditPolicy:
+           configMapRef:
+             name: audit-policy
+   ```
+
+### Why This is Safe (No Regressions)
+
+#### 1. Idempotent Operations
+
+Both operations are idempotent and safe to call repeatedly:
+
+**`oSetSecret` (set_secret.go:12-34)**:
+```go
+func oSetSecret(secretName string) operation {
+    return func(s *gardener.Shoot) error {
+        // Check if secret reference already exists
+        index := slices.IndexFunc(s.Spec.Resources, func(r gardener.NamedResourceReference) bool {
+            return r.Name == auditlogSecretReference
+        })
+        
+        if index == -1 {
+            s.Spec.Resources = append(s.Spec.Resources, resource) // Add new
+        } else {
+            s.Spec.Resources[index] = resource  // Update existing
+        }
+        return nil
+    }
+}
+```
+
+**`oSetPolicyConfigmap` (set_policy_configmap.go:8-22)**:
+```go
+func oSetPolicyConfigmap(policyConfigMapName string) operation {
+    return func(s *gardener.Shoot) error {
+        if s.Spec.Kubernetes.KubeAPIServer == nil {
+            s.Spec.Kubernetes.KubeAPIServer = &gardener.KubeAPIServerConfig{}
+        }
+        
+        // Overwrites configuration (idempotent)
+        s.Spec.Kubernetes.KubeAPIServer.AuditConfig = &gardener.AuditConfig{
+            AuditPolicy: &gardener.AuditPolicy{
+                ConfigMapRef: &core_v1.ObjectReference{Name: policyConfigMapName},
+            },
+        }
+        return nil
+    }
+}
+```
+
+#### 2. Scenario Coverage
+
+| Scenario | Old Behavior (`ForPatch`) | New Behavior (`Full`) | Status |
+|----------|---------------------------|----------------------|--------|
+| **Normal patch (secret exists)** | Policy updated only | Secret + Policy updated | ✅ Safe - idempotent update |
+| **Upgrade: shared → dedicated** | Policy updated, secret unchanged | Secret + Policy updated to new values | ✅ **Improvement** |
+| **Upgrade: no auditlog → dedicated** | Policy updated, **secret missing** 🔴 | Secret + Policy both added | ✅ **FIXED** |
+| **Secret name changes (rotation)** | Secret NOT updated | Secret updated | ✅ **Improvement** |
+| **Idempotent calls** | Policy updated | Secret + Policy updated | ✅ Safe |
+
+🔴 = Bug fixed by this change
+
+#### 3. Test Coverage
+
+Added comprehensive table-driven tests in `extender_test.go`:
+
+```go
+func Test_AuditlogExtender_ConfigurationUpdate(t *testing.T) {
+    // 6 test cases covering:
+    // 1. Add audit log to shoot without audit log
+    // 2. Update existing audit log secret reference
+    // 3. Upgrade from missing shared config to dedicated (the bug fix)
+    // 4. Idempotent operations
+    // 5. Preserve other resources
+    // 6. Experimental policy annotation
+}
+```
+
+All tests pass ✅
+
+### Historical Context
+
+The split between `NewAuditlogExtenderForCreate` and `NewAuditlogExtenderForPatch` was:
+- Introduced in commit `707739b7` (Dec 2024) as part of an OIDC refactoring
+- Later unified back to using `NewAuditlogExtender` for both operations
+- Current implementation correctly uses the same extender for create and patch
+
+### Benefits
+
+1. **Fixes upgrade bug**: Runtimes without shared audit log can now upgrade to dedicated
+2. **No regressions**: All operations are idempotent
+3. **Consistent behavior**: Create and patch flows use the same logic
+4. **Complete configuration**: Ensures all audit log components (secret + policy + extension) are synchronized
+5. **Better maintainability**: Single code path for audit log configuration
+
 ## Irreversibility Enforcement
 
 ### Behavior

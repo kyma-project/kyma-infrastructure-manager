@@ -166,6 +166,28 @@ Complete (updateStatusAndStop)
 3. Find they match (because `sFnPatchExistingShoot` already configured it)
 4. Skip to `sFnCopyAuditLogReadCredentials`
 
+## Problem 5: Missing Secret Reference in Shoot Spec
+
+**Issue**: Runtimes created in regions without shared audit log configuration have no audit log secret reference in `shoot.spec.resources`. When upgrading to dedicated audit logging, the Gardener extension fails because the secret reference is missing.
+
+**Root Cause**: The converter previously used `NewAuditlogExtenderForPatch` which only updated the policy configmap reference but did NOT update the secret reference in `shoot.spec.resources`.
+
+**Solution**: Change converter to use `NewAuditlogExtender` (previously named `NewAuditlogExtenderForCreate`) for both create and patch operations. This extender sets both:
+- Secret reference in `shoot.spec.resources` (via `oSetSecret`)
+- Policy configmap in `shoot.spec.kubernetes.kubeAPIServer.auditConfig` (via `oSetPolicyConfigmap`)
+
+**Why This is Safe**:
+1. **Idempotent operations**: Both `oSetSecret` and `oSetPolicyConfigmap` are idempotent - safe to call on every patch
+2. **No regressions**: All operations check for existing configuration and either add or update
+3. **Consistent with creation flow**: Unifies create and patch behavior
+4. **Enables missing config upgrades**: Fixes the specific case where runtimes without shared config can now upgrade to dedicated
+
+**Changed Files**:
+- `pkg/gardener/shoot/converter.go`: Line 139 - changed from `NewAuditlogExtenderForPatch` to `NewAuditlogExtender`
+- `pkg/gardener/shoot/extender/auditlogs/extender.go`: `NewAuditlogExtender` now used for both create and patch
+
+**Historical Context**: The split between `ForCreate` and `ForPatch` variants was temporarily introduced but later reverted. The current implementation uses `NewAuditlogExtender` for both operations, which is the correct approach for handling all audit log configuration scenarios.
+
 # Consequences
 
 ## Positive
