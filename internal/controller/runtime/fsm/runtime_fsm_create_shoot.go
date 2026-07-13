@@ -130,11 +130,12 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	logTokenExpirationInfo(m.log, timeBoundaries)
 
 	shoot, err := convertCreate(ctx, &s.instance, gardener_shoot.CreateOpts{
-		KcpClient:             m.KcpClient,
-		ConverterConfig:       m.ConverterConfig,
-		AuditLogData:          auditLogConfig,
-		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
-		ApiServerAclEnabled:   m.ApiServerAclEnabled,
+		KcpClient:                       m.KcpClient,
+		ConverterConfig:                 m.ConverterConfig,
+		AuditLogData:                    auditLogConfig,
+		MaintenanceTimeWindow:           getMaintenanceTimeWindow(s, m),
+		ApiServerAclEnabled:             m.ApiServerAclEnabled,
+		NetworkRestrictionGlobalEnabled: m.NetworkRestrictionGlobalEnabled,
 	})
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object")

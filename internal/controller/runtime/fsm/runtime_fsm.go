@@ -35,6 +35,7 @@ type RCCfg struct {
 	ShootNamesapace                      string
 	AuditLogMandatory                    bool
 	ApiServerAclEnabled                  bool
+	NetworkRestrictionGlobalEnabled      bool
 	Metrics                              metrics.Metrics
 	DedicatedAuditLoggingEnabled         bool
 	AuditLogDataProvider                 auditlog.DataProvider
