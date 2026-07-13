@@ -478,6 +478,105 @@ The split between `NewAuditlogExtenderForCreate` and `NewAuditlogExtenderForPatc
 4. **Complete configuration**: Ensures all audit log components (secret + policy + extension) are synchronized
 5. **Better maintainability**: Single code path for audit log configuration
 
+## Migration Helper Fix: Create Extension When Missing
+
+### Problem
+
+The `updateAuditLogExtensionConfig` function in `runtime_fsm_migrate_dedicated_auditlog_helpers.go` originally only handled updating an existing auditlog extension. When a shoot had no auditlog extension (created in a region without shared audit log configuration), the function returned an error:
+
+```go
+return fmt.Errorf("audit log extension not found in shoot spec")
+```
+
+This prevented migration to dedicated audit logging for runtimes that never had any audit log configuration.
+
+### Solution
+
+Modified `updateAuditLogExtensionConfig` to **create a new auditlog extension** when none exists, instead of returning an error.
+
+**File**: `internal/controller/runtime/fsm/runtime_fsm_migrate_dedicated_auditlog_helpers.go`
+
+**Before**:
+```go
+func updateAuditLogExtensionConfig(shoot *gardener.Shoot, auditLogData auditlog.AuditLogData) error {
+    for i := range shoot.Spec.Extensions {
+        if shoot.Spec.Extensions[i].Type != extensions.AuditlogExtensionType {
+            continue
+        }
+        if err := updateAuditLogExtension(&shoot.Spec.Extensions[i], auditLogData); err != nil {
+            return fmt.Errorf("failed to update audit log extension: %w", err)
+        }
+        return nil
+    }
+    return fmt.Errorf("audit log extension not found in shoot spec")  // BUG
+}
+```
+
+**After**:
+```go
+func updateAuditLogExtensionConfig(shoot *gardener.Shoot, auditLogData auditlog.AuditLogData) error {
+    for i := range shoot.Spec.Extensions {
+        if shoot.Spec.Extensions[i].Type != extensions.AuditlogExtensionType {
+            continue
+        }
+        if err := updateAuditLogExtension(&shoot.Spec.Extensions[i], auditLogData); err != nil {
+            return fmt.Errorf("failed to update audit log extension: %w", err)
+        }
+        return nil
+    }
+
+    // Extension not found - create a new one
+    newExt, err := createAuditLogExtension(auditLogData)
+    if err != nil {
+        return fmt.Errorf("failed to create audit log extension: %w", err)
+    }
+    shoot.Spec.Extensions = append(shoot.Spec.Extensions, *newExt)
+    return nil
+}
+```
+
+**New helper function** `createAuditLogExtension`:
+```go
+func createAuditLogExtension(auditLogData auditlog.AuditLogData) (*gardener.Extension, error) {
+    cfg := extensions.AuditlogExtensionConfig{
+        TypeMeta: metav1.TypeMeta{
+            Kind:       "AuditlogConfig",
+            APIVersion: "service.auditlog.extensions.gardener.cloud/v1alpha1",
+        },
+        Type:                "standard",
+        TenantID:            auditLogData.TenantID,
+        ServiceURL:          auditLogData.ServiceURL,
+        SecretReferenceName: dedicatedAuditlogSecretReference,
+    }
+
+    configJSON, err := json.Marshal(cfg)
+    if err != nil {
+        return nil, fmt.Errorf("failed to marshal audit log config: %w", err)
+    }
+
+    return &gardener.Extension{
+        Type: extensions.AuditlogExtensionType,
+        ProviderConfig: &runtime.RawExtension{
+            Raw: configJSON,
+        },
+    }, nil
+}
+```
+
+### Why This is Safe
+
+1. **Idempotent**: The function first checks for an existing extension; creation only happens when none exists
+2. **Consistent with converter**: Uses the same `AuditlogExtensionConfig` structure as `NewAuditLogExtension` in `pkg/gardener/shoot/extender/extensions/auditlog.go`
+3. **Proper TypeMeta**: Includes required Kind and APIVersion for the Gardener extension
+
+### Scenarios Covered
+
+| Scenario | Before Fix | After Fix |
+|----------|-----------|----------|
+| **Shoot with existing auditlog extension** | Updates extension | Updates extension (unchanged) |
+| **Shoot without auditlog extension** | Returns error ❌ | Creates new extension ✅ |
+| **Shoot with empty extensions list** | Returns error ❌ | Creates new extension ✅ |
+
 ## Irreversibility Enforcement
 
 ### Behavior
