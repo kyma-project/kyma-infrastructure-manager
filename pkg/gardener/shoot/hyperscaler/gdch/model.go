@@ -13,11 +13,18 @@ type ControlPlaneConfig struct {
 }
 
 type NetworkConfig struct {
-	NodeCIDR string `json:"nodeCIDR"`
-	Zones    []Zone `json:"zones"`
+	NodeCIDR        string          `json:"nodeCIDR"`
+	Zones           []Zone          `json:"zones"`
+	ParentReference ParentReference `json:"parentReference"`
 }
 
 type Zone struct {
 	Name string `json:"name"`
 	CIDR string `json:"CIDR"`
+}
+
+type ParentReference struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace,omitempty"` // Defaults to the project namespace of the service account
+	Type      string `json:"type,omitempty"`      // Defaults to SingleSubnet
 }

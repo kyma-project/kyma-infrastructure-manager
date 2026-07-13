@@ -23,7 +23,7 @@ import (
 )
 
 // InfrastructureConfig and ControlPlaneConfig are generated unless they are specified in the RuntimeCR
-func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIMDSv2 bool, machineImageCfg config.MachineImageConfig, workerMachineCfg config.WorkerConfig) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIMDSv2 bool, machineImageCfg config.MachineImageConfig, workerMachineCfg config.WorkerConfig, gdhcConfig config.GDCHConfig) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
 		provider.Type = rt.Spec.Shoot.Provider.Type
@@ -42,7 +42,7 @@ func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIM
 
 		canEnableDualStack := rt.Spec.Shoot.Networking.DualStack != nil && *rt.Spec.Shoot.Networking.DualStack && infraSupportsDualStack
 
-		infraConfig, controlPlaneConf, err := getConfig(rt.Spec.Shoot, workerZones, canEnableDualStack, nil)
+		infraConfig, controlPlaneConf, err := getConfig(rt.Spec.Shoot, workerZones, canEnableDualStack, nil, gdhcConfig)
 		if err != nil {
 			return err
 		}
@@ -67,7 +67,7 @@ func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIM
 }
 
 // Zones for patching workes are taken from existing shoot workers
-func NewProviderExtenderPatchOperation(enableIMDSv2 bool, shootWorkers []gardener.Worker, machineImageCfg config.MachineImageConfig, workerMachineCfg config.WorkerConfig, existingInfraConfig, existingControlPlaneConfig *runtime.RawExtension) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtenderPatchOperation(enableIMDSv2 bool, shootWorkers []gardener.Worker, machineImageCfg config.MachineImageConfig, workerMachineCfg config.WorkerConfig, existingInfraConfig, existingControlPlaneConfig *runtime.RawExtension, gdhcOptions config.GDCHConfig) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
 		provider.Type = rt.Spec.Shoot.Provider.Type
@@ -106,7 +106,7 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, shootWorkers []gardene
 		} else {
 			mergedWorkerZones := append(workerZonesFromShoot, zonesAdded...)
 
-			infraConfig, controlPlaneConfig, err := getConfig(rt.Spec.Shoot, mergedWorkerZones, false, existingInfraConfig.Raw)
+			infraConfig, controlPlaneConfig, err := getConfig(rt.Spec.Shoot, mergedWorkerZones, false, existingInfraConfig.Raw, gdhcOptions)
 			if err != nil {
 				return err
 			}
@@ -196,7 +196,7 @@ func sortWorkersToShootOrder(runtimeWorkers []gardener.Worker, shootWorkers []ga
 type InfrastructureProviderFunc func(workersCidr string, zones []string) ([]byte, error)
 type ControlPlaneProviderFunc func(zones []string) ([]byte, error)
 
-func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, enableDualStack bool, existingInfrastructureConfig []byte) (infrastructureConfig *runtime.RawExtension, controlPlaneConfig *runtime.RawExtension, err error) {
+func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, enableDualStack bool, existingInfrastructureConfig []byte, gdhcConfig config.GDCHConfig) (infrastructureConfig *runtime.RawExtension, controlPlaneConfig *runtime.RawExtension, err error) {
 	getConfigForProvider := func(runtimeShoot imv1.RuntimeShoot, infrastructureConfigFunc InfrastructureProviderFunc, controlPlaneConfigFunc ControlPlaneProviderFunc) (*runtime.RawExtension, *runtime.RawExtension, error) {
 		infrastructureConfigBytes, err := infrastructureConfigFunc(runtimeShoot.Networking.Nodes, zones)
 		if err != nil {
@@ -248,7 +248,9 @@ func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, enableDualStack b
 		}
 	case hyperscaler.TypeGDCH:
 		{
-			return getConfigForProvider(runtimeShoot, gdch.GetInfrastructureConfig, gdch.GetControlPlaneConfig)
+			return getConfigForProvider(runtimeShoot, func(workersCidr string, zones []string) ([]byte, error) {
+				return gdch.GetInfrastructureConfig(workersCidr, zones, gdhcConfig)
+			}, gdch.GetControlPlaneConfig)
 		}
 	default:
 		return nil, nil, errors.New("provider not supported")

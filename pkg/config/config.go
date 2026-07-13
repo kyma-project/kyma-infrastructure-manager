@@ -32,7 +32,10 @@ type AWSConfig struct {
 }
 
 type GDCHConfig struct {
-	CloudProfileName string `json:"cloudProfileName"`
+	CloudProfileName         string `json:"cloudProfileName"`
+	ParentReferenceName      string `json:"parentReferenceName"`
+	ParentReferenceNamespace string `json:"parentReferenceNamespace"`
+	ParentReferenceType      string `json:"parentReferenceType"`
 }
 
 type DNSConfig struct {

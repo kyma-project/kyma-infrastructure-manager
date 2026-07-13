@@ -84,6 +84,7 @@ func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.MachineImage,
 			opts.Provider.Worker,
+			opts.Provider.GDCH,
 		),
 		extender2.ExtendWithGVisorNetRawDefault,
 		extender2.NewTolerationsExtender(opts.Tolerations),
@@ -121,7 +122,8 @@ func NewConverterPatch(ctx context.Context, opts PatchOpts) Converter {
 			opts.MachineImage,
 			opts.Provider.Worker,
 			opts.InfrastructureConfig,
-			opts.ControlPlaneConfig))
+			opts.ControlPlaneConfig,
+			opts.Provider.GDCH))
 	extendersForPatch = append(extendersForPatch, extender2.ExtendWithGVisorNetRawDefault)
 
 	extendersForPatch = append(extendersForPatch,

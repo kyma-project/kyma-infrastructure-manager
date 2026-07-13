@@ -3,6 +3,7 @@ package gdch
 import (
 	"encoding/json"
 
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -12,8 +13,8 @@ const (
 	apiVersion               = "gdch.provider.extensions.gardener.gdc.goog/v1alpha1"
 )
 
-func GetInfrastructureConfig(workerCIDR string, zonesName []string) ([]byte, error) {
-	config, err := NewInfrastructureConfig(workerCIDR, zonesName)
+func GetInfrastructureConfig(workerCIDR string, zonesName []string, gdhcConfig config.GDCHConfig) ([]byte, error) {
+	config, err := NewInfrastructureConfig(workerCIDR, zonesName, gdhcConfig)
 
 	if err != nil {
 		return nil, err
@@ -21,7 +22,7 @@ func GetInfrastructureConfig(workerCIDR string, zonesName []string) ([]byte, err
 	return json.Marshal(config)
 }
 
-func NewInfrastructureConfig(workerCIDR string, zonesName []string) (*InfrastructureConfig, error) {
+func NewInfrastructureConfig(workerCIDR string, zonesName []string, gdhcConfig config.GDCHConfig) (*InfrastructureConfig, error) {
 	gdchZones, err := generateGDCHZones(workerCIDR, zonesName)
 	if err != nil {
 		return &InfrastructureConfig{}, err
@@ -35,6 +36,11 @@ func NewInfrastructureConfig(workerCIDR string, zonesName []string) (*Infrastruc
 		Networks: NetworkConfig{
 			NodeCIDR: workerCIDR,
 			Zones:    gdchZones,
+			ParentReference: ParentReference{
+				Name:      gdhcConfig.ParentReferenceName,
+				Namespace: gdhcConfig.ParentReferenceNamespace,
+				Type:      gdhcConfig.ParentReferenceType,
+			},
 		},
 	}
 
