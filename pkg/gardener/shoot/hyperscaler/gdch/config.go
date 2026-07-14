@@ -42,6 +42,7 @@ func NewInfrastructureConfig(workerCIDR string, zonesName []string, gdhcConfig c
 				Type:      gdhcConfig.ParentReferenceType,
 			},
 		},
+		EnableEgress: true,
 	}
 
 	return gdchConfig, nil

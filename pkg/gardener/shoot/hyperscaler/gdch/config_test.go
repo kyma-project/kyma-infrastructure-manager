@@ -21,7 +21,7 @@ func TestNewInfrastructureConfig(t *testing.T) {
 		assert.Equal(t, infrastructureConfigKind, got.Kind)
 		assert.Equal(t, apiVersion, got.APIVersion)
 		assert.Equal(t, workerCIDR, got.Networks.NodeCIDR)
-		assert.False(t, got.EnableEgress)
+		assert.True(t, got.EnableEgress)
 
 		require.Len(t, got.Networks.Zones, len(zoneNames))
 		wantZones, zonesErr := generateGDCHZones(workerCIDR, zoneNames)
@@ -86,7 +86,7 @@ func TestGetInfrastructureConfig(t *testing.T) {
 		assert.JSONEq(t, `{
 			"kind": "InfrastructureConfig",
 			"apiVersion": "gdch.provider.extensions.gardener.gdc.goog/v1alpha1",
-			"enableEgress": false,
+			"enableEgress": true,
 			"networks": {
 				"nodeCIDR": "10.72.0.0/24",
 				"zones": [
@@ -150,7 +150,7 @@ func TestGetInfrastructureConfig_VariableZones(t *testing.T) {
 		assert.JSONEq(t, `{
 			"kind": "InfrastructureConfig",
 			"apiVersion": "gdch.provider.extensions.gardener.gdc.goog/v1alpha1",
-			"enableEgress": false,
+			"enableEgress": true,
 			"networks": {
 				"nodeCIDR": "10.72.0.0/19",
 				"zones": [
@@ -172,7 +172,7 @@ func TestGetInfrastructureConfig_VariableZones(t *testing.T) {
 		assert.JSONEq(t, `{
 			"kind": "InfrastructureConfig",
 			"apiVersion": "gdch.provider.extensions.gardener.gdc.goog/v1alpha1",
-			"enableEgress": false,
+			"enableEgress": true,
 			"networks": {
 				"nodeCIDR": "10.72.0.0/19",
 				"zones": [
