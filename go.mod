@@ -15,6 +15,7 @@ require (
 	github.com/gardener/oidc-webhook-authenticator v0.42.0
 	github.com/go-logr/logr v1.4.3
 	github.com/go-playground/validator/v10 v10.30.3
+	github.com/google/uuid v1.6.0
 	github.com/kyma-project/lifecycle-manager/api v1.0.0
 	github.com/kyma-project/registry-cache v0.0.0-20260702083050-7fec976a2def
 	github.com/kyma-project/runtime-watcher/listener v1.4.2
@@ -69,7 +70,6 @@ require (
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20260604005048-7023385849c0 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/json-iterator/go v1.1.13-0.20220915233716-71ac16282d12 // indirect
@@ -90,7 +90,7 @@ require (
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
-	golang.org/x/mod v0.37.0 // indirect
+	golang.org/x/mod v0.38.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect
