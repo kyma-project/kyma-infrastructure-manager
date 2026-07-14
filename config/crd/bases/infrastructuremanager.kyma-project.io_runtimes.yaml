@@ -1257,9 +1257,9 @@ spec:
                         - aws
                         - azure
                         - gcp
-                        - gdch
                         - openstack
                         - alicloud
+                        - gdch
                         type: string
                       workers:
                         items:
