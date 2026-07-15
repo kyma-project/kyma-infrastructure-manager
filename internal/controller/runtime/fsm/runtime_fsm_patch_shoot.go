@@ -77,7 +77,10 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object, exiting with no retry")
 		m.Metrics.IncRuntimeFSMStopCounter()
-		setRegistryCacheStatusFailed(ctx, m, s)
+		if m.RegistryCacheConfigControllerEnabled {
+			setRegistryCacheStatusFailed(ctx, m, s)
+		}
+
 		return updateStateFailedWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonConversionError, fmt.Sprintf("Runtime conversion error %v", err))
 	}
 
