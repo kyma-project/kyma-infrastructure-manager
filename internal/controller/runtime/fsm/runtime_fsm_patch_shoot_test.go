@@ -605,3 +605,273 @@ func newMockAuditLogDataProviderWithError() *auditlogmocks.DataProvider {
 	mockProvider.On("ReleaseDedicated", mock.Anything, mock.Anything).Return(nil)
 	return mockProvider
 }
+
+// Tests for dedicated audit logging upgrade scenarios
+func TestSFnPatchExistingShoot_DedicatedAuditLogUpgrade(t *testing.T) {
+	testCtx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	testScheme := api.NewScheme()
+	util.Must(imv1.AddToScheme(testScheme))
+	util.Must(gardener.AddToScheme(testScheme))
+	util.Must(core_v1.AddToScheme(testScheme))
+
+	RegisterTestingT(t)
+
+	t.Run("should claim AuditLogCR when upgrading to dedicated and no existing claim", func(t *testing.T) {
+		// Given: Runtime with auditLogAccessEnabled=true, no existing claim
+		inputRuntime := makeInputRuntimeWithDedicatedAuditLog(true)
+		mockProvider := &auditlogmocks.DataProvider{}
+
+		// GetDedicatedAuditLogData returns error (no existing claim)
+		mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, false).
+			Return(auditlog.AuditLogData{}, fmt.Errorf("no AuditLogCR found"))
+		// ClaimAuditLog succeeds and returns dedicated config
+		mockProvider.On("ClaimAuditLog", mock.Anything, mock.Anything, mock.Anything).
+			Return(auditlog.AuditLogData{
+				TenantID:   "dedicated-tenant",
+				ServiceURL: "http://dedicated-service",
+				SecretName: "dedicated-secret",
+			}, nil)
+
+		f := must(newFakeFSM,
+			withMockedMetrics(),
+			withShootNamespace("garden-"),
+			withTestFinalizer,
+			withFakedK8sClient(testScheme, inputRuntime),
+			withFakeEventRecorder(1),
+			withDefaultReconcileDuration(),
+			withDedicatedAuditLoggingEnabled(true),
+			withAuditLogDataProvider(mockProvider),
+		)
+
+		shoot := fsm_testing.TestShootForPatch()
+		createErr := f.GardenClient.Create(testCtx, shoot)
+		Expect(createErr).To(BeNil())
+
+		// When
+		state := &systemState{instance: *inputRuntime, shoot: shoot}
+		sFn, _, err := sFnPatchExistingShoot(testCtx, f, state)
+
+		// Then
+		Expect(err).To(BeNil())
+		Expect(sFn).To(haveName("sFnUpdateStatus"))
+		mockProvider.AssertCalled(t, "ClaimAuditLog", mock.Anything, "region", mock.Anything)
+
+		// Verify condition is set to Unknown (configuring shoot)
+		condition := findCondition(state.instance.Status.Conditions, imv1.ConditionTypeCustomAuditLogConfigured)
+		Expect(condition).NotTo(BeNil())
+		Expect(condition.Status).To(Equal(metav1.ConditionUnknown))
+	})
+
+	t.Run("should use existing dedicated config when already claimed", func(t *testing.T) {
+		// Given: Runtime with auditLogAccessEnabled=true, existing claim
+		inputRuntime := makeInputRuntimeWithDedicatedAuditLog(true)
+		mockProvider := &auditlogmocks.DataProvider{}
+
+		// GetDedicatedAuditLogData returns existing data (already claimed)
+		mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, false).
+			Return(auditlog.AuditLogData{
+				TenantID:   "dedicated-tenant",
+				ServiceURL: "http://dedicated-service",
+				SecretName: "dedicated-secret",
+			}, nil)
+
+		f := must(newFakeFSM,
+			withMockedMetrics(),
+			withShootNamespace("garden-"),
+			withTestFinalizer,
+			withFakedK8sClient(testScheme, inputRuntime),
+			withFakeEventRecorder(1),
+			withDefaultReconcileDuration(),
+			withDedicatedAuditLoggingEnabled(true),
+			withAuditLogDataProvider(mockProvider),
+		)
+
+		shoot := fsm_testing.TestShootForPatch()
+		createErr := f.GardenClient.Create(testCtx, shoot)
+		Expect(createErr).To(BeNil())
+
+		// When
+		sFn, _, err := sFnPatchExistingShoot(testCtx, f, &systemState{instance: *inputRuntime, shoot: shoot})
+
+		// Then
+		Expect(err).To(BeNil())
+		Expect(sFn).To(haveName("sFnUpdateStatus"))
+		mockProvider.AssertNotCalled(t, "ClaimAuditLog", mock.Anything, mock.Anything, mock.Anything)
+	})
+
+	t.Run("should fail when pool exhausted and dedicated logging requested", func(t *testing.T) {
+		// Given: Runtime with auditLogAccessEnabled=true, no pool capacity
+		inputRuntime := makeInputRuntimeWithDedicatedAuditLog(true)
+		mockProvider := &auditlogmocks.DataProvider{}
+
+		// GetDedicatedAuditLogData returns error (no existing claim)
+		mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, false).
+			Return(auditlog.AuditLogData{}, fmt.Errorf("no AuditLogCR found"))
+		// ClaimAuditLog fails (pool exhausted)
+		mockProvider.On("ClaimAuditLog", mock.Anything, mock.Anything, mock.Anything).
+			Return(auditlog.AuditLogData{}, fmt.Errorf("no available AuditLogCR in the pool"))
+
+		f := must(newFakeFSM,
+			withMockedMetrics(),
+			withShootNamespace("garden-"),
+			withTestFinalizer,
+			withFakedK8sClient(testScheme, inputRuntime),
+			withFakeEventRecorder(1),
+			withDefaultReconcileDuration(),
+			withDedicatedAuditLoggingEnabled(true),
+			withAuditLogDataProvider(mockProvider),
+		)
+
+		shoot := fsm_testing.TestShootForPatch()
+		createErr := f.GardenClient.Create(testCtx, shoot)
+		Expect(createErr).To(BeNil())
+
+		// When
+		state := &systemState{instance: *inputRuntime, shoot: shoot}
+		sFn, _, err := sFnPatchExistingShoot(testCtx, f, state)
+
+		// Then
+		Expect(err).To(BeNil())
+		Expect(sFn).To(haveName("sFnUpdateStatus"))
+		Expect(string(state.instance.Status.State)).To(Equal(imv1.RuntimeStateFailed))
+	})
+
+	t.Run("should ignore downgrade attempt when dedicated logging already configured (irreversibility)", func(t *testing.T) {
+		// Given: Runtime with auditLogAccessEnabled=false, but existing dedicated claim
+		inputRuntime := makeInputRuntimeWithDedicatedAuditLog(false) // User trying to disable
+		mockProvider := &auditlogmocks.DataProvider{}
+
+		// GetDedicatedAuditLogData returns existing data (dedicated already configured)
+		mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, false).
+			Return(auditlog.AuditLogData{
+				TenantID:   "dedicated-tenant",
+				ServiceURL: "http://dedicated-service",
+				SecretName: "dedicated-secret",
+			}, nil)
+
+		f := must(newFakeFSM,
+			withMockedMetrics(),
+			withShootNamespace("garden-"),
+			withTestFinalizer,
+			withFakedK8sClient(testScheme, inputRuntime),
+			withFakeEventRecorder(1),
+			withDefaultReconcileDuration(),
+			withDedicatedAuditLoggingEnabled(true),
+			withAuditLogDataProvider(mockProvider),
+		)
+
+		shoot := fsm_testing.TestShootForPatch()
+		createErr := f.GardenClient.Create(testCtx, shoot)
+		Expect(createErr).To(BeNil())
+
+		// When
+		sFn, _, err := sFnPatchExistingShoot(testCtx, f, &systemState{instance: *inputRuntime, shoot: shoot})
+
+		// Then: Should continue with dedicated config (downgrade ignored)
+		Expect(err).To(BeNil())
+		Expect(sFn).To(haveName("sFnUpdateStatus"))
+		// Should NOT call GetSharedAuditLogData or ClaimAuditLog since we're using existing dedicated
+		mockProvider.AssertNotCalled(t, "GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything)
+		mockProvider.AssertNotCalled(t, "ClaimAuditLog", mock.Anything, mock.Anything, mock.Anything)
+	})
+
+	t.Run("should use shared config when no previous dedicated config exists and auditLogAccessEnabled is false", func(t *testing.T) {
+		// Given: Runtime with auditLogAccessEnabled=false, no existing dedicated claim
+		inputRuntime := makeInputRuntimeWithDedicatedAuditLog(false)
+		mockProvider := &auditlogmocks.DataProvider{}
+
+		// GetDedicatedAuditLogData returns error (no existing dedicated config)
+		mockProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, false).
+			Return(auditlog.AuditLogData{}, fmt.Errorf("no AuditLogCR found"))
+		// GetSharedAuditLogData returns shared config
+		mockProvider.On("GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything).
+			Return(auditlog.AuditLogData{
+				TenantID:   "shared-tenant",
+				ServiceURL: "http://shared-service",
+				SecretName: "shared-secret",
+			}, nil)
+
+		f := must(newFakeFSM,
+			withMockedMetrics(),
+			withShootNamespace("garden-"),
+			withTestFinalizer,
+			withFakedK8sClient(testScheme, inputRuntime),
+			withFakeEventRecorder(1),
+			withDefaultReconcileDuration(),
+			withDedicatedAuditLoggingEnabled(true),
+			withAuditLogDataProvider(mockProvider),
+		)
+
+		shoot := fsm_testing.TestShootForPatch()
+		createErr := f.GardenClient.Create(testCtx, shoot)
+		Expect(createErr).To(BeNil())
+
+		// When
+		sFn, _, err := sFnPatchExistingShoot(testCtx, f, &systemState{instance: *inputRuntime, shoot: shoot})
+
+		// Then
+		Expect(err).To(BeNil())
+		Expect(sFn).To(haveName("sFnUpdateStatus"))
+		mockProvider.AssertCalled(t, "GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything)
+		mockProvider.AssertNotCalled(t, "ClaimAuditLog", mock.Anything, mock.Anything, mock.Anything)
+	})
+
+	t.Run("should use shared config when global dedicated feature is disabled", func(t *testing.T) {
+		// Given: Runtime with auditLogAccessEnabled=true, but global feature disabled
+		inputRuntime := makeInputRuntimeWithDedicatedAuditLog(true)
+		mockProvider := &auditlogmocks.DataProvider{}
+
+		// GetSharedAuditLogData returns shared config
+		mockProvider.On("GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything).
+			Return(auditlog.AuditLogData{
+				TenantID:   "shared-tenant",
+				ServiceURL: "http://shared-service",
+				SecretName: "shared-secret",
+			}, nil)
+
+		f := must(newFakeFSM,
+			withMockedMetrics(),
+			withShootNamespace("garden-"),
+			withTestFinalizer,
+			withFakedK8sClient(testScheme, inputRuntime),
+			withFakeEventRecorder(1),
+			withDefaultReconcileDuration(),
+			withDedicatedAuditLoggingEnabled(false), // Global feature disabled
+			withAuditLogDataProvider(mockProvider),
+		)
+
+		shoot := fsm_testing.TestShootForPatch()
+		createErr := f.GardenClient.Create(testCtx, shoot)
+		Expect(createErr).To(BeNil())
+
+		// When
+		sFn, _, err := sFnPatchExistingShoot(testCtx, f, &systemState{instance: *inputRuntime, shoot: shoot})
+
+		// Then
+		Expect(err).To(BeNil())
+		Expect(sFn).To(haveName("sFnUpdateStatus"))
+		mockProvider.AssertCalled(t, "GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything)
+		// Should NOT check for dedicated or reserve
+		mockProvider.AssertNotCalled(t, "GetDedicatedAuditLogData", mock.Anything, mock.Anything, mock.Anything)
+		mockProvider.AssertNotCalled(t, "ReserveAuditLog", mock.Anything, mock.Anything, mock.Anything)
+	})
+}
+
+// makeInputRuntimeWithDedicatedAuditLog creates a runtime with auditLogAccessEnabled set
+func makeInputRuntimeWithDedicatedAuditLog(enabled bool) *imv1.Runtime {
+	runtime := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
+	runtime.Spec.AuditLogAccessEnabled = ptr.To(enabled)
+	return runtime
+}
+
+// findCondition finds a condition by type in the conditions slice
+func findCondition(conditions []metav1.Condition, conditionType imv1.RuntimeConditionType) *metav1.Condition {
+	for i := range conditions {
+		if conditions[i].Type == string(conditionType) {
+			return &conditions[i]
+		}
+	}
+	return nil
+}

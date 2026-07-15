@@ -3,8 +3,10 @@ package auditlog
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -24,6 +26,11 @@ type DataProvider interface {
 
 	// GetSharedAuditLogData returns audit log configuration from shared configuration file
 	GetSharedAuditLogData(ctx context.Context, providerType, region string) (AuditLogData, error)
+
+	// ClaimAuditLog finds an available AuditLogCR for the region and claims it directly
+	// This is used for upgrade scenarios where we don't need two-phase reservation
+	// Returns the audit log data and sets AssignedToRuntimeID on the CR
+	ClaimAuditLog(ctx context.Context, providerRegion string, runtimeID string) (AuditLogData, error)
 
 	// ReleaseDedicated releases the claimed AuditLogCR for the runtime
 	ReleaseDedicated(ctx context.Context, runtimeID string) error
@@ -129,6 +136,56 @@ func (p *DefaultDataProvider) GetSharedAuditLogData(_ context.Context, providerT
 		return AuditLogData{}, err
 	}
 	return data, nil
+}
+
+// ClaimAuditLog finds an available AuditLogCR for the region and claims it directly
+// This is used for upgrade scenarios where we don't need two-phase reservation
+func (p *DefaultDataProvider) ClaimAuditLog(ctx context.Context, providerRegion string, runtimeID string) (AuditLogData, error) {
+	// First check if already claimed (idempotent)
+	existingData, err := p.getDedicatedAuditLogDataWithoutClaim(ctx, runtimeID)
+	if err == nil {
+		p.logger.Info("AuditLogCR already claimed for runtime", "runtimeID", runtimeID)
+		return existingData, nil
+	}
+
+	// Find an available AuditLogCR
+	auditLogCR, err := p.findAvailableAuditLogCR(ctx, providerRegion)
+	if err != nil {
+		return AuditLogData{}, fmt.Errorf("failed to find available AuditLogCR: %w", err)
+	}
+	if auditLogCR == nil {
+		return AuditLogData{}, fmt.Errorf("no available AuditLogCR for region %s", providerRegion)
+	}
+
+	// Claim it directly by setting AssignedToRuntimeID
+	auditLogCR.Spec.AssignedToRuntimeID = runtimeID
+
+	// Add reservation labels as workaround for sFnMigrateToDedicatedAuditLog compatibility
+	// sFnMigrateToDedicatedAuditLog looks for reservation labels first when calling GetDedicatedAuditLogData
+	if auditLogCR.Labels == nil {
+		auditLogCR.Labels = make(map[string]string)
+	}
+	auditLogCR.Labels[LabelReservedForRuntimeID] = runtimeID
+	auditLogCR.Labels[LabelReservedAt] = fmt.Sprintf("%d", time.Now().UTC().Unix())
+
+	if err := p.client.Update(ctx, auditLogCR); err != nil {
+		if apierrors.IsConflict(err) {
+			return AuditLogData{}, fmt.Errorf("conflict claiming AuditLogCR %s: another runtime claimed it concurrently", auditLogCR.Name)
+		}
+		return AuditLogData{}, fmt.Errorf("failed to claim AuditLogCR: %w", err)
+	}
+
+	p.logger.Info("Successfully claimed AuditLogCR for upgrade",
+		"name", auditLogCR.Name,
+		"runtimeID", runtimeID,
+		"region", providerRegion)
+
+	return AuditLogData{
+		TenantID:            auditLogCR.Spec.SubaccountID,
+		ServiceURL:          auditLogCR.Spec.Config.ServiceURL,
+		SecretName:          auditLogCR.Spec.Config.GardenerSecretName,
+		ReadCredsSecretName: auditLogCR.Spec.Config.ReadCredsSecretName,
+	}, nil
 }
 
 // ReleaseDedicated releases the claimed AuditLogCR for the runtime
