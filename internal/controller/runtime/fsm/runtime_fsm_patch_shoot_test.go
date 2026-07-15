@@ -8,6 +8,7 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	fsm_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
 	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
 	auditlogmocks "github.com/kyma-project/infrastructure-manager/pkg/auditlog/mocks"
@@ -856,6 +857,118 @@ func TestSFnPatchExistingShoot_DedicatedAuditLogUpgrade(t *testing.T) {
 		// Should NOT check for dedicated or reserve
 		mockProvider.AssertNotCalled(t, "GetDedicatedAuditLogData", mock.Anything, mock.Anything, mock.Anything)
 		mockProvider.AssertNotCalled(t, "ReserveAuditLog", mock.Anything, mock.Anything, mock.Anything)
+	})
+}
+
+func TestSetRegistryCacheStatusFailed(t *testing.T) {
+	testScheme := api.NewScheme()
+	util.Must(imv1.AddToScheme(testScheme))
+	util.Must(gardener.AddToScheme(testScheme))
+	util.Must(core_v1.AddToScheme(testScheme))
+
+	// A runtime that will fail shoot conversion: strip all required labels so
+	// ValidateRequiredLabels returns an error before convertPatch touches Gardener.
+	makeRuntimeWithoutLabels := func() *imv1.Runtime {
+		rt := makeInputRuntimeWithAnnotation(map[string]string{"operator.kyma-project.io/existing-annotation": "true"})
+		rt.Labels = map[string]string{}
+		return rt
+	}
+
+	t.Run("should not panic and transition to Failed when RegistryCacheConfigControllerEnabled and RuntimeClientGetter returns error", func(t *testing.T) {
+		RegisterTestingT(t)
+		testCtx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		inputRuntime := makeRuntimeWithoutLabels()
+		clientErr := fmt.Errorf("kubeconfig secret not found")
+
+		f := must(newFakeFSM,
+			withMockedMetrics(),
+			withShootNamespace("garden-"),
+			withTestFinalizer,
+			withFailedRuntimeK8sClient(clientErr, testScheme, inputRuntime),
+			withFakeEventRecorder(1),
+			withDefaultReconcileDuration(),
+			withRegistryCacheConfigControllerEnabled(true),
+			withAuditLogDataProvider(newMockAuditLogDataProvider(auditlog.AuditLogData{})),
+		)
+
+		shoot := fsm_testing.TestShootForPatch()
+		Expect(f.GardenClient.Create(testCtx, shoot)).To(BeNil())
+
+		state := &systemState{instance: *inputRuntime, shoot: shoot}
+
+		sFn, res, err := sFnPatchExistingShoot(testCtx, f, state)
+
+		Expect(err).To(BeNil())
+		Expect(res).To(BeNil())
+		Expect(sFn).To(haveName("sFnUpdateStatus"))
+		Expect(string(state.instance.Status.State)).To(Equal(string(imv1.RuntimeStateFailed)))
+	})
+
+	t.Run("should transition to Failed and set registry cache status when RegistryCacheConfigControllerEnabled and RuntimeClientGetter succeeds", func(t *testing.T) {
+		RegisterTestingT(t)
+		testCtx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		inputRuntime := makeRuntimeWithoutLabels()
+
+		f := must(newFakeFSM,
+			withMockedMetrics(),
+			withShootNamespace("garden-"),
+			withTestFinalizer,
+			withFakedK8sClient(testScheme, inputRuntime),
+			withFakeEventRecorder(1),
+			withDefaultReconcileDuration(),
+			withRegistryCacheConfigControllerEnabled(true),
+			withAuditLogDataProvider(newMockAuditLogDataProvider(auditlog.AuditLogData{})),
+		)
+
+		shoot := fsm_testing.TestShootForPatch()
+		Expect(f.GardenClient.Create(testCtx, shoot)).To(BeNil())
+
+		state := &systemState{instance: *inputRuntime, shoot: shoot}
+
+		sFn, res, err := sFnPatchExistingShoot(testCtx, f, state)
+
+		Expect(err).To(BeNil())
+		Expect(res).To(BeNil())
+		Expect(sFn).To(haveName("sFnUpdateStatus"))
+		Expect(string(state.instance.Status.State)).To(Equal(string(imv1.RuntimeStateFailed)))
+	})
+
+	t.Run("should transition to Failed without calling RuntimeClientGetter when RegistryCacheConfigControllerEnabled is false", func(t *testing.T) {
+		RegisterTestingT(t)
+		testCtx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		inputRuntime := makeRuntimeWithoutLabels()
+		mockRuntimeClientGetter := &fsm_mocks.RuntimeClientGetter{}
+
+		f := must(newFakeFSM,
+			withMockedMetrics(),
+			withShootNamespace("garden-"),
+			withTestFinalizer,
+			withFakedK8sClient(testScheme, inputRuntime),
+			withFakeEventRecorder(1),
+			withDefaultReconcileDuration(),
+			withRegistryCacheConfigControllerEnabled(false),
+			withAuditLogDataProvider(newMockAuditLogDataProvider(auditlog.AuditLogData{})),
+		)
+		f.RuntimeClientGetter = mockRuntimeClientGetter
+
+		shoot := fsm_testing.TestShootForPatch()
+		Expect(f.GardenClient.Create(testCtx, shoot)).To(BeNil())
+
+		state := &systemState{instance: *inputRuntime, shoot: shoot}
+
+		sFn, res, err := sFnPatchExistingShoot(testCtx, f, state)
+
+		Expect(err).To(BeNil())
+		Expect(res).To(BeNil())
+		Expect(sFn).To(haveName("sFnUpdateStatus"))
+		Expect(string(state.instance.Status.State)).To(Equal(string(imv1.RuntimeStateFailed)))
+		mockRuntimeClientGetter.AssertNotCalled(t, "Get", mock.Anything, mock.Anything)
 	})
 }
 

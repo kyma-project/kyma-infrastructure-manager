@@ -3,22 +3,21 @@ package fsm
 import (
 	"context"
 	"fmt"
+	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
 	"reflect"
 
 	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
+	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
-	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
-
-	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/log_level"
-	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -78,16 +77,8 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object, exiting with no retry")
 		m.Metrics.IncRuntimeFSMStopCounter()
-
-		runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
-		if err != nil {
-			m.log.Error(err, "Failed to get Runtime Client to set Registry Cache status")
-		}
-
-		statusManager := registrycache.NewStatusManager(runtimeClient)
-		err = statusManager.SetStatusFailed(ctx, s.instance, registrycacheapi.ConditionReasonRegistryCacheExtensionConfigurationFailed, "failed to apply registry cache configuration")
-		if err != nil {
-			m.log.Error(err, "Failed to get Runtime Client to set Registry Cache status")
+		if m.RegistryCacheConfigControllerEnabled {
+			setRegistryCacheStatusFailed(ctx, m, s)
 		}
 
 		return updateStateFailedWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonConversionError, fmt.Sprintf("Runtime conversion error %v", err))
@@ -405,6 +396,18 @@ func claimDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState, runtime
 	)
 
 	return toExtenderAuditLogData(data), nil, nil, nil
+}
+
+func setRegistryCacheStatusFailed(ctx context.Context, m *fsm, s *systemState) {
+	runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
+	if err != nil {
+		m.log.Error(err, "Failed to get Runtime Client to set Registry Cache status")
+		return
+	}
+
+	if err = registrycache.NewStatusManager(runtimeClient).SetStatusFailed(ctx, s.instance, registrycacheapi.ConditionReasonRegistryCacheExtensionConfigurationFailed, "failed to apply registry cache configuration"); err != nil {
+		m.log.Error(err, "Failed to set Registry Cache status to failed")
+	}
 }
 
 // toExtenderAuditLogData converts auditlog.AuditLogData to extender auditlogs.AuditLogData
