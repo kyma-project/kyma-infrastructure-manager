@@ -3,22 +3,21 @@ package fsm
 import (
 	"context"
 	"fmt"
+	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
 	"reflect"
 
 	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
+	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
-	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
-
-	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/log_level"
-	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
 	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,42 +30,9 @@ const fieldManagerName = "kim"
 
 func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 
-	dedicatedAuditLogs := m.DedicatedAuditLoggingEnabled &&
-		s.instance.Spec.AuditLogAccessEnabled != nil &&
-		*s.instance.Spec.AuditLogAccessEnabled
-
-	var data auditlog.AuditLogData
-	var err error
-
-	if dedicatedAuditLogs {
-		runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
-
-		// Get dedicated audit log data (without claiming)
-		data, err = m.AuditLogDataProvider.GetDedicatedAuditLogData(
-			ctx,
-			runtimeID,
-			false, // don't claim, just retrieve
-		)
-	} else {
-		// Use shared configuration
-		data, err = m.AuditLogDataProvider.GetSharedAuditLogData(
-			ctx,
-			s.instance.Spec.Shoot.Provider.Type,
-			s.instance.Spec.Shoot.Region,
-		)
-	}
-
-	if err != nil {
-		m.log.Error(err, msgFailedToConfigureAuditlogs)
-	}
-
-	if err != nil && m.AuditLogMandatory {
-		m.Metrics.IncRuntimeFSMStopCounter()
-		return updateStateFailedWithErrorAndStop(
-			&s.instance,
-			imv1.ConditionTypeRuntimeProvisioned,
-			imv1.ConditionReasonAuditLogError,
-			msgFailedToConfigureAuditlogs)
+	auditLogConfig, nextState, res, err := resolveAuditLogData(ctx, m, s)
+	if nextState != nil {
+		return nextState, res, err
 	}
 
 	oidcConfig := structuredauth.GetOIDCConfigOrDefault(s.instance, m.ConverterConfig.Kubernetes.DefaultOperatorOidc.ToOIDCConfig())
@@ -91,13 +57,6 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	timeBoundaries, _ := token.ValidateTokenExpirationTime(m.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
 	logTokenExpirationInfo(m.log, timeBoundaries)
 
-	// Convert auditlog.AuditLogData to extender auditlogs.AuditLogData
-	auditLogConfig := auditlogs.AuditLogData{
-		TenantID:   data.TenantID,
-		ServiceURL: data.ServiceURL,
-		SecretName: data.SecretName,
-	}
-
 	patchOptions, err := getPatchOptions(ctx, m, s, auditLogConfig)
 	if err != nil {
 		m.log.Error(err, "Failed to check if registry cache secret should be removed")
@@ -118,16 +77,8 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	if err != nil {
 		m.log.Error(err, "Failed to convert Runtime instance to shoot object, exiting with no retry")
 		m.Metrics.IncRuntimeFSMStopCounter()
-
-		runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
-		if err != nil {
-			m.log.Error(err, "Failed to get Runtime Client to set Registry Cache status")
-		}
-
-		statusManager := registrycache.NewStatusManager(runtimeClient)
-		err = statusManager.SetStatusFailed(ctx, s.instance, registrycacheapi.ConditionReasonRegistryCacheExtensionConfigurationFailed, "failed to apply registry cache configuration")
-		if err != nil {
-			m.log.Error(err, "Failed to get Runtime Client to set Registry Cache status")
+		if m.RegistryCacheConfigControllerEnabled {
+			setRegistryCacheStatusFailed(ctx, m, s)
 		}
 
 		return updateStateFailedWithErrorAndStop(&s.instance, imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonConversionError, fmt.Sprintf("Runtime conversion error %v", err))
@@ -200,10 +151,10 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		FieldManager: fieldManagerName,
 		Force:        ptr.To(true),
 	})
-	nextState, res, err := handleUpdateError(patchErr, m, s, "Failed to patch shoot object, exiting with no retry", "Gardener API shoot patch error")
+	nextState, res, patchErr = handleUpdateError(patchErr, m, s, "Failed to patch shoot object, exiting with no retry", "Gardener API shoot patch error")
 
 	if nextState != nil {
-		return nextState, res, err
+		return nextState, res, patchErr
 	}
 
 	err = handleForceReconciliationAnnotation(&s.instance, m, ctx)
@@ -353,4 +304,118 @@ func getPatchOptions(ctx context.Context, m *fsm, s *systemState, auditLogConfig
 	}
 
 	return patchOptions, nil
+}
+
+// resolveAuditLogData determines which audit log configuration to use based on:
+// - Global feature flag (DedicatedAuditLoggingEnabled)
+// - Runtime flag (spec.auditLogAccessEnabled)
+// - Existing AuditLog assignment
+// Returns the audit log data in extender format and optional state transition in case of error
+func resolveAuditLogData(ctx context.Context, m *fsm, s *systemState) (auditlogs.AuditLogData, stateFn, *ctrl.Result, error) {
+	// Global feature disabled → use shared config
+	if !m.DedicatedAuditLoggingEnabled {
+		return getSharedAuditLogDataWithErrorHandling(ctx, m, s)
+	}
+
+	runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
+
+	// Check if AuditLog is already assigned (irreversibility check)
+	existingData, existingErr := m.AuditLogDataProvider.GetDedicatedAuditLogData(ctx, runtimeID, false)
+	if existingErr == nil {
+		if !s.instance.IsDedicatedAuditLogEnabled() {
+			m.log.Info("Dedicated audit logging is irreversible - ignoring attempt to disable",
+				"runtimeID", runtimeID)
+		}
+		return toExtenderAuditLogData(existingData), nil, nil, nil
+	}
+
+	if !s.instance.IsDedicatedAuditLogEnabled() {
+		return getSharedAuditLogDataWithErrorHandling(ctx, m, s)
+	}
+
+	return claimDedicatedAuditLog(ctx, m, s, runtimeID)
+}
+
+// getSharedAuditLogDataWithErrorHandling retrieves shared config and handles errors
+func getSharedAuditLogDataWithErrorHandling(ctx context.Context, m *fsm, s *systemState) (auditlogs.AuditLogData, stateFn, *ctrl.Result, error) {
+	data, err := m.AuditLogDataProvider.GetSharedAuditLogData(
+		ctx,
+		s.instance.Spec.Shoot.Provider.Type,
+		s.instance.Spec.Shoot.Region,
+	)
+
+	if err != nil {
+		m.log.Error(err, msgFailedToConfigureAuditlogs)
+
+		if m.AuditLogMandatory {
+			m.Metrics.IncRuntimeFSMStopCounter()
+			nextState, res, stateErr := updateStateFailedWithErrorAndStop(
+				&s.instance,
+				imv1.ConditionTypeRuntimeProvisioned,
+				imv1.ConditionReasonAuditLogError,
+				msgFailedToConfigureAuditlogs)
+			return auditlogs.AuditLogData{}, nextState, res, stateErr
+		}
+	}
+
+	return toExtenderAuditLogData(data), nil, nil, err
+}
+
+// claimDedicatedAuditLog claims an AuditLogCR for upgrade scenario
+func claimDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState, runtimeID string) (auditlogs.AuditLogData, stateFn, *ctrl.Result, error) {
+	m.log.Info("Upgrading shared to dedicated audit logging",
+		"runtimeID", runtimeID,
+		"region", s.instance.Spec.Shoot.Region)
+
+	data, err := m.AuditLogDataProvider.ClaimAuditLog(
+		ctx,
+		s.instance.Spec.Shoot.Region,
+		runtimeID,
+	)
+
+	if err != nil {
+		msg := fmt.Sprintf("Dedicated audit logging requested but no available configuration found: %v", err)
+		m.log.Error(err, "Cannot upgrade runtime to dedicated audit logging")
+		m.Metrics.IncRuntimeFSMStopCounter()
+		nextState, res, stateErr := updateStateFailedWithErrorAndStop(
+			&s.instance,
+			imv1.ConditionTypeRuntimeProvisioned,
+			imv1.ConditionReasonCustomAuditLogError,
+			msg)
+		return auditlogs.AuditLogData{}, nextState, res, stateErr
+	}
+
+	m.log.Info("Successfully claimed dedicated audit log for runtime upgrade",
+		"runtimeID", runtimeID,
+		"tenantID", data.TenantID)
+
+	s.instance.UpdateStatePending(
+		imv1.ConditionTypeCustomAuditLogConfigured,
+		imv1.ConditionReasonCustomAuditLogConfigured,
+		metav1.ConditionUnknown,
+		"Dedicated audit logging claimed, configuring shoot",
+	)
+
+	return toExtenderAuditLogData(data), nil, nil, nil
+}
+
+func setRegistryCacheStatusFailed(ctx context.Context, m *fsm, s *systemState) {
+	runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
+	if err != nil {
+		m.log.Error(err, "Failed to get Runtime Client to set Registry Cache status")
+		return
+	}
+
+	if err = registrycache.NewStatusManager(runtimeClient).SetStatusFailed(ctx, s.instance, registrycacheapi.ConditionReasonRegistryCacheExtensionConfigurationFailed, "failed to apply registry cache configuration"); err != nil {
+		m.log.Error(err, "Failed to set Registry Cache status to failed")
+	}
+}
+
+// toExtenderAuditLogData converts auditlog.AuditLogData to extender auditlogs.AuditLogData
+func toExtenderAuditLogData(data auditlog.AuditLogData) auditlogs.AuditLogData {
+	return auditlogs.AuditLogData{
+		TenantID:   data.TenantID,
+		ServiceURL: data.ServiceURL,
+		SecretName: data.SecretName,
+	}
 }

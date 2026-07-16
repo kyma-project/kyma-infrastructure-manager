@@ -88,6 +88,20 @@ var (
 		}
 	}
 
+	withDedicatedAuditLoggingEnabled = func(enabled bool) fakeFSMOpt {
+		return func(fsm *fsm) error {
+			fsm.DedicatedAuditLoggingEnabled = enabled
+			return nil
+		}
+	}
+
+	withRegistryCacheConfigControllerEnabled = func(enabled bool) fakeFSMOpt {
+		return func(fsm *fsm) error {
+			fsm.RegistryCacheConfigControllerEnabled = enabled
+			return nil
+		}
+	}
+
 	withMetrics = func(m metrics.Metrics) fakeFSMOpt {
 		return func(fsm *fsm) error {
 			fsm.Metrics = m

@@ -51,8 +51,8 @@ sharedConfig, err := loadAuditLogDataMap(configPath)
 provider := auditlog.NewDataProvider(
     kubeClient,
     sharedConfig,
-    dedicatedAuditLoggingEnabled, // feature flag
     logger,
+    namespace, // e.g., "kcp-system"
 )
 ```
 
@@ -78,21 +78,73 @@ dedicatedData, err := provider.GetDedicatedAuditLogData(
 )
 ```
 
-### Two-Phase Claiming Process
+### Claiming Process
 
-Dedicated audit logging uses a two-phase approach:
+Dedicated audit logging supports two approaches depending on the scenario:
 
-**Phase 1: Reserve** (during shoot creation)
+#### Two-Phase Process (New Runtime Creation)
+
+**Phase 1: Reserve** (during shoot creation in `sFnCreateShoot`)
 ```go
 // Reserve an AuditLogCR by adding reservation labels (light lock)
 err := provider.ReserveAuditLog(ctx, providerRegion, runtimeID)
 ```
 
-**Phase 2: Claim** (after successful provisioning)
+**Phase 2: Claim** (after successful provisioning in `sFnMigrateToDedicatedAuditLog`)
 ```go
 // Upgrade reservation to full claim by setting assignedToRuntimeID (heavy lock)
 data, err := provider.GetDedicatedAuditLogData(ctx, runtimeID, true)
 ```
+
+#### Direct Claim (Existing Runtime Upgrade)
+
+For upgrading existing runtimes from shared to dedicated audit logging:
+
+```go
+// Claim AuditLogCR directly without reservation phase
+data, err := provider.ClaimAuditLog(ctx, providerRegion, runtimeID)
+```
+
+This is used in `sFnPatchExistingShoot` when:
+- Global feature flag (`DedicatedAuditLoggingEnabled`) is enabled
+- Runtime has `spec.auditLogAccessEnabled: true`
+- No AuditLog is already assigned to the runtime
+
+The direct claim is safe for upgrades because:
+- The shoot already exists (no risk of creation failure)
+- If patch fails, claim persists for retry
+- Saves one Gardener reconciliation cycle (~10 minutes)
+
+**Phase 1: Reserve** (during shoot creation in `sFnCreateShoot`)
+```go
+// Reserve an AuditLogCR by adding reservation labels (light lock)
+err := provider.ReserveAuditLog(ctx, providerRegion, runtimeID)
+```
+
+**Phase 2: Claim** (after successful provisioning in `sFnMigrateToDedicatedAuditLog`)
+```go
+// Upgrade reservation to full claim by setting assignedToRuntimeID (heavy lock)
+data, err := provider.GetDedicatedAuditLogData(ctx, runtimeID, true)
+```
+
+#### Direct Claim (Existing Runtime Upgrade)
+
+For upgrading existing runtimes from shared to dedicated audit logging:
+
+```go
+// Claim AuditLogCR directly without reservation phase
+data, err := provider.ClaimAuditLog(ctx, providerRegion, runtimeID)
+```
+
+This is used in `sFnPatchExistingShoot` when:
+- Global feature flag (`DedicatedAuditLoggingEnabled`) is enabled
+- Runtime has `spec.auditLogAccessEnabled: true`
+- No AuditLog is already assigned to the runtime
+
+The direct claim is safe for upgrades because:
+- The shoot already exists (no risk of creation failure)
+- If patch fails, claim persists for retry
+- Saves one Gardener reconciliation cycle (~10 minutes)
 
 ### Releasing Dedicated Resources
 
@@ -103,9 +155,13 @@ err := provider.ReleaseDedicated(ctx, runtimeID)
 
 ## How Dedicated Logging Works
 
-### Two-Phase Reservation System
+### Claiming Strategies
 
-The package implements a two-phase reservation system to prevent race conditions:
+The package implements two claiming strategies depending on the scenario:
+
+#### 1. Two-Phase Reservation (New Runtime Creation)
+
+Used during initial runtime provisioning to prevent wasting dedicated resources if shoot creation fails:
 
 1. **Phase 1 - Reserve** (in `sFnCreateShoot`):
    - Adds `reserved-for-runtime-id` label to AuditLogCR (light lock)
@@ -121,6 +177,24 @@ The package implements a two-phase reservation system to prevent race conditions
    - Sets `Spec.Orphaned = true`
    - KALM maintains logs for retention period (default: 90 days)
 
+#### 2. Direct Claim (Existing Runtime Upgrade)
+
+Used when upgrading existing runtimes to dedicated audit logging (in `sFnPatchExistingShoot`):
+
+1. **Direct Claim**:
+   - Sets `Spec.AssignedToRuntimeID` immediately (no reservation phase)
+   - Shoot configuration updated with dedicated config in same operation
+   - Safe because shoot already exists (no risk of creation failure)
+
+2. **Benefits**:
+   - Single Gardener reconciliation (saves ~10 minutes)
+   - No "brief shared logging period" during upgrade
+   - Simpler upgrade flow
+
+3. **Release** (same as two-phase):
+   - Sets `Spec.Orphaned = true`
+   - KALM maintains logs for retention period (default: 90 days)
+
 ### Pool-Based Provisioning
 
 The Kyma Audit Log Manager (KALM) maintains a pool of pre-provisioned AuditLog CRs. CRs are available when:
@@ -133,10 +207,10 @@ The Kyma Audit Log Manager (KALM) maintains a pool of pre-provisioned AuditLog C
 
 All operations are designed to be idempotent:
 
-- **reserveAuditLogCR**: Checks for existing reservation before creating new one
-- **getOrClaimAuditLogCR**: Checks for existing claim before upgrading reservation
-- **findAuditLogCRByRuntimeID**: Uses loop-based filtering (spec fields not indexed by default)
-- **releaseAuditLogCR**: Safe to call multiple times
+- **ReserveAuditLog**: Checks for existing reservation before creating new one
+- **GetDedicatedAuditLogData**: Checks for existing claim before upgrading reservation
+- **ClaimAuditLog**: Returns existing data if already claimed, otherwise finds and claims available CR
+- **ReleaseDedicated**: Safe to call multiple times
 
 ### Optimistic Concurrency
 
@@ -163,6 +237,8 @@ cfg := fsm.RCCfg{
 
 ### FSM State Flow
 
+#### New Runtime Creation (Two-Phase)
+
 1. **sFnCreateShoot**: Reserve AuditLogCR (Phase 1), create shoot with shared audit logging
 2. **sFnWaitForShootCreation**: Wait for shoot to be ready
 3. **... full provisioning flow ...**
@@ -170,16 +246,39 @@ cfg := fsm.RCCfg{
    - Claim AuditLogCR - Phase 2 (upgrade reservation to full claim)
    - Patch shoot with dedicated config (only if configs differ)
    - Complete provisioning
+5. **sFnCopyAuditLogReadCredentials**: Copy read credentials to SKR
+
+#### Existing Runtime Upgrade (Direct Claim)
+
+1. **sFnPatchExistingShoot**: 
+   - Detects `spec.auditLogAccessEnabled: true` with no existing AuditLog
+   - Calls `ClaimAuditLog` to claim directly
+   - Patches shoot with dedicated config immediately
+2. **sFnWaitForShootReconcile**: Wait for shoot update
+3. **... rest of reconciliation flow ...**
+4. **sFnMigrateToDedicatedAuditLog**: Becomes no-op (shoot already configured)
+5. **sFnCopyAuditLogReadCredentials**: Copy read credentials to SKR
 
 ## Error Handling
 
-The two-phase approach provides fail-fast behavior:
+### New Runtime Creation (Two-Phase)
 
 - **Reservation fails**: Provisioning fails immediately, no resources wasted
 - **Claim fails**: Should never happen if reservation succeeded; fails provisioning with clear error
 - **Patch fails**: Requeues with claimed AuditLogCR (retries on next reconciliation)
 
-No automatic fallback to shared logging - explicit failure when dedicated is requested but unavailable.
+### Existing Runtime Upgrade (Direct Claim)
+
+- **Claim fails (pool exhausted)**: Runtime CR state set to Failed with `CustomAuditLogError`
+- **Patch fails after claim**: Requeues with claimed AuditLogCR (retries on next reconciliation)
+- **No automatic fallback**: Explicit failure when dedicated is requested but unavailable
+
+### Irreversibility
+
+Once dedicated audit logging is enabled for a runtime, it **cannot be disabled**:
+- Setting `spec.auditLogAccessEnabled: false` is ignored
+- Warning logged: "Dedicated audit logging is irreversible - ignoring attempt to disable"
+- Runtime continues using dedicated configuration
 
 ## Testing
 

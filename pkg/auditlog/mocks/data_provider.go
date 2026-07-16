@@ -71,6 +71,27 @@ func (m *DataProvider) GetSharedAuditLogData(ctx context.Context, providerType s
 	return r0, r1
 }
 
+// ClaimAuditLog provides a mock function with given fields: ctx, providerRegion, runtimeID
+func (m *DataProvider) ClaimAuditLog(ctx context.Context, providerRegion string, runtimeID string) (auditlog.AuditLogData, error) {
+	ret := m.Called(ctx, providerRegion, runtimeID)
+
+	var r0 auditlog.AuditLogData
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) auditlog.AuditLogData); ok {
+		r0 = rf(ctx, providerRegion, runtimeID)
+	} else {
+		r0 = ret.Get(0).(auditlog.AuditLogData)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, providerRegion, runtimeID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ReleaseDedicated provides a mock function with given fields: ctx, runtimeID
 func (m *DataProvider) ReleaseDedicated(ctx context.Context, runtimeID string) error {
 	ret := m.Called(ctx, runtimeID)

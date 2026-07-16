@@ -24,7 +24,7 @@ func fixPolicyConfigMapName(annotations map[string]string, defaultPolicyMapName 
 	return defaultPolicyMapName
 }
 
-func NewAuditlogExtenderForCreate(policyConfigMapName string, data AuditLogData) Extend {
+func NewAuditlogExtender(policyConfigMapName string, data AuditLogData) Extend {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		policyConfigMapName := fixPolicyConfigMapName(rt.Annotations, policyConfigMapName)
 		for _, f := range []operation{
@@ -36,12 +36,5 @@ func NewAuditlogExtenderForCreate(policyConfigMapName string, data AuditLogData)
 			}
 		}
 		return nil
-	}
-}
-
-func NewAuditlogExtenderForPatch(policyConfigMapName string) Extend {
-	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
-		policyConfigMapName := fixPolicyConfigMapName(rt.Annotations, policyConfigMapName)
-		return oSetPolicyConfigmap(policyConfigMapName)(shoot)
 	}
 }
