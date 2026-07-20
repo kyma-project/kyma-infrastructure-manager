@@ -277,18 +277,19 @@ func updateStateFailedWithErrorAndStop(instance *imv1.Runtime,
 
 func getPatchOptions(ctx context.Context, m *fsm, s *systemState, auditLogConfig auditlogs.AuditLogData) (gardener_shoot.PatchOpts, error) {
 	patchOptions := gardener_shoot.PatchOpts{
-		KcpClient:             m.KcpClient,
-		ConverterConfig:       m.ConverterConfig,
-		AuditLogData:          auditLogConfig,
-		MaintenanceTimeWindow: getMaintenanceTimeWindow(s, m),
-		Workers:               s.shoot.Spec.Provider.Workers,
-		ShootK8SVersion:       s.shoot.Spec.Kubernetes.Version,
-		Extensions:            s.shoot.Spec.Extensions,
-		Resources:             s.shoot.Spec.Resources,
-		InfrastructureConfig:  s.shoot.Spec.Provider.InfrastructureConfig,
-		ControlPlaneConfig:    s.shoot.Spec.Provider.ControlPlaneConfig,
-		ApiServerAclEnabled:   m.ApiServerAclEnabled,
-		ExistingDNS:           s.shoot.Spec.DNS,
+		KcpClient:                       m.KcpClient,
+		ConverterConfig:                 m.ConverterConfig,
+		AuditLogData:                    auditLogConfig,
+		MaintenanceTimeWindow:           getMaintenanceTimeWindow(s, m),
+		Workers:                         s.shoot.Spec.Provider.Workers,
+		ShootK8SVersion:                 s.shoot.Spec.Kubernetes.Version,
+		Extensions:                      s.shoot.Spec.Extensions,
+		Resources:                       s.shoot.Spec.Resources,
+		InfrastructureConfig:            s.shoot.Spec.Provider.InfrastructureConfig,
+		ControlPlaneConfig:              s.shoot.Spec.Provider.ControlPlaneConfig,
+		ApiServerAclEnabled:             m.ApiServerAclEnabled,
+		ExistingDNS:                     s.shoot.Spec.DNS,
+		NetworkRestrictionGlobalEnabled: m.NetworkRestrictionGlobalEnabled,
 	}
 
 	if m.RegistryCacheConfigControllerEnabled {

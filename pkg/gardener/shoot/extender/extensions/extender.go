@@ -28,11 +28,14 @@ type Extension struct {
 	Strategy Strategy
 }
 
-func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, apiServerAclEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, apiServerAclEnabled, networkingRestrictionsGlobalEnabled bool) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			Type: NetworkFilterType,
 			Create: func(runtime imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
+				if !networkingRestrictionsGlobalEnabled {
+					return nil, nil
+				}
 				return NewNetworkFilterExtension(runtime.Spec.Security.Networking.Filter)
 			},
 		},
@@ -91,7 +94,7 @@ func NewExtensionsExtenderForCreate(ctx context.Context, kcpClient client.Client
 	}, nil)
 }
 
-func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension, apiServerAclEnabled bool, registryCacheGardenSecretNames map[string]string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client, config config.ConverterConfig, auditLogData auditlogs.AuditLogData, extensionsOnTheShoot []gardener.Extension, apiServerAclEnabled, networkingRestrictionsGlobalEnabled bool, registryCacheGardenSecretNames map[string]string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return newExtensionsExtender([]Extension{
 		{
 			Type: AuditlogExtensionType,
@@ -133,6 +136,9 @@ func NewExtensionsExtenderForPatch(ctx context.Context, kcpClient client.Client,
 		{
 			Type: NetworkFilterType,
 			Create: func(runtime imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
+				if !networkingRestrictionsGlobalEnabled {
+					return nil, nil
+				}
 				return NewNetworkFilterExtension(runtime.Spec.Security.Networking.Filter)
 			},
 		},

@@ -227,7 +227,7 @@ type ACL struct {
 	AllowedCIDRs []string `json:"allowedCIDRs,omitempty"`
 }
 type Provider struct {
-	//+kubebuilder:validation:Enum=aws;azure;gcp;openstack;alicloud
+	//+kubebuilder:validation:Enum=aws;azure;gcp;openstack;alicloud;gdch
 	Type                 string                `json:"type"`
 	Workers              []gardener.Worker     `json:"workers"`
 	AdditionalWorkers    *[]gardener.Worker    `json:"additionalWorkers,omitempty"`

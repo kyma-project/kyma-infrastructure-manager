@@ -1,9 +1,10 @@
 package extender
 
 import (
+	"testing"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
-	"testing"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
@@ -15,6 +16,7 @@ func TestExtendWithCloudProfile(t *testing.T) {
 	for _, testCase := range []struct {
 		name            string
 		providerType    string
+		override        string
 		expectedProfile *gardener.CloudProfileReference
 	}{
 		{
@@ -42,6 +44,23 @@ func TestExtendWithCloudProfile(t *testing.T) {
 			providerType:    hyperscaler.TypeAlicloud,
 			expectedProfile: CreateCloudProfileReference(DefaultAlicloudCloudProfileName),
 		},
+		{
+			name:            "Set cloud profile for gdch",
+			providerType:    hyperscaler.TypeGDCH,
+			expectedProfile: CreateCloudProfileReference(DefaultGDCHCloudProfileName),
+		},
+		{
+			name:            "Override cloud profile for gdch when provided",
+			providerType:    hyperscaler.TypeGDCH,
+			override:        "custom-gdch",
+			expectedProfile: CreateCloudProfileReference("custom-gdch"),
+		},
+		{
+			name:            "Ignore override for non-gdch providers",
+			providerType:    hyperscaler.TypeAWS,
+			override:        "custom-gdch",
+			expectedProfile: CreateCloudProfileReference(DefaultAWSCloudProfileName),
+		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			// given
@@ -58,7 +77,7 @@ func TestExtendWithCloudProfile(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("test", "dev")
 
 			// when
-			err := ExtendWithCloudProfile(runtime, &shoot)
+			err := ExtendWithCloudProfile(testCase.override)(runtime, &shoot)
 
 			// then
 			require.NoError(t, err)
@@ -84,7 +103,7 @@ func TestExtendWithCloudProfile(t *testing.T) {
 		shoot := testutils.FixEmptyGardenerShoot("test", "dev")
 
 		// when
-		err := ExtendWithCloudProfile(runtime, &shoot)
+		err := ExtendWithCloudProfile("")(runtime, &shoot)
 
 		// then
 		require.Error(t, err)

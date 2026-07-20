@@ -35,8 +35,9 @@ func TestConverter(t *testing.T) {
 			SecretName: "doesnt matter",
 		}
 		converter := NewConverterCreate(context.Background(), CreateOpts{
-			ConverterConfig: converterConfig,
-			AuditLogData:    auditLogData,
+			ConverterConfig:                 converterConfig,
+			AuditLogData:                    auditLogData,
+			NetworkRestrictionGlobalEnabled: true,
 		})
 
 		// when
@@ -60,8 +61,9 @@ func TestConverter(t *testing.T) {
 		emptyAuditLogData := auditlogs.AuditLogData{}
 
 		converter := NewConverterCreate(context.Background(), CreateOpts{
-			ConverterConfig: converterConfig,
-			AuditLogData:    emptyAuditLogData,
+			ConverterConfig:                 converterConfig,
+			AuditLogData:                    emptyAuditLogData,
+			NetworkRestrictionGlobalEnabled: true,
 		})
 
 		// when
@@ -88,8 +90,9 @@ func TestConverter(t *testing.T) {
 			SecretName: "doesnt matter",
 		}
 		converter := NewConverterCreate(context.Background(), CreateOpts{
-			ConverterConfig: converterConfig,
-			AuditLogData:    auditLogData,
+			ConverterConfig:                 converterConfig,
+			AuditLogData:                    auditLogData,
+			NetworkRestrictionGlobalEnabled: true,
 		})
 
 		// when

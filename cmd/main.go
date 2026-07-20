@@ -121,6 +121,7 @@ func main() {
 	var registryCacheConfigControllerEnabled bool
 	var registryCacheListenerPort string
 	var apiServerAclEnabled bool
+	var networkRestrictionGlobalEnabled bool
 	var runtimeBootstrapperEnabled bool
 	var runtimeBootstrapperKCPConfigName string
 	var runtimeBootstrapperKCPPullSecretName string
@@ -170,6 +171,7 @@ func main() {
 	flag.BoolVar(&registryCacheConfigControllerEnabled, "registry-cache-config-controller-enabled", false, "Feature flag to enable registry cache config controller")
 	flag.BoolVar(&runtimeBootstrapperEnabled, "runtime-bootstrapper-enabled", false, "Feature flag to enable runtime bootstrapper")
 	flag.BoolVar(&apiServerAclEnabled, "api-server-acl-enabled", false, "Feature flag to enable the shoot API server ACL extender which restricts access to the API server to a defined set of CIDRs")
+	flag.BoolVar(&networkRestrictionGlobalEnabled, "network-restriction-enabled", true, "Feature flag to enable network restriction on the project scope")
 
 	// Runtime bootstrapper configuration
 	flag.StringVar(&runtimeBootstrapperManifestsConfigMapName, "runtime-bootstrapper-manifests-config-map-name", "runtime-bootstrapper-manifests", "Config map with Runtime Bootstrapper manifests.")
@@ -414,6 +416,7 @@ func main() {
 		AuditLogMandatory:                    auditLogMandatory,
 		DedicatedAuditLoggingEnabled:         dedicatedAuditLoggingEnabled,
 		ApiServerAclEnabled:                  apiServerAclEnabled,
+		NetworkRestrictionGlobalEnabled:      networkRestrictionGlobalEnabled,
 		Metrics:                              metrics,
 		AuditLogDataProvider:                 auditLogDataProvider,
 		RegistryCacheConfigControllerEnabled: registryCacheConfigControllerEnabled,

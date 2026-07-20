@@ -1259,6 +1259,7 @@ spec:
                         - gcp
                         - openstack
                         - alicloud
+                        - gdch
                         type: string
                       workers:
                         items:
