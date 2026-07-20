@@ -13,7 +13,7 @@ require (
 	github.com/gardener/gardener-extension-runtime-gvisor v0.33.0
 	github.com/gardener/gardener/pkg/apis v1.140.1
 	github.com/gardener/oidc-webhook-authenticator v0.42.0
-	github.com/go-logr/logr v1.4.3
+	github.com/go-logr/logr v1.4.4
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/google/uuid v1.6.0
 	github.com/kyma-project/lifecycle-manager/api v1.0.0
