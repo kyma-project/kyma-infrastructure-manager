@@ -9,7 +9,7 @@
 
 ## Overview
 
-Kyma Infrastructure Manager (KIM) manages the [Kyma](https://kyma-project.io/#/) cluster infrastructure. It's built using the [kubebuilder](https://github.com/kubernetes-sigs/kubebuilder) framework.
+Kyma Infrastructure Manager (KIM) manages the [Kyma](https://kyma-project.io/#/) cluster infrastructurTEST CHANGEe. It's built using the [kubebuilder](https://github.com/kubernetes-sigs/kubebuilder) framework.
 
 It's responsible for generating and rotating Secrets containing dynamic kubeconfigs.
 
