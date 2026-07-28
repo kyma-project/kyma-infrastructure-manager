@@ -48,7 +48,7 @@ func validateAdministrator(admin string) error {
 		return fmt.Errorf("cannot have leading or trailing whitespace")
 	}
 
-	if len(admin) > maxAdministratorLength {
+	if len([]rune(admin)) > maxAdministratorLength {
 		return fmt.Errorf("exceeds maximum length of %d characters", maxAdministratorLength)
 	}
 
@@ -101,14 +101,13 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 
 	// Validate administrators before processing
 	if err := validateAdministrators(s.instance.Spec.Security.Administrators); err != nil {
-		s.instance.UpdateStatePending(
+		s.instance.UpdateStateFailed(
 			imv1.ConditionTypeRuntimeConfigured,
 			imv1.ConditionReasonConfigurationErr,
-			metav1.ConditionFalse,
 			fmt.Sprintf("invalid administrator: %s", err.Error()),
 		)
 		m.log.Error(err, "Invalid administrator configuration")
-		return updateStatusAndRequeueAfter(m.ControlPlaneRequeueDuration)
+		return updateStatusAndStopWithError(err)
 	}
 
 	removed := getRemoved(crbList.Items, s.instance.Spec.Security.Administrators)

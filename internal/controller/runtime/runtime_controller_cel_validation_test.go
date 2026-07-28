@@ -28,9 +28,11 @@ import (
 var _ = Describe("Runtime Administrator CEL Validation", func() {
 	ctx := context.Background()
 
+	var invalidAdminTestCounter int
 	DescribeTable("should reject Runtime with invalid administrators",
 		func(adminName string, expectedErrSubstring string) {
-			runtime := CreateRuntimeStub("test-cel-validation")
+			invalidAdminTestCounter++
+			runtime := CreateRuntimeStub(fmt.Sprintf("test-cel-invalid-%d", invalidAdminTestCounter))
 			runtime.Spec.Security.Administrators = []string{adminName}
 
 			err := k8sClient.Create(ctx, runtime)
