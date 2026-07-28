@@ -159,8 +159,18 @@ spec:
                 properties:
                   administrators:
                     items:
+                      maxLength: 253
                       type: string
+                    maxItems: 100
                     type: array
+                    x-kubernetes-validations:
+                    - message: administrator cannot start with 'system:' (Kubernetes
+                        built-in identity)
+                      rule: self.all(admin, !admin.lowerAscii().startsWith('system:'))
+                    - message: administrator cannot be empty or have leading/trailing
+                        whitespace
+                      rule: self.all(admin, admin.trim() == admin && size(admin) >
+                        0)
                   networking:
                     properties:
                       filter:

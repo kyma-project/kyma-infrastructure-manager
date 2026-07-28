@@ -244,6 +244,10 @@ type Networking struct {
 	VPCNetwork *string `json:"vpcNetwork,omitempty"`
 }
 type Security struct {
+	// +kubebuilder:validation:MaxItems=100
+	// +kubebuilder:validation:items:MaxLength=253
+	// +kubebuilder:validation:XValidation:rule="self.all(admin, !admin.lowerAscii().startsWith('system:'))",message="administrator cannot start with 'system:' (Kubernetes built-in identity)"
+	// +kubebuilder:validation:XValidation:rule="self.all(admin, admin.trim() == admin && size(admin) > 0)",message="administrator cannot be empty or have leading/trailing whitespace"
 	Administrators []string           `json:"administrators"`
 	Networking     NetworkingSecurity `json:"networking"`
 }
