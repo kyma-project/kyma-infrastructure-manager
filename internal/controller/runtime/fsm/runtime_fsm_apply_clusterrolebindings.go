@@ -79,6 +79,17 @@ func validateAdministrators(admins []string) error {
 }
 
 func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+	// Validate administrators before processing
+	if err := validateAdministrators(s.instance.Spec.Security.Administrators); err != nil {
+		s.instance.UpdateStateFailed(
+			imv1.ConditionTypeRuntimeConfigured,
+			imv1.ConditionReasonConfigurationErr,
+			fmt.Sprintf("invalid administrator: %s", err.Error()),
+		)
+		m.log.Error(err, "Invalid administrator configuration")
+		return updateStatusAndStopWithError(err)
+	}
+
 	runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 	if err != nil {
 		s.instance.UpdateStatePending(
@@ -97,17 +108,6 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 		updateCRBApplyPending(&s.instance)
 		m.log.Info("Cannot list Cluster Role Bindings on shoot, scheduling for retry")
 		return updateStatusAndRequeueAfter(m.ControlPlaneRequeueDuration)
-	}
-
-	// Validate administrators before processing
-	if err := validateAdministrators(s.instance.Spec.Security.Administrators); err != nil {
-		s.instance.UpdateStateFailed(
-			imv1.ConditionTypeRuntimeConfigured,
-			imv1.ConditionReasonConfigurationErr,
-			fmt.Sprintf("invalid administrator: %s", err.Error()),
-		)
-		m.log.Error(err, "Invalid administrator configuration")
-		return updateStatusAndStopWithError(err)
 	}
 
 	removed := getRemoved(crbList.Items, s.instance.Spec.Security.Administrators)
