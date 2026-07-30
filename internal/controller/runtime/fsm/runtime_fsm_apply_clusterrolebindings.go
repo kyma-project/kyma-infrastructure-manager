@@ -2,7 +2,10 @@ package fsm
 
 import (
 	"context"
+	"fmt"
 	"slices"
+	"strings"
+	"unicode"
 
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/log_level"
@@ -20,7 +23,73 @@ var (
 	}
 )
 
+const maxAdministratorLength = 253
+
+// blockedPrefixes contains prefixes that are not allowed for administrators.
+// All Kubernetes built-in identities start with "system:" and granting them
+// cluster-admin would be a security risk.
+var blockedPrefixes = []string{
+	"system:",
+}
+
+// validateAdministrator checks if an administrator string is valid.
+// It blocks:
+// - Empty or whitespace-only strings
+// - Strings with leading/trailing whitespace
+// - Strings exceeding 253 characters
+// - Strings containing control characters
+// - Kubernetes built-in identities (anything starting with "system:")
+func validateAdministrator(admin string) error {
+	if strings.TrimSpace(admin) == "" {
+		return fmt.Errorf("cannot be empty or whitespace-only")
+	}
+
+	if admin != strings.TrimSpace(admin) {
+		return fmt.Errorf("cannot have leading or trailing whitespace")
+	}
+
+	if len([]rune(admin)) > maxAdministratorLength {
+		return fmt.Errorf("exceeds maximum length of %d characters", maxAdministratorLength)
+	}
+
+	for _, r := range admin {
+		if unicode.IsControl(r) {
+			return fmt.Errorf("contains invalid control character")
+		}
+	}
+
+	adminLower := strings.ToLower(admin)
+	for _, prefix := range blockedPrefixes {
+		if strings.HasPrefix(adminLower, prefix) {
+			return fmt.Errorf("cannot start with '%s' (Kubernetes built-in identity)", prefix)
+		}
+	}
+
+	return nil
+}
+
+// validateAdministrators validates a list of administrator strings.
+func validateAdministrators(admins []string) error {
+	for i, admin := range admins {
+		if err := validateAdministrator(admin); err != nil {
+			return fmt.Errorf("administrator[%d] %q: %w", i, admin, err)
+		}
+	}
+	return nil
+}
+
 func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+	// Validate administrators before processing
+	if err := validateAdministrators(s.instance.Spec.Security.Administrators); err != nil {
+		s.instance.UpdateStateFailed(
+			imv1.ConditionTypeRuntimeConfigured,
+			imv1.ConditionReasonConfigurationErr,
+			fmt.Sprintf("invalid administrator: %s", err.Error()),
+		)
+		m.log.Error(err, "Invalid administrator configuration")
+		return updateStatusAndStopWithError(err)
+	}
+
 	runtimeClient, err := m.RuntimeClientGetter.Get(ctx, s.instance)
 	if err != nil {
 		s.instance.UpdateStatePending(
@@ -35,7 +104,7 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 	}
 	// list existing cluster role bindings
 	var crbList rbacv1.ClusterRoleBindingList
-	if err := runtimeClient.List(ctx, &crbList); err != nil {
+	if err = runtimeClient.List(ctx, &crbList); err != nil {
 		updateCRBApplyPending(&s.instance)
 		m.log.Info("Cannot list Cluster Role Bindings on shoot, scheduling for retry")
 		return updateStatusAndRequeueAfter(m.ControlPlaneRequeueDuration)
@@ -117,7 +186,7 @@ func getRemoved(crbs []rbacv1.ClusterRoleBinding, admins []string) (removed []rb
 			continue
 		}
 
-		if crb.RoleRef.Kind != "ClusterRole" && crb.RoleRef.Name != "cluster-admin" {
+		if crb.RoleRef.Kind != "ClusterRole" || crb.RoleRef.Name != "cluster-admin" {
 			// cluster role binding is not admin
 			continue
 		}
@@ -171,15 +240,15 @@ func getMissing(crbs []rbacv1.ClusterRoleBinding, admins []string) (missing []rb
 
 func toAdminClusterRoleBindingWithLabel(name string, key, value string) rbacv1.ClusterRoleBinding {
 	// initialize labels
-	labels := map[string]string{}
+	lbls := map[string]string{}
 	if key != "" {
-		labels[key] = value
+		lbls[key] = value
 	}
 	// build CRB
 	return rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "admin-",
-			Labels:       labels,
+			Labels:       lbls,
 		},
 		Subjects: []rbacv1.Subject{{
 			Kind:     rbacv1.UserKind,
