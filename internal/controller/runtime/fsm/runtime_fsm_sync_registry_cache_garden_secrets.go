@@ -41,11 +41,15 @@ func sFnSyncRegistryCacheGardenSecrets(ctx context.Context, m *fsm, s *systemSta
 			return requeue()
 		}
 
-		secretSyncer := registrycache.NewGardenSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
+		secretSyncer := registrycache.NewGardenSecretSyncer(
+			m.GardenClient,
+			runtimeClient, registrycache.DefaultGardenSecretNameGenerator,
+			fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName),
+			s.instance.Name)
 
-		if registryCacheWithSecretsExist(s.instance) {
+		if registrycache.HasCachesWithSecrets(s.instance.Spec.Caching) {
 			m.log.V(log_level.DEBUG).Info("Registry cache secrets creation", "instance", s.instance.Name)
-			err = secretSyncer.CreateOrUpdate(ctx, s.instance.Spec.Caching)
+			err = secretSyncer.Do(ctx, s.instance.Spec.Caching)
 			if err != nil {
 				s.instance.UpdateStatePending(
 					imv1.ConditionTypeRegistryCacheConfigured,
@@ -67,14 +71,4 @@ func sFnSyncRegistryCacheGardenSecrets(ctx context.Context, m *fsm, s *systemSta
 	}
 
 	return switchState(sFnPatchExistingShoot)
-}
-
-func registryCacheWithSecretsExist(runtime imv1.Runtime) bool {
-	for _, cache := range runtime.Spec.Caching {
-		if cache.Config.SecretReferenceName != nil && *cache.Config.SecretReferenceName != "" {
-			return true
-		}
-	}
-
-	return false
 }

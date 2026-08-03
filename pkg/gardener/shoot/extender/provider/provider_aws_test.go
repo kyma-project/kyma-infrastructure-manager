@@ -136,7 +136,7 @@ func TestProviderExtenderForCreateAWS(t *testing.T) {
 
 			// when
 
-			extender := NewProviderExtenderForCreateOperation(tc.EnableDualStackIP, tc.EnableIMDSv2, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"})
+			extender := NewProviderExtenderForCreateOperation(tc.EnableDualStackIP, tc.EnableIMDSv2, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, config.GDCHConfig{})
 			err := extender(tc.Runtime, &shoot)
 
 			// then
@@ -330,7 +330,7 @@ func TestProviderExtenderForPatchSingleWorkerAWS(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderPatchOperation(tc.EnableIMDSv2, tc.CurrentShootWorkers, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig)
+			extender := NewProviderExtenderPatchOperation(tc.EnableIMDSv2, tc.CurrentShootWorkers, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig, config.GDCHConfig{})
 			err := extender(tc.Runtime, &shoot)
 
 			// then

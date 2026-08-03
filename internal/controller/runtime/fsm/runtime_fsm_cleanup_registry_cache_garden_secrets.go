@@ -30,10 +30,13 @@ func sFnCleanupRegistryCacheGardenSecrets(ctx context.Context, m *fsm, s *system
 		return updateStatusAndRequeueAfter(m.StatusRequeueDelay)
 	}
 
-	secretSyncer := registrycache.NewGardenSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
+	secretManager := registrycache.NewGardenSecretManager(
+		m.GardenClient,
+		fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName),
+		s.instance.Name)
 
 	m.log.V(log_level.DEBUG).Info("Registry cache secrets deletion", "instance", s.instance.Name)
-	err = secretSyncer.Delete(ctx, s.instance.Spec.Caching)
+	err = secretManager.DeleteUnused(ctx, s.instance.Spec.Caching)
 	if err != nil {
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRegistryCacheConfigured,
@@ -41,7 +44,7 @@ func sFnCleanupRegistryCacheGardenSecrets(ctx context.Context, m *fsm, s *system
 			metav1.ConditionFalse,
 			err.Error(),
 		)
-		m.log.Error(err, "Failed to delete not used registry cache secrets")
+		m.log.Error(err, "Failed to delete unused registry cache secrets")
 
 		return updateStatusAndRequeueAfter(m.StatusRequeueDelay)
 	}

@@ -3,7 +3,6 @@ package extensions
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 
 	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
@@ -50,103 +49,111 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 		SecretName: "doesnt matter",
 	}
 
-	registryCache := []imv1.ImageRegistryCache{
-		{
-			UID: "id1",
-			Config: registrycache.RegistryCacheConfigSpec{
-				Upstream: "ghcr.io",
-			},
-		},
-	}
-
 	for _, testcase := range []struct {
-		name                  string
-		inputAuditLogData     auditlogs.AuditLogData
-		enableNetworkFilter   bool
-		registryCache         []imv1.ImageRegistryCache
-		apiServerACL          []string
-		apiServerACLEnabled   bool
-		enableNvidiaOpenshell *bool
-		extensionOrderMap     map[string]int
-		providerType          string
+		name                      string
+		inputAuditLogData         auditlogs.AuditLogData
+		enableNetworkFilter       bool
+		networkRestrictionEnabled bool
+		apiServerACL              []string
+		apiServerACLEnabled       bool
+		enableNvidiaOpenshell     *bool
+		extensionOrderMap         map[string]int
+		providerType              string
 	}{
 		{
-			name:                  "Should create all extensions for new Shoot in the right order, network filter is enabled",
-			inputAuditLogData:     newAuditLogData,
-			enableNetworkFilter:   true,
-			registryCache:         registryCache,
-			apiServerACL:          []string{"1.1.1.1/32", "2.2.2.2/32"},
-			apiServerACLEnabled:   true,
-			enableNvidiaOpenshell: nil,
-			extensionOrderMap:     getExpectedExtensionsOrderMapForCreate(),
-			providerType:          hyperscaler.TypeAWS,
+			name:                      "Should create all extensions for new Shoot in the right order, network filter is enabled",
+			inputAuditLogData:         newAuditLogData,
+			enableNetworkFilter:       true,
+			networkRestrictionEnabled: true,
+			apiServerACL:              []string{"1.1.1.1/32", "2.2.2.2/32"},
+			apiServerACLEnabled:       true,
+			enableNvidiaOpenshell:     nil,
+			extensionOrderMap:         getExpectedExtensionsOrderMapForCreate(),
+			providerType:              hyperscaler.TypeAWS,
 		},
 		{
-			name:                  "Should create all extensions for new Shoot in the right order, network filter is disabled",
-			inputAuditLogData:     newAuditLogData,
-			enableNetworkFilter:   false,
-			registryCache:         registryCache,
-			apiServerACL:          []string{"1.1.1.1/32", "2.2.2.2/32"},
-			apiServerACLEnabled:   true,
-			enableNvidiaOpenshell: nil,
-			extensionOrderMap:     getExpectedExtensionsOrderMapForCreate(),
-			providerType:          hyperscaler.TypeAzure,
+			name:                      "Should create all extensions for new Shoot in the right order, network filter is disabled",
+			inputAuditLogData:         newAuditLogData,
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: true,
+			apiServerACL:              []string{"1.1.1.1/32", "2.2.2.2/32"},
+			apiServerACLEnabled:       true,
+			enableNvidiaOpenshell:     nil,
+			extensionOrderMap:         getExpectedExtensionsOrderMapForCreate(),
+			providerType:              hyperscaler.TypeAzure,
 		},
 		{
-			name:                  "Should not include AuditLog extension for new Shoot when input auditLogData is empty",
-			inputAuditLogData:     auditlogs.AuditLogData{},
-			enableNvidiaOpenshell: nil,
-			extensionOrderMap:     getExpectedExtensionsOrderMapForCreateWithoutOptional(),
-			providerType:          hyperscaler.TypeAWS,
-			apiServerACLEnabled:   false,
+			name:                      "Should not include Network filter extension for new Shoot when network restriction is globally disabled",
+			inputAuditLogData:         newAuditLogData,
+			enableNetworkFilter:       true,
+			networkRestrictionEnabled: false,
+			apiServerACL:              []string{"1.1.1.1/32", "2.2.2.2/32"},
+			apiServerACLEnabled:       true,
+			enableNvidiaOpenshell:     nil,
+			extensionOrderMap:         getExpectedExtensionsOrderMapForCreateWithoutNetworkFilter(),
+			providerType:              hyperscaler.TypeAWS,
 		},
 		{
-			name:                  "Should not include ACL extension for new Shoot when feature flag in disabled",
-			inputAuditLogData:     auditlogs.AuditLogData{},
-			apiServerACL:          []string{"1.1.1.1/32", "2.2.2.2/32"},
-			apiServerACLEnabled:   false,
-			enableNvidiaOpenshell: nil,
-			extensionOrderMap:     getExpectedExtensionsOrderMapForCreateWithoutOptional(),
-			providerType:          hyperscaler.TypeAWS,
+			name:                      "Should not include AuditLog extension for new Shoot when input auditLogData is empty",
+			inputAuditLogData:         auditlogs.AuditLogData{},
+			networkRestrictionEnabled: true,
+			enableNvidiaOpenshell:     nil,
+			extensionOrderMap:         getExpectedExtensionsOrderMapForCreateWithoutOptional(),
+			providerType:              hyperscaler.TypeAWS,
+			apiServerACLEnabled:       false,
 		},
 		{
-			name:                  "Should not include ACL extension for new Shoot when ACL is empty on Runtime CR",
-			inputAuditLogData:     auditlogs.AuditLogData{},
-			apiServerACL:          []string{},
-			apiServerACLEnabled:   true,
-			enableNvidiaOpenshell: nil,
-			extensionOrderMap:     getExpectedExtensionsOrderMapForCreateWithoutOptional(),
-			providerType:          hyperscaler.TypeAWS,
+			name:                      "Should not include ACL extension for new Shoot when feature flag in disabled",
+			inputAuditLogData:         auditlogs.AuditLogData{},
+			networkRestrictionEnabled: true,
+			apiServerACL:              []string{"1.1.1.1/32", "2.2.2.2/32"},
+			apiServerACLEnabled:       false,
+			enableNvidiaOpenshell:     nil,
+			extensionOrderMap:         getExpectedExtensionsOrderMapForCreateWithoutOptional(),
+			providerType:              hyperscaler.TypeAWS,
 		},
 		{
-			name:                  "Should not include ACL extension for new Shoot when hyperscaler type is not supported",
-			inputAuditLogData:     auditlogs.AuditLogData{},
-			apiServerACL:          []string{"1.1.1.1/32", "2.2.2.2/32"},
-			apiServerACLEnabled:   true,
-			enableNvidiaOpenshell: nil,
-			extensionOrderMap:     getExpectedExtensionsOrderMapForCreateWithoutOptional(),
-			providerType:          hyperscaler.TypeGCP,
+			name:                      "Should not include ACL extension for new Shoot when ACL is empty on Runtime CR",
+			inputAuditLogData:         auditlogs.AuditLogData{},
+			networkRestrictionEnabled: true,
+			apiServerACL:              []string{},
+			apiServerACLEnabled:       true,
+			enableNvidiaOpenshell:     nil,
+			extensionOrderMap:         getExpectedExtensionsOrderMapForCreateWithoutOptional(),
+			providerType:              hyperscaler.TypeAWS,
 		},
 		{
-			name:                  "Should include NvidiaOpenshell extension when enabled",
-			inputAuditLogData:     auditlogs.AuditLogData{},
-			enableNvidiaOpenshell: ptr.To(true),
-			extensionOrderMap:     getExpectedExtensionsOrderMapForCreateWithNvidiaOpenshell(),
-			providerType:          hyperscaler.TypeAWS,
-			apiServerACLEnabled:   false,
+			name:                      "Should not include ACL extension for new Shoot when hyperscaler type is not supported",
+			inputAuditLogData:         auditlogs.AuditLogData{},
+			networkRestrictionEnabled: true,
+			apiServerACL:              []string{"1.1.1.1/32", "2.2.2.2/32"},
+			apiServerACLEnabled:       true,
+			enableNvidiaOpenshell:     nil,
+			extensionOrderMap:         getExpectedExtensionsOrderMapForCreateWithoutOptional(),
+			providerType:              hyperscaler.TypeGCP,
 		},
 		{
-			name:                  "Should not include NvidiaOpenshell extension when disabled",
-			inputAuditLogData:     auditlogs.AuditLogData{},
-			enableNvidiaOpenshell: ptr.To(false),
-			extensionOrderMap:     getExpectedExtensionsOrderMapForCreateWithoutOptional(),
-			providerType:          hyperscaler.TypeAWS,
-			apiServerACLEnabled:   false,
+			name:                      "Should include NvidiaOpenshell extension when enabled",
+			inputAuditLogData:         auditlogs.AuditLogData{},
+			networkRestrictionEnabled: true,
+			enableNvidiaOpenshell:     ptr.To(true),
+			extensionOrderMap:         getExpectedExtensionsOrderMapForCreateWithNvidiaOpenshell(),
+			providerType:              hyperscaler.TypeAWS,
+			apiServerACLEnabled:       false,
+		},
+		{
+			name:                      "Should not include NvidiaOpenshell extension when disabled",
+			inputAuditLogData:         auditlogs.AuditLogData{},
+			networkRestrictionEnabled: true,
+			enableNvidiaOpenshell:     ptr.To(false),
+			extensionOrderMap:         getExpectedExtensionsOrderMapForCreateWithoutOptional(),
+			providerType:              hyperscaler.TypeAWS,
+			apiServerACLEnabled:       false,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			providerType := testcase.providerType
-			testRuntime := fixRuntimeCRForExtensionExtenderTests(testcase.enableNetworkFilter, testcase.registryCache, testcase.apiServerACL, providerType, testcase.enableNvidiaOpenshell)
+			testRuntime := fixRuntimeCRForExtensionExtenderTests(testcase.enableNetworkFilter, nil, testcase.apiServerACL, providerType, testcase.enableNvidiaOpenshell)
 
 			configMapGetCalled := false
 			fakeClient := buildFakeClientWithACLConfigMap(t, &configMapGetCalled)
@@ -157,7 +164,7 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 				},
 			}
 
-			extender := NewExtensionsExtenderForCreate(context.Background(), fakeClient, config, testcase.inputAuditLogData, testcase.registryCache, testcase.apiServerACLEnabled)
+			extender := NewExtensionsExtenderForCreate(context.Background(), fakeClient, config, testcase.inputAuditLogData, testcase.apiServerACLEnabled, testcase.networkRestrictionEnabled)
 
 			err := extender(testRuntime, shoot)
 			assert.NoError(t, err)
@@ -184,8 +191,6 @@ func TestNewExtensionsExtenderForCreate(t *testing.T) {
 				case OidcExtensionType:
 					verifyOIDCExtension(t, ext)
 
-				case RegistryCacheExtensionType:
-					verifyRegistryCacheExtension(t, &ext, testcase.registryCache)
 				case ApiServerACLExtensionType:
 					mergedACL := testcase.apiServerACL
 					mergedACL = append(mergedACL, "2.2.2.2/29", "3.3.3.3/29", "4.4.4.4/29")
@@ -241,194 +246,235 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 	}
 
 	for _, testCase := range []struct {
-		name                  string
-		previousExtensions    []gardener.Extension
-		inputAuditLogData     auditlogs.AuditLogData
-		expectedAuditLogData  auditlogs.AuditLogData
-		registryCaches        []imv1.ImageRegistryCache
-		enableNetworkFilter   bool
-		apiServerACL          []string
-		apiServerACLEnabled   bool
-		enableNvidiaOpenshell *bool
-		providerType          string
-		expectedInternalDNS   bool
+		name                      string
+		previousExtensions        []gardener.Extension
+		inputAuditLogData         auditlogs.AuditLogData
+		expectedAuditLogData      auditlogs.AuditLogData
+		registryCaches            []imv1.ImageRegistryCache
+		enableNetworkFilter       bool
+		networkRestrictionEnabled bool
+		apiServerACL              []string
+		apiServerACLEnabled       bool
+		enableNvidiaOpenshell     *bool
+		providerType              string
+		expectedInternalDNS       bool
+		removedExtensionTypes     []string
 	}{
 		{
-			name:                 "Should add AuditLog extension at the end without changing order and data of other extensions",
-			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
-			inputAuditLogData:    oldAuditLogData,
-			expectedAuditLogData: oldAuditLogData,
-			registryCaches:       nil,
-			enableNetworkFilter:  false,
+			name:                      "Should add AuditLog extension at the end without changing order and data of other extensions",
+			previousExtensions:        []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:         oldAuditLogData,
+			expectedAuditLogData:      oldAuditLogData,
+			registryCaches:            nil,
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: true,
 		},
 		{
-			name:                 "Should not add AuditLog extension to existing shoot extensions when input auditLogData is empty",
-			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
-			inputAuditLogData:    auditlogs.AuditLogData{},
-			expectedAuditLogData: auditlogs.AuditLogData{},
-			registryCaches:       nil,
-			enableNetworkFilter:  false,
+			name:                      "Should not add AuditLog extension to existing shoot extensions when input auditLogData is empty",
+			previousExtensions:        []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:         auditlogs.AuditLogData{},
+			expectedAuditLogData:      auditlogs.AuditLogData{},
+			registryCaches:            nil,
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: true,
 		},
 		{
-			name:                 "Should add Network filter extension at the end without changing order and data of other extensions",
-			previousExtensions:   []gardener.Extension{fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
-			inputAuditLogData:    auditlogs.AuditLogData{},
-			expectedAuditLogData: auditlogs.AuditLogData{},
-			registryCaches:       nil,
-			enableNetworkFilter:  true,
+			name:                      "Should add Network filter extension at the end without changing order and data of other extensions",
+			previousExtensions:        []gardener.Extension{fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:         auditlogs.AuditLogData{},
+			expectedAuditLogData:      auditlogs.AuditLogData{},
+			registryCaches:            nil,
+			enableNetworkFilter:       true,
+			networkRestrictionEnabled: true,
 		},
 		{
-			name:                 "Should add RegistryCache extension at the end without changing order and data of other extensions",
-			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
-			inputAuditLogData:    auditlogs.AuditLogData{},
-			expectedAuditLogData: auditlogs.AuditLogData{},
-			registryCaches:       newCaches,
-			enableNetworkFilter:  false,
+			name:                      "Should not add Network filter extension when network restriction is globally disabled and none exists",
+			previousExtensions:        []gardener.Extension{fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:         auditlogs.AuditLogData{},
+			expectedAuditLogData:      auditlogs.AuditLogData{},
+			registryCaches:            nil,
+			enableNetworkFilter:       true,
+			networkRestrictionEnabled: false,
 		},
 		{
-			name:                 "Should not add RegistryCache extension when cache list is empty",
-			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
-			inputAuditLogData:    auditlogs.AuditLogData{},
-			expectedAuditLogData: auditlogs.AuditLogData{},
-			registryCaches:       []imv1.ImageRegistryCache{},
-			enableNetworkFilter:  false,
+			name:                      "Should leave existing Network filter extension untouched when network restriction is globally disabled",
+			previousExtensions:        []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:         auditlogs.AuditLogData{},
+			expectedAuditLogData:      auditlogs.AuditLogData{},
+			registryCaches:            nil,
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: false,
 		},
 		{
-			name:                 "Should not add RegistryCache extension when cache is not enabled on Runtime CR",
-			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
-			inputAuditLogData:    auditlogs.AuditLogData{},
-			expectedAuditLogData: auditlogs.AuditLogData{},
-			registryCaches:       newCaches,
-			enableNetworkFilter:  false,
+			name:                      "Should add RegistryCache extension at the end without changing order and data of other extensions",
+			previousExtensions:        []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:         auditlogs.AuditLogData{},
+			expectedAuditLogData:      auditlogs.AuditLogData{},
+			registryCaches:            newCaches,
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: true,
 		},
 		{
-			name:                 "Existing extensions should not change order during patching if nothing has changed",
-			previousExtensions:   fixAllExtensionsOnTheShoot(true),
-			inputAuditLogData:    oldAuditLogData,
-			expectedAuditLogData: oldAuditLogData,
-			registryCaches:       newCaches,
-			enableNetworkFilter:  true,
+			name:                      "Should not add RegistryCache extension when cache list is empty",
+			previousExtensions:        []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:         auditlogs.AuditLogData{},
+			expectedAuditLogData:      auditlogs.AuditLogData{},
+			registryCaches:            []imv1.ImageRegistryCache{},
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: true,
 		},
 		{
-			name:                 "Should update Audit Log extension without changing order and data of other extensions",
-			previousExtensions:   fixAllExtensionsOnTheShoot(true),
-			inputAuditLogData:    newAuditLogData,
-			expectedAuditLogData: newAuditLogData,
-			registryCaches:       oldCaches,
-			enableNetworkFilter:  false,
+			name:                      "Should not add RegistryCache extension when cache is not enabled on Runtime CR",
+			previousExtensions:        []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:         auditlogs.AuditLogData{},
+			expectedAuditLogData:      auditlogs.AuditLogData{},
+			registryCaches:            newCaches,
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: true,
 		},
 		{
-			name:                 "Should update Network filter extension without changing order and data of other extensions",
-			previousExtensions:   fixAllExtensionsOnTheShoot(true),
-			inputAuditLogData:    oldAuditLogData,
-			expectedAuditLogData: oldAuditLogData,
-			registryCaches:       oldCaches,
-			enableNetworkFilter:  true,
+			name:                      "Existing extensions should not change order during patching if nothing has changed",
+			previousExtensions:        fixAllExtensionsOnTheShoot(true),
+			inputAuditLogData:         oldAuditLogData,
+			expectedAuditLogData:      oldAuditLogData,
+			registryCaches:            newCaches,
+			enableNetworkFilter:       true,
+			networkRestrictionEnabled: true,
 		},
 		{
-			name:                 "Should update RegistryCache extension without changing order and data of other extensions",
-			previousExtensions:   fixAllExtensionsOnTheShoot(true),
-			inputAuditLogData:    oldAuditLogData,
-			expectedAuditLogData: oldAuditLogData,
-			registryCaches:       newCaches,
-			enableNetworkFilter:  false,
+			name:                      "Should update Audit Log extension without changing order and data of other extensions",
+			previousExtensions:        fixAllExtensionsOnTheShoot(true),
+			inputAuditLogData:         newAuditLogData,
+			expectedAuditLogData:      newAuditLogData,
+			registryCaches:            oldCaches,
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: true,
 		},
 		{
-			name:                 "Should disable RegistryCache extension when cache is not enabled on Runtime CR without changing order and data of other extensions",
-			previousExtensions:   fixAllExtensionsOnTheShoot(true),
-			inputAuditLogData:    oldAuditLogData,
-			expectedAuditLogData: oldAuditLogData,
-			registryCaches:       newCaches,
-			enableNetworkFilter:  false,
+			name:                      "Should update Network filter extension without changing order and data of other extensions",
+			previousExtensions:        fixAllExtensionsOnTheShoot(true),
+			inputAuditLogData:         oldAuditLogData,
+			expectedAuditLogData:      oldAuditLogData,
+			registryCaches:            oldCaches,
+			enableNetworkFilter:       true,
+			networkRestrictionEnabled: true,
 		},
 		{
-			name:                 "Should disable RegistryCache extension when cache is not enabled on Runtime CR without changing order and data of other extensions",
-			previousExtensions:   fixAllExtensionsOnTheShoot(true),
-			inputAuditLogData:    oldAuditLogData,
-			expectedAuditLogData: oldAuditLogData,
-			registryCaches:       []imv1.ImageRegistryCache{},
-			enableNetworkFilter:  false,
+			name:                      "Should update RegistryCache extension without changing order and data of other extensions",
+			previousExtensions:        []gardener.Extension{fixAuditLogExtensions(), fixDNSExtension(), fixCertExtension(), fixNetworkExtension(), fixOIDCExtensions()},
+			inputAuditLogData:         oldAuditLogData,
+			expectedAuditLogData:      oldAuditLogData,
+			registryCaches:            newCaches,
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: true,
 		},
 		{
-			name:                 "Should not update existing AuditLog extension when input auditLogData is empty",
-			previousExtensions:   fixAllExtensionsOnTheShoot(true),
-			inputAuditLogData:    auditlogs.AuditLogData{},
-			expectedAuditLogData: oldAuditLogData,
-			registryCaches:       oldCaches,
-			enableNetworkFilter:  false,
+			name:                      "Should disable RegistryCache extension when cache is not enabled on Runtime CR without changing order and data of other extensions",
+			previousExtensions:        fixAllExtensionsOnTheShoot(true),
+			inputAuditLogData:         oldAuditLogData,
+			expectedAuditLogData:      oldAuditLogData,
+			registryCaches:            newCaches,
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: true,
 		},
 		{
-			name:                 "Should update ACL extension without changing order and data of other extensions",
-			previousExtensions:   fixAllExtensionsOnTheShoot(true),
-			inputAuditLogData:    oldAuditLogData,
-			expectedAuditLogData: oldAuditLogData,
-			registryCaches:       newCaches,
-			enableNetworkFilter:  false,
-			apiServerACL:         []string{"1.1.1.1/32", "2.2.2.2/32"},
-			apiServerACLEnabled:  true,
-			providerType:         hyperscaler.TypeAWS,
+			name:                      "Should remove RegistryCache extension when cache list is empty on Runtime CR without changing order and data of other extensions",
+			previousExtensions:        fixAllExtensionsOnTheShoot(true),
+			inputAuditLogData:         oldAuditLogData,
+			expectedAuditLogData:      oldAuditLogData,
+			registryCaches:            []imv1.ImageRegistryCache{},
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: true,
+			removedExtensionTypes:     []string{RegistryCacheExtensionType},
 		},
 		{
-			name:                 "Should disable ACL extension without changing order and data of other extensions when acl is empty on Runtime CR",
-			previousExtensions:   fixAllExtensionsOnTheShoot(true),
-			inputAuditLogData:    oldAuditLogData,
-			expectedAuditLogData: oldAuditLogData,
-			registryCaches:       newCaches,
-			enableNetworkFilter:  false,
-			apiServerACL:         []string{},
-			apiServerACLEnabled:  true,
-			providerType:         hyperscaler.TypeAWS,
+			name:                      "Should not update existing AuditLog extension when input auditLogData is empty",
+			previousExtensions:        fixAllExtensionsOnTheShoot(true),
+			inputAuditLogData:         auditlogs.AuditLogData{},
+			expectedAuditLogData:      oldAuditLogData,
+			registryCaches:            oldCaches,
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: true,
 		},
 		{
-			name:                 "Should not add ACL extension when acl is disabled",
-			previousExtensions:   fixAllExtensionsOnTheShoot(false),
-			inputAuditLogData:    oldAuditLogData,
-			expectedAuditLogData: oldAuditLogData,
-			registryCaches:       newCaches,
-			enableNetworkFilter:  false,
-			apiServerACL:         []string{"1.1.1.1/32", "2.2.2.2/32"},
-			apiServerACLEnabled:  false,
-			providerType:         hyperscaler.TypeAWS,
+			name:                      "Should update ACL extension without changing order and data of other extensions",
+			previousExtensions:        fixAllExtensionsOnTheShoot(true),
+			inputAuditLogData:         oldAuditLogData,
+			expectedAuditLogData:      oldAuditLogData,
+			registryCaches:            newCaches,
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: true,
+			apiServerACL:              []string{"1.1.1.1/32", "2.2.2.2/32"},
+			apiServerACLEnabled:       true,
+			providerType:              hyperscaler.TypeAWS,
 		},
 		{
-			name:                  "Should disable NvidiaOpenshell extension when it was enabled but is now disabled on Runtime CR",
-			previousExtensions:    append(fixAllExtensionsOnTheShoot(true), fixNvidiaOpenshellExtensionEnabled()),
-			inputAuditLogData:     oldAuditLogData,
-			expectedAuditLogData:  oldAuditLogData,
-			registryCaches:        oldCaches,
-			enableNetworkFilter:   false,
-			apiServerACLEnabled:   false,
-			enableNvidiaOpenshell: ptr.To(false),
-			providerType:          hyperscaler.TypeAWS,
+			name:                      "Should disable ACL extension without changing order and data of other extensions when acl is empty on Runtime CR",
+			previousExtensions:        fixAllExtensionsOnTheShoot(true),
+			inputAuditLogData:         oldAuditLogData,
+			expectedAuditLogData:      oldAuditLogData,
+			registryCaches:            newCaches,
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: true,
+			apiServerACL:              []string{},
+			apiServerACLEnabled:       true,
+			providerType:              hyperscaler.TypeAWS,
 		},
 		{
-			name:                  "Should add NvidiaOpenshell extension when enabled on Runtime CR",
-			previousExtensions:    fixAllExtensionsOnTheShoot(true),
-			inputAuditLogData:     oldAuditLogData,
-			expectedAuditLogData:  oldAuditLogData,
-			registryCaches:        oldCaches,
-			enableNetworkFilter:   false,
-			apiServerACLEnabled:   false,
-			enableNvidiaOpenshell: ptr.To(true),
-			providerType:          hyperscaler.TypeAWS,
+			name:                      "Should not add ACL extension when acl is disabled",
+			previousExtensions:        fixAllExtensionsOnTheShoot(false),
+			inputAuditLogData:         oldAuditLogData,
+			expectedAuditLogData:      oldAuditLogData,
+			registryCaches:            newCaches,
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: true,
+			apiServerACL:              []string{"1.1.1.1/32", "2.2.2.2/32"},
+			apiServerACLEnabled:       false,
+			providerType:              hyperscaler.TypeAWS,
 		},
 		{
-			name:                 "Should preserve existing internal DNS extension when existing providers list is empty",
-			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixInternalDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
-			inputAuditLogData:    auditlogs.AuditLogData{},
-			expectedAuditLogData: auditlogs.AuditLogData{},
-			registryCaches:       nil,
-			enableNetworkFilter:  false,
-			expectedInternalDNS:  true,
+			name:                      "Should disable NvidiaOpenshell extension when it was enabled but is now disabled on Runtime CR",
+			previousExtensions:        append(fixAllExtensionsOnTheShoot(true), fixNvidiaOpenshellExtensionEnabled()),
+			inputAuditLogData:         oldAuditLogData,
+			expectedAuditLogData:      oldAuditLogData,
+			registryCaches:            oldCaches,
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: true,
+			apiServerACLEnabled:       false,
+			enableNvidiaOpenshell:     ptr.To(false),
+			providerType:              hyperscaler.TypeAWS,
 		},
 		{
-			name:                 "Should update DNS extension when existing providers list is non-empty",
-			previousExtensions:   []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
-			inputAuditLogData:    auditlogs.AuditLogData{},
-			expectedAuditLogData: auditlogs.AuditLogData{},
-			registryCaches:       nil,
-			enableNetworkFilter:  false,
-			expectedInternalDNS:  false,
+			name:                      "Should add NvidiaOpenshell extension when enabled on Runtime CR",
+			previousExtensions:        fixAllExtensionsOnTheShoot(true),
+			inputAuditLogData:         oldAuditLogData,
+			expectedAuditLogData:      oldAuditLogData,
+			registryCaches:            oldCaches,
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: true,
+			apiServerACLEnabled:       false,
+			enableNvidiaOpenshell:     ptr.To(true),
+			providerType:              hyperscaler.TypeAWS,
+		},
+		{
+			name:                      "Should preserve existing internal DNS extension when existing providers list is empty",
+			previousExtensions:        []gardener.Extension{fixNetworkExtension(), fixInternalDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:         auditlogs.AuditLogData{},
+			expectedAuditLogData:      auditlogs.AuditLogData{},
+			registryCaches:            nil,
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: true,
+			expectedInternalDNS:       true,
+		},
+		{
+			name:                      "Should update DNS extension when existing providers list is non-empty",
+			previousExtensions:        []gardener.Extension{fixNetworkExtension(), fixDNSExtension(), fixCertExtension(), fixOIDCExtensions()},
+			inputAuditLogData:         auditlogs.AuditLogData{},
+			expectedAuditLogData:      auditlogs.AuditLogData{},
+			registryCaches:            nil,
+			enableNetworkFilter:       false,
+			networkRestrictionEnabled: true,
+			expectedInternalDNS:       false,
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -455,8 +501,8 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 			kubeApiServerACLEnabled := AclNeedsToBeEnabled(testCase.apiServerACLEnabled, testRuntime)
 			nvidiaOpenshellExistsInOutput := isNvidiaOpenshellEnabled(testRuntime) || existingExtension(NvidiaOpenshellExtensionType, prevShoot) != nil
 
-			extender := NewExtensionsExtenderForPatch(context.Background(), fakeClient, config, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled)
-			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.enableNetworkFilter, auditLogDataProvided, registryCacheDataProvided, kubeApiServerACLEnabled, nvidiaOpenshellExistsInOutput)
+			extender := NewExtensionsExtenderForPatch(context.Background(), fakeClient, config, testCase.inputAuditLogData, testCase.previousExtensions, testCase.apiServerACLEnabled, testCase.networkRestrictionEnabled, map[string]string{})
+			orderMap := getExpectedExtensionsOrderMapForPatch(testCase.previousExtensions, testCase.networkRestrictionEnabled, auditLogDataProvided, registryCacheDataProvided, kubeApiServerACLEnabled, nvidiaOpenshellExistsInOutput, testCase.removedExtensionTypes)
 
 			err := extender(testRuntime, shoot)
 			assert.NoError(t, err)
@@ -489,7 +535,7 @@ func TestNewExtensionsExtenderForPatch(t *testing.T) {
 					verifyAuditLogExtension(t, ext, testCase.expectedAuditLogData)
 
 				case RegistryCacheExtensionType:
-					verifyRegistryCacheExtension(t, &ext, testCase.registryCaches)
+					verifyRegistryCacheExtension(t, &ext, testCase.registryCaches, map[string]string{})
 				case ApiServerACLExtensionType:
 					mergedACL := make([]string, 0)
 					if len(testCase.apiServerACL) != 0 {
@@ -603,11 +649,20 @@ func fixNvidiaOpenshellExtensionEnabled() gardener.Extension {
 	}
 }
 
-func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extension, networkExtAdded bool, auditLogExtAdded bool, registryCacheExtAdded bool, kubeApiServerACLEnabled bool, nvidiaOpenshellInOutput bool) map[string]int {
-	extensionOrderMap := make(map[string]int)
+func getExpectedExtensionsOrderMapForPatch(previousExtensions []gardener.Extension, networkExtAdded bool, auditLogExtAdded bool, registryCacheExtAdded bool, kubeApiServerACLEnabled bool, nvidiaOpenshellInOutput bool, removedExtensionTypes []string) map[string]int {
+	removed := make(map[string]bool, len(removedExtensionTypes))
+	for _, t := range removedExtensionTypes {
+		removed[t] = true
+	}
 
-	for idx, ext := range previousExtensions {
+	extensionOrderMap := make(map[string]int)
+	idx := 0
+	for _, ext := range previousExtensions {
+		if removed[ext.Type] {
+			continue
+		}
 		extensionOrderMap[ext.Type] = idx
+		idx++
 	}
 
 	if auditLogExtAdded {
@@ -659,8 +714,7 @@ func getExpectedExtensionsOrderMapForCreate() map[string]int {
 	extensionOrderMap[DNSExtensionType] = 2
 	extensionOrderMap[OidcExtensionType] = 3
 	extensionOrderMap[AuditlogExtensionType] = 4
-	extensionOrderMap[RegistryCacheExtensionType] = 5
-	extensionOrderMap[ApiServerACLExtensionType] = 6
+	extensionOrderMap[ApiServerACLExtensionType] = 5
 
 	return extensionOrderMap
 }
@@ -672,6 +726,18 @@ func getExpectedExtensionsOrderMapForCreateWithoutOptional() map[string]int {
 	extensionOrderMap[CertExtensionType] = 1
 	extensionOrderMap[DNSExtensionType] = 2
 	extensionOrderMap[OidcExtensionType] = 3
+
+	return extensionOrderMap
+}
+
+func getExpectedExtensionsOrderMapForCreateWithoutNetworkFilter() map[string]int {
+	extensionOrderMap := make(map[string]int)
+
+	extensionOrderMap[CertExtensionType] = 0
+	extensionOrderMap[DNSExtensionType] = 1
+	extensionOrderMap[OidcExtensionType] = 2
+	extensionOrderMap[AuditlogExtensionType] = 3
+	extensionOrderMap[ApiServerACLExtensionType] = 4
 
 	return extensionOrderMap
 }
@@ -758,7 +824,7 @@ func verifyNetworkFilterExtension(t *testing.T, ext gardener.Extension, isEnable
 	assert.Equal(t, !isEnabled, *ext.Disabled)
 }
 
-func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches []imv1.ImageRegistryCache) {
+func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches []imv1.ImageRegistryCache, registryCacheGardenSecretNames map[string]string) {
 	if len(caches) == 0 {
 		assert.True(t, ext != nil && (ext.ProviderConfig != nil && *ext.Disabled))
 
@@ -779,7 +845,7 @@ func verifyRegistryCacheExtension(t *testing.T, ext *gardener.Extension, caches 
 	assert.Nil(t, caches[0].Config.GarbageCollection)
 
 	if caches[0].Config.SecretReferenceName != nil {
-		assert.Equal(t, ptr.To(fmt.Sprintf(RegistryCacheSecretNameFmt, caches[0].UID)), registryConfig.Caches[0].SecretReferenceName)
+		assert.Equal(t, ptr.To(registryCacheGardenSecretNames[caches[0].UID]), registryConfig.Caches[0].SecretReferenceName)
 	} else {
 		assert.Nil(t, registryConfig.Caches[0].SecretReferenceName)
 	}
@@ -830,6 +896,62 @@ func getExpectedExtensionsOrderMapForCreateWithNvidiaOpenshell() map[string]int 
 	extensionOrderMap[NvidiaOpenshellExtensionType] = 4
 
 	return extensionOrderMap
+}
+
+func TestStrategyRemove(t *testing.T) {
+	const removedType = "to-be-removed"
+	const keptType = "kept"
+
+	existingExtensions := []gardener.Extension{
+		{Type: keptType},
+		{Type: removedType},
+	}
+
+	extender := newExtensionsExtender([]Extension{
+		{
+			Type: removedType,
+			Create: func(_ imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
+				return nil, nil
+			},
+			Strategy: StrategyRemove,
+		},
+	}, existingExtensions)
+
+	shoot := &gardener.Shoot{}
+	err := extender(imv1.Runtime{}, shoot)
+	assert.NoError(t, err)
+	require.Len(t, shoot.Spec.Extensions, 1)
+	assert.Equal(t, keptType, shoot.Spec.Extensions[0].Type)
+}
+
+func TestStrategyRemoveDoesNotRemoveWhenExtensionReturnsNonNil(t *testing.T) {
+	const updatedType = "updated"
+	const keptType = "kept"
+
+	updated := &gardener.Extension{Type: updatedType, Disabled: ptr.To(false)}
+
+	existingExtensions := []gardener.Extension{
+		{Type: keptType},
+		{Type: updatedType, Disabled: ptr.To(true)},
+	}
+
+	extender := newExtensionsExtender([]Extension{
+		{
+			Type: updatedType,
+			Create: func(_ imv1.Runtime, _ gardener.Shoot) (*gardener.Extension, error) {
+				return updated, nil
+			},
+			Strategy: StrategyRemove,
+		},
+	}, existingExtensions)
+
+	shoot := &gardener.Shoot{}
+	err := extender(imv1.Runtime{}, shoot)
+	assert.NoError(t, err)
+	require.Len(t, shoot.Spec.Extensions, 2)
+	assert.Equal(t, keptType, shoot.Spec.Extensions[0].Type)
+	assert.Equal(t, updatedType, shoot.Spec.Extensions[1].Type)
+	assert.Equal(t, false, *shoot.Spec.Extensions[1].Disabled)
 }
 
 func buildFakeClientWithACLConfigMap(t *testing.T, configMapGetCalled *bool) client.Client {

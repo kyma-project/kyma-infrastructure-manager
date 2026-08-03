@@ -3,10 +3,9 @@ package fsm
 import (
 	"context"
 	"errors"
-	"fmt"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	util "k8s.io/apimachinery/pkg/util/runtime"
@@ -267,12 +266,12 @@ func TestFnSyncRegistryCacheGardenSecrets_CachingWithSecret(t *testing.T) {
 	require.Contains(t, nextState.name(), "sFnPatchExistingShoot")
 
 	// garden secret should have been created from the runtime secret
-	var gardenSecret corev1.Secret
-	expectedSecretName := fmt.Sprintf("reg-cache-%s", rt.Spec.Caching[0].UID)
-	getErr := testFSM.GardenClient.Get(testCtx, client.ObjectKey{Name: expectedSecretName, Namespace: "garden-"}, &gardenSecret)
-	require.False(t, apierrors.IsNotFound(getErr), "garden secret should have been created")
+	var gardenSecrets corev1.SecretList
+
+	getErr := testFSM.GardenClient.List(testCtx, &gardenSecrets, client.MatchingLabels{registrycache.CacheIDLabel: rt.Spec.Caching[0].UID}, client.InNamespace("garden-"))
+
 	require.NoError(t, getErr)
-	require.Equal(t, runtimeSecret.Data, gardenSecret.Data)
+	require.Equal(t, runtimeSecret.Data, gardenSecrets.Items[0].Data)
 }
 
 func TestFnSyncRegistryCacheGardenSecrets_StatusSetToPending(t *testing.T) {

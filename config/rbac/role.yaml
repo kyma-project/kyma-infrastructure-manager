@@ -24,6 +24,24 @@ rules:
   - update
   - watch
 - apiGroups:
+  - auditlogmanager.kyma-project.io
+  resources:
+  - auditlogs
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - auditlogmanager.kyma-project.io
+  resources:
+  - auditlogs/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - certificates.k8s.io
   resources:
   - clustertrustbundles

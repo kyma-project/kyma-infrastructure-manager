@@ -15,10 +15,14 @@ type KymaProvisioningInfo struct {
 	SubaccountID          string               `json:"subaccountID,omitzero"`
 	EnvironmentInstanceID string               `json:"environmentInstanceID,omitzero"`
 	InstanceName          string               `json:"instanceName,omitzero"`
+	RuntimeID             string               `json:"runtimeID,omitzero"`
+	InstanceID            string               `json:"instanceID,omitzero"`
+	LastReconcileTime     metav1.Time          `json:"lastReconcileTime,omitzero"`
 	Region                string               `json:"region,omitzero"`
 	PlatformRegion        string               `json:"platformRegion,omitzero"`
 	InfrastructureConfig  runtime.RawExtension `json:"infrastructureConfig,omitzero"`
 	NetworkDetails        NetworkDetails       `json:"networkDetails"`
+	SeedRegion            string               `json:"seedRegion,omitzero"`
 }
 
 type WorkerPools struct {
@@ -42,7 +46,7 @@ type KubeAPIServer struct {
 	ACL []string `json:"acl,omitzero"`
 }
 
-func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaProvisioningInfo {
+func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot, seed gardener.Seed) KymaProvisioningInfo {
 	var kymaWorkerPool WorkerPool
 	var customWorkerPools []WorkerPool
 
@@ -58,7 +62,6 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 			AutoScalerMax:         mainRuntimeCRWorker.Maximum,
 		}
 	}
-
 	additionalWorkers := runtime.Spec.Shoot.Provider.AdditionalWorkers
 
 	if additionalWorkers != nil {
@@ -87,7 +90,11 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 		SubaccountID:          runtime.Labels[imv1.LabelKymaSubaccountID],
 		EnvironmentInstanceID: runtime.Labels[imv1.LabelKymaInstanceID],
 		InstanceName:          runtime.Labels[imv1.LabelKymaName],
+		RuntimeID:             runtime.Labels[imv1.LabelKymaRuntimeID],
+		InstanceID:            runtime.Labels[imv1.LabelKymaInstanceID],
 		Region:                runtime.Spec.Shoot.Region,
+		SeedRegion:            seed.Spec.Provider.Region,
+		LastReconcileTime:     runtime.Status.ShootLastOperation.LastUpdateTime,
 		PlatformRegion:        runtime.Spec.Shoot.PlatformRegion,
 		InfrastructureConfig:  *shoot.Spec.Provider.InfrastructureConfig,
 		NetworkDetails: NetworkDetails{
@@ -97,14 +104,13 @@ func ToKymaProvisioningInfo(runtime imv1.Runtime, shoot *gardener.Shoot) KymaPro
 	}
 }
 
-func ToKymaProvisioningInfoConfigMap(runtime imv1.Runtime, shoot *gardener.Shoot) (v1.ConfigMap, error) {
-	details := ToKymaProvisioningInfo(runtime, shoot)
+func ToKymaProvisioningInfoConfigMap(runtime imv1.Runtime, shoot *gardener.Shoot, seed *gardener.Seed) (v1.ConfigMap, error) {
+	details := ToKymaProvisioningInfo(runtime, shoot, *seed)
 	authConfigBytes, err := yaml.Marshal(details)
 
 	if err != nil {
 		return v1.ConfigMap{}, err
 	}
-
 	return v1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ConfigMap",

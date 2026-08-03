@@ -14,6 +14,13 @@ import (
 
 var expectedIPFamilies = []gardener.IPFamily{gardener.IPFamilyIPv4, gardener.IPFamilyIPv6}
 
+const expectedVXLanConfig = `{
+	"apiVersion": "calico.networking.extensions.gardener.cloud/v1alpha1",
+	"kind": "NetworkConfig",
+	"vxlan": {"enabled": true},
+	"overlay": {"enabled": true}
+}`
+
 func TestExtendWithNetworking(t *testing.T) {
 	t.Run("Should configure an DualStackIP shoot if the provider is AWS, landscape supports DualStack and DualStack is enabled on RuntimeCR", func(t *testing.T) {
 		// given
@@ -103,6 +110,55 @@ func TestExtendWithNetworking(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, expectedIPFamilies, shoot.Spec.Networking.IPFamilies)
+	})
+
+	t.Run("Should configure VXLan overlay networking if the provider is GDCH", func(t *testing.T) {
+		// given
+		runtime := prepareRuntimeStub(hyperscaler.TypeGDCH, false)
+		shoot := testutils.FixEmptyGardenerShoot("test-shoot", "kcp-dev")
+
+		// when
+		networkExtender := ExtendWithNetworking(false)
+		err := networkExtender(runtime, &shoot)
+
+		// then
+		require.NoError(t, err)
+		require.NotNil(t, shoot.Spec.Networking)
+		require.NotNil(t, shoot.Spec.Networking.ProviderConfig)
+		assert.JSONEq(t, expectedVXLanConfig, string(shoot.Spec.Networking.ProviderConfig.Raw))
+	})
+
+	t.Run("Should append VXLan configuration to existing networking config for GDCH", func(t *testing.T) {
+		// given
+		runtime := prepareRuntimeStub(hyperscaler.TypeGDCH, false)
+		shoot := testutils.FixEmptyGardenerShoot("test-shoot", "kcp-dev")
+		shoot.Spec.Networking = &gardener.Networking{
+			Type: ptr.To("test-type"),
+		}
+
+		// when
+		networkExtender := ExtendWithNetworking(false)
+		err := networkExtender(runtime, &shoot)
+
+		// then
+		require.NoError(t, err)
+		require.NotNil(t, shoot.Spec.Networking.ProviderConfig)
+		assert.Equal(t, ptr.To("test-type"), shoot.Spec.Networking.Type)
+		assert.JSONEq(t, expectedVXLanConfig, string(shoot.Spec.Networking.ProviderConfig.Raw))
+	})
+
+	t.Run("Should not configure VXLan if the provider is not GDCH", func(t *testing.T) {
+		// given
+		runtime := prepareRuntimeStub(hyperscaler.TypeAWS, false)
+		shoot := testutils.FixEmptyGardenerShoot("test-shoot", "kcp-dev")
+
+		// when
+		networkExtender := ExtendWithNetworking(false)
+		err := networkExtender(runtime, &shoot)
+
+		// then
+		require.NoError(t, err)
+		assert.Nil(t, shoot.Spec.Networking)
 	})
 }
 

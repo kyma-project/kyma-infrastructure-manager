@@ -43,7 +43,7 @@ func TestNewResourcesExtenderForPatch(t *testing.T) {
 			},
 		}
 
-		extender := NewResourcesExtenderForPatch(shoot.Spec.Resources)
+		extender := NewResourcesExtenderForPatch(shoot.Spec.Resources, map[string]string{"cache-1": "garden-cache-1", "cache-2": "garden-cache-2"})
 
 		// when
 		err := extender(runtime, &shoot)
@@ -56,19 +56,19 @@ func TestNewResourcesExtenderForPatch(t *testing.T) {
 
 		// Verify new resources are added
 		assert.Contains(t, shoot.Spec.Resources, gardener.NamedResourceReference{
-			Name: "reg-cache-cache-1",
+			Name: "garden-cache-1",
 			ResourceRef: v1.CrossVersionObjectReference{
 				Kind:       "Secret",
 				APIVersion: "v1",
-				Name:       "reg-cache-cache-1",
+				Name:       "garden-cache-1",
 			},
 		})
 		assert.Contains(t, shoot.Spec.Resources, gardener.NamedResourceReference{
-			Name: "reg-cache-cache-2",
+			Name: "garden-cache-2",
 			ResourceRef: v1.CrossVersionObjectReference{
 				Kind:       "Secret",
 				APIVersion: "v1",
-				Name:       "reg-cache-cache-2",
+				Name:       "garden-cache-2",
 			},
 		})
 
