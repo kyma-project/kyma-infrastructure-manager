@@ -121,10 +121,11 @@ File: `internal/controller/runtime/fsm/runtime_fsm_cleanup_registry_cache_garden
 
 Entered after `sFnInitializeRuntimeBootstrapper` (i.e., after the shoot has reconciled in Gardener).
 
-1. Guard: feature flag check.
-2. Call `secretManager.DeleteUnused()` — removes Garden secrets that are dirty or orphaned.
-3. If `Spec.Caching` is non-empty: call `statusManager.SetStatusReady()` on SKR CRs and set `ConditionTypeRegistryCacheConfigured = Ready` on the Runtime CR.
-4. Transition → `sFnConfigureSKR`.
+1. Guard: feature flag check — if `RegistryCacheConfigControllerEnabled` is false → skip to `sFnConfigureSKR`.
+2. **Unconditionally** get a client to the SKR (a transient failure here sets `ConditionTypeRegistryCacheConfigured = False` and requeues, even when no registry cache is configured — see Gotcha #8).
+3. Call `secretManager.DeleteUnused()` — removes Garden secrets that are dirty or orphaned.
+4. If `Spec.Caching` is non-empty: call `statusManager.SetStatusReady()` on SKR CRs and set `ConditionTypeRegistryCacheConfigured = Ready` on the Runtime CR.
+5. Transition → `sFnConfigureSKR`.
 
 ---
 
