@@ -8,6 +8,7 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	v1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,8 +17,8 @@ import (
 )
 
 const (
-	auditlogSecretReference          = "auditlog-credentials"
-	dedicatedAuditlogSecretReference = "dedicated-auditlog-credentials"
+	auditlogSecretReference          = auditlogs.SharedAuditlogSecretReference
+	dedicatedAuditlogSecretReference = auditlogs.DedicatedAuditlogSecretReference
 )
 
 // patchShootAuditLog patches the shoot with dedicated audit log configuration.
