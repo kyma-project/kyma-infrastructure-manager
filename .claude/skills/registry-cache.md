@@ -10,7 +10,7 @@ When invoked, read the key files listed below in parallel, then produce a struct
 2. Three-cluster topology
 3. Two reconciliation loops (with entry points and transitions)
 4. Secret lifecycle (copy, rotation, cleanup)
-5. Key files with line-level pointers
+5. Key files
 6. Common gotchas
 
 ---
@@ -73,7 +73,7 @@ Read all of these before producing the walkthrough:
 - `internal/registrycache/registrycache_predicates.go` — detects when shoot patch is needed
 - `internal/registrycache/runtimewatcher/watcherevent.go` — bridges HTTP watcher events to controller-runtime
 - `pkg/gardener/shoot/extender/extensions/registry_config.go` — builds Gardener shoot extension
-- `api/v1/runtime_types.go` lines 157–170 — `ImageRegistryCache` struct and condition constants
+- `api/v1/runtime_types.go` — `ImageRegistryCache` struct and condition constants
 
 ---
 
@@ -83,19 +83,19 @@ Read all of these before producing the walkthrough:
 
 **Entry:** A kubeconfig Secret in KCP changes, OR a `RegistryCacheConfig` change event arrives from the SKR via the runtime-watcher HTTP listener (port 8082).
 
-**File:** `internal/controller/registrycache/registry_cache_config_controller.go:51`
+**File:** `internal/controller/registrycache/registry_cache_config_controller.go`
 
 Steps:
-1. Load the kubeconfig Secret; skip if not managed by KIM (`secretControlledByKIM` at line 198).
+1. Load the kubeconfig Secret; skip if not managed by KIM (`secretControlledByKIM`).
 2. Load the corresponding `Runtime` CR from KCP.
-3. Call `fetchConfigs()` (line 122):
+3. Call `fetchConfigs()`:
    - Check the SKR for the `kymas.operator.kyma-project.io` CRD — if absent, registry-cache module is disabled, return nil.
    - Read `kyma-system/default` Kyma CR; check `.spec.modules` for `"registry-cache"`.
    - If enabled, list all `RegistryCacheConfig` CRs from the SKR and map them to `[]ImageRegistryCache`.
-4. Write the result to `Runtime.Spec.Caching` on KCP (only if changed, line 110).
+4. Write the result to `Runtime.Spec.Caching` on KCP (only if changed).
 5. Re-queue after `ReconcilePeriod` (default 60 min).
 
-**Watcher bridge:** `internal/registrycache/runtimewatcher/watcherevent.go:32` — `AdaptEvents` converts the runtime-watcher event channel to a controller-runtime `source.Channel`. `CreateSkrEventHandler` (line 56) extracts the `runtime-id` from the event payload and enqueues `kubeconfig-<runtime-id>` for reconciliation.
+**Watcher bridge:** `internal/registrycache/runtimewatcher/watcherevent.go` — `AdaptEvents` converts the runtime-watcher event channel to a controller-runtime `source.Channel`. `CreateSkrEventHandler` extracts the `runtime-id` from the event payload and enqueues `kubeconfig-<runtime-id>` for reconciliation.
 
 ---
 
@@ -104,7 +104,7 @@ Steps:
 Triggered by: `Runtime.Spec.Caching` changing (generation bump from Loop 1) or any other shoot patch trigger.
 
 **Step A — `sFnSyncRegistryCacheGardenSecrets`**
-File: `internal/controller/runtime/fsm/runtime_fsm_sync_registry_cache_garden_secrets.go:14`
+File: `internal/controller/runtime/fsm/runtime_fsm_sync_registry_cache_garden_secrets.go`
 
 1. Guard: if feature flag `RegistryCacheConfigControllerEnabled` is false → skip to `sFnPatchExistingShoot`.
 2. If `Spec.Caching` is non-empty, get a client to the SKR.
@@ -117,7 +117,7 @@ File: `internal/controller/runtime/fsm/runtime_fsm_sync_registry_cache_garden_se
 Calls `GardenSecretManager.GetCacheUIDToSecretNameMap()` to build the `cacheUID → secretName` map, then passes it to `NewRegistryCacheExtension()` when building the shoot spec. The shoot is patched in Gardener.
 
 **Step C — `sFnCleanupRegistryCacheGardenSecrets`**
-File: `internal/controller/runtime/fsm/runtime_fsm_cleanup_registry_cache_garden_secrets.go:14`
+File: `internal/controller/runtime/fsm/runtime_fsm_cleanup_registry_cache_garden_secrets.go`
 
 Entered after `sFnInitializeRuntimeBootstrapper` (i.e., after the shoot has reconciled in Gardener).
 
@@ -130,13 +130,13 @@ Entered after `sFnInitializeRuntimeBootstrapper` (i.e., after the shoot has reco
 
 ## Secret Lifecycle
 
-**Copy (first time):** `GardenSecretSyncer.copySecretFromRuntimeToGardenCluster` (line 78) — reads the pull secret from the SKR, creates an immutable `reg-cache-<uuid>` Secret in `garden-<project>` namespace. Labels: `kyma-project.io/runtime-id`, `kyma-project.io/registry-cache-id`, `app.kubernetes.io/managed-by=infrastructure-manager`.
+**Copy (first time):** `GardenSecretSyncer.copySecretFromRuntimeToGardenCluster` — reads the pull secret from the SKR, creates an immutable `reg-cache-<uuid>` Secret in `garden-<project>` namespace. Labels: `kyma-project.io/runtime-id`, `kyma-project.io/registry-cache-id`, `app.kubernetes.io/managed-by=infrastructure-manager`.
 
-**Rotation:** `GardenSecretSyncer.replaceSecretInGardenCluster` (line 87) — if the SKR secret data changed, the existing Garden secret is patched with `kyma-project.io/dirty=true` (making it invisible to `GetCacheUIDToSecretNameMap`), then a new immutable secret is created. The dirty secret is deleted in the next cleanup pass.
+**Rotation:** `GardenSecretSyncer.replaceSecretInGardenCluster` — if the SKR secret data changed, the existing Garden secret is patched with `kyma-project.io/dirty=true` (making it invisible to `GetCacheUIDToSecretNameMap`), then a new immutable secret is created. The dirty secret is deleted in the next cleanup pass.
 
-**Cleanup:** `GardenSecretManager.DeleteUnused` (line 45) — deletes any Garden secret that is dirty OR whose `registry-cache-id` label no longer matches a UID in `Runtime.Spec.Caching`.
+**Cleanup:** `GardenSecretManager.DeleteUnused` — deletes any Garden secret that is dirty OR whose `registry-cache-id` label no longer matches a UID in `Runtime.Spec.Caching`.
 
-**Runtime deletion:** `GardenSecretManager.DeleteAll` (line 71) — called from `sFnInitialise` when the shoot is gone, purges all Garden secrets for the runtime.
+**Runtime deletion:** `GardenSecretManager.DeleteAll` — called from `sFnInitialise` when the shoot is gone, purges all Garden secrets for the runtime.
 
 ---
 
@@ -153,3 +153,9 @@ Entered after `sFnInitializeRuntimeBootstrapper` (i.e., after the shoot has reco
 5. **Module detection** — `fetchConfigs` first checks for the `kymas.operator.kyma-project.io` CRD before reading the Kyma CR. If the CRD is missing (module not installed at all), it returns nil silently — not an error.
 
 6. **`HasRegistryCacheCountChanged`** — only detects count changes, not config changes. Config-only changes (e.g., upstream URL) are reconciled when the `RegistryCacheConfigReconciler` updates `Runtime.Spec.Caching`, which increments the generation and triggers the FSM anyway.
+
+7. **Random secret names on every rotation** — `DefaultGardenSecretNameGenerator` (`internal/registrycache/garden_secret_syncer.go`) ignores both `runtimeID` and `cacheUID` and calls `uuid.New()` each time. Every rotation produces a new random `reg-cache-<uuid>` name. Seeing two `reg-cache-*` secrets with the same `kyma-project.io/registry-cache-id` label during a rotation window is normal — the dirty one will be deleted by the next cleanup pass.
+
+8. **Cleanup fetches the SKR client unconditionally** — `sFnCleanupRegistryCacheGardenSecrets` calls `RuntimeClientGetter.Get` before checking whether `Spec.Caching` is non-empty. A transient SKR connectivity failure sets `ConditionTypeRegistryCacheConfigured = False` and requeues the Runtime even when no registry cache was ever configured.
+
+9. **`existingRegistryCacheExt` is accepted but ignored** — `NewRegistryCacheExtension` (`pkg/gardener/shoot/extender/extensions/registry_config.go`) takes an `existingRegistryCacheExt *gardener.Extension` parameter but never reads it. The existing extension config is not merged or consulted; the output is built entirely from `caches` and `registryCacheGardenSecretNames`.
