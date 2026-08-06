@@ -3,6 +3,7 @@ package fsm
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"testing"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -14,6 +15,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
+
+const auditlogCredentialsResource = "auditlog-credentials"
 
 func TestPatchShootAuditLog(t *testing.T) {
 	t.Run("should update audit log extension and add resource reference", func(t *testing.T) {
@@ -30,7 +33,7 @@ func TestPatchShootAuditLog(t *testing.T) {
 			Type:                "standard",
 			TenantID:            "old-tenant-id",
 			ServiceURL:          "https://old.example.com",
-			SecretReferenceName: "auditlog-credentials",
+			SecretReferenceName: auditlogCredentialsResource,
 		}
 		configJSON, _ := json.Marshal(existingConfig)
 
@@ -50,7 +53,7 @@ func TestPatchShootAuditLog(t *testing.T) {
 				},
 				Resources: []gardener.NamedResourceReference{
 					{
-						Name: "auditlog-credentials",
+						Name: auditlogCredentialsResource,
 						ResourceRef: v1.CrossVersionObjectReference{
 							Name:       "old-secret",
 							Kind:       "Secret",
@@ -307,6 +310,91 @@ func TestPatchShootAuditLog(t *testing.T) {
 		require.Len(t, systemState.shoot.Spec.Resources, 1)
 		require.Equal(t, dedicatedAuditlogSecretReference, systemState.shoot.Spec.Resources[0].Name)
 		require.Equal(t, "test-gardener-secret", systemState.shoot.Spec.Resources[0].ResourceRef.Name)
+	})
+
+	t.Run("should remove stale shared auditlog-credentials resource entry when migrating to dedicated", func(t *testing.T) {
+		// given
+		const expectedSecretName = "new-dedicated-secret"
+		ctx := context.Background()
+		auditLogData := auditlog.AuditLogData{
+			TenantID:   "test-tenant-id",
+			ServiceURL: "https://test.auditlog.example.com",
+			SecretName: expectedSecretName,
+		}
+
+		existingConfig := extensions.AuditlogExtensionConfig{
+			Type:                "standard",
+			TenantID:            "old-tenant-id",
+			ServiceURL:          "https://old.example.com",
+			SecretReferenceName: auditlogCredentialsResource,
+		}
+		configJSON, _ := json.Marshal(existingConfig)
+
+		shoot := &gardener.Shoot{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-shoot",
+				Namespace: "garden-test",
+			},
+			Spec: gardener.ShootSpec{
+				Extensions: []gardener.Extension{
+					{
+						Type: extensions.AuditlogExtensionType,
+						ProviderConfig: &runtime.RawExtension{
+							Raw: configJSON,
+						},
+					},
+				},
+				Resources: []gardener.NamedResourceReference{
+					{
+						Name: auditlogCredentialsResource,
+						ResourceRef: v1.CrossVersionObjectReference{
+							Name:       "old-shared-secret",
+							Kind:       "Secret",
+							APIVersion: "v1",
+						},
+					},
+				},
+			},
+		}
+
+		scheme, _ := newCreateTestScheme()
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(shoot).Build()
+
+		testFsm := &fsm{
+			K8s: K8s{
+				GardenClient: fakeClient,
+			},
+		}
+
+		systemState := &systemState{
+			shoot: shoot,
+		}
+
+		// when
+		err := patchShootAuditLog(ctx, testFsm, systemState, auditLogData)
+
+		// then
+		require.NoError(t, err)
+
+		// Verify audit log extension configuration
+		require.Len(t, systemState.shoot.Spec.Extensions, 1)
+		ext := systemState.shoot.Spec.Extensions[0]
+		require.Equal(t, extensions.AuditlogExtensionType, ext.Type)
+
+		var updatedConfig extensions.AuditlogExtensionConfig
+		err = json.Unmarshal(ext.ProviderConfig.Raw, &updatedConfig)
+		require.NoError(t, err)
+		require.Equal(t, dedicatedAuditlogSecretReference, updatedConfig.SecretReferenceName)
+
+		// Verify stale shared auditlog-credentials resource entry was removed and only dedicated reference remains
+		require.Len(t, systemState.shoot.Spec.Resources, 1)
+		require.Equal(t, dedicatedAuditlogSecretReference, systemState.shoot.Spec.Resources[0].Name)
+		require.Equal(t, expectedSecretName, systemState.shoot.Spec.Resources[0].ResourceRef.Name)
+
+		sharedIndex := slices.IndexFunc(systemState.shoot.Spec.Resources, func(r gardener.NamedResourceReference) bool {
+			return r.Name == auditlogCredentialsResource
+		})
+		require.Equal(t, -1, sharedIndex, "stale auditlog-credentials resource entry should have been removed")
 	})
 }
 
