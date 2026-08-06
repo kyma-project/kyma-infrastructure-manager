@@ -16,8 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-const auditlogCredentialsResource = "auditlog-credentials"
-
 func TestPatchShootAuditLog(t *testing.T) {
 	t.Run("should update audit log extension and add resource reference", func(t *testing.T) {
 		// given
