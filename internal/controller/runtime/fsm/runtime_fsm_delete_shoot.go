@@ -15,7 +15,7 @@ import (
 
 func sFnDeleteShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 	// Release the claimed AuditLogCR if dedicated audit logging was used
-	if m.DedicatedAuditLoggingEnabled && s.instance.Spec.AuditLogAccessEnabled != nil && *s.instance.Spec.AuditLogAccessEnabled {
+	if m.DedicatedAuditLoggingEnabled && s.instance.IsDedicatedAuditLogEnabled() {
 		runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
 
 		if err := m.AuditLogDataProvider.ReleaseDedicated(ctx, runtimeID); err != nil {

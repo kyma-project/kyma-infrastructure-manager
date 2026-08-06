@@ -52,9 +52,7 @@ func sFnCreateShoot(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl
 	}
 
 	// Check if dedicated audit logging is requested and available before creating shoot
-	if m.DedicatedAuditLoggingEnabled &&
-		s.instance.Spec.AuditLogAccessEnabled != nil &&
-		*s.instance.Spec.AuditLogAccessEnabled {
+	if m.DedicatedAuditLoggingEnabled && s.instance.IsDedicatedAuditLogEnabled() {
 		runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
 
 		m.log.Info("Validating dedicated audit logging availability before shoot creation",

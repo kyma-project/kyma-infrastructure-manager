@@ -382,3 +382,8 @@ func (k *Runtime) ValidateRequiredLabels() error {
 	}
 	return nil
 }
+
+// IsDedicatedAuditLogEnabled checks if runtime has dedicated audit logging flag enabled
+func (k *Runtime) IsDedicatedAuditLogEnabled() bool {
+	return k.Spec.AuditLogAccessEnabled != nil && *k.Spec.AuditLogAccessEnabled
+}

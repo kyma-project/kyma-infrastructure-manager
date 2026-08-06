@@ -181,7 +181,7 @@ func TestPatchShootAuditLog(t *testing.T) {
 		require.Equal(t, "new-gardener-secret", systemState.shoot.Spec.Resources[0].ResourceRef.Name)
 	})
 
-	t.Run("should return error when audit log extension not found", func(t *testing.T) {
+	t.Run("should create audit log extension when not found and add resource reference", func(t *testing.T) {
 		// given
 		ctx := context.Background()
 		auditLogData := auditlog.AuditLogData{
@@ -191,6 +191,10 @@ func TestPatchShootAuditLog(t *testing.T) {
 		}
 
 		shoot := &gardener.Shoot{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-shoot",
+				Namespace: "garden-test",
+			},
 			Spec: gardener.ShootSpec{
 				Extensions: []gardener.Extension{
 					{
@@ -217,8 +221,92 @@ func TestPatchShootAuditLog(t *testing.T) {
 		err := patchShootAuditLog(ctx, testFsm, systemState, auditLogData)
 
 		// then
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "audit log extension not found")
+		require.NoError(t, err)
+
+		// Verify the audit log extension was created
+		require.Len(t, systemState.shoot.Spec.Extensions, 2)
+
+		// Find the audit log extension
+		var auditlogExt *gardener.Extension
+		for i := range systemState.shoot.Spec.Extensions {
+			if systemState.shoot.Spec.Extensions[i].Type == extensions.AuditlogExtensionType {
+				auditlogExt = &systemState.shoot.Spec.Extensions[i]
+				break
+			}
+		}
+
+		require.NotNil(t, auditlogExt)
+		require.Equal(t, extensions.AuditlogExtensionType, auditlogExt.Type)
+
+		var createdConfig extensions.AuditlogExtensionConfig
+		err = json.Unmarshal(auditlogExt.ProviderConfig.Raw, &createdConfig)
+		require.NoError(t, err)
+		require.Equal(t, "test-tenant-id", createdConfig.TenantID)
+		require.Equal(t, "https://test.auditlog.example.com", createdConfig.ServiceURL)
+		require.Equal(t, dedicatedAuditlogSecretReference, createdConfig.SecretReferenceName)
+		require.Equal(t, "standard", createdConfig.Type)
+
+		// Verify the resource reference was added
+		require.Len(t, systemState.shoot.Spec.Resources, 1)
+		require.Equal(t, dedicatedAuditlogSecretReference, systemState.shoot.Spec.Resources[0].Name)
+		require.Equal(t, "test-gardener-secret", systemState.shoot.Spec.Resources[0].ResourceRef.Name)
+	})
+
+	t.Run("should create audit log extension when shoot has no extensions", func(t *testing.T) {
+		// given
+		ctx := context.Background()
+		auditLogData := auditlog.AuditLogData{
+			TenantID:   "test-tenant-id",
+			ServiceURL: "https://test.auditlog.example.com",
+			SecretName: "test-gardener-secret",
+		}
+
+		shoot := &gardener.Shoot{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-shoot",
+				Namespace: "garden-test",
+			},
+			Spec: gardener.ShootSpec{
+				Extensions: []gardener.Extension{},
+			},
+		}
+
+		scheme, _ := newCreateTestScheme()
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(shoot).Build()
+
+		testFsm := &fsm{
+			K8s: K8s{
+				GardenClient: fakeClient,
+			},
+		}
+
+		systemState := &systemState{
+			shoot: shoot,
+		}
+
+		// when
+		err := patchShootAuditLog(ctx, testFsm, systemState, auditLogData)
+
+		// then
+		require.NoError(t, err)
+
+		// Verify the audit log extension was created
+		require.Len(t, systemState.shoot.Spec.Extensions, 1)
+		ext := systemState.shoot.Spec.Extensions[0]
+		require.Equal(t, extensions.AuditlogExtensionType, ext.Type)
+
+		var createdConfig extensions.AuditlogExtensionConfig
+		err = json.Unmarshal(ext.ProviderConfig.Raw, &createdConfig)
+		require.NoError(t, err)
+		require.Equal(t, "test-tenant-id", createdConfig.TenantID)
+		require.Equal(t, "https://test.auditlog.example.com", createdConfig.ServiceURL)
+		require.Equal(t, dedicatedAuditlogSecretReference, createdConfig.SecretReferenceName)
+		require.Equal(t, "standard", createdConfig.Type)
+
+		// Verify the resource reference was added
+		require.Len(t, systemState.shoot.Spec.Resources, 1)
+		require.Equal(t, dedicatedAuditlogSecretReference, systemState.shoot.Spec.Resources[0].Name)
+		require.Equal(t, "test-gardener-secret", systemState.shoot.Spec.Resources[0].ResourceRef.Name)
 	})
 }
 

@@ -59,9 +59,7 @@ func sFnApplyClusterRoleBindings(ctx context.Context, m *fsm, s *systemState) (s
 	m.log.Info("Finished configuring shoot")
 
 	// Only proceed to audit log migration if both flags are enabled
-	if m.DedicatedAuditLoggingEnabled &&
-		s.instance.Spec.AuditLogAccessEnabled != nil &&
-		*s.instance.Spec.AuditLogAccessEnabled {
+	if m.DedicatedAuditLoggingEnabled && s.instance.IsDedicatedAuditLogEnabled() {
 
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRuntimeConfigured,

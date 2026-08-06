@@ -31,7 +31,7 @@ func sFnMigrateToDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState) 
 	runtimeID := s.instance.Labels[imv1.LabelKymaRuntimeID]
 
 	// Check if runtime-specific audit log access is enabled
-	if s.instance.Spec.AuditLogAccessEnabled == nil || !*s.instance.Spec.AuditLogAccessEnabled {
+	if !s.instance.IsDedicatedAuditLogEnabled() {
 		m.log.V(log_level.DEBUG).Info("Audit log access not enabled for this runtime, completing provisioning",
 			"runtimeID", runtimeID)
 

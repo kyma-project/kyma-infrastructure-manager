@@ -10,6 +10,8 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	v1 "k8s.io/api/autoscaling/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -47,6 +49,7 @@ func applyDedicatedAuditLogToShoot(shoot *gardener.Shoot, auditLogData auditlog.
 
 // updateAuditLogExtensionConfig finds the audit log extension in the shoot and updates
 // its provider config with the dedicated audit log settings.
+// If no audit log extension exists, it creates a new one.
 func updateAuditLogExtensionConfig(shoot *gardener.Shoot, auditLogData auditlog.AuditLogData) error {
 	for i := range shoot.Spec.Extensions {
 		if shoot.Spec.Extensions[i].Type != extensions.AuditlogExtensionType {
@@ -57,7 +60,14 @@ func updateAuditLogExtensionConfig(shoot *gardener.Shoot, auditLogData auditlog.
 		}
 		return nil
 	}
-	return fmt.Errorf("audit log extension not found in shoot spec")
+
+	// Extension not found - create a new one
+	newExt, err := createAuditLogExtension(auditLogData)
+	if err != nil {
+		return fmt.Errorf("failed to create audit log extension: %w", err)
+	}
+	shoot.Spec.Extensions = append(shoot.Spec.Extensions, *newExt)
+	return nil
 }
 
 // upsertAuditLogSecretReference adds or updates the NamedResourceReference that maps
@@ -110,6 +120,33 @@ func updateAuditLogExtension(ext *gardener.Extension, auditLogData auditlog.Audi
 	ext.ProviderConfig.Raw = updatedConfig
 
 	return nil
+}
+
+// createAuditLogExtension creates a new audit log extension with dedicated settings.
+// Uses the constant dedicatedAuditlogSecretReference for the secret reference name.
+func createAuditLogExtension(auditLogData auditlog.AuditLogData) (*gardener.Extension, error) {
+	cfg := extensions.AuditlogExtensionConfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "AuditlogConfig",
+			APIVersion: "service.auditlog.extensions.gardener.cloud/v1alpha1",
+		},
+		Type:                "standard",
+		TenantID:            auditLogData.TenantID,
+		ServiceURL:          auditLogData.ServiceURL,
+		SecretReferenceName: dedicatedAuditlogSecretReference,
+	}
+
+	configJSON, err := json.Marshal(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal audit log config: %w", err)
+	}
+
+	return &gardener.Extension{
+		Type: extensions.AuditlogExtensionType,
+		ProviderConfig: &runtime.RawExtension{
+			Raw: configJSON,
+		},
+	}, nil
 }
 
 // getShootAuditLogConfig extracts the current audit log configuration from the shoot
