@@ -108,8 +108,8 @@ File: `internal/controller/runtime/fsm/runtime_fsm_sync_registry_cache_garden_se
 
 1. Guard: if feature flag `RegistryCacheConfigControllerEnabled` is false → skip to `sFnPatchExistingShoot`.
 2. If `Spec.Caching` is non-empty, get a client to the SKR.
-3. Call `statusManager.SetStatusPending()` on each `RegistryCacheConfig` CR in the SKR.
-4. If any cache has a `SecretReferenceName`, call `GardenSecretSyncer.Do()` to copy secrets from SKR to Garden cluster.
+3. Call `statusManager.SetStatusPending()` on **all** `RegistryCacheConfig` CRs in the SKR (unconditionally when `Spec.Caching` is non-empty, regardless of whether any cache has a secret).
+4. If any cache has a `SecretReferenceName` (`HasCachesWithSecrets`), call `GardenSecretSyncer.Do()` to copy/rotate secrets from SKR to Garden cluster.
 5. Transition → `sFnPatchExistingShoot`.
 
 **Step B — `sFnPatchExistingShoot`** (not registry-cache specific)
