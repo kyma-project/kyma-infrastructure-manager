@@ -15,7 +15,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const dedicatedAuditlogSecretReference = "dedicated-auditlog-credentials"
+const (
+	auditlogSecretReference          = "auditlog-credentials"
+	dedicatedAuditlogSecretReference = "dedicated-auditlog-credentials"
+)
 
 // patchShootAuditLog patches the shoot with dedicated audit log configuration.
 // It delegates all data mutations to applyDedicatedAuditLogToShoot and then
@@ -73,6 +76,10 @@ func updateAuditLogExtensionConfig(shoot *gardener.Shoot, auditLogData auditlog.
 // upsertAuditLogSecretReference adds or updates the NamedResourceReference that maps
 // dedicatedAuditlogSecretReference to the actual Gardener secret.
 func upsertAuditLogSecretReference(shoot *gardener.Shoot, secretName string) {
+	shoot.Spec.Resources = slices.DeleteFunc(shoot.Spec.Resources, func(r gardener.NamedResourceReference) bool {
+		return r.Name == auditlogSecretReference
+	})
+
 	resource := gardener.NamedResourceReference{
 		Name: dedicatedAuditlogSecretReference,
 		ResourceRef: v1.CrossVersionObjectReference{

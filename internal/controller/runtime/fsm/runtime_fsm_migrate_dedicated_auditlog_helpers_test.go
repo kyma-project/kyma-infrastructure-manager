@@ -33,7 +33,7 @@ func TestPatchShootAuditLog(t *testing.T) {
 			Type:                "standard",
 			TenantID:            "old-tenant-id",
 			ServiceURL:          "https://old.example.com",
-			SecretReferenceName: auditlogCredentialsResource,
+			SecretReferenceName: auditlogSecretReference,
 		}
 		configJSON, _ := json.Marshal(existingConfig)
 
@@ -53,7 +53,7 @@ func TestPatchShootAuditLog(t *testing.T) {
 				},
 				Resources: []gardener.NamedResourceReference{
 					{
-						Name: auditlogCredentialsResource,
+						Name: auditlogSecretReference,
 						ResourceRef: v1.CrossVersionObjectReference{
 							Name:       "old-secret",
 							Kind:       "Secret",
@@ -96,8 +96,8 @@ func TestPatchShootAuditLog(t *testing.T) {
 		require.Equal(t, dedicatedAuditlogSecretReference, updatedConfig.SecretReferenceName)
 		require.Equal(t, "standard", updatedConfig.Type)
 
-		// Verify the resource reference was added
-		require.Len(t, systemState.shoot.Spec.Resources, 2)
+		// Verify the resource reference was added and stale shared reference was removed
+		require.Len(t, systemState.shoot.Spec.Resources, 1)
 
 		// Find the dedicated audit log resource reference
 		var dedicatedResource *gardener.NamedResourceReference
@@ -326,7 +326,7 @@ func TestPatchShootAuditLog(t *testing.T) {
 			Type:                "standard",
 			TenantID:            "old-tenant-id",
 			ServiceURL:          "https://old.example.com",
-			SecretReferenceName: auditlogCredentialsResource,
+			SecretReferenceName: auditlogSecretReference,
 		}
 		configJSON, _ := json.Marshal(existingConfig)
 
@@ -346,7 +346,7 @@ func TestPatchShootAuditLog(t *testing.T) {
 				},
 				Resources: []gardener.NamedResourceReference{
 					{
-						Name: auditlogCredentialsResource,
+						Name: auditlogSecretReference,
 						ResourceRef: v1.CrossVersionObjectReference{
 							Name:       "old-shared-secret",
 							Kind:       "Secret",
@@ -392,7 +392,7 @@ func TestPatchShootAuditLog(t *testing.T) {
 		require.Equal(t, expectedSecretName, systemState.shoot.Spec.Resources[0].ResourceRef.Name)
 
 		sharedIndex := slices.IndexFunc(systemState.shoot.Spec.Resources, func(r gardener.NamedResourceReference) bool {
-			return r.Name == auditlogCredentialsResource
+			return r.Name == auditlogSecretReference
 		})
 		require.Equal(t, -1, sharedIndex, "stale auditlog-credentials resource entry should have been removed")
 	})
