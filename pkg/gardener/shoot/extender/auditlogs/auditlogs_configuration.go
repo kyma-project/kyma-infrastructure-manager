@@ -19,7 +19,9 @@ type AuditLogData struct {
 	TenantID   string `json:"tenantID" validate:"required"`
 	ServiceURL string `json:"serviceURL" validate:"required,url"`
 	SecretName string `json:"secretName" validate:"required"`
-	Dedicated  bool   `json:"dedicated,omitempty"`
+	// Dedicated is set internally to select the correct secret reference name; it is never
+	// (un)marshalled from/to the shared audit log configuration file.
+	Dedicated bool `json:"-"`
 }
 
 // SecretReferenceName returns the name under which the audit log secret should be
