@@ -7,12 +7,19 @@ import (
 	v1 "k8s.io/api/autoscaling/v1"
 )
 
-const auditlogSecretReference = "auditlog-credentials"
-
-func oSetSecret(secretName string) operation {
+func oSetSecret(referenceName, secretName string) operation {
 	return func(s *gardener.Shoot) error {
+		otherReferenceName := SharedAuditlogSecretReference
+		if referenceName == SharedAuditlogSecretReference {
+			otherReferenceName = DedicatedAuditlogSecretReference
+		}
+
+		s.Spec.Resources = slices.DeleteFunc(s.Spec.Resources, func(r gardener.NamedResourceReference) bool {
+			return r.Name == otherReferenceName
+		})
+
 		resource := gardener.NamedResourceReference{
-			Name: auditlogSecretReference,
+			Name: referenceName,
 			ResourceRef: v1.CrossVersionObjectReference{
 				Name:       secretName,
 				Kind:       "Secret",
@@ -20,7 +27,7 @@ func oSetSecret(secretName string) operation {
 			},
 		}
 		index := slices.IndexFunc(s.Spec.Resources, func(r gardener.NamedResourceReference) bool {
-			return r.Name == auditlogSecretReference
+			return r.Name == referenceName
 		})
 
 		if index == -1 {

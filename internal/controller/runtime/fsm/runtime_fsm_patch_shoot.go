@@ -326,7 +326,7 @@ func resolveAuditLogData(ctx context.Context, m *fsm, s *systemState) (auditlogs
 			m.log.Info("Dedicated audit logging is irreversible - ignoring attempt to disable",
 				"runtimeID", runtimeID)
 		}
-		return toExtenderAuditLogData(existingData), nil, nil, nil
+		return toExtenderAuditLogData(existingData, true), nil, nil, nil
 	}
 
 	if !s.instance.IsDedicatedAuditLogEnabled() {
@@ -358,7 +358,7 @@ func getSharedAuditLogDataWithErrorHandling(ctx context.Context, m *fsm, s *syst
 		}
 	}
 
-	return toExtenderAuditLogData(data), nil, nil, err
+	return toExtenderAuditLogData(data, false), nil, nil, err
 }
 
 // claimDedicatedAuditLog claims an AuditLogCR for upgrade scenario
@@ -396,7 +396,7 @@ func claimDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState, runtime
 		"Dedicated audit logging claimed, configuring shoot",
 	)
 
-	return toExtenderAuditLogData(data), nil, nil, nil
+	return toExtenderAuditLogData(data, true), nil, nil, nil
 }
 
 func setRegistryCacheStatusFailed(ctx context.Context, m *fsm, s *systemState) {
@@ -412,10 +412,11 @@ func setRegistryCacheStatusFailed(ctx context.Context, m *fsm, s *systemState) {
 }
 
 // toExtenderAuditLogData converts auditlog.AuditLogData to extender auditlogs.AuditLogData
-func toExtenderAuditLogData(data auditlog.AuditLogData) auditlogs.AuditLogData {
+func toExtenderAuditLogData(data auditlog.AuditLogData, dedicated bool) auditlogs.AuditLogData {
 	return auditlogs.AuditLogData{
 		TenantID:   data.TenantID,
 		ServiceURL: data.ServiceURL,
 		SecretName: data.SecretName,
+		Dedicated:  dedicated,
 	}
 }

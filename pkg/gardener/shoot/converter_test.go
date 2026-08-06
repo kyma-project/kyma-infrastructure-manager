@@ -322,6 +322,7 @@ func TestConverter(t *testing.T) {
 			TenantID:   "new-tenant-id",
 			ServiceURL: "https://new.auditlog.example.com",
 			SecretName: expectedSecretName,
+			Dedicated:  true,
 		}
 
 		converter := NewConverterPatch(context.Background(), PatchOpts{
