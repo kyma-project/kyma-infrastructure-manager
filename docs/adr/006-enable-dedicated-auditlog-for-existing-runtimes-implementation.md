@@ -77,7 +77,7 @@ func resolveAuditLogData(ctx context.Context, m *fsm, s *systemState) (auditlogs
             m.log.Info("Dedicated audit logging is irreversible - ignoring attempt to disable",
                 "runtimeID", runtimeID)
         }
-        return toExtenderAuditLogData(existingData), nil, nil, nil
+        return toExtenderAuditLogData(existingData, true), nil, nil, nil
     }
 
     // Runtime flag not set → use shared config
@@ -117,7 +117,7 @@ func getSharedAuditLogDataWithErrorHandling(ctx context.Context, m *fsm, s *syst
         }
     }
 
-    return toExtenderAuditLogData(data), nil, nil, err
+    return toExtenderAuditLogData(data, false), nil, nil, err
 }
 ```
 
@@ -161,7 +161,7 @@ func claimDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState, runtime
         "Dedicated audit logging claimed, configuring shoot",
     )
 
-    return toExtenderAuditLogData(data), nil, nil, nil
+    return toExtenderAuditLogData(data, true), nil, nil, nil
 }
 ```
 
@@ -170,12 +170,14 @@ func claimDedicatedAuditLog(ctx context.Context, m *fsm, s *systemState, runtime
 Converts between package types:
 
 ```go
-// toExtenderAuditLogData converts auditlog.AuditLogData to extender auditlogs.AuditLogData
-func toExtenderAuditLogData(data auditlog.AuditLogData) auditlogs.AuditLogData {
+// toExtenderAuditLogData converts auditlog.AuditLogData to extender auditlogs.AuditLogData.
+// Dedicated data selects the dedicated secret reference; shared data selects the shared reference.
+func toExtenderAuditLogData(data auditlog.AuditLogData, dedicated bool) auditlogs.AuditLogData {
     return auditlogs.AuditLogData{
         TenantID:   data.TenantID,
         ServiceURL: data.ServiceURL,
         SecretName: data.SecretName,
+        Dedicated:  dedicated,
     }
 }
 ```
@@ -304,7 +306,7 @@ No changes needed to `sFnMigrateToDedicatedAuditLog`.
 
 Runtimes created in regions without shared audit log configuration had no audit log secret reference in `shoot.spec.resources`. When upgrading to dedicated audit logging, the Gardener `shoot-auditlog-service` extension would fail because:
 
-1. The extension expects a secret reference named `auditlog-credentials` in `shoot.spec.resources`
+1. The extension expects a secret reference whose name matches the audit logging mode in `shoot.spec.resources`: `auditlog-credentials` for shared logging or `dedicated-auditlog-credentials` for dedicated logging
 2. The converter was using `NewAuditlogExtenderForPatch` which **only updated the policy configmap**
 3. The secret reference was never added, causing the extension to fail
 
@@ -356,7 +358,7 @@ func NewAuditlogExtender(policyConfigMapName string, data AuditLogData) Extend {
     return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
         policyConfigMapName := fixPolicyConfigMapName(rt.Annotations, policyConfigMapName)
         for _, f := range []operation{
-            oSetSecret(data.SecretName),           // ← Adds/updates secret reference
+            oSetSecret(data.SecretReferenceName(), data.SecretName),
             oSetPolicyConfigmap(policyConfigMapName), // ← Adds/updates policy
         } {
             if err := f(shoot); err != nil {
@@ -372,7 +374,7 @@ func NewAuditlogExtender(policyConfigMapName string, data AuditLogData) Extend {
 1. **Secret reference** in `shoot.spec.resources`:
    ```yaml
    resources:
-     - name: auditlog-credentials
+     - name: dedicated-auditlog-credentials  # Shared mode uses auditlog-credentials
        resourceRef:
          name: dedicated-audit-secret  # From AuditLogData.SecretName
          kind: Secret
@@ -395,20 +397,37 @@ func NewAuditlogExtender(policyConfigMapName string, data AuditLogData) Extend {
 
 Both operations are idempotent and safe to call repeatedly:
 
-**`oSetSecret` (set_secret.go:12-34)**:
+**`oSetSecret` (set_secret.go:10-41)**:
 ```go
-func oSetSecret(secretName string) operation {
+func oSetSecret(referenceName, secretName string) operation {
     return func(s *gardener.Shoot) error {
-        // Check if secret reference already exists
-        index := slices.IndexFunc(s.Spec.Resources, func(r gardener.NamedResourceReference) bool {
-            return r.Name == auditlogSecretReference
-        })
-        
-        if index == -1 {
-            s.Spec.Resources = append(s.Spec.Resources, resource) // Add new
-        } else {
-            s.Spec.Resources[index] = resource  // Update existing
+        otherReferenceName := SharedAuditlogSecretReference
+        if referenceName == SharedAuditlogSecretReference {
+            otherReferenceName = DedicatedAuditlogSecretReference
         }
+
+        s.Spec.Resources = slices.DeleteFunc(s.Spec.Resources, func(r gardener.NamedResourceReference) bool {
+            return r.Name == otherReferenceName
+        })
+
+        resource := gardener.NamedResourceReference{
+            Name: referenceName,
+            ResourceRef: v1.CrossVersionObjectReference{
+                Name:       secretName,
+                Kind:       "Secret",
+                APIVersion: "v1",
+            },
+        }
+        index := slices.IndexFunc(s.Spec.Resources, func(r gardener.NamedResourceReference) bool {
+            return r.Name == referenceName
+        })
+
+        if index == -1 {
+            s.Spec.Resources = append(s.Spec.Resources, resource)
+            return nil
+        }
+
+        s.Spec.Resources[index] = resource
         return nil
     }
 }
@@ -438,10 +457,10 @@ func oSetPolicyConfigmap(policyConfigMapName string) operation {
 | Scenario | Old Behavior (`ForPatch`) | New Behavior (`Full`) | Status |
 |----------|---------------------------|----------------------|--------|
 | **Normal patch (secret exists)** | Policy updated only | Secret + Policy updated | ✅ Safe - idempotent update |
-| **Upgrade: shared → dedicated** | Policy updated, secret unchanged | Secret + Policy updated to new values | ✅ **Improvement** |
+| **Upgrade: shared → dedicated** | Policy updated, secret unchanged | Dedicated secret + Policy updated; stale shared reference removed | ✅ **FIXED** |
 | **Upgrade: no auditlog → dedicated** | Policy updated, **secret missing** 🔴 | Secret + Policy both added | ✅ **FIXED** |
-| **Secret name changes (rotation)** | Secret NOT updated | Secret updated | ✅ **Improvement** |
-| **Idempotent calls** | Policy updated | Secret + Policy updated | ✅ Safe |
+| **Secret name changes (rotation)** | Secret NOT updated | Selected secret reference updated | ✅ **Improvement** |
+| **Repeated mode-consistent calls** | Policy updated | Selected secret + Policy updated; opposite reference removed | ✅ Safe |
 
 🔴 = Bug fixed by this change
 
