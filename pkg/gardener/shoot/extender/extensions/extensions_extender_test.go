@@ -751,7 +751,7 @@ func verifyAuditLogExtension(t *testing.T, ext gardener.Extension, expected audi
 	assert.Equal(t, "standard", auditlogConfig.Type)
 	assert.Equal(t, expected.TenantID, auditlogConfig.TenantID)
 	assert.Equal(t, expected.ServiceURL, auditlogConfig.ServiceURL)
-	assert.Equal(t, auditlogReferenceName, auditlogConfig.SecretReferenceName)
+	assert.Equal(t, expected.SecretReferenceName(), auditlogConfig.SecretReferenceName)
 	assert.Equal(t, "service.auditlog.extensions.gardener.cloud/v1alpha1", auditlogConfig.APIVersion)
 	assert.Equal(t, "AuditlogConfig", auditlogConfig.Kind)
 }

@@ -8,6 +8,7 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	v1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,7 +16,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const dedicatedAuditlogSecretReference = "dedicated-auditlog-credentials"
+const (
+	auditlogSecretReference          = auditlogs.SharedAuditlogSecretReference
+	dedicatedAuditlogSecretReference = auditlogs.DedicatedAuditlogSecretReference
+)
 
 // patchShootAuditLog patches the shoot with dedicated audit log configuration.
 // It delegates all data mutations to applyDedicatedAuditLogToShoot and then
@@ -73,6 +77,10 @@ func updateAuditLogExtensionConfig(shoot *gardener.Shoot, auditLogData auditlog.
 // upsertAuditLogSecretReference adds or updates the NamedResourceReference that maps
 // dedicatedAuditlogSecretReference to the actual Gardener secret.
 func upsertAuditLogSecretReference(shoot *gardener.Shoot, secretName string) {
+	shoot.Spec.Resources = slices.DeleteFunc(shoot.Spec.Resources, func(r gardener.NamedResourceReference) bool {
+		return r.Name == auditlogSecretReference
+	})
+
 	resource := gardener.NamedResourceReference{
 		Name: dedicatedAuditlogSecretReference,
 		ResourceRef: v1.CrossVersionObjectReference{
