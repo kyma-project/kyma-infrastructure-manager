@@ -4,15 +4,15 @@ go 1.26.5
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
-	github.com/gardener/gardener v1.140.1
-	github.com/gardener/gardener-extension-provider-alicloud v1.71.0
+	github.com/gardener/gardener v1.143.1
+	github.com/gardener/gardener-extension-provider-alicloud v1.72.0
 	github.com/gardener/gardener-extension-provider-aws v1.68.3
 	github.com/gardener/gardener-extension-provider-gcp v1.50.0
 	github.com/gardener/gardener-extension-provider-openstack v1.53.1
 	github.com/gardener/gardener-extension-registry-cache v0.21.0
 	github.com/gardener/gardener-extension-runtime-gvisor v0.33.0
-	github.com/gardener/gardener/pkg/apis v1.140.1
-	github.com/gardener/oidc-webhook-authenticator v0.42.0
+	github.com/gardener/gardener/pkg/apis v1.143.1
+	github.com/gardener/oidc-webhook-authenticator v0.44.0
 	github.com/go-logr/logr v1.4.3
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/google/uuid v1.6.0
@@ -29,7 +29,7 @@ require (
 	k8s.io/apimachinery v0.36.3
 	k8s.io/client-go v0.36.3
 	k8s.io/utils v0.0.0-20260626114624-be93311217bd
-	sigs.k8s.io/controller-runtime v0.24.0
+	sigs.k8s.io/controller-runtime v0.24.1
 	sigs.k8s.io/yaml v1.6.0
 )
 
@@ -43,12 +43,10 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/elliotchance/orderedmap/v3 v3.1.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
-	github.com/evanphx/json-patch v5.9.11+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
-	github.com/fsnotify/fsnotify v1.9.0 // indirect
+	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
-	github.com/gardener/cert-management v0.22.0 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.23.1 // indirect
 	github.com/go-openapi/jsonreference v0.21.6 // indirect
