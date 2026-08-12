@@ -47,6 +47,7 @@ const (
 	LabelKymaGlobalAccountID = "kyma-project.io/global-account-id"
 	LabelKymaSubaccountID    = "kyma-project.io/subaccount-id"
 	LabelKymaManagedBy       = "operator.kyma-project.io/managed-by"
+	LabelKymaManagedByValue  = "kyma"
 	LabelKymaInternal        = "operator.kyma-project.io/internal"
 	LabelKymaPlatformRegion  = "kyma-project.io/platform-region"
 )
