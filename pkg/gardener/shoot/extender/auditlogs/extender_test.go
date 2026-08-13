@@ -238,7 +238,7 @@ func Test_AuditlogExtender_ConfigurationUpdate(t *testing.T) {
 				Dedicated:  true,
 			},
 			expectedPolicyConfigMap:     defaultPolicyConfigmapName,
-			expectedSharedSecretName:    "shared-secret",
+			expectedSharedSecretName:    "dedicated-secret",
 			expectedDedicatedSecretName: "dedicated-secret",
 			expectedResourceCount:       2,
 		},
