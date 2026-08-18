@@ -357,10 +357,11 @@ func TestConverter(t *testing.T) {
 		require.NotEqual(t, -1, resIdx, "resource reference dedicated-auditlog-credentials not found")
 		assert.Equal(t, expectedSecretName, shoot.Spec.Resources[resIdx].ResourceRef.Name)
 
-		staleResIdx := slices.IndexFunc(shoot.Spec.Resources, func(res gardener.NamedResourceReference) bool {
+		sharedResIdx := slices.IndexFunc(shoot.Spec.Resources, func(res gardener.NamedResourceReference) bool {
 			return res.Name == auditlogCredentialsRes
 		})
-		assert.Equal(t, -1, staleResIdx, "stale resource reference auditlog-credentials should not be present")
+		require.NotEqual(t, -1, sharedResIdx, "resource reference auditlog-credentials not found")
+		assert.Equal(t, "old-shared-secret", shoot.Spec.Resources[sharedResIdx].ResourceRef.Name)
 	})
 }
 

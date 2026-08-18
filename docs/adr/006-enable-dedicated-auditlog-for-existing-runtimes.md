@@ -172,13 +172,14 @@ Complete (updateStatusAndStop)
 
 **Root Cause**: The converter previously used `NewAuditlogExtenderForPatch` which only updated the policy configmap reference but did NOT update the secret reference in `shoot.spec.resources`.
 
-**Solution**: Change converter to use `NewAuditlogExtender` (previously named `NewAuditlogExtenderForCreate`) for both create and patch operations. This extender sets both:
-- Secret reference in `shoot.spec.resources` (via `oSetSecret`)
+**Solution**: Change converter to use `NewAuditlogExtender` (previously named `NewAuditlogExtenderForCreate`) for both create and patch operations. This extender updates the secret references according to the logging mode and sets the policy configmap:
+- In shared mode, `auditlog-credentials` is created or updated with the current secret name, while `dedicated-auditlog-credentials` is untouched.
+- In dedicated mode, `dedicated-auditlog-credentials` is always updated with the current secret name. `auditlog-credentials` is created only if missing and then left untouched, because the Gardener admission webhook requires it to remain present even though the dedicated extension no longer references it.
 - Policy configmap in `shoot.spec.kubernetes.kubeAPIServer.auditConfig` (via `oSetPolicyConfigmap`)
 
 **Why This is Safe**:
-1. **Idempotent operations**: Both `oSetSecret` and `oSetPolicyConfigmap` are idempotent - safe to call on every patch
-2. **No regressions**: All operations check for existing configuration and either add or update
+1. **Idempotent operations**: Both `oSetSecret` and `oSetPolicyConfigmap` are idempotent - safe to call on every patch; dedicated mode preserves an existing shared fallback
+2. **No regressions**: All operations check for existing configuration and either add or update according to the active logging mode
 3. **Consistent with creation flow**: Unifies create and patch behavior
 4. **Enables missing config upgrades**: Fixes the specific case where runtimes without shared config can now upgrade to dedicated
 

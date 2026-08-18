@@ -117,15 +117,17 @@ func Test_AuditlogExtender_ConfigurationUpdate(t *testing.T) {
 	defaultPolicyConfigmapName := "audit-policy"
 
 	testCases := []struct {
-		name                    string
-		initialShoot            gardener.Shoot
-		runtime                 imv1.Runtime
-		data                    AuditLogData
-		applyTwice              bool
-		expectedPolicyConfigMap string
-		expectedSecretName      string
-		expectedResourceCount   int
-		verifyOtherResources    bool
+		name                        string
+		initialShoot                gardener.Shoot
+		runtime                     imv1.Runtime
+		data                        AuditLogData
+		secondData                  AuditLogData
+		applyTwice                  bool
+		expectedPolicyConfigMap     string
+		expectedSharedSecretName    string
+		expectedDedicatedSecretName string
+		expectedResourceCount       int
+		verifyOtherResources        bool
 	}{
 		{
 			name: "should add audit log configuration to shoot without audit log",
@@ -139,10 +141,12 @@ func Test_AuditlogExtender_ConfigurationUpdate(t *testing.T) {
 				TenantID:   "new-tenant-id",
 				ServiceURL: "https://new-audit.example.com",
 				SecretName: "new-audit-secret",
+				Dedicated:  false,
 			},
-			expectedPolicyConfigMap: defaultPolicyConfigmapName,
-			expectedSecretName:      "new-audit-secret",
-			expectedResourceCount:   1,
+			expectedPolicyConfigMap:     defaultPolicyConfigmapName,
+			expectedSharedSecretName:    "new-audit-secret",
+			expectedDedicatedSecretName: "",
+			expectedResourceCount:       1,
 		},
 		{
 			name: "should update existing audit log secret reference",
@@ -171,16 +175,55 @@ func Test_AuditlogExtender_ConfigurationUpdate(t *testing.T) {
 			},
 			runtime: imv1.Runtime{},
 			data: AuditLogData{
-				TenantID:   "dedicated-tenant-id",
-				ServiceURL: "https://dedicated-audit.example.com",
-				SecretName: "dedicated-audit-secret",
+				TenantID:   "shared-tenant-id",
+				ServiceURL: "https://shared-audit.example.com",
+				SecretName: "new-shared-secret",
+				Dedicated:  false,
 			},
-			expectedPolicyConfigMap: defaultPolicyConfigmapName,
-			expectedSecretName:      "dedicated-audit-secret",
-			expectedResourceCount:   1,
+			expectedPolicyConfigMap:     defaultPolicyConfigmapName,
+			expectedSharedSecretName:    "new-shared-secret",
+			expectedDedicatedSecretName: "",
+			expectedResourceCount:       1,
 		},
 		{
-			name: "should update secret reference when upgrading from missing shared config to dedicated",
+			name: "should update existing dedicated audit log secret reference and freeze pre-existing shared reference",
+			initialShoot: gardener.Shoot{
+				Spec: gardener.ShootSpec{
+					Kubernetes: gardener.Kubernetes{},
+					Resources: []gardener.NamedResourceReference{
+						{
+							Name: "dedicated-auditlog-credentials",
+							ResourceRef: autoscalingv1.CrossVersionObjectReference{
+								Name:       "old-dedicated-secret",
+								Kind:       "Secret",
+								APIVersion: "v1",
+							},
+						},
+						{
+							Name: "auditlog-credentials",
+							ResourceRef: autoscalingv1.CrossVersionObjectReference{
+								Name:       "old-shared-secret",
+								Kind:       "Secret",
+								APIVersion: "v1",
+							},
+						},
+					},
+				},
+			},
+			runtime: imv1.Runtime{},
+			data: AuditLogData{
+				TenantID:   "dedicated-tenant-id",
+				ServiceURL: "https://dedicated-audit.example.com",
+				SecretName: "new-dedicated-secret",
+				Dedicated:  true,
+			},
+			expectedPolicyConfigMap:     defaultPolicyConfigmapName,
+			expectedSharedSecretName:    "old-shared-secret",
+			expectedDedicatedSecretName: "new-dedicated-secret",
+			expectedResourceCount:       2,
+		},
+		{
+			name: "should create shared reference once with fallback secret name when upgrading from missing config to dedicated",
 			initialShoot: gardener.Shoot{
 				Spec: gardener.ShootSpec{
 					Kubernetes: gardener.Kubernetes{},
@@ -192,10 +235,38 @@ func Test_AuditlogExtender_ConfigurationUpdate(t *testing.T) {
 				TenantID:   "dedicated-tenant",
 				ServiceURL: "https://dedicated-audit.example.com",
 				SecretName: "dedicated-secret",
+				Dedicated:  true,
 			},
-			expectedPolicyConfigMap: defaultPolicyConfigmapName,
-			expectedSecretName:      "dedicated-secret",
-			expectedResourceCount:   1,
+			expectedPolicyConfigMap:     defaultPolicyConfigmapName,
+			expectedSharedSecretName:    "dedicated-secret",
+			expectedDedicatedSecretName: "dedicated-secret",
+			expectedResourceCount:       2,
+		},
+		{
+			name: "should freeze shared reference on subsequent calls with new secret name after initial dedicated creation",
+			initialShoot: gardener.Shoot{
+				Spec: gardener.ShootSpec{
+					Kubernetes: gardener.Kubernetes{},
+					Resources:  []gardener.NamedResourceReference{},
+				},
+			},
+			runtime: imv1.Runtime{},
+			data: AuditLogData{
+				TenantID:   "dedicated-tenant",
+				ServiceURL: "https://dedicated-audit.example.com",
+				SecretName: "initial-secret",
+				Dedicated:  true,
+			},
+			secondData: AuditLogData{
+				TenantID:   "dedicated-tenant",
+				ServiceURL: "https://dedicated-audit.example.com",
+				SecretName: "rotated-secret",
+				Dedicated:  true,
+			},
+			expectedPolicyConfigMap:     defaultPolicyConfigmapName,
+			expectedSharedSecretName:    "initial-secret",
+			expectedDedicatedSecretName: "rotated-secret",
+			expectedResourceCount:       2,
 		},
 		{
 			name: "should be idempotent when called multiple times with same configuration",
@@ -209,11 +280,13 @@ func Test_AuditlogExtender_ConfigurationUpdate(t *testing.T) {
 				TenantID:   "tenant-id",
 				ServiceURL: "https://audit.example.com",
 				SecretName: "audit-secret",
+				Dedicated:  false,
 			},
-			applyTwice:              true,
-			expectedPolicyConfigMap: defaultPolicyConfigmapName,
-			expectedSecretName:      "audit-secret",
-			expectedResourceCount:   1,
+			applyTwice:                  true,
+			expectedPolicyConfigMap:     defaultPolicyConfigmapName,
+			expectedSharedSecretName:    "audit-secret",
+			expectedDedicatedSecretName: "",
+			expectedResourceCount:       1,
 		},
 		{
 			name: "should preserve other resources when updating audit log secret",
@@ -245,11 +318,13 @@ func Test_AuditlogExtender_ConfigurationUpdate(t *testing.T) {
 				TenantID:   "tenant-id",
 				ServiceURL: "https://audit.example.com",
 				SecretName: "new-audit-secret",
+				Dedicated:  false,
 			},
-			expectedPolicyConfigMap: defaultPolicyConfigmapName,
-			expectedSecretName:      "new-audit-secret",
-			expectedResourceCount:   2,
-			verifyOtherResources:    true,
+			expectedPolicyConfigMap:     defaultPolicyConfigmapName,
+			expectedSharedSecretName:    "new-audit-secret",
+			expectedDedicatedSecretName: "",
+			expectedResourceCount:       2,
+			verifyOtherResources:        true,
 		},
 		{
 			name: "should update policy configmap when experimental annotation is set",
@@ -277,10 +352,12 @@ func Test_AuditlogExtender_ConfigurationUpdate(t *testing.T) {
 				TenantID:   "tenant-id",
 				ServiceURL: "https://audit.example.com",
 				SecretName: "audit-secret",
+				Dedicated:  false,
 			},
-			expectedPolicyConfigMap: "experimental-audit-policy",
-			expectedSecretName:      "audit-secret",
-			expectedResourceCount:   1,
+			expectedPolicyConfigMap:     "experimental-audit-policy",
+			expectedSharedSecretName:    "audit-secret",
+			expectedDedicatedSecretName: "",
+			expectedResourceCount:       1,
 		},
 	}
 
@@ -294,7 +371,11 @@ func Test_AuditlogExtender_ConfigurationUpdate(t *testing.T) {
 			err := extendWithAuditlogs(tc.runtime, shoot)
 			require.NoError(t, err)
 
-			if tc.applyTwice {
+			if tc.secondData != (AuditLogData{}) {
+				secondExtend := NewAuditlogExtender(defaultPolicyConfigmapName, tc.secondData)
+				err = secondExtend(tc.runtime, shoot)
+				require.NoError(t, err)
+			} else if tc.applyTwice {
 				err = extendWithAuditlogs(tc.runtime, shoot)
 				require.NoError(t, err)
 			}
@@ -308,16 +389,31 @@ func Test_AuditlogExtender_ConfigurationUpdate(t *testing.T) {
 			// verify resource count
 			require.Len(t, shoot.Spec.Resources, tc.expectedResourceCount)
 
-			// verify audit log secret reference
-			var auditLogResource *gardener.NamedResourceReference
+			// verify audit log secret references
+			var sharedAuditLogResource *gardener.NamedResourceReference
+			var dedicatedAuditLogResource *gardener.NamedResourceReference
 			for i := range shoot.Spec.Resources {
-				if shoot.Spec.Resources[i].Name == "auditlog-credentials" {
-					auditLogResource = &shoot.Spec.Resources[i]
-					break
+				if shoot.Spec.Resources[i].Name == SharedAuditlogSecretReference {
+					sharedAuditLogResource = &shoot.Spec.Resources[i]
+				}
+				if shoot.Spec.Resources[i].Name == DedicatedAuditlogSecretReference {
+					dedicatedAuditLogResource = &shoot.Spec.Resources[i]
 				}
 			}
-			require.NotNil(t, auditLogResource, "auditlog-credentials resource not found")
-			require.Equal(t, tc.expectedSecretName, auditLogResource.ResourceRef.Name)
+
+			if tc.expectedSharedSecretName != "" {
+				require.NotNil(t, sharedAuditLogResource, "auditlog-credentials resource not found")
+				require.Equal(t, tc.expectedSharedSecretName, sharedAuditLogResource.ResourceRef.Name)
+			} else {
+				require.Nil(t, sharedAuditLogResource, "auditlog-credentials resource should not exist")
+			}
+
+			if tc.expectedDedicatedSecretName != "" {
+				require.NotNil(t, dedicatedAuditLogResource, "dedicated-auditlog-credentials resource not found")
+				require.Equal(t, tc.expectedDedicatedSecretName, dedicatedAuditLogResource.ResourceRef.Name)
+			} else {
+				require.Nil(t, dedicatedAuditLogResource, "dedicated-auditlog-credentials resource should not exist")
+			}
 
 			// verify other resources are preserved (if applicable)
 			if tc.verifyOtherResources {
