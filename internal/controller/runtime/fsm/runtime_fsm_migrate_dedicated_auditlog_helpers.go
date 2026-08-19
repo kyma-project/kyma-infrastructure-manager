@@ -4,21 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"slices"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
-	v1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-const (
-	auditlogSecretReference          = auditlogs.SharedAuditlogSecretReference
-	dedicatedAuditlogSecretReference = auditlogs.DedicatedAuditlogSecretReference
 )
 
 // patchShootAuditLog patches the shoot with dedicated audit log configuration.
@@ -47,7 +40,7 @@ func applyDedicatedAuditLogToShoot(shoot *gardener.Shoot, auditLogData auditlog.
 	if err := updateAuditLogExtensionConfig(shoot, auditLogData); err != nil {
 		return err
 	}
-	upsertAuditLogSecretReference(shoot, auditLogData.SecretName)
+	auditlogs.UpsertAuditLogSecretReferences(shoot, true, auditLogData.SecretName)
 	return nil
 }
 
@@ -74,31 +67,6 @@ func updateAuditLogExtensionConfig(shoot *gardener.Shoot, auditLogData auditlog.
 	return nil
 }
 
-// upsertAuditLogSecretReference adds or updates the NamedResourceReference that maps
-// dedicatedAuditlogSecretReference to the actual Gardener secret.
-func upsertAuditLogSecretReference(shoot *gardener.Shoot, secretName string) {
-	shoot.Spec.Resources = slices.DeleteFunc(shoot.Spec.Resources, func(r gardener.NamedResourceReference) bool {
-		return r.Name == auditlogSecretReference
-	})
-
-	resource := gardener.NamedResourceReference{
-		Name: dedicatedAuditlogSecretReference,
-		ResourceRef: v1.CrossVersionObjectReference{
-			Name:       secretName,
-			Kind:       "Secret",
-			APIVersion: "v1",
-		},
-	}
-	index := slices.IndexFunc(shoot.Spec.Resources, func(r gardener.NamedResourceReference) bool {
-		return r.Name == dedicatedAuditlogSecretReference
-	})
-	if index == -1 {
-		shoot.Spec.Resources = append(shoot.Spec.Resources, resource)
-		return
-	}
-	shoot.Spec.Resources[index] = resource
-}
-
 // updateAuditLogExtension updates the extension's provider config with dedicated audit log settings
 func updateAuditLogExtension(ext *gardener.Extension, auditLogData auditlog.AuditLogData) error {
 	if ext.ProviderConfig == nil {
@@ -115,7 +83,7 @@ func updateAuditLogExtension(ext *gardener.Extension, auditLogData auditlog.Audi
 	config.TenantID = auditLogData.TenantID
 	config.ServiceURL = auditLogData.ServiceURL
 	// Use constant resource reference name, not the actual secret name
-	config.SecretReferenceName = dedicatedAuditlogSecretReference
+	config.SecretReferenceName = auditlogs.DedicatedAuditlogSecretReference
 	config.Type = "standard"
 
 	// Marshal back to JSON
@@ -131,7 +99,7 @@ func updateAuditLogExtension(ext *gardener.Extension, auditLogData auditlog.Audi
 }
 
 // createAuditLogExtension creates a new audit log extension with dedicated settings.
-// Uses the constant dedicatedAuditlogSecretReference for the secret reference name.
+// Uses the constant auditlogs.DedicatedAuditlogSecretReference for the secret reference name.
 func createAuditLogExtension(auditLogData auditlog.AuditLogData) (*gardener.Extension, error) {
 	cfg := extensions.AuditlogExtensionConfig{
 		TypeMeta: metav1.TypeMeta{
@@ -141,7 +109,7 @@ func createAuditLogExtension(auditLogData auditlog.AuditLogData) (*gardener.Exte
 		Type:                "standard",
 		TenantID:            auditLogData.TenantID,
 		ServiceURL:          auditLogData.ServiceURL,
-		SecretReferenceName: dedicatedAuditlogSecretReference,
+		SecretReferenceName: auditlogs.DedicatedAuditlogSecretReference,
 	}
 
 	configJSON, err := json.Marshal(cfg)

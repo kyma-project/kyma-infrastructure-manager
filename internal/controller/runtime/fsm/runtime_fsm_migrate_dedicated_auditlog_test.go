@@ -12,6 +12,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
 	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
 	auditlogmocks "github.com/kyma-project/infrastructure-manager/pkg/auditlog/mocks"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/autoscaling/v1"
@@ -205,7 +206,7 @@ func TestSFnMigrateToDedicatedAuditLog(t *testing.T) {
 			Type:                "standard",
 			TenantID:            desiredAuditLogData.TenantID,
 			ServiceURL:          desiredAuditLogData.ServiceURL,
-			SecretReferenceName: dedicatedAuditlogSecretReference,
+			SecretReferenceName: auditlogs.DedicatedAuditlogSecretReference,
 		}
 		configJSON, _ := json.Marshal(config)
 
@@ -225,7 +226,7 @@ func TestSFnMigrateToDedicatedAuditLog(t *testing.T) {
 				},
 				Resources: []gardener.NamedResourceReference{
 					{
-						Name: dedicatedAuditlogSecretReference,
+						Name: auditlogs.DedicatedAuditlogSecretReference,
 						ResourceRef: v1.CrossVersionObjectReference{
 							Name:       desiredAuditLogData.SecretName,
 							Kind:       "Secret",
