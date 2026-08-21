@@ -41,6 +41,9 @@ func createKymaSystemNamespace(ctx context.Context, m *fsm, s *systemState) erro
 	kymaSystemNs := v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "kyma-system",
+			Labels: map[string]string{
+				imv1.LabelKymaManagedBy: imv1.LabelKymaManagedByValue,
+			},
 		},
 	}
 

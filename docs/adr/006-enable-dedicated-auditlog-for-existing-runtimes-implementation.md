@@ -306,7 +306,7 @@ No changes needed to `sFnMigrateToDedicatedAuditLog`.
 
 Runtimes created in regions without shared audit log configuration had no audit log secret reference in `shoot.spec.resources`. When upgrading to dedicated audit logging, the Gardener `shoot-auditlog-service` extension would fail because:
 
-1. The extension expects a secret reference whose name matches the audit logging mode in `shoot.spec.resources`: `auditlog-credentials` for shared logging or `dedicated-auditlog-credentials` for dedicated logging
+1. The extension selects its active secret reference name based on the audit logging mode: `auditlog-credentials` for shared logging or `dedicated-auditlog-credentials` for dedicated logging. Both named resources must be present in `shoot.spec.resources`, but their lifecycle differs: shared mode upserts only `auditlog-credentials`; dedicated mode keeps `dedicated-auditlog-credentials` current and creates `auditlog-credentials` only when missing, then leaves the shared entry untouched.
 2. The converter was using `NewAuditlogExtenderForPatch` which **only updated the policy configmap**
 3. The secret reference was never added, causing the extension to fail
 
@@ -358,7 +358,7 @@ func NewAuditlogExtender(policyConfigMapName string, data AuditLogData) Extend {
     return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
         policyConfigMapName := fixPolicyConfigMapName(rt.Annotations, policyConfigMapName)
         for _, f := range []operation{
-            oSetSecret(data.SecretReferenceName(), data.SecretName),
+            oSetSecret(data.Dedicated, data.SecretName),
             oSetPolicyConfigmap(policyConfigMapName), // ← Adds/updates policy
         } {
             if err := f(shoot); err != nil {
@@ -370,16 +370,28 @@ func NewAuditlogExtender(policyConfigMapName string, data AuditLogData) Extend {
 }
 ```
 
-**Sets both**:
-1. **Secret reference** in `shoot.spec.resources`:
+**Sets the audit log secret references according to the logging mode**:
+1. **Audit log secret references** in `shoot.spec.resources`:
    ```yaml
    resources:
-     - name: dedicated-auditlog-credentials  # Shared mode uses auditlog-credentials
+     - name: auditlog-credentials
        resourceRef:
-         name: dedicated-audit-secret  # From AuditLogData.SecretName
+         name: frozen-shared-auditlog-secret
+         kind: Secret
+         apiVersion: v1
+     - name: dedicated-auditlog-credentials
+       resourceRef:
+         name: current-dedicated-auditlog-secret  # Updated to AuditLogData.SecretName
          kind: Secret
          apiVersion: v1
    ```
+   In shared mode, `auditlog-credentials` is created or updated with the current
+   secret name and `dedicated-auditlog-credentials` is untouched. In dedicated
+   mode, `dedicated-auditlog-credentials` is always updated with the current
+   secret name, while `auditlog-credentials` is created only if missing and is
+   otherwise frozen. The extension's `providerConfig.secretReferenceName` selects
+   `dedicated-auditlog-credentials` once dedicated logging is active. Keeping the
+   shared entry present satisfies admission webhook validation.
 
 2. **Policy configmap** in `shoot.spec.kubernetes.kubeAPIServer.auditConfig`:
    ```yaml
@@ -397,41 +409,28 @@ func NewAuditlogExtender(policyConfigMapName string, data AuditLogData) Extend {
 
 Both operations are idempotent and safe to call repeatedly:
 
-**`oSetSecret` (set_secret.go:10-41)**:
+**`oSetSecret` and `UpsertAuditLogSecretReferences` (set_secret.go)**:
 ```go
-func oSetSecret(referenceName, secretName string) operation {
+func oSetSecret(dedicated bool, secretName string) operation {
     return func(s *gardener.Shoot) error {
-        otherReferenceName := SharedAuditlogSecretReference
-        if referenceName == SharedAuditlogSecretReference {
-            otherReferenceName = DedicatedAuditlogSecretReference
-        }
-
-        s.Spec.Resources = slices.DeleteFunc(s.Spec.Resources, func(r gardener.NamedResourceReference) bool {
-            return r.Name == otherReferenceName
-        })
-
-        resource := gardener.NamedResourceReference{
-            Name: referenceName,
-            ResourceRef: v1.CrossVersionObjectReference{
-                Name:       secretName,
-                Kind:       "Secret",
-                APIVersion: "v1",
-            },
-        }
-        index := slices.IndexFunc(s.Spec.Resources, func(r gardener.NamedResourceReference) bool {
-            return r.Name == referenceName
-        })
-
-        if index == -1 {
-            s.Spec.Resources = append(s.Spec.Resources, resource)
-            return nil
-        }
-
-        s.Spec.Resources[index] = resource
+        UpsertAuditLogSecretReferences(s, dedicated, secretName)
         return nil
     }
 }
+
+func UpsertAuditLogSecretReferences(s *gardener.Shoot, dedicated bool, secretName string) {
+    if !dedicated {
+        upsertNamedResourceReference(s, SharedAuditlogSecretReference, secretName)
+        return
+    }
+    upsertNamedResourceReference(s, DedicatedAuditlogSecretReference, secretName)
+    createIfMissingNamedResourceReference(s, SharedAuditlogSecretReference, secretName)
+}
 ```
+
+In dedicated mode, the shared reference is a valid fallback required by the
+admission webhook, but an existing `auditlog-credentials` entry is never
+overwritten. This prevents churn during dedicated secret rotation.
 
 **`oSetPolicyConfigmap` (set_policy_configmap.go:8-22)**:
 ```go
@@ -457,10 +456,10 @@ func oSetPolicyConfigmap(policyConfigMapName string) operation {
 | Scenario | Old Behavior (`ForPatch`) | New Behavior (`Full`) | Status |
 |----------|---------------------------|----------------------|--------|
 | **Normal patch (secret exists)** | Policy updated only | Secret + Policy updated | ✅ Safe - idempotent update |
-| **Upgrade: shared → dedicated** | Policy updated, secret unchanged | Dedicated secret + Policy updated; stale shared reference removed | ✅ **FIXED** |
-| **Upgrade: no auditlog → dedicated** | Policy updated, **secret missing** 🔴 | Secret + Policy both added | ✅ **FIXED** |
-| **Secret name changes (rotation)** | Secret NOT updated | Selected secret reference updated | ✅ **Improvement** |
-| **Repeated mode-consistent calls** | Policy updated | Selected secret + Policy updated; opposite reference removed | ✅ Safe |
+| **Upgrade: shared → dedicated** | Policy updated, secret unchanged | Dedicated reference + Policy updated; existing shared reference frozen | ✅ **FIXED** |
+| **Upgrade: no auditlog → dedicated** | Policy updated, **secret missing** 🔴 | Dedicated reference + Policy added; shared fallback created once | ✅ **FIXED** |
+| **Secret name changes (rotation)** | Secret NOT updated | Dedicated reference updated; shared reference unchanged | ✅ **Improvement** |
+| **Repeated mode-consistent calls** | Policy updated | Active reference + Policy updated; shared fallback remains valid and stable | ✅ Safe |
 
 🔴 = Bug fixed by this change
 
@@ -494,7 +493,7 @@ The split between `NewAuditlogExtenderForCreate` and `NewAuditlogExtenderForPatc
 1. **Fixes upgrade bug**: Runtimes without shared audit log can now upgrade to dedicated
 2. **No regressions**: All operations are idempotent
 3. **Consistent behavior**: Create and patch flows use the same logic
-4. **Complete configuration**: Ensures all audit log components (secret + policy + extension) are synchronized
+4. **Complete configuration**: Ensures the active audit log secret reference, policy, and extension are synchronized while preserving the obsolete shared fallback
 5. **Better maintainability**: Single code path for audit log configuration
 
 ## Migration Helper Fix: Create Extension When Missing
