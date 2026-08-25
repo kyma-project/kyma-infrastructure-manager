@@ -38,7 +38,7 @@ jobs:
             --output-path=./config/crd/crd-docs.md
 
       - name: Create Release and Generate Notes
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: ./config/crd/crd-docs.md
           generate_release_notes: true
