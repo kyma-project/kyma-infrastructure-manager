@@ -17,7 +17,7 @@ require (
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/google/uuid v1.6.0
 	github.com/kyma-project/lifecycle-manager/api v1.0.0
-	github.com/kyma-project/registry-cache v0.0.0-20260702083050-7fec976a2def
+	github.com/kyma-project/registry-cache v0.0.0-20260826070411-ca083255b7bc
 	github.com/kyma-project/runtime-watcher/listener v1.4.3
 	github.com/onsi/ginkgo/v2 v2.32.0
 	github.com/onsi/gomega v1.42.1
