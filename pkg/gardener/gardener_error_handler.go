@@ -2,6 +2,7 @@ package gardener
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -10,6 +11,8 @@ import (
 )
 
 type ErrReason string
+
+const SubnetInvalidError = "InvalidSubnetID.NotFound"
 
 func IsRetryable(lastErrors []gardener.LastError) bool {
 	if len(lastErrors) == 0 {
@@ -31,6 +34,17 @@ func IsRetryable(lastErrors []gardener.LastError) bool {
 		return true
 	}
 
+	return false
+}
+
+func IsInvalidSubnetError(lastErrors []gardener.LastError) bool {
+	for _, lastError := range lastErrors {
+		if slices.Contains(lastError.Codes, gardener.ErrorConfigurationProblem) {
+			if strings.Contains(lastError.Description, SubnetInvalidError) {
+				return true
+			}
+		}
+	}
 	return false
 }
 

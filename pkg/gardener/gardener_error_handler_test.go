@@ -74,6 +74,62 @@ func TestGardenerErrorHandler(t *testing.T) {
 			assert.Equal(t, testCase.expectedRetryable, retryable)
 		})
 	}
+
+	t.Run("Should return true for invalid subnet error", func(t *testing.T) {
+		// given
+		lastErrors := []gardener.LastError{
+			{
+				Description: "something InvalidSubnetID.NotFound something",
+				Codes: []gardener.ErrorCode{
+					gardener.ErrorConfigurationProblem,
+				},
+			},
+		}
+
+		// when
+		retryable := IsInvalidSubnetError(lastErrors)
+
+		// then
+		assert.True(t, retryable)
+	})
+
+	t.Run("Should return false if configuration problem do not contain the invalid.subnet error", func(t *testing.T) {
+		// given
+		lastErrors := []gardener.LastError{
+			{
+				Description: "something something",
+				Codes: []gardener.ErrorCode{
+					gardener.ErrorConfigurationProblem,
+				},
+			},
+		}
+
+		// when
+		retryable := IsInvalidSubnetError(lastErrors)
+
+		// then
+		assert.False(t, retryable)
+	})
+
+	t.Run("Should return true when the subnet error matches only a later last-error entry", func(t *testing.T) {
+		// given
+		lastErrors := []gardener.LastError{
+			{
+				Description: "unrelated configuration problem",
+				Codes:       []gardener.ErrorCode{gardener.ErrorConfigurationProblem},
+			},
+			{
+				Description: "something InvalidSubnetID.NotFound something",
+				Codes:       []gardener.ErrorCode{gardener.ErrorConfigurationProblem},
+			},
+		}
+
+		// when
+		retryable := IsInvalidSubnetError(lastErrors)
+
+		// then
+		assert.True(t, retryable)
+	})
 }
 
 func fixRetryableErrors() []gardener.LastError {

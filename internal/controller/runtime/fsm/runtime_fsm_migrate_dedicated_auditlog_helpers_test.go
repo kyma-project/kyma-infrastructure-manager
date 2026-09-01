@@ -3,17 +3,22 @@ package fsm
 import (
 	"context"
 	"encoding/json"
-	"slices"
 	"testing"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+)
+
+const (
+	gardenerSharedSecretName    = "shared-secret"
+	gardenerDedicatedSecretName = "dedicated-secret"
 )
 
 func TestPatchShootAuditLog(t *testing.T) {
@@ -23,7 +28,7 @@ func TestPatchShootAuditLog(t *testing.T) {
 		auditLogData := auditlog.AuditLogData{
 			TenantID:   "test-tenant-id",
 			ServiceURL: "https://test.auditlog.example.com",
-			SecretName: "test-gardener-secret",
+			SecretName: gardenerDedicatedSecretName,
 		}
 
 		// Create initial shoot with audit log extension
@@ -31,7 +36,7 @@ func TestPatchShootAuditLog(t *testing.T) {
 			Type:                "standard",
 			TenantID:            "old-tenant-id",
 			ServiceURL:          "https://old.example.com",
-			SecretReferenceName: auditlogSecretReference,
+			SecretReferenceName: auditlogs.SharedAuditlogSecretReference,
 		}
 		configJSON, _ := json.Marshal(existingConfig)
 
@@ -51,9 +56,9 @@ func TestPatchShootAuditLog(t *testing.T) {
 				},
 				Resources: []gardener.NamedResourceReference{
 					{
-						Name: auditlogSecretReference,
+						Name: auditlogs.SharedAuditlogSecretReference,
 						ResourceRef: v1.CrossVersionObjectReference{
-							Name:       "old-secret",
+							Name:       gardenerSharedSecretName,
 							Kind:       "Secret",
 							APIVersion: "v1",
 						},
@@ -91,42 +96,41 @@ func TestPatchShootAuditLog(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "test-tenant-id", updatedConfig.TenantID)
 		require.Equal(t, "https://test.auditlog.example.com", updatedConfig.ServiceURL)
-		require.Equal(t, dedicatedAuditlogSecretReference, updatedConfig.SecretReferenceName)
+		require.Equal(t, auditlogs.DedicatedAuditlogSecretReference, updatedConfig.SecretReferenceName)
 		require.Equal(t, "standard", updatedConfig.Type)
 
-		// Verify the resource reference was added and stale shared reference was removed
-		require.Len(t, systemState.shoot.Spec.Resources, 1)
+		// Verify the resource reference was added and both references are present
+		require.Len(t, systemState.shoot.Spec.Resources, 2)
 
-		// Find the dedicated audit log resource reference
-		var dedicatedResource *gardener.NamedResourceReference
-		for i := range systemState.shoot.Spec.Resources {
-			if systemState.shoot.Spec.Resources[i].Name == dedicatedAuditlogSecretReference {
-				dedicatedResource = &systemState.shoot.Spec.Resources[i]
-				break
-			}
-		}
+		// Find the dedicated and shared audit log resource references
+		dedicatedResource := auditlogResource(systemState, auditlogs.DedicatedAuditlogSecretReference)
+		sharedResource := auditlogResource(systemState, auditlogs.SharedAuditlogSecretReference)
 
 		require.NotNil(t, dedicatedResource)
-		require.Equal(t, dedicatedAuditlogSecretReference, dedicatedResource.Name)
-		require.Equal(t, "test-gardener-secret", dedicatedResource.ResourceRef.Name)
+		require.Equal(t, auditlogs.DedicatedAuditlogSecretReference, dedicatedResource.Name)
+		require.Equal(t, gardenerDedicatedSecretName, dedicatedResource.ResourceRef.Name)
 		require.Equal(t, "Secret", dedicatedResource.ResourceRef.Kind)
 		require.Equal(t, "v1", dedicatedResource.ResourceRef.APIVersion)
-	})
 
+		require.NotNil(t, sharedResource)
+		require.Equal(t, auditlogs.SharedAuditlogSecretReference, sharedResource.Name)
+		require.Equal(t, gardenerSharedSecretName, sharedResource.ResourceRef.Name)
+	})
 	t.Run("should update existing dedicated resource reference", func(t *testing.T) {
 		// given
+		const expectedDedicatedSecretName = "new-dedicated-secret"
 		ctx := context.Background()
 		auditLogData := auditlog.AuditLogData{
 			TenantID:   "new-tenant-id",
 			ServiceURL: "https://new.auditlog.example.com",
-			SecretName: "new-gardener-secret",
+			SecretName: expectedDedicatedSecretName,
 		}
 
 		existingConfig := extensions.AuditlogExtensionConfig{
 			Type:                "standard",
 			TenantID:            "old-tenant-id",
 			ServiceURL:          "https://old.example.com",
-			SecretReferenceName: dedicatedAuditlogSecretReference,
+			SecretReferenceName: auditlogs.DedicatedAuditlogSecretReference,
 		}
 		configJSON, _ := json.Marshal(existingConfig)
 
@@ -146,9 +150,17 @@ func TestPatchShootAuditLog(t *testing.T) {
 				},
 				Resources: []gardener.NamedResourceReference{
 					{
-						Name: dedicatedAuditlogSecretReference,
+						Name: auditlogs.DedicatedAuditlogSecretReference,
 						ResourceRef: v1.CrossVersionObjectReference{
-							Name:       "old-gardener-secret",
+							Name:       gardenerDedicatedSecretName,
+							Kind:       "Secret",
+							APIVersion: "v1",
+						},
+					},
+					{
+						Name: auditlogs.SharedAuditlogSecretReference,
+						ResourceRef: v1.CrossVersionObjectReference{
+							Name:       gardenerSharedSecretName,
 							Kind:       "Secret",
 							APIVersion: "v1",
 						},
@@ -176,19 +188,28 @@ func TestPatchShootAuditLog(t *testing.T) {
 		// then
 		require.NoError(t, err)
 
-		// Verify only one resource reference exists (updated, not duplicated)
-		require.Len(t, systemState.shoot.Spec.Resources, 1)
-		require.Equal(t, dedicatedAuditlogSecretReference, systemState.shoot.Spec.Resources[0].Name)
-		require.Equal(t, "new-gardener-secret", systemState.shoot.Spec.Resources[0].ResourceRef.Name)
+		// Verify both resource references exist (updated, not duplicated)
+		require.Len(t, systemState.shoot.Spec.Resources, 2)
+
+		dedicatedResource := auditlogResource(systemState, auditlogs.DedicatedAuditlogSecretReference)
+		sharedResource := auditlogResource(systemState, auditlogs.SharedAuditlogSecretReference)
+
+		require.NotNil(t, dedicatedResource)
+		require.Equal(t, auditlogs.DedicatedAuditlogSecretReference, dedicatedResource.Name)
+		require.Equal(t, expectedDedicatedSecretName, dedicatedResource.ResourceRef.Name)
+
+		require.NotNil(t, sharedResource)
+		require.Equal(t, auditlogs.SharedAuditlogSecretReference, sharedResource.Name)
+		require.Equal(t, gardenerSharedSecretName, sharedResource.ResourceRef.Name)
 	})
 
-	t.Run("should create audit log extension when not found and add resource reference", func(t *testing.T) {
+	t.Run("should create audit log extension when not found and add resource references", func(t *testing.T) {
 		// given
 		ctx := context.Background()
 		auditLogData := auditlog.AuditLogData{
 			TenantID:   "test-tenant-id",
 			ServiceURL: "https://test.auditlog.example.com",
-			SecretName: "test-gardener-secret",
+			SecretName: gardenerDedicatedSecretName,
 		}
 
 		shoot := &gardener.Shoot{
@@ -244,13 +265,22 @@ func TestPatchShootAuditLog(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "test-tenant-id", createdConfig.TenantID)
 		require.Equal(t, "https://test.auditlog.example.com", createdConfig.ServiceURL)
-		require.Equal(t, dedicatedAuditlogSecretReference, createdConfig.SecretReferenceName)
+		require.Equal(t, auditlogs.DedicatedAuditlogSecretReference, createdConfig.SecretReferenceName)
 		require.Equal(t, "standard", createdConfig.Type)
 
-		// Verify the resource reference was added
-		require.Len(t, systemState.shoot.Spec.Resources, 1)
-		require.Equal(t, dedicatedAuditlogSecretReference, systemState.shoot.Spec.Resources[0].Name)
-		require.Equal(t, "test-gardener-secret", systemState.shoot.Spec.Resources[0].ResourceRef.Name)
+		// Verify the resource reference was added and both exist
+		require.Len(t, systemState.shoot.Spec.Resources, 2)
+
+		dedicatedResource := auditlogResource(systemState, auditlogs.DedicatedAuditlogSecretReference)
+		sharedResource := auditlogResource(systemState, auditlogs.SharedAuditlogSecretReference)
+
+		require.NotNil(t, dedicatedResource)
+		require.Equal(t, auditlogs.DedicatedAuditlogSecretReference, dedicatedResource.Name)
+		require.Equal(t, gardenerDedicatedSecretName, dedicatedResource.ResourceRef.Name)
+
+		require.NotNil(t, sharedResource)
+		require.Equal(t, auditlogs.SharedAuditlogSecretReference, sharedResource.Name)
+		require.Equal(t, gardenerDedicatedSecretName, sharedResource.ResourceRef.Name) // The shared resource reference is created with the same secret name as the dedicated one in this case
 	})
 
 	t.Run("should create audit log extension when shoot has no extensions", func(t *testing.T) {
@@ -259,7 +289,7 @@ func TestPatchShootAuditLog(t *testing.T) {
 		auditLogData := auditlog.AuditLogData{
 			TenantID:   "test-tenant-id",
 			ServiceURL: "https://test.auditlog.example.com",
-			SecretName: "test-gardener-secret",
+			SecretName: gardenerDedicatedSecretName,
 		}
 
 		shoot := &gardener.Shoot{
@@ -301,16 +331,24 @@ func TestPatchShootAuditLog(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "test-tenant-id", createdConfig.TenantID)
 		require.Equal(t, "https://test.auditlog.example.com", createdConfig.ServiceURL)
-		require.Equal(t, dedicatedAuditlogSecretReference, createdConfig.SecretReferenceName)
+		require.Equal(t, auditlogs.DedicatedAuditlogSecretReference, createdConfig.SecretReferenceName)
 		require.Equal(t, "standard", createdConfig.Type)
 
-		// Verify the resource reference was added
-		require.Len(t, systemState.shoot.Spec.Resources, 1)
-		require.Equal(t, dedicatedAuditlogSecretReference, systemState.shoot.Spec.Resources[0].Name)
-		require.Equal(t, "test-gardener-secret", systemState.shoot.Spec.Resources[0].ResourceRef.Name)
+		require.Len(t, systemState.shoot.Spec.Resources, 2)
+
+		dedicatedResource := auditlogResource(systemState, auditlogs.DedicatedAuditlogSecretReference)
+		sharedResource := auditlogResource(systemState, auditlogs.SharedAuditlogSecretReference)
+
+		require.NotNil(t, dedicatedResource)
+		require.Equal(t, auditlogs.DedicatedAuditlogSecretReference, dedicatedResource.Name)
+		require.Equal(t, gardenerDedicatedSecretName, dedicatedResource.ResourceRef.Name)
+
+		require.NotNil(t, sharedResource)
+		require.Equal(t, auditlogs.SharedAuditlogSecretReference, sharedResource.Name)
+		require.Equal(t, gardenerDedicatedSecretName, sharedResource.ResourceRef.Name)
 	})
 
-	t.Run("should remove stale shared auditlog-credentials resource entry when migrating to dedicated", func(t *testing.T) {
+	t.Run("should keep both shared and dedicated resource entries valid when migrating to dedicated", func(t *testing.T) {
 		// given
 		const expectedSecretName = "new-dedicated-secret"
 		ctx := context.Background()
@@ -324,7 +362,7 @@ func TestPatchShootAuditLog(t *testing.T) {
 			Type:                "standard",
 			TenantID:            "old-tenant-id",
 			ServiceURL:          "https://old.example.com",
-			SecretReferenceName: auditlogSecretReference,
+			SecretReferenceName: auditlogs.SharedAuditlogSecretReference,
 		}
 		configJSON, _ := json.Marshal(existingConfig)
 
@@ -344,9 +382,9 @@ func TestPatchShootAuditLog(t *testing.T) {
 				},
 				Resources: []gardener.NamedResourceReference{
 					{
-						Name: auditlogSecretReference,
+						Name: auditlogs.SharedAuditlogSecretReference,
 						ResourceRef: v1.CrossVersionObjectReference{
-							Name:       "old-shared-secret",
+							Name:       gardenerSharedSecretName,
 							Kind:       "Secret",
 							APIVersion: "v1",
 						},
@@ -382,18 +420,31 @@ func TestPatchShootAuditLog(t *testing.T) {
 		var updatedConfig extensions.AuditlogExtensionConfig
 		err = json.Unmarshal(ext.ProviderConfig.Raw, &updatedConfig)
 		require.NoError(t, err)
-		require.Equal(t, dedicatedAuditlogSecretReference, updatedConfig.SecretReferenceName)
+		require.Equal(t, auditlogs.DedicatedAuditlogSecretReference, updatedConfig.SecretReferenceName)
 
-		// Verify stale shared auditlog-credentials resource entry was removed and only dedicated reference remains
-		require.Len(t, systemState.shoot.Spec.Resources, 1)
-		require.Equal(t, dedicatedAuditlogSecretReference, systemState.shoot.Spec.Resources[0].Name)
-		require.Equal(t, expectedSecretName, systemState.shoot.Spec.Resources[0].ResourceRef.Name)
+		// Verify both shared and dedicated resource references remain present
+		require.Len(t, systemState.shoot.Spec.Resources, 2)
 
-		sharedIndex := slices.IndexFunc(systemState.shoot.Spec.Resources, func(r gardener.NamedResourceReference) bool {
-			return r.Name == auditlogSecretReference
-		})
-		require.Equal(t, -1, sharedIndex, "stale auditlog-credentials resource entry should have been removed")
+		dedicatedResource := auditlogResource(systemState, auditlogs.DedicatedAuditlogSecretReference)
+		sharedResource := auditlogResource(systemState, auditlogs.SharedAuditlogSecretReference)
+
+		require.NotNil(t, dedicatedResource)
+		require.Equal(t, expectedSecretName, dedicatedResource.ResourceRef.Name)
+
+		require.NotNil(t, sharedResource, "shared auditlog-credentials resource entry should be kept")
+		require.Equal(t, gardenerSharedSecretName, sharedResource.ResourceRef.Name)
 	})
+}
+
+func auditlogResource(s *systemState, resourceName string) *gardener.NamedResourceReference {
+	var resource *gardener.NamedResourceReference
+	for i := range s.shoot.Spec.Resources {
+		if s.shoot.Spec.Resources[i].Name == resourceName {
+			resource = &s.shoot.Spec.Resources[i]
+			break
+		}
+	}
+	return resource
 }
 
 func TestUpdateAuditLogExtension(t *testing.T) {
@@ -403,7 +454,7 @@ func TestUpdateAuditLogExtension(t *testing.T) {
 			Type:                "standard",
 			TenantID:            "old-tenant",
 			ServiceURL:          "https://old.example.com",
-			SecretReferenceName: "auditlog-credentials",
+			SecretReferenceName: auditlogs.SharedAuditlogSecretReference,
 		}
 		configJSON, _ := json.Marshal(existingConfig)
 
@@ -432,7 +483,7 @@ func TestUpdateAuditLogExtension(t *testing.T) {
 
 		require.Equal(t, "new-tenant", updatedConfig.TenantID)
 		require.Equal(t, "https://new.example.com", updatedConfig.ServiceURL)
-		require.Equal(t, dedicatedAuditlogSecretReference, updatedConfig.SecretReferenceName)
+		require.Equal(t, auditlogs.DedicatedAuditlogSecretReference, updatedConfig.SecretReferenceName)
 		require.Equal(t, "standard", updatedConfig.Type)
 	})
 
@@ -465,7 +516,7 @@ func TestGetShootAuditLogConfig(t *testing.T) {
 			Type:                "standard",
 			TenantID:            "test-tenant-id",
 			ServiceURL:          "https://test.auditlog.example.com",
-			SecretReferenceName: dedicatedAuditlogSecretReference,
+			SecretReferenceName: auditlogs.DedicatedAuditlogSecretReference,
 		}
 		configJSON, _ := json.Marshal(config)
 
@@ -481,9 +532,9 @@ func TestGetShootAuditLogConfig(t *testing.T) {
 				},
 				Resources: []gardener.NamedResourceReference{
 					{
-						Name: dedicatedAuditlogSecretReference,
+						Name: auditlogs.DedicatedAuditlogSecretReference,
 						ResourceRef: v1.CrossVersionObjectReference{
-							Name:       "actual-gardener-secret",
+							Name:       gardenerDedicatedSecretName,
 							Kind:       "Secret",
 							APIVersion: "v1",
 						},
@@ -500,7 +551,7 @@ func TestGetShootAuditLogConfig(t *testing.T) {
 		require.NotNil(t, auditLogData)
 		require.Equal(t, "test-tenant-id", auditLogData.TenantID)
 		require.Equal(t, "https://test.auditlog.example.com", auditLogData.ServiceURL)
-		require.Equal(t, "actual-gardener-secret", auditLogData.SecretName)
+		require.Equal(t, gardenerDedicatedSecretName, auditLogData.SecretName)
 	})
 
 	t.Run("should return error when resource reference not found", func(t *testing.T) {
@@ -509,7 +560,7 @@ func TestGetShootAuditLogConfig(t *testing.T) {
 			Type:                "standard",
 			TenantID:            "test-tenant-id",
 			ServiceURL:          "https://test.auditlog.example.com",
-			SecretReferenceName: dedicatedAuditlogSecretReference,
+			SecretReferenceName: auditlogs.DedicatedAuditlogSecretReference,
 		}
 		configJSON, _ := json.Marshal(config)
 
@@ -582,9 +633,9 @@ func TestGetSecretNameFromResources(t *testing.T) {
 						},
 					},
 					{
-						Name: dedicatedAuditlogSecretReference,
+						Name: auditlogs.DedicatedAuditlogSecretReference,
 						ResourceRef: v1.CrossVersionObjectReference{
-							Name:       "actual-secret-name",
+							Name:       gardenerDedicatedSecretName,
 							Kind:       "Secret",
 							APIVersion: "v1",
 						},
@@ -594,11 +645,11 @@ func TestGetSecretNameFromResources(t *testing.T) {
 		}
 
 		// when
-		secretName, err := getSecretNameFromResources(shoot, dedicatedAuditlogSecretReference)
+		secretName, err := getSecretNameFromResources(shoot, auditlogs.DedicatedAuditlogSecretReference)
 
 		// then
 		require.NoError(t, err)
-		require.Equal(t, "actual-secret-name", secretName)
+		require.Equal(t, gardenerDedicatedSecretName, secretName)
 	})
 
 	t.Run("should return error when resource reference not found", func(t *testing.T) {
