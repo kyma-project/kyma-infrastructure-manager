@@ -1,6 +1,6 @@
 module github.com/kyma-project/infrastructure-manager
 
-go 1.26.5
+go 1.27.1
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
@@ -96,7 +96,7 @@ require (
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/term v0.45.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
+	golang.org/x/text v0.41.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.48.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
@@ -117,6 +117,6 @@ replace (
 	golang.org/x/crypto => golang.org/x/crypto v0.54.0
 	golang.org/x/net => golang.org/x/net v0.57.0
 	golang.org/x/sys => golang.org/x/sys v0.47.0
-	golang.org/x/text => golang.org/x/text v0.40.0
+	golang.org/x/text => golang.org/x/text v0.41.0
 	golang.org/x/tools => golang.org/x/tools v0.48.0
 )
