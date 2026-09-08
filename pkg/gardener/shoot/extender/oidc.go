@@ -19,7 +19,6 @@ func NewOidcExtender() func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 			StructuredAuthentication: &gardener.StructuredAuthentication{
 				ConfigMapName: cmName,
 			},
-			OIDCConfig: nil,
 		}
 
 		return nil
