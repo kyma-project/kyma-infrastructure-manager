@@ -174,7 +174,7 @@ func createOpenIDConnectResource(additionalOidcConfig imv1.OIDCConfig, oidcID in
 		},
 		Spec: authenticationv1alpha1.OIDCAuthenticationSpec{
 			IssuerURL:            *additionalOidcConfig.IssuerURL,
-			ClientID:             *additionalOidcConfig.ClientID,
+			Audiences:            []string{*additionalOidcConfig.ClientID},
 			UsernameClaim:        additionalOidcConfig.UsernameClaim,
 			UsernamePrefix:       additionalOidcConfig.UsernamePrefix,
 			GroupsClaim:          additionalOidcConfig.GroupsClaim,
