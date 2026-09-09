@@ -144,9 +144,10 @@ var _ = BeforeSuite(func() {
 	mockAuditLogProvider := &auditlogmocks.DataProvider{}
 	mockAuditLogProvider.On("ReserveAuditLog", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mockAuditLogProvider.On("GetDedicatedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(auditlog.AuditLogData{
-		TenantID:   "test-tenant",
-		ServiceURL: "http://test-service",
-		SecretName: "test-secret",
+		TenantID:            "test-tenant",
+		ServiceURL:          "http://test-service",
+		SecretName:          "test-secret",
+		ReadCredsSecretName: "auditlog-read-creds-source",
 	}, nil)
 	mockAuditLogProvider.On("GetSharedAuditLogData", mock.Anything, mock.Anything, mock.Anything).Return(auditlog.AuditLogData{
 		TenantID:   "test-tenant",
@@ -160,6 +161,7 @@ var _ = BeforeSuite(func() {
 		Config:                        convConfig,
 		Metrics:                       mm,
 		AuditLogDataProvider:          mockAuditLogProvider,
+		DedicatedAuditLoggingEnabled:  true,
 		GardenerRequeueDuration:       3 * time.Second,
 		ControlPlaneRequeueDuration:   3 * time.Second,
 		RequeueDurationShootReconcile: 3 * time.Second,
@@ -192,6 +194,27 @@ var _ = BeforeSuite(func() {
 
 	cmCreationErr := fakeClient.Create(context.Background(), detailsConfigMap)
 	Expect(cmCreationErr).To(BeNil())
+
+	// Create audit log read credentials source secret in KCP (for dedicated audit log tests)
+	// This secret will be copied to SKR by sFnCopyAuditLogReadCredentials
+	auditLogReadCredsSecret := &v12.Secret{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "auditlog-read-creds-source",
+			Namespace: "default",
+		},
+		Data: map[string][]byte{
+			"clientid":     []byte("test-client-id"),
+			"clientsecret": []byte("test-client-secret"),
+			"url":          []byte("https://auditlog.example.com"),
+		},
+		Type: v12.SecretTypeOpaque,
+	}
+	secretCreationErr := k8sClient.Create(context.Background(), auditLogReadCredsSecret)
+	Expect(secretCreationErr).To(BeNil())
 
 	go func() {
 		defer GinkgoRecover()
@@ -227,6 +250,117 @@ func setupGardenerTestClientForDelete() {
 	baseShoot := getBaseShootForTestingSequence()
 	shoots := fixShootsSequenceForDelete(&baseShoot)
 	setupGardenerClientWithSequence(shoots, nil)
+}
+
+func setupGardenerTestClientForDedicatedAuditLogProvisioning() {
+	baseShoot := getBaseShootForTestingSequenceWithDedicatedAuditLog()
+	shoots := fixShootsSequenceForDedicatedAuditLogProvisioning(&baseShoot)
+	seeds := fixSeedSequenceForProvisioning("aws")
+
+	setupGardenerClientWithSequence(shoots, seeds)
+}
+
+func getBaseShootForTestingSequenceWithDedicatedAuditLog() gardener_api.Shoot {
+	runtimeStub := CreateRuntimeStubWithDedicatedAuditLog("test-resource-dedicated-auditlog")
+	infrastructureManagerConfig := fixConverterConfigForTests()
+	converter := gardener_shoot.NewConverterCreate(context.Background(), gardener_shoot.CreateOpts{
+		ConverterConfig: infrastructureManagerConfig.ConverterConfig,
+	})
+	convertedShoot, err := converter.ToShoot(*runtimeStub)
+	if err != nil {
+		panic(err)
+	}
+	return convertedShoot
+}
+
+func fixShootsSequenceForDedicatedAuditLogProvisioning(shoot *gardener_api.Shoot) []*gardener_api.Shoot {
+	var missingShoot *gardener_api.Shoot
+	initialisedShoot := shoot.DeepCopy()
+
+	dnsShoot := initialisedShoot.DeepCopy()
+	dnsShoot.Spec.DNS = &gardener_api.DNS{
+		Domain: ptr.To("test.domain"),
+	}
+
+	pendingShoot := dnsShoot.DeepCopy()
+	pendingShoot.Status = gardener_api.ShootStatus{
+		LastOperation: &gardener_api.LastOperation{
+			Type:           gardener_api.LastOperationTypeCreate,
+			State:          gardener_api.LastOperationStatePending,
+			LastUpdateTime: metav1.Now(),
+		},
+	}
+
+	processingShoot := pendingShoot.DeepCopy()
+	processingShoot.Status.LastOperation.State = gardener_api.LastOperationStateProcessing
+
+	readyShoot := processingShoot.DeepCopy()
+	readyShoot.Status.LastOperation.State = gardener_api.LastOperationStateSucceeded
+
+	// Ready shoot with dedicated audit log config matching the mock values
+	// This is needed for sFnMigrateToDedicatedAuditLog to detect configs are equal
+	readyShootWithDedicatedAuditLog := readyShoot.DeepCopy()
+	addDedicatedAuditLogConfigToShoot(readyShootWithDedicatedAuditLog)
+
+	// Additional ready shoots for:
+	// - sFnMigrateToDedicatedAuditLog (may patch shoot and requeue)
+	// - sFnCopyAuditLogReadCredentials (copies secret and completes)
+	return []*gardener_api.Shoot{
+		missingShoot, missingShoot, missingShoot, // initial checks
+		initialisedShoot, dnsShoot, pendingShoot, processingShoot, // shoot creation
+		readyShoot, readyShoot, readyShoot, readyShoot, // runtime configuration states
+		readyShootWithDedicatedAuditLog, readyShootWithDedicatedAuditLog, readyShootWithDedicatedAuditLog, // dedicated audit log states
+		readyShootWithDedicatedAuditLog, readyShootWithDedicatedAuditLog, // extra for safety
+	}
+}
+
+// addDedicatedAuditLogConfigToShoot adds audit log config matching the mock values
+// Used for dedicated audit log testing where configs need to match for sFnMigrateToDedicatedAuditLog
+func addDedicatedAuditLogConfigToShoot(shoot *gardener_api.Shoot) {
+	shoot.Spec.Kubernetes = gardener_api.Kubernetes{
+		KubeAPIServer: &gardener_api.KubeAPIServerConfig{
+			AuditConfig: &gardener_api.AuditConfig{
+				AuditPolicy: &gardener_api.AuditPolicy{
+					ConfigMapRef: &v12.ObjectReference{Name: "policy-config-map"},
+				},
+			},
+		},
+	}
+
+	shoot.Spec.Resources = append(shoot.Spec.Resources, gardener_api.NamedResourceReference{
+		Name: "auditlog-credentials",
+		ResourceRef: v1.CrossVersionObjectReference{
+			Kind:       "Secret",
+			Name:       "test-secret", // matches mock SecretName
+			APIVersion: "v1",
+		},
+	})
+
+	const (
+		extensionKind    = "AuditlogConfig"
+		extensionVersion = "service.auditlog.extensions.gardener.cloud/v1alpha1"
+		extensionType    = "standard"
+	)
+
+	shoot.Spec.Extensions = append(shoot.Spec.Extensions, gardener_api.Extension{
+		Type: "shoot-auditlog-service",
+	})
+
+	ext := &shoot.Spec.Extensions[len(shoot.Spec.Extensions)-1]
+
+	cfg := extensions.AuditlogExtensionConfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionKind,
+			APIVersion: extensionVersion,
+		},
+		Type:                extensionType,
+		TenantID:            "test-tenant",         // matches mock TenantID
+		ServiceURL:          "http://test-service", // matches mock ServiceURL
+		SecretReferenceName: "auditlog-credentials",
+	}
+
+	ext.ProviderConfig = &runtime.RawExtension{}
+	ext.ProviderConfig.Raw, _ = json.Marshal(cfg)
 }
 
 func setupGardenerClientWithSequence(shoots []*gardener_api.Shoot, seeds []*gardener_api.SeedList) {
