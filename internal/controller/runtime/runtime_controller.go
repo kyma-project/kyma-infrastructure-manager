@@ -59,9 +59,7 @@ func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 
 	var runtime imv1.Runtime
 	if err := r.KcpClient.Get(ctx, request.NamespacedName, &runtime); err != nil {
-		return ctrl.Result{
-			Requeue: false,
-		}, client.IgnoreNotFound(err)
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	runtimeID, ok := runtime.Labels["kyma-project.io/runtime-id"]
