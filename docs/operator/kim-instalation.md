@@ -63,33 +63,37 @@ The following table describes the parameters within the JSON object provided to 
 
 All of below fields are mandatory
 
-| Attribute(s)                                                                       | Type | Description |
-|:-----------------------------------------------------------------------------------| :--- | :--- |
-| **cluster.defaultSharedIASTenant.ClientID**                                        | string | The default OIDC client ID for the shared Identity and Access Service (IAS) tenant. |
-| **cluster.defaultSharedIASTenant.GroupsClaim**                                     | string | The claim in the OIDC token that contains the user's groups. |
-| **cluster.defaultSharedIASTenant.IssuerURL**                                       | string | The URL of the OIDC issuer. |
-| **cluster.defaultSharedIASTenant.SigningAlgs**                                     | list | A list of supported signing algorithms for the OIDC token. |
-| **cluster.defaultSharedIASTenant.UsernameClaim**                                   | string | The claim in the OIDC token to be used as the username. |
-| **cluster.defaultSharedIASTenant.UsernamePrefix**                                  | string | A prefix to be added to the username claim. |
-| **converter.kubernetes.defaultVersion**                                            | string | The default Kubernetes version for newly created Shoot clusters. |
-| **converter.kubernetes.enableKubernetesVersionAutoUpdate**                         | bool | If `true`, the Kubernetes version of the Shoot cluster is automatically updated to newer patch versions. |
-| **converter.kubernetes.enableMachineImageVersionAutoUpdate**                       | bool | If `true`, the machine image version of the Shoot cluster is automatically updated. |
-| **converter.kubernetes.defaultOperatorOidc.ClientID**                              | string | The default OIDC client ID used by the Kubernetes operator. |
-| **converter.kubernetes.defaultOperatorOidc.GroupsClaim**                           | string | The OIDC groups claim for the operator. |
-| **converter.kubernetes.defaultOperatorOidc.IssuerURL**                             | string | The OIDC issuer URL for the operator. |
-| **converter.kubernetes.defaultOperatorOidc.SigningAlgs**                           | list | The supported OIDC signing algorithms for the operator. |
-| **converter.kubernetes.defaultOperatorOidc.UsernameClaim**                         | string | The OIDC username claim for the operator. |
-| **converter.kubernetes.defaultOperatorOidc.UsernamePrefix**                        | string | The username prefix for the operator. |
-| **converter.dns.secretName**                                                       | string | The name of the Kubernetes `Secret` containing credentials for the DNS provider. |
-| **converter.dns.domainPrefix**                                                     | string | The domain prefix used for the cluster's DNS records (e.g., `example.com` results in `sub.example.com`). |
-| **converter.dns.providerType**                                                     | string | The type of DNS provider to use for managing DNS records. |
-| **converter.provider.aws.enableIMDSv2**                                            | bool | If `true`, Instance Metadata Service Version 2 (IMDSv2) is enforced on all AWS nodes in the cluster. |
-| **converter.gardener.projectName**                                                 | string | The name of the Gardener project where the Shoot cluster will be created. |
-| **converter.machineImage.defaultName**                                             | string | The default name of the machine image to use for worker nodes. |
-| **converter.machineImage.defaultVersion**                                          | string | The default version of the machine image to use. |
-| **converter.auditLogging.policyConfigMapName**                                     | string | The name of the `ConfigMap` containing the audit logging policy. |
-| **converter.auditLogging.tenantConfigPath**                                          | string | The file path inside the manager container where the audit log tenant configuration is located. |
-| **converter.maintenanceWindow.windowMapPath**                                      | string | The file path inside the manager container where the maintenance window configuration `ConfigMap` is mounted. |
+| Attribute(s)                                                                       | Type | Description | NS2 | CN | GDCH |
+|:-----------------------------------------------------------------------------------| :--- | :--- | :---: | :---: | :---: |
+| **cluster.defaultSharedIASTenant.ClientID**                                        | string | The default OIDC client ID for the shared Identity and Access Service (IAS) tenant. | Yes | Yes | Yes |
+| **cluster.defaultSharedIASTenant.GroupsClaim**                                     | string | The claim in the OIDC token that contains the user's groups. | Yes | Yes | Yes |
+| **cluster.defaultSharedIASTenant.IssuerURL**                                       | string | The URL of the OIDC issuer. | Yes | Yes | Yes |
+| **cluster.defaultSharedIASTenant.SigningAlgs**                                     | list | A list of supported signing algorithms for the OIDC token. | Yes | Yes | Yes |
+| **cluster.defaultSharedIASTenant.UsernameClaim**                                   | string | The claim in the OIDC token to be used as the username. | Yes | Yes | Yes |
+| **cluster.defaultSharedIASTenant.UsernamePrefix**                                  | string | A prefix to be added to the username claim. | Yes | Yes | Yes |
+| **converter.kubernetes.defaultVersion**                                            | string | The default Kubernetes version for newly created Shoot clusters. | Yes | Yes | Yes |
+| **converter.kubernetes.enableKubernetesVersionAutoUpdate**                         | bool | If `true`, the Kubernetes version of the Shoot cluster is automatically updated to newer patch versions. | Yes | Yes | Yes |
+| **converter.kubernetes.enableMachineImageVersionAutoUpdate**                       | bool | If `true`, the machine image version of the Shoot cluster is automatically updated. | Yes | Yes | Yes |
+| **converter.kubernetes.defaultOperatorOidc.ClientID**                              | string | The default OIDC client ID used by the Kubernetes operator. | Yes | Yes | Yes |
+| **converter.kubernetes.defaultOperatorOidc.GroupsClaim**                           | string | The OIDC groups claim for the operator. | Yes | Yes | Yes |
+| **converter.kubernetes.defaultOperatorOidc.IssuerURL**                             | string | The OIDC issuer URL for the operator. | Yes | Yes | Yes |
+| **converter.kubernetes.defaultOperatorOidc.SigningAlgs**                           | list | The supported OIDC signing algorithms for the operator. | Yes | Yes | Yes |
+| **converter.kubernetes.defaultOperatorOidc.UsernameClaim**                         | string | The OIDC username claim for the operator. | Yes | Yes | Yes |
+| **converter.kubernetes.defaultOperatorOidc.UsernamePrefix**                        | string | The username prefix for the operator. | Yes | Yes | Yes |
+| **converter.dns.secretName**                                                       | string | The name of the Kubernetes `Secret` containing credentials for the DNS provider. | Yes | Yes | Yes |
+| **converter.dns.domainPrefix**                                                     | string | The domain prefix used for the cluster's DNS records (e.g., `example.com` results in `sub.example.com`). | Yes | Yes | Yes |
+| **converter.dns.providerType**                                                     | string | The type of DNS provider to use for managing DNS records. | Yes | Yes | Yes |
+| **converter.provider.aws.enableIMDSv2**                                            | bool | If `true`, Instance Metadata Service Version 2 (IMDSv2) is enforced on all AWS nodes in the cluster. | Yes | Yes | Yes |
+| **converter.gardener.projectName**                                                 | string | The name of the Gardener project where the Shoot cluster will be created. | Yes | Yes | Yes |
+| **converter.machineImage.defaultName**                                             | string | The default name of the machine image to use for worker nodes. | Yes | Yes | Yes |
+| **converter.machineImage.defaultVersion**                                          | string | The default version of the machine image to use. | Yes | Yes | Yes |
+| **converter.auditLogging.policyConfigMapName**                                     | string | The name of the `ConfigMap` containing the audit logging policy. | Yes | Yes | Yes |
+| **converter.auditLogging.tenantConfigPath**                                          | string | The file path inside the manager container where the audit log tenant configuration is located. | Yes | Yes | Yes |
+| **converter.maintenanceWindow.windowMapPath**                                      | string | The file path inside the manager container where the maintenance window configuration `ConfigMap` is mounted. | Yes | Yes | Yes |
+| **converter.provider.gdch.cloudProfileName**                                       | string | The name of the Gardener cloud profile for the GDCH provider. |  |  | Yes |
+| **converter.provider.gdch.parentReferenceName**                                    | string | The name of the parent reference resource (e.g., a `SubnetGroup`) for the GDCH provider. |  |  | Yes |
+| **converter.provider.gdch.parentReferenceNamespace**                               | string | The namespace of the parent reference resource for the GDCH provider. |  |  | Yes |
+| **converter.provider.gdch.parentReferenceType**                                    | string | The type of the parent reference resource for the GDCH provider (e.g., `SubnetGroup`). |  |  | Yes |
 
 All the following fields are optional. If not specified otherwise, KIM applies the default value.
 
