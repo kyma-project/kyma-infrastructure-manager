@@ -594,8 +594,7 @@ func createOpenIDConnectCR(name string, labelKey, labelValue string) *authentica
 
 func assertOIDCCRD(t *testing.T, expectedName, expectedClientID string, actual authenticationv1alpha1.OpenIDConnect) {
 	assert.Equal(t, expectedName, actual.Name)
-	//nolint:staticcheck // SA1019: ClientID is deprecated in favor of audiences, but we verify it for now
-	assert.Equal(t, expectedClientID, actual.Spec.ClientID)
+	assert.Equal(t, []string{expectedClientID}, actual.Spec.Audiences)
 	assert.Equal(t, ptr.To("groups"), actual.Spec.GroupsClaim)
 	assert.Nil(t, actual.Spec.GroupsPrefix)
 	assert.Equal(t, "https://my.cool.tokens.com", actual.Spec.IssuerURL)

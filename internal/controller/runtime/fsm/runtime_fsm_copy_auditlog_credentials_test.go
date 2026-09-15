@@ -105,7 +105,7 @@ func TestSFnCopyAuditLogReadCredentials(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		require.Nil(t, result)
-		require.Contains(t, stateFn.name(), "updateStatusAndStop")
+		require.Contains(t, stateFn.name(), "sFnUpdateStatus")
 		require.True(t, systemState.instance.IsProvisioningCompletedStatusSet())
 
 		// Verify condition is set
@@ -463,7 +463,7 @@ func TestSFnCopyAuditLogReadCredentials(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		require.Nil(t, result)
-		require.Contains(t, stateFn.name(), "updateStatusAndStop")
+		require.Contains(t, stateFn.name(), "sFnUpdateStatus")
 		require.True(t, systemState.instance.IsProvisioningCompletedStatusSet())
 
 		// Verify secret was updated with new data

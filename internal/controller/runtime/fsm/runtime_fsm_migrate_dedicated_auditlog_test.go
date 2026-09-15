@@ -73,7 +73,7 @@ func TestSFnMigrateToDedicatedAuditLog(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		require.Nil(t, result)
-		require.Contains(t, stateFn.name(), "updateStatusAndStop")
+		require.Contains(t, stateFn.name(), "sFnUpdateStatus")
 		require.True(t, systemState.instance.IsProvisioningCompletedStatusSet())
 	})
 
@@ -124,7 +124,7 @@ func TestSFnMigrateToDedicatedAuditLog(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		require.Nil(t, result)
-		require.Contains(t, stateFn.name(), "updateStatusAndStop")
+		require.Contains(t, stateFn.name(), "sFnUpdateStatus")
 		require.True(t, systemState.instance.IsProvisioningCompletedStatusSet())
 	})
 
@@ -181,7 +181,7 @@ func TestSFnMigrateToDedicatedAuditLog(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		require.Nil(t, result)
-		require.Contains(t, stateFn.name(), "updateStatusAndStop")
+		require.Contains(t, stateFn.name(), "sFnUpdateStatus")
 
 		// Verify instance status was updated with error
 		condition := meta.FindStatusCondition(systemState.instance.Status.Conditions, string(imv1.ConditionTypeCustomAuditLogConfigured))
@@ -523,7 +523,7 @@ func TestSFnMigrateToDedicatedAuditLog(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		require.Nil(t, result)
-		require.Contains(t, stateFn.name(), "updateStatusAndStop")
+		require.Contains(t, stateFn.name(), "sFnUpdateStatus")
 		require.True(t, systemState.instance.IsProvisioningCompletedStatusSet())
 	})
 }
