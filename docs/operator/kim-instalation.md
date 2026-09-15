@@ -83,12 +83,12 @@ All of below fields are mandatory
 | **converter.dns.secretName**                                                       | string | The name of the Kubernetes `Secret` containing credentials for the DNS provider. | Yes | Yes | Yes |
 | **converter.dns.domainPrefix**                                                     | string | The domain prefix used for the cluster's DNS records (e.g., `example.com` results in `sub.example.com`). | Yes | Yes | Yes |
 | **converter.dns.providerType**                                                     | string | The type of DNS provider to use for managing DNS records. | Yes | Yes | Yes |
-| **converter.provider.aws.enableIMDSv2**                                            | bool | If `true`, Instance Metadata Service Version 2 (IMDSv2) is enforced on all AWS nodes in the cluster. | Yes | Yes |  |
+| **converter.provider.aws.enableIMDSv2**                                            | bool | If `true`, Instance Metadata Service Version 2 (IMDSv2) is enforced on all AWS nodes in the cluster. | Yes | Yes | Yes |
 | **converter.gardener.projectName**                                                 | string | The name of the Gardener project where the Shoot cluster will be created. | Yes | Yes | Yes |
 | **converter.machineImage.defaultName**                                             | string | The default name of the machine image to use for worker nodes. | Yes | Yes | Yes |
 | **converter.machineImage.defaultVersion**                                          | string | The default version of the machine image to use. | Yes | Yes | Yes |
 | **converter.auditLogging.policyConfigMapName**                                     | string | The name of the `ConfigMap` containing the audit logging policy. | Yes | Yes | Yes |
-| **converter.auditLogging.tenantConfigPath**                                          | string | The file path inside the manager container where the audit log tenant configuration is located. | Yes | Yes | Yes |
+| **converter.auditLogging.tenantConfigPath**                                        | string | The file path inside the manager container where the audit log tenant configuration is located. | Yes | Yes | Yes |
 | **converter.maintenanceWindow.windowMapPath**                                      | string | The file path inside the manager container where the maintenance window configuration `ConfigMap` is mounted. | Yes | Yes | Yes |
 | **converter.provider.gdch.cloudProfileName**                                       | string | The name of the Gardener cloud profile for the GDCH provider. |  |  | Yes |
 | **converter.provider.gdch.parentReferenceName**                                    | string | The name of the parent reference resource (e.g., a `SubnetGroup`) for the GDCH provider. |  |  | Yes |
