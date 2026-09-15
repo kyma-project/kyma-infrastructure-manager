@@ -13,7 +13,7 @@ import (
 const (
 	runtimeIDKeyName               = "runtimeId"
 	runtimeNameKeyName             = "runtimeName"
-	shootNameIDKeyName             = "shootName"
+	shootKeyName                   = "shoot"
 	rotationDuration               = "rotationDuration"
 	expirationDuration             = "expirationDuration"
 	componentName                  = "infrastructure_manager"
@@ -57,19 +57,19 @@ func NewMetrics() Metrics {
 				Subsystem: componentName,
 				Name:      GardenerClusterStateMetricName,
 				Help:      "Indicates the Status.state for GardenerCluster CRs",
-			}, []string{runtimeIDKeyName, shootNameIDKeyName, state, reason}),
+			}, []string{runtimeIDKeyName, shootKeyName, state, reason}),
 		kubeconfigExpirationGauge: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Subsystem: componentName,
 				Name:      KubeconfigExpirationMetricName,
 				Help:      "Exposes current kubeconfig expiration value in epoch timestamp value format",
-			}, []string{runtimeIDKeyName, shootNameIDKeyName, expires, rotationDuration, expirationDuration}),
+			}, []string{runtimeIDKeyName, shootKeyName, expires, rotationDuration, expirationDuration}),
 		runtimeStateGauge: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Subsystem: componentName,
 				Name:      RuntimeStateMetricName,
 				Help:      "Exposes current Status.state for Runtime CRs",
-			}, []string{runtimeIDKeyName, runtimeNameKeyName, shootNameIDKeyName, provider, state, message}),
+			}, []string{runtimeIDKeyName, runtimeNameKeyName, shootKeyName, provider, state, message}),
 		runtimeFSMUnexpectedStopsCnt: prometheus.NewCounter(
 			prometheus.CounterOpts{
 				Name: RuntimeFSMStopMetricName,

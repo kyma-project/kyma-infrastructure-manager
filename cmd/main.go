@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -57,10 +56,11 @@ import (
 	registrycachecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/registrycache"
 	runtimecontroller "github.com/kyma-project/infrastructure-manager/internal/controller/runtime"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
+	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
+	auditlogv1 "github.com/kyma-project/infrastructure-manager/pkg/auditlog/v1beta1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/kubeconfig"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
 	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
@@ -76,24 +76,29 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(infrastructuremanagerv1.AddToScheme(scheme))
 	utilruntime.Must(rbacv1.AddToScheme(scheme))
+	utilruntime.Must(auditlogv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
 // Default values for the Runtime controller configuration
 const (
-	defaultControlPlaneRequeueDuration   = 10 * time.Second
-	defaultGardenerRequestTimeout        = 3 * time.Second
-	defaultGardenerRateLimiterQPS        = 5
-	defaultGardenerRateLimiterBurst      = 5
-	defaultMinimalRotationTimeRatio      = 0.6
-	defaultExpirationTime                = 24 * time.Hour
-	defaultGardenerReconciliationTimeout = 60 * time.Second
-	defaultGardenerRequeueDuration       = 15 * time.Second
-	defaultShootCreateRequeueDuration    = 60 * time.Second
-	defaultShootDeleteRequeueDuration    = 90 * time.Second
-	defaultShootReconcileRequeueDuration = 30 * time.Second
-	defaultRuntimeCtrlWorkersCnt         = 25
-	defaultGardenerClusterCtrlWorkersCnt = 25
+	defaultControlPlaneRequeueDuration        = 10 * time.Second
+	defaultGardenerRequestTimeout             = 3 * time.Second
+	defaultGardenerRateLimiterQPS             = 5
+	defaultGardenerRateLimiterBurst           = 5
+	defaultMinimalRotationTimeRatio           = 0.6
+	defaultExpirationTime                     = 24 * time.Hour
+	defaultGardenerReconciliationTimeout      = 60 * time.Second
+	defaultGardenerRequeueDuration            = 15 * time.Second
+	defaultShootCreateRequeueDuration         = 60 * time.Second
+	defaultShootDeleteRequeueDuration         = 90 * time.Second
+	defaultShootReconcileRequeueDuration      = 30 * time.Second
+	defaultRuntimeCtrlWorkersCnt              = 25
+	defaultGardenerClusterCtrlWorkersCnt      = 25
+	defaultStatusRequeueDelay                 = 1 * time.Second
+	defaultRegistryCacheListenerComponentName = "infrastructure-manager-registry-cache"
+	defaultRegistryCacheReconcilePeriod       = 60 * time.Minute
+	defaultControlPlaneSystemNamespace        = "kcp-system"
 )
 
 func main() {
@@ -112,8 +117,11 @@ func main() {
 	var gardenerClusterCtrlWorkersCnt int
 	var converterConfigFilepath string
 	var auditLogMandatory bool
+	var dedicatedAuditLoggingEnabled bool
 	var registryCacheConfigControllerEnabled bool
+	var registryCacheListenerPort string
 	var apiServerAclEnabled bool
+	var networkRestrictionGlobalEnabled bool
 	var runtimeBootstrapperEnabled bool
 	var runtimeBootstrapperKCPConfigName string
 	var runtimeBootstrapperKCPPullSecretName string
@@ -124,6 +132,8 @@ func main() {
 	var runtimeBootstrapperSKRPullSecretName string
 	var runtimeBootstrapperSKRClusterTrustBundle string
 	var runtimeBootstrapperSKRNamespace string
+	var registryCacheReconcilePeriod time.Duration
+	var statusRequeueDelay time.Duration
 
 	//Kubebuilder related parameters:
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to. Monitoring and alerting tools can use this endpoint to collect application specific metrics during runtime")
@@ -149,12 +159,19 @@ func main() {
 	flag.IntVar(&runtimeCtrlGardenerRateLimiterBurst, "gardener-ratelimiter-burst", defaultGardenerRateLimiterBurst, "Gardener client rate limiter burst for Runtime Controller. The burst value allows for more requests than the qps limit for short periods (see https://cloud.google.com/config-connector/docs/how-to/customize-controller-manager-rate-limit)")
 	flag.IntVar(&runtimeCtrlWorkersCnt, "runtime-ctrl-workers-cnt", defaultRuntimeCtrlWorkersCnt, "Number of workers running in parallel for Runtime Controller. The number of parallel workers has an impact on the amount of requests send to the Gardener cluster")
 	flag.StringVar(&converterConfigFilepath, "converter-config-filepath", "/converter-config/converter_config.json", "File path to the gardener shoot converter configuration.")
+	flag.DurationVar(&statusRequeueDelay, "status-requeue-delay", defaultStatusRequeueDelay, "Delay applied when the FSM re-enqueues itself after writing Runtime status. A small non-zero value lets the informer cache observe the status write before the next reconcile, avoiding 409 conflicts caused by reading a stale resourceVersion. Must be greater than zero: setting this to 0 disables re-enqueue and stalls the FSM.")
+
+	// Registry cache specific parameters:
+	flag.StringVar(&registryCacheListenerPort, "registry-cache-listener-port", "8082", "Port for the registry cache listener to listen on")
+	flag.DurationVar(&registryCacheReconcilePeriod, "registry-cache-reconcile-period", defaultRegistryCacheReconcilePeriod, "Time base reconciliation period for Registry Cache Controller.")
 
 	//Feature flags:
 	flag.BoolVar(&auditLogMandatory, "audit-log-mandatory", true, "Feature flag to enable strict mode for audit log configuration. When enabled this feature, a Shoot cluster will only be created when an auditlog tenant exists (this is defined in the auditlog mapping configuration file)")
+	flag.BoolVar(&dedicatedAuditLoggingEnabled, "dedicated-audit-logging-enabled", false, "Feature flag to enable dedicated BTP audit logging infrastructure for provisioned Kyma Runtime. When enabled, this feature integrates with the Kyma Audit Log Manager to provide self-service access to runtime audit logs")
 	flag.BoolVar(&registryCacheConfigControllerEnabled, "registry-cache-config-controller-enabled", false, "Feature flag to enable registry cache config controller")
 	flag.BoolVar(&runtimeBootstrapperEnabled, "runtime-bootstrapper-enabled", false, "Feature flag to enable runtime bootstrapper")
 	flag.BoolVar(&apiServerAclEnabled, "api-server-acl-enabled", false, "Feature flag to enable the shoot API server ACL extender which restricts access to the API server to a defined set of CIDRs")
+	flag.BoolVar(&networkRestrictionGlobalEnabled, "network-restriction-enabled", true, "Feature flag to enable network restriction on the project scope")
 
 	// Runtime bootstrapper configuration
 	flag.StringVar(&runtimeBootstrapperManifestsConfigMapName, "runtime-bootstrapper-manifests-config-map-name", "runtime-bootstrapper-manifests", "Config map with Runtime Bootstrapper manifests.")
@@ -177,6 +194,11 @@ func main() {
 	logger := zap.New(zap.UseFlagOptions(&opts))
 	ctrl.SetLogger(logger)
 
+	if statusRequeueDelay <= 0 {
+		setupLog.Error(nil, "invalid --status-requeue-delay; must be greater than zero", "value", statusRequeueDelay)
+		os.Exit(1)
+	}
+
 	restConfig := ctrl.GetConfigOrDie()
 
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
@@ -188,7 +210,7 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "f1c68560.kyma-project.io",
-		Cache:                  restrictWatchedNamespace(),
+		Cache:                  restrictWatchedNamespace(dedicatedAuditLoggingEnabled),
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -258,11 +280,19 @@ func main() {
 		}
 	}
 
-	auditLogDataMap, err := loadAuditLogDataMap(config.ConverterConfig.AuditLog.TenantConfigPath)
+	auditLogSharedConfig, err := auditlog.LoadConfiguration(config.ConverterConfig.AuditLog.TenantConfigPath)
 	if err != nil {
 		setupLog.Error(err, "invalid audit log tenant configuration")
 		os.Exit(1)
 	}
+
+	// Create audit log data provider
+	auditLogDataProvider := auditlog.NewDataProvider(
+		mgr.GetClient(),
+		auditLogSharedConfig,
+		logger,
+		defaultControlPlaneSystemNamespace,
+	)
 
 	_, err = token.ValidateTokenExpirationTime(config.ConverterConfig.Kubernetes.KubeApiServer.MaxTokenExpiration)
 	if err != nil {
@@ -323,11 +353,11 @@ func main() {
 
 			rtBootstrapperCfgNN := types.NamespacedName{
 				Name:      runtimeBootstrapperKCPConfigName,
-				Namespace: "kcp-system",
+				Namespace: defaultControlPlaneSystemNamespace,
 			}
 			rtBootstrapperManifestsNN := types.NamespacedName{
 				Name:      runtimeBootstrapperManifestsConfigMapName,
-				Namespace: "kcp-system",
+				Namespace: defaultControlPlaneSystemNamespace,
 			}
 
 			configMapPredicates = append(configMapPredicates,
@@ -343,7 +373,7 @@ func main() {
 			if runtimeBootstrapperKCPPullSecretName != "" {
 				secretPredicates = append(secretPredicates, configctrl.ObjectUpdatedPredicate{NamespacedName: types.NamespacedName{
 					Name:      runtimeBootstrapperKCPPullSecretName,
-					Namespace: "kcp-system",
+					Namespace: defaultControlPlaneSystemNamespace,
 				}})
 			}
 		}
@@ -351,13 +381,13 @@ func main() {
 		if apiServerAclEnabled {
 			configMapPredicates = append(configMapPredicates, configctrl.ObjectUpdatedPredicate{NamespacedName: types.NamespacedName{
 				Name:      config.ConverterConfig.Kubernetes.KubeApiServer.ACL.ConfigMapName,
-				Namespace: "kcp-system",
+				Namespace: defaultControlPlaneSystemNamespace,
 			}})
 		}
 
 		if err = (&configctrl.ConfigReloadWatcher{
 			KcpClient:                   kcpClient,
-			Namespace:                   "kcp-system",
+			Namespace:                   defaultControlPlaneSystemNamespace,
 			ConfigMapPredicates:         configMapPredicates,
 			SecretPredicates:            secretPredicates,
 			ClusterTrustBundlePredicate: clusterTrustBundlePredicate,
@@ -379,13 +409,16 @@ func main() {
 		RequeueDurationShootDelete:           defaultShootDeleteRequeueDuration,
 		RequeueDurationShootReconcile:        defaultShootReconcileRequeueDuration,
 		ControlPlaneRequeueDuration:          defaultControlPlaneRequeueDuration,
+		StatusRequeueDelay:                   statusRequeueDelay,
 		Finalizer:                            infrastructuremanagerv1.Finalizer,
 		ShootNamesapace:                      gardenerNamespace,
 		Config:                               config,
 		AuditLogMandatory:                    auditLogMandatory,
+		DedicatedAuditLoggingEnabled:         dedicatedAuditLoggingEnabled,
 		ApiServerAclEnabled:                  apiServerAclEnabled,
+		NetworkRestrictionGlobalEnabled:      networkRestrictionGlobalEnabled,
 		Metrics:                              metrics,
-		AuditLogging:                         auditLogDataMap,
+		AuditLogDataProvider:                 auditLogDataProvider,
 		RegistryCacheConfigControllerEnabled: registryCacheConfigControllerEnabled,
 		RuntimeBootstrapperEnabled:           runtimeBootstrapperEnabled,
 		RuntimeBootstrapperInstaller:         runtimeBootstrapperInstaller,
@@ -418,14 +451,16 @@ func main() {
 
 	refreshRuntimeMetrics(restConfig, logger, metrics)
 
+	ctx := ctrl.SetupSignalHandler()
+
 	if registryCacheConfigControllerEnabled {
 		// use closure that creates runtime client with prebuilt scheme
 		runtimeClientClosure := func(secret corev1.Secret) (client.Client, error) {
 			return gardener.GetRuntimeClientWithScheme(secret, prebuiltRuntimeScheme)
 		}
 
-		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, runtimeClientClosure)
-		if err = registryCacheConfigReconciler.SetupWithManager(mgr, 1); err != nil {
+		registryCacheConfigReconciler := registrycachecontroller.NewRegistryCacheConfigReconciler(mgr, logger, defaultControlPlaneSystemNamespace, runtimeClientClosure, registryCacheReconcilePeriod)
+		if err = registryCacheConfigReconciler.SetupWithManager(ctx, mgr, 1, registryCacheListenerPort, defaultRegistryCacheListenerComponentName); err != nil {
 			setupLog.Error(err, "unable to setup registry cache config controller with Manager", "controller", "Runtime")
 			os.Exit(1)
 		}
@@ -433,7 +468,7 @@ func main() {
 
 	setupLog.Info("Starting Manager", "kubeconfigExpirationTime", expirationTime, "kubeconfigRotationPeriod", rotationPeriod)
 
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
@@ -480,29 +515,6 @@ func initGardenerClients(kubeconfigPath string, namespace string, timeout time.D
 	return gardenerClient, shootClient, dynamicKubeconfigAPI, nil
 }
 
-func loadAuditLogDataMap(p string) (auditlogs.Configuration, error) {
-	file, err := os.Open(p)
-	if err != nil {
-		return nil, err
-	}
-
-	var data auditlogs.Configuration
-	if err := json.NewDecoder(file).Decode(&data); err != nil {
-		return nil, err
-	}
-	validate := validator.New(validator.WithRequiredStructEnabled())
-
-	for _, nestedMap := range data {
-		for _, auditLogData := range nestedMap {
-			if err := validate.Struct(auditLogData); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	return data, nil
-}
-
 func refreshRuntimeMetrics(restConfig *rest.Config, logger logr.Logger, metrics metrics.Metrics) {
 	k8sClient, err := client.New(restConfig, client.Options{})
 	if err != nil {
@@ -529,33 +541,43 @@ func refreshRuntimeMetrics(restConfig *rest.Config, logger logr.Logger, metrics 
 	}
 }
 
-func restrictWatchedNamespace() cache.Options {
-	return cache.Options{
+func restrictWatchedNamespace(dedicatedAuditLoggingEnabled bool) cache.Options {
+	cacheOptions := cache.Options{
 		ByObject: map[client.Object]cache.ByObject{
 			&corev1.ConfigMap{}: {
 				Label: k8slabels.Everything(),
 				Namespaces: map[string]cache.Config{
-					"kcp-system": {},
+					defaultControlPlaneSystemNamespace: {},
 				},
 			},
 			&corev1.Secret{}: {
 				Label: k8slabels.Everything(),
 				Namespaces: map[string]cache.Config{
-					"kcp-system": {},
+					defaultControlPlaneSystemNamespace: {},
 				},
 			},
 			&infrastructuremanagerv1.Runtime{}: {
 				Namespaces: map[string]cache.Config{
-					"kcp-system": {},
+					defaultControlPlaneSystemNamespace: {},
 				},
 			},
 			&infrastructuremanagerv1.GardenerCluster{}: {
 				Namespaces: map[string]cache.Config{
-					"kcp-system": {},
+					defaultControlPlaneSystemNamespace: {},
 				},
 			},
 		},
 	}
+
+	if dedicatedAuditLoggingEnabled {
+		cacheOptions.ByObject[&auditlogv1.AuditLog{}] = cache.ByObject{
+			Namespaces: map[string]cache.Config{
+				defaultControlPlaneSystemNamespace: {},
+			},
+		}
+	}
+
+	return cacheOptions
 }
 
 func configureRuntimeBootstrapper(config rtbootstrapper.Config, runtimeClientGetter fsm.RuntimeClientGetter, kcpClient client.Client) (*rtbootstrapper.Installer, error) {

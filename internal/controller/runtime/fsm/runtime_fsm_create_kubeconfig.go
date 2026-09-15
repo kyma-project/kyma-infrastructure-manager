@@ -63,7 +63,7 @@ func sFnHandleKubeconfig(ctx context.Context, m *fsm, s *systemState) (stateFn, 
 
 	m.log.V(log_level.DEBUG).Info("GardenerCluster CR is ready", "name", runtimeID)
 
-	return ensureStatusConditionIsSetAndContinue(&s.instance,
+	return ensureStatusConditionIsSetAndContinue(m.StatusRequeueDelay, &s.instance,
 		imv1.ConditionTypeRuntimeKubeconfigReady,
 		imv1.ConditionReasonGardenerCRReady,
 		"Gardener Cluster CR is ready.",

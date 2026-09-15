@@ -12,7 +12,6 @@ import (
 
 const (
 	AuditlogExtensionType = "shoot-auditlog-service"
-	auditlogReferenceName = "auditlog-credentials"
 )
 
 type AuditlogExtensionConfig struct {
@@ -36,7 +35,7 @@ func NewAuditLogExtension(d auditlogs.AuditLogData) (*gardener.Extension, error)
 		Type:                "standard",
 		TenantID:            d.TenantID,
 		ServiceURL:          d.ServiceURL,
-		SecretReferenceName: auditlogReferenceName,
+		SecretReferenceName: d.SecretReferenceName(),
 	}
 	var buffer bytes.Buffer
 	if err := json.NewEncoder(&buffer).Encode(&cfg); err != nil {

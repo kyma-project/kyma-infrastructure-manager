@@ -29,7 +29,7 @@ func baseExtenders(converterConfig config.ConverterConfig) []Extend {
 		extender2.ExtendWithLabels,
 		extender2.ExtendWithSeedSelector,
 		extender2.NewOidcExtender(),
-		extender2.ExtendWithCloudProfile,
+		extender2.ExtendWithCloudProfile(converterConfig.Provider.GDCH.CloudProfileName),
 		extender2.ExtendWithExposureClassName,
 		restrictions.ExtendWithAccessRestriction(),
 		extender2.NewFeatureGatesExtender(converterConfig.Kubernetes.KubeApiServer.FeatureGates, converterConfig.Kubernetes.Kubelet.FeatureGates),
@@ -53,22 +53,26 @@ type CreateOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
-	KcpClient           client.Client
-	ApiServerAclEnabled bool
+	KcpClient                       client.Client
+	ApiServerAclEnabled             bool
+	NetworkRestrictionGlobalEnabled bool
 }
 
 type PatchOpts struct {
 	config.ConverterConfig
 	auditlogs.AuditLogData
 	*gardener.MaintenanceTimeWindow
-	KcpClient            client.Client
-	ShootK8SVersion      string
-	Workers              []gardener.Worker
-	Extensions           []gardener.Extension
-	Resources            []gardener.NamedResourceReference
-	InfrastructureConfig *runtime.RawExtension
-	ControlPlaneConfig   *runtime.RawExtension
-	ApiServerAclEnabled  bool
+	KcpClient                       client.Client
+	ShootK8SVersion                 string
+	Workers                         []gardener.Worker
+	Extensions                      []gardener.Extension
+	Resources                       []gardener.NamedResourceReference
+	InfrastructureConfig            *runtime.RawExtension
+	ControlPlaneConfig              *runtime.RawExtension
+	ApiServerAclEnabled             bool
+	NetworkRestrictionGlobalEnabled bool
+	ExistingDNS                     *gardener.DNS
+	RegistryCacheGardenSecretNames  map[string]string
 }
 
 func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
@@ -78,17 +82,18 @@ func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
 		provider.NewProviderExtenderForCreateOperation(
 			opts.Networking.EnableDualStackIP,
 			opts.Provider.AWS.EnableIMDSv2,
-			opts.MachineImage.DefaultName,
-			opts.MachineImage.DefaultVersion,
+			opts.MachineImage,
+			opts.Provider.Worker,
+			opts.Provider.GDCH,
 		),
 		extender2.ExtendWithGVisorNetRawDefault,
 		extender2.NewTolerationsExtender(opts.Tolerations),
 	)
 
 	if !opts.DNS.IsGardenerInternal() {
-		extendersForCreate = append(extendersForCreate, extender2.NewDNSExtender(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType))
+		extendersForCreate = append(extendersForCreate, extender2.NewDNSExtenderForCreate(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType))
 	}
-	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(ctx, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, nil, opts.ApiServerAclEnabled))
+	extendersForCreate = append(extendersForCreate, extensions.NewExtensionsExtenderForCreate(ctx, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, opts.ApiServerAclEnabled, opts.NetworkRestrictionGlobalEnabled))
 	extendersForCreate = append(extendersForCreate,
 		extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, ""))
 
@@ -96,7 +101,7 @@ func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
 
 	if opts.AuditLogData != (auditlogs.AuditLogData{}) {
 		extendersForCreate = append(extendersForCreate,
-			auditlogs.NewAuditlogExtenderForCreate(
+			auditlogs.NewAuditlogExtender(
 				opts.AuditLog.PolicyConfigMapName,
 				opts.AuditLogData))
 	}
@@ -113,16 +118,21 @@ func NewConverterPatch(ctx context.Context, opts PatchOpts) Converter {
 	extendersForPatch = append(extendersForPatch,
 		provider.NewProviderExtenderPatchOperation(
 			opts.Provider.AWS.EnableIMDSv2,
-			opts.MachineImage.DefaultName,
-			opts.MachineImage.DefaultVersion,
 			opts.Workers,
+			opts.MachineImage,
+			opts.Provider.Worker,
 			opts.InfrastructureConfig,
-			opts.ControlPlaneConfig))
+			opts.ControlPlaneConfig,
+			opts.Provider.GDCH))
 	extendersForPatch = append(extendersForPatch, extender2.ExtendWithGVisorNetRawDefault)
 
 	extendersForPatch = append(extendersForPatch,
-		extender2.NewResourcesExtenderForPatch(opts.Resources),
-		extensions.NewExtensionsExtenderForPatch(ctx, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, opts.Extensions, opts.ApiServerAclEnabled))
+		extender2.NewResourcesExtenderForPatch(opts.Resources, opts.RegistryCacheGardenSecretNames),
+		extensions.NewExtensionsExtenderForPatch(ctx, opts.KcpClient, opts.ConverterConfig, opts.AuditLogData, opts.Extensions, opts.ApiServerAclEnabled, opts.NetworkRestrictionGlobalEnabled, opts.RegistryCacheGardenSecretNames))
+
+	if !opts.DNS.IsGardenerInternal() {
+		extendersForPatch = append(extendersForPatch, extender2.NewDNSExtenderForPatch(opts.DNS.SecretName, opts.DNS.DomainPrefix, opts.DNS.ProviderType, opts.ExistingDNS))
+	}
 
 	extendersForPatch = append(extendersForPatch, extender2.NewKubernetesExtender(opts.Kubernetes.DefaultVersion, opts.ShootK8SVersion))
 	extendersForPatch = append(extendersForPatch, maintenance.NewMaintenanceExtender(opts.Kubernetes.EnableKubernetesVersionAutoUpdate, opts.Kubernetes.EnableMachineImageVersionAutoUpdate, opts.MaintenanceTimeWindow))
@@ -130,7 +140,9 @@ func NewConverterPatch(ctx context.Context, opts PatchOpts) Converter {
 
 	if opts.AuditLogData != (auditlogs.AuditLogData{}) {
 		extendersForPatch = append(extendersForPatch,
-			auditlogs.NewAuditlogExtenderForPatch(opts.AuditLog.PolicyConfigMapName))
+			auditlogs.NewAuditlogExtender(
+				opts.AuditLog.PolicyConfigMapName,
+				opts.AuditLogData))
 	}
 
 	return newConverter(opts.ConverterConfig, extendersForPatch...)

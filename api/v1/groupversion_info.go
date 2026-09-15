@@ -29,7 +29,7 @@ var (
 	GroupVersion = schema.GroupVersion{Group: "infrastructuremanager.kyma-project.io", Version: "v1"} //nolint:gochecknoglobals
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
-	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion} //nolint:gochecknoglobals
+	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion} //nolint:gochecknoglobals,staticcheck
 
 	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = SchemeBuilder.AddToScheme //nolint:gochecknoglobals

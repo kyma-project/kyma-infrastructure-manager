@@ -79,7 +79,7 @@ func AclNeedsToBeEnabled(apiServerAclEnabled bool, runtime imv1.Runtime) bool {
 	runtimeType := runtime.Spec.Shoot.Provider.Type
 
 	return apiServerAclEnabled &&
-		(runtimeType == hyperscaler.TypeAWS || runtimeType == hyperscaler.TypeAzure) &&
+		(runtimeType == hyperscaler.TypeAWS || runtimeType == hyperscaler.TypeAzure || runtimeType == hyperscaler.TypeOpenStack) &&
 		runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL != nil &&
 		len(runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL.AllowedCIDRs) > 0
 }

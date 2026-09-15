@@ -290,18 +290,19 @@ func getMetricsData(runtimeID string) metricsData {
 // 1) `expirationDuration` label value
 // 2) `expires` label value
 // 3) `rotationDuration` label value
-// 4) `shootName` label value
+// 4) `shoot` label value
 func getKubeconfigExpirationMetricRegex(runtimeID string) *regexp.Regexp {
-	regexString := fmt.Sprintf("im_kubeconfig_expiration{expirationDuration=\"(.*?)\",expires=\"(.*?)\",rotationDuration=\"(.*?)\",runtimeId=\"%v\",shootName=\"(.*?)\"", runtimeID)
+	regexString := fmt.Sprintf("im_kubeconfig_expiration{expirationDuration=\"(.*?)\",expires=\"(.*?)\",rotationDuration=\"(.*?)\",runtimeId=\"%v\",shoot=\"(.*?)\"", runtimeID)
 	return regexp.MustCompile(regexString)
 }
 
 // getGardenerClusterStateMetricRegex returns regex that will find matches of gardener_cluster_state metrics
-// and capture two groups for given `runtimeId` label value:
+// and capture three groups for given `runtimeId` label value:
 // 1) `reason` label value
-// 2) `state` label value
+// 2) `shoot` label value
+// 3) `state` label value
 func getGardenerClusterStateMetricRegex(runtimeID string) *regexp.Regexp {
-	regexString := fmt.Sprintf("infrastructure_manager_im_gardener_clusters_state.*reason=\"(.*?)\",runtimeId=\"%v\",shootName=\"(.*?)\",state=\"(.*?)\"", runtimeID)
+	regexString := fmt.Sprintf("infrastructure_manager_im_gardener_clusters_state.*reason=\"(.*?)\",runtimeId=\"%v\",shoot=\"(.*?)\",state=\"(.*?)\"", runtimeID)
 	return regexp.MustCompile(regexString)
 }
 

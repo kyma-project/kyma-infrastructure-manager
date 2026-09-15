@@ -5,12 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/aws"
+	v1 "k8s.io/api/autoscaling/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 
@@ -21,7 +24,6 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestConverter(t *testing.T) {
@@ -35,8 +37,9 @@ func TestConverter(t *testing.T) {
 			SecretName: "doesnt matter",
 		}
 		converter := NewConverterCreate(context.Background(), CreateOpts{
-			ConverterConfig: converterConfig,
-			AuditLogData:    auditLogData,
+			ConverterConfig:                 converterConfig,
+			AuditLogData:                    auditLogData,
+			NetworkRestrictionGlobalEnabled: true,
 		})
 
 		// when
@@ -60,8 +63,9 @@ func TestConverter(t *testing.T) {
 		emptyAuditLogData := auditlogs.AuditLogData{}
 
 		converter := NewConverterCreate(context.Background(), CreateOpts{
-			ConverterConfig: converterConfig,
-			AuditLogData:    emptyAuditLogData,
+			ConverterConfig:                 converterConfig,
+			AuditLogData:                    emptyAuditLogData,
+			NetworkRestrictionGlobalEnabled: true,
 		})
 
 		// when
@@ -88,8 +92,9 @@ func TestConverter(t *testing.T) {
 			SecretName: "doesnt matter",
 		}
 		converter := NewConverterCreate(context.Background(), CreateOpts{
-			ConverterConfig: converterConfig,
-			AuditLogData:    auditLogData,
+			ConverterConfig:                 converterConfig,
+			AuditLogData:                    auditLogData,
+			NetworkRestrictionGlobalEnabled: true,
 		})
 
 		// when
@@ -143,7 +148,11 @@ func TestConverter(t *testing.T) {
 		assert.Equal(t, "1.30", shoot.Spec.Kubernetes.Version)
 		assert.Equal(t, "gardenlinux", shoot.Spec.Provider.Workers[0].Machine.Image.Name)
 		assert.Equal(t, "1592.2.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
-		assert.Nil(t, shoot.Spec.DNS)
+		require.NotNil(t, shoot.Spec.DNS)
+		require.Len(t, shoot.Spec.DNS.Providers, 1)                                    //nolint:staticcheck
+		require.NotNil(t, shoot.Spec.DNS.Providers[0].CredentialsRef)                  //nolint:staticcheck
+		assert.Equal(t, "dns-secret", shoot.Spec.DNS.Providers[0].CredentialsRef.Name) //nolint:staticcheck
+		assert.Nil(t, shoot.Spec.DNS.Providers[0].SecretName)                          //nolint:staticcheck
 
 		extensionLen := len(shoot.Spec.Extensions)
 		require.Equalf(t, extensionLen, 5, "unexpected number of extensions: %d, expected: 5", extensionLen)
@@ -279,6 +288,81 @@ func TestConverter(t *testing.T) {
 
 		assert.Equal(t, expectedMaintenanceWindow, shoot.Spec.Maintenance.TimeWindow)
 	})
+
+	t.Run("Patch shoot already migrated to dedicated audit logging should not revert to shared secret reference name", func(t *testing.T) {
+		// given
+		const auditlogCredentialsRes = "auditlog-credentials"
+		const dedicatedAuditlogCredentialsRes = "dedicated-auditlog-credentials"
+		const expectedSecretName = "new-dedicated-secret"
+		runtime := fixRuntime(gardener.ShootPurposeProduction)
+		converterConfig := fixConverterConfig()
+
+		dedicatedExtensions := fixAllExtensionsOnTheShootWithDedicatedAuditLog()
+
+		resources := []gardener.NamedResourceReference{
+			{
+				Name: auditlogCredentialsRes,
+				ResourceRef: v1.CrossVersionObjectReference{
+					Name:       "old-shared-secret",
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
+			},
+			{
+				Name: dedicatedAuditlogCredentialsRes,
+				ResourceRef: v1.CrossVersionObjectReference{
+					Name:       "old-dedicated-secret",
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
+			},
+		}
+
+		auditLogData := auditlogs.AuditLogData{
+			TenantID:   "new-tenant-id",
+			ServiceURL: "https://new.auditlog.example.com",
+			SecretName: expectedSecretName,
+			Dedicated:  true,
+		}
+
+		converter := NewConverterPatch(context.Background(), PatchOpts{
+			ConverterConfig:      converterConfig,
+			Workers:              fixWorkersWithReversedZones("gardenlinux", "1591.1.0"),
+			ShootK8SVersion:      "1.28",
+			Extensions:           dedicatedExtensions,
+			Resources:            resources,
+			AuditLogData:         auditLogData,
+			InfrastructureConfig: fixAWSInfrastructureConfig("10.250.0.0/16", []string{"eu-central-1a"}),
+			ControlPlaneConfig:   fixAWSControlPlaneConfig(),
+		})
+
+		// when
+		shoot, err := converter.ToShoot(runtime)
+
+		// then
+		require.NoError(t, err)
+
+		extIdx := slices.IndexFunc(shoot.Spec.Extensions, func(ext gardener.Extension) bool {
+			return ext.Type == extensions.AuditlogExtensionType
+		})
+		require.NotEqual(t, -1, extIdx, "extension %s not found", extensions.AuditlogExtensionType)
+
+		var auditlogConfig extensions.AuditlogExtensionConfig
+		require.NoError(t, json.Unmarshal(shoot.Spec.Extensions[extIdx].ProviderConfig.Raw, &auditlogConfig))
+		assert.Equal(t, dedicatedAuditlogCredentialsRes, auditlogConfig.SecretReferenceName)
+
+		resIdx := slices.IndexFunc(shoot.Spec.Resources, func(res gardener.NamedResourceReference) bool {
+			return res.Name == dedicatedAuditlogCredentialsRes
+		})
+		require.NotEqual(t, -1, resIdx, "resource reference dedicated-auditlog-credentials not found")
+		assert.Equal(t, expectedSecretName, shoot.Spec.Resources[resIdx].ResourceRef.Name)
+
+		sharedResIdx := slices.IndexFunc(shoot.Spec.Resources, func(res gardener.NamedResourceReference) bool {
+			return res.Name == auditlogCredentialsRes
+		})
+		require.NotEqual(t, -1, sharedResIdx, "resource reference auditlog-credentials not found")
+		assert.Equal(t, "old-shared-secret", shoot.Spec.Resources[sharedResIdx].ResourceRef.Name)
+	})
 }
 
 func assertShootFields(t *testing.T, runtime imv1.Runtime, shoot gardener.Shoot) {
@@ -331,6 +415,10 @@ func fixConverterConfig() config.ConverterConfig {
 			AWS: config.AWSConfig{
 				EnableIMDSv2: true,
 			},
+			Worker: config.WorkerConfig{
+				DefaultMaxEvictRetries:     "2",
+				DefaultMachineDrainTimeout: "15m",
+			},
 		},
 		MachineImage: config.MachineImageConfig{
 			DefaultName:    "gardenlinux",
@@ -353,7 +441,7 @@ func fixAllExtensionsOnTheShoot() []gardener.Extension {
 		{
 			Type: extensions.DNSExtensionType,
 			ProviderConfig: &runtime.RawExtension{
-				Raw: []byte(`{"apiVersion":"service.dns.extensions.gardener.cloud/v1alpha1","dnsProviderReplication":{"enabled":true},"syncProvidersFromShootSpecDNS":true,"providers":[{"domains":{"include":["test-shoot-name.test-domain"],"exclude":null},"secretName":"test-dns-secret","type":"test-provider"}],"kind":"DNSConfig"}`),
+				Raw: []byte(`{"apiVersion":"service.dns.extensions.gardener.cloud/v1alpha1","dnsProviderReplication":{"enabled":true},"syncProvidersFromShootSpecDNS":true,"providers":[{"domains":{"include":["test-shoot-name.test-domain"],"exclude":null},"credentials":"test-dns-secret","type":"test-provider"}],"kind":"DNSConfig"}`),
 			},
 		},
 		{
@@ -371,6 +459,17 @@ func fixAllExtensionsOnTheShoot() []gardener.Extension {
 			Disabled: ptr.To(false),
 		},
 	}
+}
+
+func fixAllExtensionsOnTheShootWithDedicatedAuditLog() []gardener.Extension {
+	exts := fixAllExtensionsOnTheShoot()
+	auditLogIdx := slices.IndexFunc(exts, func(ext gardener.Extension) bool {
+		return ext.Type == extensions.AuditlogExtensionType
+	})
+	exts[auditLogIdx].ProviderConfig = &runtime.RawExtension{
+		Raw: []byte(`{"apiVersion":"service.auditlog.extensions.gardener.cloud/v1alpha1","kind":"AuditlogConfig","type":"standard","tenantID":"test-auditlog-tenant","serviceURL":"test-auditlog-service-url","secretReferenceName":"dedicated-auditlog-credentials"}`),
+	}
+	return exts
 }
 
 func fixAWSInfrastructureConfig(workersCIDR string, zones []string) *runtime.RawExtension {
@@ -392,7 +491,7 @@ func fixRuntime(purpose gardener.ShootPurpose) imv1.Runtime {
 	imageVersion := "1591.1.0"
 
 	return imv1.Runtime{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "runtime",
 			Namespace: "kcp-system",
 		},
@@ -461,7 +560,7 @@ func fixRuntimeWithNoVersionsSpecified() imv1.Runtime {
 	usernameClaim := "sub"
 
 	return imv1.Runtime{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "runtime",
 			Namespace: "kcp-system",
 		},
@@ -578,6 +677,10 @@ var testReader io.Reader = strings.NewReader(
   "provider": {
 		"aws": {
   "enableIMDSv2": true
+		},
+		"worker": {
+  "defaultMaxEvictRetries": "2",
+  "defaultMachineDrainTimeout": "15m"
 		}
   },
   "machineImage": {
@@ -643,6 +746,10 @@ func Test_ConverterConfig_Load_OK(t *testing.T) {
 			Provider: config.ProviderConfig{
 				AWS: config.AWSConfig{
 					EnableIMDSv2: true,
+				},
+				Worker: config.WorkerConfig{
+					DefaultMaxEvictRetries:     "2",
+					DefaultMachineDrainTimeout: "15m",
 				},
 			},
 			MachineImage: config.MachineImageConfig{

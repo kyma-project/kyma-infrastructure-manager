@@ -300,6 +300,10 @@ func fixWorkers(name, machineType, machineImageName, machineImageVersion string,
 			Minimum: min,
 			Maximum: max,
 			Zones:   zones,
+			MachineControllerManagerSettings: &gardener.MachineControllerManagerSettings{
+				MaxEvictRetries:     ptr.To(int32(2)),
+				MachineDrainTimeout: &metav1.Duration{Duration: 15 * time.Minute},
+			},
 		},
 	}
 }

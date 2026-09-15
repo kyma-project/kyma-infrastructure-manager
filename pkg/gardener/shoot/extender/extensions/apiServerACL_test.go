@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
@@ -71,6 +73,101 @@ func TestNewApiServerACLExtension(t *testing.T) {
 				assert.Equal(t, "remote_ip", config.Rule.Type)
 				assert.Equal(t, testCase.expectedCIDRs, config.Rule.Cidrs)
 			}
+		})
+	}
+}
+
+func TestAclNeedsToBeEnabled(t *testing.T) {
+	for _, testCase := range []struct {
+		name         string
+		providerType string
+		flagEnabled  bool
+		aclNil       bool
+		cidrs        []string
+		expected     bool
+	}{
+		{
+			name:         "OpenStack + flag on + CIDRs present == true",
+			providerType: hyperscaler.TypeOpenStack,
+			flagEnabled:  true,
+			aclNil:       false,
+			cidrs:        []string{"10.0.0.1/32"},
+			expected:     true,
+		},
+		{
+			name:         "AWS + flag on + CIDRs present == true (regression)",
+			providerType: hyperscaler.TypeAWS,
+			flagEnabled:  true,
+			aclNil:       false,
+			cidrs:        []string{"10.0.0.1/32"},
+			expected:     true,
+		},
+		{
+			name:         "Azure + flag on + CIDRs present == true (regression)",
+			providerType: hyperscaler.TypeAzure,
+			flagEnabled:  true,
+			aclNil:       false,
+			cidrs:        []string{"10.0.0.1/32"},
+			expected:     true,
+		},
+		{
+			name:         "GCP == false (still unsupported; guards against accidental enablement)",
+			providerType: hyperscaler.TypeGCP,
+			flagEnabled:  true,
+			aclNil:       false,
+			cidrs:        []string{"10.0.0.1/32"},
+			expected:     false,
+		},
+		{
+			name:         "OpenStack + flag off == false",
+			providerType: hyperscaler.TypeOpenStack,
+			flagEnabled:  false,
+			aclNil:       false,
+			cidrs:        []string{"10.0.0.1/32"},
+			expected:     false,
+		},
+		{
+			name:         "OpenStack + empty CIDRs == false",
+			providerType: hyperscaler.TypeOpenStack,
+			flagEnabled:  true,
+			aclNil:       false,
+			cidrs:        []string{},
+			expected:     false,
+		},
+		{
+			name:         "OpenStack + nil ACL == false",
+			providerType: hyperscaler.TypeOpenStack,
+			flagEnabled:  true,
+			aclNil:       true,
+			cidrs:        nil,
+			expected:     false,
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			runtime := imv1.Runtime{
+				Spec: imv1.RuntimeSpec{
+					Shoot: imv1.RuntimeShoot{
+						Name: "test-shoot",
+						Provider: imv1.Provider{
+							Type: testCase.providerType,
+						},
+						Kubernetes: imv1.Kubernetes{
+							KubeAPIServer: imv1.APIServer{
+								ACL: nil,
+							},
+						},
+					},
+				},
+			}
+
+			if !testCase.aclNil {
+				runtime.Spec.Shoot.Kubernetes.KubeAPIServer.ACL = &imv1.ACL{
+					AllowedCIDRs: testCase.cidrs,
+				}
+			}
+
+			result := AclNeedsToBeEnabled(testCase.flagEnabled, runtime)
+			assert.Equal(t, testCase.expected, result)
 		})
 	}
 }

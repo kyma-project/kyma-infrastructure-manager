@@ -1,12 +1,13 @@
 package restrictions
 
 import (
+	"testing"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestExtendWithAccessRestriction(t *testing.T) {
@@ -46,9 +47,55 @@ func TestExtendWithAccessRestriction(t *testing.T) {
 			},
 		},
 		{
-			name:                       "Should do not add eu-access-only restriction if platform region is different than cf-eu11 or cf-ch20",
+			name:                       "Should do not add eu-access-only restriction if platform region is different than cf-eu11, cf-ch20, cf-eu01, cf-eu02 or cf-eu31",
 			platformRegion:             "test-region",
 			expectedAccessRestrictions: nil,
+		},
+		{
+			name:           "Should add eu-access-only access restriction if platform region is cf-eu01",
+			platformRegion: "cf-eu01",
+			expectedAccessRestrictions: []gardener.AccessRestrictionWithOptions{
+				{
+					AccessRestriction: gardener.AccessRestriction{
+						Name: "eu-access-only",
+					},
+					Options: map[string]string{
+						euAccessAddons: "true",
+						euAccessNodes:  "true",
+					},
+				},
+			},
+		},
+		{
+			name:           "Should add eu-access-only access restriction if platform region is cf-eu02",
+			platformRegion: "cf-eu02",
+			expectedAccessRestrictions: []gardener.AccessRestrictionWithOptions{
+				{
+					AccessRestriction: gardener.AccessRestriction{
+						Name: "eu-access-only",
+					},
+
+					Options: map[string]string{
+						euAccessAddons: "true",
+						euAccessNodes:  "true",
+					},
+				},
+			},
+		},
+		{
+			name:           "Should add eu-access-only access restriction if platform region is cf-eu31",
+			platformRegion: "cf-eu31",
+			expectedAccessRestrictions: []gardener.AccessRestrictionWithOptions{
+				{
+					AccessRestriction: gardener.AccessRestriction{
+						Name: "eu-access-only",
+					},
+					Options: map[string]string{
+						euAccessAddons: "true",
+						euAccessNodes:  "true",
+					},
+				},
+			},
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {

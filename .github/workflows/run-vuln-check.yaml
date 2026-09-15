@@ -9,9 +9,6 @@ jobs:
   govuln:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
-
     - name: vulncheck
       uses: golang/govulncheck-action@v1
       with:

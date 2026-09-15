@@ -11,7 +11,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func sFnFinalizeRegistryCache(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
+func sFnCleanupRegistryCacheGardenSecrets(ctx context.Context, m *fsm, s *systemState) (stateFn, *ctrl.Result, error) {
 
 	if !m.RegistryCacheConfigControllerEnabled {
 		return switchState(sFnConfigureSKR)
@@ -27,13 +27,16 @@ func sFnFinalizeRegistryCache(ctx context.Context, m *fsm, s *systemState) (stat
 		)
 		m.log.Error(err, "Failed to get runtime client")
 
-		return updateStatusAndRequeue()
+		return updateStatusAndRequeueAfter(m.StatusRequeueDelay)
 	}
 
-	secretSyncer := registrycache.NewGardenSecretSyncer(m.GardenClient, runtimeClient, fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName), s.instance.Name)
+	secretManager := registrycache.NewGardenSecretManager(
+		m.GardenClient,
+		fmt.Sprintf("garden-%s", m.ConverterConfig.Gardener.ProjectName),
+		s.instance.Name)
 
 	m.log.V(log_level.DEBUG).Info("Registry cache secrets deletion", "instance", s.instance.Name)
-	err = secretSyncer.Delete(ctx, s.instance.Spec.Caching)
+	err = secretManager.DeleteUnused(ctx, s.instance.Spec.Caching)
 	if err != nil {
 		s.instance.UpdateStatePending(
 			imv1.ConditionTypeRegistryCacheConfigured,
@@ -41,12 +44,12 @@ func sFnFinalizeRegistryCache(ctx context.Context, m *fsm, s *systemState) (stat
 			metav1.ConditionFalse,
 			err.Error(),
 		)
-		m.log.Error(err, "Failed to delete not used registry cache secrets")
+		m.log.Error(err, "Failed to delete unused registry cache secrets")
 
-		return updateStatusAndRequeue()
+		return updateStatusAndRequeueAfter(m.StatusRequeueDelay)
 	}
 
-	if registryCacheExists(s.instance) {
+	if len(s.instance.Spec.Caching) > 0 {
 		m.log.V(log_level.DEBUG).Info("Registry cache configuration exists", "instance", s.instance.Name)
 		statusManager := registrycache.NewStatusManager(runtimeClient)
 
@@ -59,6 +62,7 @@ func sFnFinalizeRegistryCache(ctx context.Context, m *fsm, s *systemState) (stat
 		}
 
 		return ensureStatusConditionIsSetAndContinue(
+			m.StatusRequeueDelay,
 			&s.instance,
 			imv1.ConditionTypeRegistryCacheConfigured,
 			imv1.ConditionReasonRegistryCacheConfigured,

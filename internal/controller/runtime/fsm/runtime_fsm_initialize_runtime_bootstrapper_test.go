@@ -31,7 +31,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Disabled(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, res)
 	require.NotNil(t, next)
-	require.Contains(t, next.name(), "sFnFinalizeRegistryCache")
+	require.Contains(t, next.name(), "sFnCleanupRegistryCacheGardenSecrets")
 }
 
 func Test_sFnInitializeRuntimeBootstrapper_Ready(t *testing.T) {
@@ -70,7 +70,7 @@ func Test_sFnInitializeRuntimeBootstrapper_Ready(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, res)
 	require.NotNil(t, next)
-	require.Contains(t, next.name(), "sFnFinalizeRegistryCache")
+	require.Contains(t, next.name(), "sFnCleanupRegistryCacheGardenSecrets")
 	assertEqualConditions(t, expectedRuntimeConditions, ss.instance.Status.Conditions)
 }
 

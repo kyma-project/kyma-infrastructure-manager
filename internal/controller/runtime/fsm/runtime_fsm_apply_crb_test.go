@@ -151,6 +151,20 @@ var _ = Describe(`runtime_fsm_apply_crb`, Label("applyCRB"), func() {
 			},
 			expected: nil,
 		}),
+		Entry("should not remove CRB with non-cluster-admin role name", tcCRBData{
+			admins: []string{"test1"},
+			crbs: []rbacv1.ClusterRoleBinding{
+				toNonAdminClusterRoleBinding("test2", "view"),
+			},
+			expected: nil,
+		}),
+		Entry("should not remove CRB with Role kind instead of ClusterRole", tcCRBData{
+			admins: []string{"test1"},
+			crbs: []rbacv1.ClusterRoleBinding{
+				toRoleBindingNotClusterRole("test2"),
+			},
+			expected: nil,
+		}),
 	)
 
 	testRuntime := imv1.Runtime{
@@ -306,4 +320,16 @@ func toServiceAccountClusterRoleBinding(name string) rbacv1.ClusterRoleBinding {
 			Name:     "cluster-admin",
 		},
 	}
+}
+
+func toNonAdminClusterRoleBinding(name, roleName string) rbacv1.ClusterRoleBinding {
+	crb := toAdminClusterRoleBinding(name)
+	crb.RoleRef.Name = roleName
+	return crb
+}
+
+func toRoleBindingNotClusterRole(name string) rbacv1.ClusterRoleBinding {
+	crb := toAdminClusterRoleBinding(name)
+	crb.RoleRef.Kind = "Role"
+	return crb
 }

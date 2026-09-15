@@ -1,7 +1,6 @@
 package extender
 
 import (
-	"fmt"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
@@ -10,7 +9,7 @@ import (
 	"strings"
 )
 
-func NewResourcesExtenderForPatch(resources []gardener.NamedResourceReference) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewResourcesExtenderForPatch(resources []gardener.NamedResourceReference, registryCacheGardenSecretNames map[string]string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(r imv1.Runtime, shoot *gardener.Shoot) error {
 
 		resources = slices.DeleteFunc(resources, func(r gardener.NamedResourceReference) bool {
@@ -24,11 +23,11 @@ func NewResourcesExtenderForPatch(resources []gardener.NamedResourceReference) f
 		for _, cache := range r.Spec.Caching {
 			if cache.Config.SecretReferenceName != nil && *cache.Config.SecretReferenceName != "" {
 				shoot.Spec.Resources = append(shoot.Spec.Resources, gardener.NamedResourceReference{
-					Name: fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, cache.UID),
+					Name: registryCacheGardenSecretNames[cache.UID],
 					ResourceRef: v1.CrossVersionObjectReference{
 						Kind:       "Secret",
 						APIVersion: "v1",
-						Name:       fmt.Sprintf(extensions.RegistryCacheSecretNameFmt, cache.UID),
+						Name:       registryCacheGardenSecretNames[cache.UID],
 					},
 				})
 			}

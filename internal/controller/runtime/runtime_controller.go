@@ -51,15 +51,15 @@ type RuntimeReconciler struct {
 //+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=runtimes,verbs=get;list;watch;create;update;patch,namespace=kcp-system
 //+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=runtimes/status,verbs=get;list;delete;create;update;patch,namespace=kcp-system
 //+kubebuilder:rbac:groups=infrastructuremanager.kyma-project.io,resources=runtimes/finalizers,verbs=get;list;delete;create;update;patch,namespace=kcp-system
+//+kubebuilder:rbac:groups=auditlogmanager.kyma-project.io,resources=auditlogs,verbs=get;list;watch;update;patch,namespace=kcp-system
+//+kubebuilder:rbac:groups=auditlogmanager.kyma-project.io,resources=auditlogs/status,verbs=get;list;watch,namespace=kcp-system
 
 func (r *RuntimeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	r.Log.V(log_level.TRACE).Info(request.String())
 
 	var runtime imv1.Runtime
 	if err := r.KcpClient.Get(ctx, request.NamespacedName, &runtime); err != nil {
-		return ctrl.Result{
-			Requeue: false,
-		}, client.IgnoreNotFound(err)
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	runtimeID, ok := runtime.Labels["kyma-project.io/runtime-id"]

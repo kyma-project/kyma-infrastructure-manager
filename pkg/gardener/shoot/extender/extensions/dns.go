@@ -3,6 +3,7 @@ package extensions
 import (
 	"encoding/json"
 	"fmt"
+
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
@@ -32,9 +33,8 @@ type DNSExtensionProviderConfig struct {
 type DNSProvider struct {
 	// Domains contains information about which domains shall be included/excluded for this provider.
 	Domains *DNSIncludeExclude `json:"domains,omitempty"`
-	// SecretName is a name of a secret containing credentials for the stated domain and the
-	// provider.
-	SecretName *string `json:"secretName,omitempty"`
+	// Credentials is the name of the resource reference containing the credentials for the provider.
+	Credentials *string `json:"credentials,omitempty"`
 	// Type is the DNS provider type.
 	Type *string `json:"type,omitempty"`
 	// Zones contains information about which hosted zones shall be included/excluded for this provider.
@@ -55,20 +55,20 @@ type DNSProviderReplication struct {
 }
 
 func newDNSExtensionConfig(domain, secretName, dnsProviderType string) *DNSExtensionProviderConfig {
+	provider := DNSProvider{
+		Domains: &DNSIncludeExclude{
+			Include: []string{domain},
+		},
+		Type:        ptr.To(dnsProviderType),
+		Credentials: ptr.To(fmt.Sprintf("%s-%s", DNSExtensionType, secretName)),
+	}
+
 	return &DNSExtensionProviderConfig{
 		APIVersion:                    "service.dns.extensions.gardener.cloud/v1alpha1",
 		Kind:                          "DNSConfig",
 		DNSProviderReplication:        &DNSProviderReplication{Enabled: true},
 		SyncProvidersFromShootSpecDNS: ptr.To(true),
-		Providers: []DNSProvider{
-			{
-				Domains: &DNSIncludeExclude{
-					Include: []string{domain},
-				},
-				SecretName: ptr.To(secretName),
-				Type:       ptr.To(dnsProviderType),
-			},
-		},
+		Providers:                     []DNSProvider{provider},
 	}
 }
 
@@ -83,6 +83,7 @@ func NewDNSExtensionInternal() (*gardener.Extension, error) {
 	providerConfig := &DNSExtensionProviderConfig{
 		APIVersion:                    "service.dns.extensions.gardener.cloud/v1alpha1",
 		Kind:                          "DNSConfig",
+		DNSProviderReplication:        &DNSProviderReplication{Enabled: true},
 		SyncProvidersFromShootSpecDNS: ptr.To(true),
 	}
 

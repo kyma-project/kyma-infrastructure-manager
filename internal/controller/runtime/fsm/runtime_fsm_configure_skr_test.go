@@ -3,6 +3,7 @@ package fsm
 import (
 	"context"
 	"testing"
+	"time"
 
 	fsm_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
@@ -291,6 +292,7 @@ func TestSkrConfigState(t *testing.T) {
 			Disabled: ptr.To(false),
 		}
 		shootStub.Spec.Extensions = append(shootStub.Spec.Extensions, oidcService)
+		shootStub.Spec.SeedName = new("aws-jj-10")
 
 		fakeClient, testFsm := setupFakeClient()
 
@@ -314,7 +316,7 @@ func TestSkrConfigState(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, detailsCM.Data)
 		assert.NotNil(t, detailsCM.Data["details"])
-		assert.Equal(t, detailsCM.Data["details"], "environmentInstanceID: instance-id\nglobalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\ninstanceName: kyma-name\nnetworkDetails:\n  dualStackIPEnabled: false\n  kubeAPIServer:\n    acl:\n    - 1.2.3.4/32\n    - 5.6.7.8/16\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
+		assert.Equal(t, detailsCM.Data["details"], "environmentInstanceID: instance-id\nglobalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\ninstanceID: instance-id\ninstanceName: kyma-name\nlastReconcileTime: \"2026-01-01T00:00:00Z\"\nnetworkDetails:\n  dualStackIPEnabled: false\n  kubeAPIServer:\n    acl:\n    - 1.2.3.4/32\n    - 5.6.7.8/16\nregion: region\nruntimeID: runtime-id\nseedRegion: eu-central-5\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
 		assert.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
 		assertSuccesfullStatusConditions(t, systemState)
 	})
@@ -329,7 +331,7 @@ func TestSkrConfigState(t *testing.T) {
 			Disabled: ptr.To(false),
 		}
 		shootStub.Spec.Extensions = append(shootStub.Spec.Extensions, oidcService)
-
+		shootStub.Spec.SeedName = new("aws-jj-10")
 		fakeClient, testFsm := setupFakeClient()
 
 		systemState := &systemState{
@@ -380,7 +382,7 @@ func TestSkrConfigState(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, detailsCM.Data)
 		assert.NotNil(t, detailsCM.Data["details"])
-		assert.Equal(t, detailsCM.Data["details"], "environmentInstanceID: instance-id\nglobalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\ninstanceName: kyma-name\nnetworkDetails:\n  dualStackIPEnabled: false\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
+		assert.Equal(t, detailsCM.Data["details"], "environmentInstanceID: instance-id\nglobalAccountID: global-account-id\ninfrastructureConfig:\n  apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1\n  kind: InfrastructureConfig\n  networks:\n    vpc:\n      cidr: 10.250.0.0/22\n    zones:\n    - internal: 10.250.0.192/26\n      name: europe-west1-d\n      public: 10.250.0.128/26\n      workers: 10.250.0.0/25\ninstanceID: instance-id\ninstanceName: kyma-name\nlastReconcileTime: \"2026-01-01T00:00:00Z\"\nnetworkDetails:\n  dualStackIPEnabled: false\nregion: region\nruntimeID: runtime-id\nseedRegion: eu-central-5\nsubaccountID: subaccount-id\nworkerPools:\n  kyma:\n    autoScalerMax: 1\n    autoScalerMin: 1\n    haZones: false\n    machineType: m5.xlarge\n    name: test-worker\n")
 		assert.Contains(t, stateFn.name(), "sFnApplyClusterRoleBindings")
 		assertSuccesfullStatusConditions(t, systemState)
 	})
@@ -510,6 +512,7 @@ func setupFakeClient() (client.WithWatch, *fsm) {
 	var fakeClient = fake.NewClientBuilder().
 		WithInterceptorFuncs(interceptor.Funcs{
 			Patch: fsm_testing.GetFakePatchInterceptorForShootsAndConfigMaps(true),
+			Get:   fsm_testing.GetFakeGetInterceptorForSeed(),
 		}).
 		WithScheme(scheme).
 		Build()
@@ -591,8 +594,7 @@ func createOpenIDConnectCR(name string, labelKey, labelValue string) *authentica
 
 func assertOIDCCRD(t *testing.T, expectedName, expectedClientID string, actual authenticationv1alpha1.OpenIDConnect) {
 	assert.Equal(t, expectedName, actual.Name)
-	//nolint:staticcheck // SA1019: ClientID is deprecated in favor of audiences, but we verify it for now
-	assert.Equal(t, expectedClientID, actual.Spec.ClientID)
+	assert.Equal(t, []string{expectedClientID}, actual.Spec.Audiences)
 	assert.Equal(t, ptr.To("groups"), actual.Spec.GroupsClaim)
 	assert.Nil(t, actual.Spec.GroupsPrefix)
 	assert.Equal(t, "https://my.cool.tokens.com", actual.Spec.IssuerURL)
@@ -617,6 +619,11 @@ func runtimeForTest() imv1.Runtime {
 				Name:     "test-shoot",
 				Region:   "region",
 				Provider: imv1.Provider{Type: "aws"},
+			},
+		},
+		Status: imv1.RuntimeStatus{
+			ShootLastOperation: &gardener.LastOperation{
+				LastUpdateTime: metav1.NewTime(time.Now()),
 			},
 		},
 	}

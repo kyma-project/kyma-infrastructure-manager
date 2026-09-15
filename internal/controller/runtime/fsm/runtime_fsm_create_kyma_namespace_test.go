@@ -63,6 +63,7 @@ func TestNamespaceCreateState(t *testing.T) {
 		err = fakeClient.Get(ctx, nsKey, &kymaSystemNs)
 		assert.NoError(t, err)
 		assert.Equal(t, "kyma-system", kymaSystemNs.Name)
+		assert.Equal(t, imv1.LabelKymaManagedByValue, kymaSystemNs.Labels[imv1.LabelKymaManagedBy])
 		assertEqualConditions(t, expectedRuntimeConditions, systemState.instance.Status.Conditions)
 	})
 

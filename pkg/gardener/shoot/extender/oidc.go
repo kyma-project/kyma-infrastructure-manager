@@ -19,7 +19,7 @@ func NewOidcExtender() func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 			StructuredAuthentication: &gardener.StructuredAuthentication{
 				ConfigMapName: cmName,
 			},
-			OIDCConfig: nil,
+			OIDCConfig: nil, //nolint:staticcheck // SA1019: explicitly nil to take SSA field ownership and clear legacy OIDC config (see commit 70a1b989)
 		}
 
 		return nil

@@ -47,6 +47,7 @@ const (
 	LabelKymaGlobalAccountID = "kyma-project.io/global-account-id"
 	LabelKymaSubaccountID    = "kyma-project.io/subaccount-id"
 	LabelKymaManagedBy       = "operator.kyma-project.io/managed-by"
+	LabelKymaManagedByValue  = "kyma"
 	LabelKymaInternal        = "operator.kyma-project.io/internal"
 	LabelKymaPlatformRegion  = "kyma-project.io/platform-region"
 )
@@ -61,14 +62,16 @@ const (
 type RuntimeConditionType string
 
 const (
-	ConditionTypeRuntimeProvisioned       RuntimeConditionType = "Provisioned"
-	ConditionTypeRuntimeKubeconfigReady   RuntimeConditionType = "KubeconfigReady"
-	ConditionTypeOidcAndCMsConfigured     RuntimeConditionType = "OidcAndConfigMapConfigured"
-	ConditionTypeKymaSystemCreated        RuntimeConditionType = "KymaSystemNSCreated"
-	ConditionTypeRuntimeConfigured        RuntimeConditionType = "Configured"
-	ConditionTypeRuntimeDeprovisioned     RuntimeConditionType = "Deprovisioned"
-	ConditionTypeRegistryCacheConfigured  RuntimeConditionType = "RegistryCacheConfigured"
-	ConditionTypeRuntimeBootstrapperReady RuntimeConditionType = "RuntimeBootstrapperReady"
+	ConditionTypeRuntimeProvisioned        RuntimeConditionType = "Provisioned"
+	ConditionTypeRuntimeKubeconfigReady    RuntimeConditionType = "KubeconfigReady"
+	ConditionTypeOidcAndCMsConfigured      RuntimeConditionType = "OidcAndConfigMapConfigured"
+	ConditionTypeKymaSystemCreated         RuntimeConditionType = "KymaSystemNSCreated"
+	ConditionTypeRuntimeConfigured         RuntimeConditionType = "Configured"
+	ConditionTypeRuntimeDeprovisioned      RuntimeConditionType = "Deprovisioned"
+	ConditionTypeRegistryCacheConfigured   RuntimeConditionType = "RegistryCacheConfigured"
+	ConditionTypeRuntimeBootstrapperReady  RuntimeConditionType = "RuntimeBootstrapperReady"
+	ConditionTypeCustomAuditLogConfigured  RuntimeConditionType = "CustomAuditLogConfigured"
+	ConditionTypeAuditLogCredentialsCopied RuntimeConditionType = "AuditLogCredentialsCopied"
 )
 
 type RuntimeConditionReason string
@@ -94,7 +97,11 @@ const (
 	ConditionReasonGardenerError           = RuntimeConditionReason("GardenerErr")
 	ConditionReasonKubernetesAPIErr        = RuntimeConditionReason("KubernetesErr")
 
-	ConditionReasonAuditLogError = RuntimeConditionReason("AuditLogErr")
+	ConditionReasonAuditLogError            = RuntimeConditionReason("AuditLogErr")
+	ConditionReasonCustomAuditLogError      = RuntimeConditionReason("CustomAuditLogErr")
+	ConditionReasonCustomAuditLogConfigured = RuntimeConditionReason("CustomAuditLogConfigured")
+	ConditionReasonCredentialsCopyError     = RuntimeConditionReason("CredentialsCopyErr")
+	ConditionReasonCredentialsCopied        = RuntimeConditionReason("CredentialsCopied")
 
 	ConditionReasonAdministratorsConfigured = RuntimeConditionReason("AdministratorsConfigured")
 	ConditionReasonOidcAndCMsConfigured     = RuntimeConditionReason("OidcAndConfigMapsConfigured")
@@ -149,6 +156,9 @@ type RuntimeSpec struct {
 	Shoot    RuntimeShoot         `json:"shoot"`
 	Security Security             `json:"security"`
 	Caching  []ImageRegistryCache `json:"imageRegistryCache,omitempty"`
+
+	// AuditLogAccessEnabled indicates whether the client requires access to their audit log data
+	AuditLogAccessEnabled *bool `json:"auditLogAccessEnabled,omitempty"`
 }
 
 type ImageRegistryCache struct {
@@ -177,6 +187,9 @@ type RuntimeStatus struct {
 
 	// LastError indicates the last occurred error for an operation on a Gardener's `shoot` resource.
 	ShootLastErrors []gardener.LastError `json:"shootLastErrors,omitempty" protobuf:"bytes,6,rep,name=lastErrors"`
+
+	// AuditLogCR holds the name of the AuditLog custom resource chosen for this Runtime
+	AuditLogCR string `json:"auditLogCR,omitempty"`
 }
 
 type RuntimeShoot struct {
@@ -215,7 +228,7 @@ type ACL struct {
 	AllowedCIDRs []string `json:"allowedCIDRs,omitempty"`
 }
 type Provider struct {
-	//+kubebuilder:validation:Enum=aws;azure;gcp;openstack;alicloud
+	//+kubebuilder:validation:Enum=aws;azure;gcp;openstack;alicloud;gdch
 	Type                 string                `json:"type"`
 	Workers              []gardener.Worker     `json:"workers"`
 	AdditionalWorkers    *[]gardener.Worker    `json:"additionalWorkers,omitempty"`
@@ -232,6 +245,10 @@ type Networking struct {
 	VPCNetwork *string `json:"vpcNetwork,omitempty"`
 }
 type Security struct {
+	// +kubebuilder:validation:MaxItems=100
+	// +kubebuilder:validation:items:MaxLength=253
+	// +kubebuilder:validation:XValidation:rule="self.all(admin, !admin.lowerAscii().startsWith('system:'))",message="administrator cannot start with 'system:' (Kubernetes built-in identity)"
+	// +kubebuilder:validation:XValidation:rule="self.all(admin, admin.trim() == admin && size(admin) > 0)",message="administrator cannot be empty or have leading/trailing whitespace"
 	Administrators []string           `json:"administrators"`
 	Networking     NetworkingSecurity `json:"networking"`
 }
@@ -369,4 +386,9 @@ func (k *Runtime) ValidateRequiredLabels() error {
 		}
 	}
 	return nil
+}
+
+// IsDedicatedAuditLogEnabled checks if runtime has dedicated audit logging flag enabled
+func (k *Runtime) IsDedicatedAuditLogEnabled() bool {
+	return k.Spec.AuditLogAccessEnabled != nil && *k.Spec.AuditLogAccessEnabled
 }

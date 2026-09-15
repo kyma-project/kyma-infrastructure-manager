@@ -17,11 +17,25 @@ type ClusterConfig struct {
 }
 
 type ProviderConfig struct {
-	AWS AWSConfig `json:"aws"`
+	AWS    AWSConfig    `json:"aws"`
+	GDCH   GDCHConfig   `json:"gdch"`
+	Worker WorkerConfig `json:"worker"`
+}
+
+type WorkerConfig struct {
+	DefaultMaxEvictRetries     string `json:"defaultMaxEvictRetries"`
+	DefaultMachineDrainTimeout string `json:"defaultMachineDrainTimeout"`
 }
 
 type AWSConfig struct {
 	EnableIMDSv2 bool `json:"enableIMDSv2"`
+}
+
+type GDCHConfig struct {
+	CloudProfileName         string `json:"cloudProfileName"`
+	ParentReferenceName      string `json:"parentReferenceName"`
+	ParentReferenceNamespace string `json:"parentReferenceNamespace"`
+	ParentReferenceType      string `json:"parentReferenceType"`
 }
 
 type DNSConfig struct {

@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"testing"
+	"time"
 )
 
 var (
@@ -64,14 +65,18 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	reconciler = NewRegistryCacheConfigReconciler(mgr, logger, fixRuntimeClientGetter(fixRuntimeClients()))
+	kcpNamespace := &v1.Namespace{}
+	kcpNamespace.Name = "kcp-system"
+	Expect(k8sClient.Create(context.Background(), kcpNamespace)).To(Succeed())
+
+	reconciler = NewRegistryCacheConfigReconciler(mgr, logger, "kcp-system", fixRuntimeClientGetter(fixRuntimeClients()), 2*time.Minute)
 	Expect(reconciler).NotTo(BeNil())
-	err = reconciler.SetupWithManager(mgr, 1)
+	suiteCtx, cancelFunc = context.WithCancel(context.Background())
+	err = reconciler.SetupWithManager(suiteCtx, mgr, 1, "0", "infrastructure-manager-registry-cache")
 	Expect(err).To(BeNil())
 
 	go func() {
 		defer GinkgoRecover()
-		suiteCtx, cancelFunc = context.WithCancel(context.Background())
 		err = mgr.Start(suiteCtx)
 		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
 	}()

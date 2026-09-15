@@ -3,13 +3,16 @@ package fsm
 import (
 	"context"
 	"fmt"
+	"time"
+
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
 	metrics_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
 	fsm_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
 	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
 	"github.com/onsi/gomega/types"
@@ -23,7 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"time"
 )
 
 type fakeFSMOpt func(*fsm) error
@@ -79,13 +81,23 @@ var (
 		}
 	}
 
-	withAuditLogConfig = func(provider, region string, data auditlogs.AuditLogData) fakeFSMOpt {
+	withAuditLogDataProvider = func(provider auditlog.DataProvider) fakeFSMOpt {
 		return func(fsm *fsm) error {
-			fsm.AuditLogging = auditlogs.Configuration{
-				provider: {
-					region: data,
-				},
-			}
+			fsm.AuditLogDataProvider = provider
+			return nil
+		}
+	}
+
+	withDedicatedAuditLoggingEnabled = func(enabled bool) fakeFSMOpt {
+		return func(fsm *fsm) error {
+			fsm.DedicatedAuditLoggingEnabled = enabled
+			return nil
+		}
+	}
+
+	withRegistryCacheConfigControllerEnabled = func(enabled bool) fakeFSMOpt {
+		return func(fsm *fsm) error {
+			fsm.RegistryCacheConfigControllerEnabled = enabled
 			return nil
 		}
 	}
@@ -248,6 +260,10 @@ var (
 func newFakeFSM(opts ...fakeFSMOpt) (*fsm, error) {
 	fsm := fsm{
 		log: zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)),
+	}
+	fsm.ConverterConfig.Provider.Worker = config.WorkerConfig{
+		DefaultMaxEvictRetries:     "2",
+		DefaultMachineDrainTimeout: "15m",
 	}
 	// apply opts
 	for _, opt := range opts {
