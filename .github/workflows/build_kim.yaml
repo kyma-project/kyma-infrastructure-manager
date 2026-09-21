@@ -50,7 +50,7 @@ jobs:
       pr-tag: ${{ steps.pr-tag.outputs.pr-tag }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
@@ -68,7 +68,7 @@ jobs:
   build-image:
     needs: [setup, gate]
     if: ${{ !cancelled() && needs.setup.result == 'success' && (needs.gate.result == 'success' || needs.gate.result == 'skipped') }}
-    uses: kyma-project/test-infra/.github/workflows/image-builder.yml@main # Usage: kyma-project/test-infra/.github/workflows/image-builder.yml@main
+    uses: kyma-project/test-infra/.github/workflows/image-builder.yml@9958cda786d567317447fc83549d186fdcf40ec6 # main
     with:
       name: infrastructure-manager
       dockerfile: Dockerfile
