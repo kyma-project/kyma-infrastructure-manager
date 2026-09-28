@@ -48,7 +48,7 @@ The Runtime Controller already manages a finalizer (`runtime-controller.infrastr
 - Does not satisfy requirement 2: the deletion event reaches KIM before it can be blocked. A bug or misconfiguration in KIM could still process the deletion.
 - Does not satisfy requirement 1 cleanly: the only gate is removing the second finalizer, which is a single action.
 
-#### Option 2: Validating admission webhook
+#### Option 2: Validating Admission Webhook
 
 A Kubernetes `ValidatingWebhookConfiguration` intercepts every `DELETE` request for `Runtime` objects before it is persisted. The webhook rejects the request with HTTP 403 and a human-readable message unless the Runtime CR carries a specific annotation added as a separate, prior action.
 
