@@ -22,20 +22,20 @@ Kyma landscapes have been accidentally deleted in the past. Incidents were limit
 
 **Human error:** SRE or on-call engineers execute an incorrect `kubectl delete` command, or a broad `kubectl delete` targeting the wrong resource type or namespace removes Runtime CRs as collateral damage.
 
-**Software failure:** A cleanup or maintenance job contains a bug that removes all Runtime CRs in a landscape, or a job intended only for DEV is mistakenly deployed to STAGE or PROD and deletes all clusters there. An additional trigger is a CRD schema change that causes Kubernetes to cascade-delete existing Custom Resources.
+**Software failure:** A cleanup or maintenance job contains a bug that removes all Runtime CRs in a landscape, or a job intended only for DEV is mistakenly deployed to STAGE or PROD and deletes all clusters there. An additional trigger is a CRD schema change that causes Kubernetes to cascade-delete existing custom resources (CRs).
 
 In both cases the deletion reaches Kubernetes before any human or automated check can intervene, and KIM immediately begins deprovisioning the Gardener Shoot clusters. By the time the mistake is noticed, cluster deletion may already be irreversible.
 
-### Requirements for a protection mechanism
+### Requirements for a Protection Mechanism
 
 1. **Two-step confirmation:** At least one explicit preparatory action (separate from the `kubectl delete` call itself) must be completed before a `Runtime` CR deletion is accepted. This prevents a single erroneous command from triggering deprovisioning.
 2. **Rejection at the API level:** The deletion request must be refused by the Kubernetes API server before it reaches KIM. A controller-side finalizer alone is insufficient because a misconfigured or compromised controller could still process the deletion.
 3. **Auditability:** Every rejection and every accepted deletion must produce an audit trail entry so incidents can be reconstructed.
 4. **Minimal operational burden:** The confirmation step must be simple enough for a human to perform correctly under time pressure, and must be automatable by KEB for programmatic deletions.
 
-### Options considered
+### Options
 
-#### Option 1: Controller-side finalizer only
+#### Option 1: Controller-Side Finalizer Only
 
 The Runtime Controller already manages a finalizer (`runtime-controller.infrastructure-manager.kyma-project.io/deletion-hook`) that prevents the CR from disappearing until the Shoot is deleted. Adding a second, operator-controlled finalizer would mean the CR stays in a `Terminating` state until a human removes the second finalizer.
 
@@ -48,7 +48,7 @@ The Runtime Controller already manages a finalizer (`runtime-controller.infrastr
 - Does not satisfy requirement 2: the deletion event reaches KIM before it can be blocked. A bug or misconfiguration in KIM could still process the deletion.
 - Does not satisfy requirement 1 cleanly: the only gate is removing the second finalizer, which is a single action.
 
-#### Option 2: Validating admission webhook
+#### Option 2: Validating Admission Webhook
 
 A Kubernetes `ValidatingWebhookConfiguration` intercepts every `DELETE` request for `Runtime` objects before it is persisted. The webhook rejects the request with HTTP 403 and a human-readable message unless the Runtime CR carries a specific annotation added as a separate, prior action.
 
@@ -73,7 +73,7 @@ The webhook is the enforcement point; it runs in a separate process (or as a sub
 - Needs careful RBAC design to prevent the annotation from being added by any service account that also has delete permission (which would reduce the two-step requirement to a single automated step).
 - The caller and the webhook server must have sufficiently synchronised clocks. A clock skew larger than the acceptance window would either block valid deletions or extend the window unintentionally. Mitigation: rely on NTP synchronisation, which is standard for Kubernetes nodes.
 
-#### Option 3: OPA / Kyverno policy
+#### Option 3: OPA / Kyverno Policy
 
 An external policy engine (Open Policy Agent Gatekeeper or Kyverno) enforces the same annotation-before-delete rule as Option 2.
 
@@ -204,7 +204,7 @@ webhooks:
 
 `failurePolicy: Fail` is the required setting for a safety mechanism: if the webhook is unreachable, deletions are blocked rather than allowed. The KIM webhook server must therefore be included in the KCP availability SLO.
 
-### RBAC considerations
+### RBAC Considerations
 
 The `deletion-confirmed` annotation must not be freely settable by any service account that also holds the `delete` verb on `runtimes`. Otherwise, a single compromised or buggy service account could annotate and delete in one automated flow, reducing the two-step protocol to a single step.
 
