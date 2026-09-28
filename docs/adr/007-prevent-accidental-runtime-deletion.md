@@ -73,7 +73,7 @@ The webhook is the enforcement point; it runs in a separate process (or as a sub
 - Needs careful RBAC design to prevent the annotation from being added by any service account that also has delete permission (which would reduce the two-step requirement to a single automated step).
 - The caller and the webhook server must have sufficiently synchronised clocks. A clock skew larger than the acceptance window would either block valid deletions or extend the window unintentionally. Mitigation: rely on NTP synchronisation, which is standard for Kubernetes nodes.
 
-#### Option 3: OPA / Kyverno policy
+#### Option 3: OPA / Kyverno Policy
 
 An external policy engine (Open Policy Agent Gatekeeper or Kyverno) enforces the same annotation-before-delete rule as Option 2.
 
@@ -204,7 +204,7 @@ webhooks:
 
 `failurePolicy: Fail` is the required setting for a safety mechanism: if the webhook is unreachable, deletions are blocked rather than allowed. The KIM webhook server must therefore be included in the KCP availability SLO.
 
-### RBAC considerations
+### RBAC Considerations
 
 The `deletion-confirmed` annotation must not be freely settable by any service account that also holds the `delete` verb on `runtimes`. Otherwise, a single compromised or buggy service account could annotate and delete in one automated flow, reducing the two-step protocol to a single step.
 
