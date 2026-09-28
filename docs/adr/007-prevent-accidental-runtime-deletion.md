@@ -26,7 +26,7 @@ Kyma landscapes have been accidentally deleted in the past. Incidents were limit
 
 In both cases the deletion reaches Kubernetes before any human or automated check can intervene, and KIM immediately begins deprovisioning the Gardener Shoot clusters. By the time the mistake is noticed, cluster deletion may already be irreversible.
 
-### Requirements for a protection mechanism
+### Requirements for a Protection Mechanism
 
 1. **Two-step confirmation:** At least one explicit preparatory action (separate from the `kubectl delete` call itself) must be completed before a `Runtime` CR deletion is accepted. This prevents a single erroneous command from triggering deprovisioning.
 2. **Rejection at the API level:** The deletion request must be refused by the Kubernetes API server before it reaches KIM. A controller-side finalizer alone is insufficient because a misconfigured or compromised controller could still process the deletion.
