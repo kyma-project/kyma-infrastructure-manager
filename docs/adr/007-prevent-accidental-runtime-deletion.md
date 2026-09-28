@@ -33,7 +33,7 @@ In both cases the deletion reaches Kubernetes before any human or automated chec
 3. **Auditability:** Every rejection and every accepted deletion must produce an audit trail entry so incidents can be reconstructed.
 4. **Minimal operational burden:** The confirmation step must be simple enough for a human to perform correctly under time pressure, and must be automatable by KEB for programmatic deletions.
 
-### Options considered
+### Options
 
 #### Option 1: Controller-side finalizer only
 
