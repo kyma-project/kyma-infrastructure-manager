@@ -22,7 +22,7 @@ Kyma landscapes have been accidentally deleted in the past. Incidents were limit
 
 **Human error:** SRE or on-call engineers execute an incorrect `kubectl delete` command, or a broad `kubectl delete` targeting the wrong resource type or namespace removes Runtime CRs as collateral damage.
 
-**Software failure:** A cleanup or maintenance job contains a bug that removes all Runtime CRs in a landscape, or a job intended only for DEV is mistakenly deployed to STAGE or PROD and deletes all clusters there. An additional trigger is a CRD schema change that causes Kubernetes to cascade-delete existing Custom Resources.
+**Software failure:** A cleanup or maintenance job contains a bug that removes all Runtime CRs in a landscape, or a job intended only for DEV is mistakenly deployed to STAGE or PROD and deletes all clusters there. An additional trigger is a CRD schema change that causes Kubernetes to cascade-delete existing custom resources (CRs).
 
 In both cases the deletion reaches Kubernetes before any human or automated check can intervene, and KIM immediately begins deprovisioning the Gardener Shoot clusters. By the time the mistake is noticed, cluster deletion may already be irreversible.
 
