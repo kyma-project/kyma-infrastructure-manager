@@ -53,6 +53,10 @@ vet: ## Run go vet against code.
 build: manifests generate fmt vet ## Build manager binary.
 	GOFIPS140=v1.0.0 go build -o bin/manager cmd/main.go
 
+.PHONY: build-for-codeql
+build-for-codeql: ## Build all packages for CodeQL analysis (no code generation).
+	GOFIPS140=v1.0.0 go build -o /dev/null ./...
+
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
 	GOFIPS140=v1.0.0 go run ./cmd/main.go
