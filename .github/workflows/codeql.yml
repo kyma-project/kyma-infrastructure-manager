@@ -12,6 +12,8 @@ jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
+    env:
+      GOFIPS140: v1.0.0
     permissions:
       security-events: write
       packages: read
