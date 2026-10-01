@@ -4,6 +4,8 @@ on:
     schedule:
     # Run everyday at 5:00 AM
     - cron: "0 5 * * *"
+permissions:
+  contents: read
 jobs:
   daily-markdown-link-check:
     runs-on: ubuntu-latest
