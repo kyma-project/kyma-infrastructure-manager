@@ -4,7 +4,7 @@ go 1.27.1
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
-	github.com/gardener/gardener v1.140.1
+	github.com/gardener/gardener v1.142.6
 	github.com/gardener/gardener-extension-provider-alicloud v1.71.0
 	github.com/gardener/gardener-extension-provider-aws v1.68.3
 	github.com/gardener/gardener-extension-provider-gcp v1.50.0
@@ -48,7 +48,6 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
-	github.com/gardener/cert-management v0.22.0 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.23.1 // indirect
 	github.com/go-openapi/jsonreference v0.21.6 // indirect
