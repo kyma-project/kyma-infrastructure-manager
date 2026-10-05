@@ -525,7 +525,7 @@ func fixRuntime(purpose gardener.ShootPurpose) imv1.Runtime {
 				Kubernetes: imv1.Kubernetes{
 					Version: &kubernetesVersion,
 					KubeAPIServer: imv1.APIServer{
-						OidcConfig: gardener.OIDCConfig{
+						OidcConfig: imv1.GardenerOIDCConfig{
 							ClientID:    &clientID,
 							GroupsClaim: &groupsClaim,
 							IssuerURL:   &issuerURL,
@@ -589,7 +589,7 @@ func fixRuntimeWithNoVersionsSpecified() imv1.Runtime {
 				},
 				Kubernetes: imv1.Kubernetes{
 					KubeAPIServer: imv1.APIServer{
-						OidcConfig: gardener.OIDCConfig{
+						OidcConfig: imv1.GardenerOIDCConfig{
 							ClientID:    &clientID,
 							GroupsClaim: &groupsClaim,
 							IssuerURL:   &issuerURL,

@@ -559,7 +559,7 @@ func assertEqualConditions(t *testing.T, expectedConditions []metav1.Condition, 
 
 func createGardenerOidcConfig(clientId string) imv1.OIDCConfig {
 	return imv1.OIDCConfig{
-		OIDCConfig: gardener.OIDCConfig{
+		GardenerOIDCConfig: imv1.GardenerOIDCConfig{
 			ClientID:       ptr.To(clientId),
 			GroupsClaim:    ptr.To("groups"),
 			IssuerURL:      ptr.To("https://my.cool.tokens.com"),
