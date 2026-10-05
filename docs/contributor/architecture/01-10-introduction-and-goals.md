@@ -6,7 +6,7 @@ Kyma Infrastructure Manager (KIM) is a Kubernetes operator that manages the full
 Requirements Overview
 ---------------------
 
-KIM fulfils the following core functional requirements:
+KIM fulfills the following core functional requirements:
 
 | ID  | Requirement                                                                                                    |
 |-----|----------------------------------------------------------------------------------------------------------------|

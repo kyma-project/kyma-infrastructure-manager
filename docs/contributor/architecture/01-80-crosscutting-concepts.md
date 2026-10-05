@@ -1,4 +1,4 @@
-Cross-cutting Concepts
+Cross-Cutting Concepts
 ======================
 
 Domain Model
@@ -109,9 +109,9 @@ Security Concepts
 
 **Namespace isolation:** The controller manager is restricted to `kcp-system`. `Runtime` CRs created outside this namespace are ignored.
 
-**Credential handling:** Registry credential Secrets are read from the SKR cluster and written to the Gardener project namespace. They are never written to KCP. They are cleaned up when the registry cache configuration is removed.
+**Credential handling:** The Runtime Controller reads registry credential Secrets from the SKR cluster and writes them to the Gardener project namespace. It never writes them to KCP. When you remove the registry cache configuration, KIM cleans up the credentials.
 
-**Network filtering:** The `spec.security.networking.filter` field on the `Runtime` CR controls Gardener's `shoot-networking-filter` extension. Egress filtering is the default mode; ingress blackholing is opt-in.
+**Network filtering:** The `spec.security.networking.filter` field on the `Runtime` CR controls Gardener's `shoot-networking-filter` extension. Egress filtering is the default mode. Ingress blackholing is opt-in.
 
 **API server ACL:** When `--api-server-acl-enabled=true`, the FSM patch step applies `spec.shoot.kubernetes.kubeAPIServer.acl.allowedCIDRs` to the Shoot, restricting API server access to the listed CIDR ranges.
 
@@ -123,7 +123,7 @@ Observability
 KIM uses three complementary observability mechanisms:
 
 **Prometheus metrics** (`internal/controller/metrics/`):
-- `infrastructure_manager_runtime_state` — gauge per Runtime, labelled by state
+- `infrastructure_manager_runtime_state`: gauge per Runtime, labelled by state
 - Reconciliation counts and error rates via `controller-runtime`'s built-in metrics
 
 **Structured logging** (via `logr` / `slog` backend):
@@ -140,6 +140,6 @@ Configuration Management
 
 KIM's behaviour is controlled by two orthogonal configuration mechanisms:
 
-**CLI flags** (startup-time, process-scoped): Feature flags, rate limits, timeout values. Changing these requires a pod restart.
+**CLI flags** (startup-time, process-scoped): Feature flags, rate limits, timeout values. Changing these requires a pod restart. For the full list of flags, see [Context and Scope](./01-30-context-and-scope.md).
 
 **Converter configuration file** (runtime-reloadable, file-backed): Provider defaults for Kubernetes versions, machine images, networking ranges, and audit log tenant mappings. Stored in a ConfigMap mounted into the pod. The Config Reload Watcher detects file changes and reloads the configuration in-process without a restart.

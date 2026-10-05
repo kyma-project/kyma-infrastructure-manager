@@ -27,7 +27,7 @@ Kyma Infrastructure Manager (KIM) is a single binary composed of several control
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Motivation:** Separate controllers for separate concerns keeps each reconciliation loop simple and independently testable. The Runtime Controller handles provisioning; the GardenerCluster Controller handles kubeconfig rotation; the Registry Cache Config Controller handles registry configuration synchronisation.
+**Motivation:** Separate controllers for separate concerns keeps each reconciliation loop simple and independently testable. The Runtime Controller handles provisioning; the GardenerCluster Controller handles kubeconfig rotation; the Registry Cache Config Controller handles registry configuration synchronization.
 
 | Building Block                    | Responsibility                                                                                        |
 |-----------------------------------|-------------------------------------------------------------------------------------------------------|
@@ -41,7 +41,7 @@ Kyma Infrastructure Manager (KIM) is a single binary composed of several control
 | `internal/rtbootstrapper`         | Installs, upgrades, and validates runtime bootstrapper manifests on SKR                               |
 | `internal/controller/metrics`     | Prometheus metrics for runtime states and provisioning outcomes                                       |
 
-Level 2 — Runtime Controller
+Level 2: Runtime Controller
 -----------------------------
 
 The Runtime Controller is the most complex building block. It delegates all work to a Finite State Machine.
@@ -88,12 +88,11 @@ The Runtime Controller is the most complex building block. It delegates all work
 
 ### FSM State Functions
 
-Each state function has the signature:
-```go
-type stateFn func(ctx context.Context, r *fsm, s *systemState) (stateFn, *ctrl.Result, error)
-```
+Each state function follows the `stateFn` signature described in [Cross-Cutting Concepts](./01-80-crosscutting-concepts.md).
 
 A function returns either the next state to transition to, a `ctrl.Result` to requeue after a delay, or an error.
+
+For requeue delay values, see [Cross-Cutting Concepts](./01-80-crosscutting-concepts.md).
 
 | State Function                         | Location                                        | Purpose                                                                                  |
 |----------------------------------------|-------------------------------------------------|------------------------------------------------------------------------------------------|
@@ -101,37 +100,37 @@ A function returns either the next state to transition to, a `ctrl.Result` to re
 | `sFnInitialise`                        | `runtime_fsm_initialise.go`                     | Validates required labels; sets `Pending` state                                          |
 | `sFnSelectShootProcessing`             | `runtime_fsm_select_shoot_processing.go`        | Decides between create / patch / delete based on shoot existence and deletion timestamp  |
 | `sFnCreateShoot`                       | `runtime_fsm_create_shoot.go`                   | Converts Runtime CR to Gardener Shoot and creates it                                     |
-| `sFnWaitingShootCreation`              | `runtime_fsm_waiting_shoot_creation.go`         | Polls Shoot until it reaches a reconciled state; requeues every 60s                     |
+| `sFnWaitingShootCreation`              | `runtime_fsm_waiting_shoot_creation.go`         | Polls Shoot until it reaches a reconciled state                         |
 | `sFnPatchShoot`                        | `runtime_fsm_patch_shoot.go`                    | Applies audit log, OIDC, ACL, and networking filter updates to an existing Shoot         |
-| `sFnWaitingForShootReconcile`          | `runtime_fsm_waiting_for_shoot_reconcile.go`    | Waits for Gardener to reconcile the patched Shoot; requeues every 30s                   |
+| `sFnWaitingForShootReconcile`          | `runtime_fsm_waiting_for_shoot_reconcile.go`    | Waits for Gardener to reconcile the patched Shoot                       |
 | `sFnConfigureSKR`                      | `runtime_fsm_configure_skr.go`                  | Creates kubeconfig Secret; creates OIDC ConfigMaps on SKR                               |
 | `sFnCreateKymaNamespace`               | `runtime_fsm_create_kyma_namespace.go`          | Creates `kyma-system` namespace on SKR                                                   |
 | `sFnApplyClusterRoleBindings`          | `runtime_fsm_apply_clusterrolebindings.go`      | Creates ClusterRoleBindings for cluster administrators on SKR                            |
 | `sFnPrepareRegistryCache`              | `runtime_fsm_prepare_registry_cache.go`         | Syncs registry credential secrets from SKR to Garden cluster                             |
 | `sFnFinalizeRegistryCache`             | `runtime_fsm_finalize_registry_cache.go`        | Applies `registry-cache` Gardener extension and updates SKR status                       |
 | `sFnInitializeRuntimeBootstrapper`     | `runtime_fsm_initialize_runtime_bootstrapper.go`| Installs / upgrades runtime bootstrapper on SKR                                          |
-| `sFnDeleteShoot`                       | `runtime_fsm_delete_shoot.go`                   | Annotates Shoot for deletion and waits for removal; requeues every 90s                  |
+| `sFnDeleteShoot`                       | `runtime_fsm_delete_shoot.go`                   | Annotates Shoot for deletion and waits for removal                      |
 | `sFnDeleteKubeconfig`                  | `runtime_fsm_delete_kubeconfig.go`              | Removes kubeconfig Secret from KCP                                                       |
 | `sFnUpdateStatus`                      | `runtime_fsm_update_status.go`                  | Persists status changes to the Runtime CR                                                |
 | `sFnEmitEvent`                         | `runtime_fsm_emit_event.go`                     | Records a Kubernetes Event on the Runtime CR                                             |
 
-Level 2 — GardenerCluster Controller
+Level 2: GardenerCluster Controller
 --------------------------------------
 
-### White Box GardenerCluster Controller
+### Whitebox GardenerCluster Controller
 
 **Purpose:** Generates and rotates dynamic kubeconfigs for SKR clusters. Kubeconfigs are stored as Kubernetes Secrets in the `kcp-system` namespace.
 
-**Rotation policy:** A kubeconfig is rotated when its age exceeds `minimal-rotation-time * expiration-time`. Both values are configured via CLI flags (defaults: 0.6 and 24h respectively).
+**Rotation policy:** For the kubeconfig rotation formula and default values, see the Security Concepts section in [Cross-Cutting Concepts](./01-80-crosscutting-concepts.md).
 
 **Directory:** `internal/controller/kubeconfig/`
 
-Level 2 — Registry Cache Config Controller
+Level 2: Registry Cache Config Controller
 -------------------------------------------
 
-### White Box Registry Cache Config Controller
+### Whitebox Registry Cache Config Controller
 
-**Purpose:** Watches `RegistryCacheConfig` CRs on SKR clusters and synchronises their content into the `spec.imageRegistryCache` field of the corresponding `Runtime` CR on KCP.
+**Purpose:** Watches `RegistryCacheConfig` CRs on SKR clusters and synchronizes their content into the `spec.imageRegistryCache` field of the corresponding `Runtime` CR on KCP.
 
 **Trigger:** Time-based requeue (periodic polling); in a future phase also triggered by the Runtime Watcher.
 

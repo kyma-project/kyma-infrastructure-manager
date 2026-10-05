@@ -33,17 +33,17 @@ Quality Scenarios
 **QS-R1 — Idempotency of reconciliation**
 - **Stimulus:** The Runtime Controller reconciles the same `Runtime` CR twice in quick succession (e.g., due to a spurious watch event after a status update).
 - **Response:** The second reconciliation detects that all desired state has already been applied and completes without making any API calls to Gardener or the SKR.
-- **Measure:** No duplicate Shoots are created; no unnecessary patch requests are sent to Gardener.
+- **Measure:** The controller creates no duplicate Shoots and sends no unnecessary patch requests to Gardener.
 
 **QS-R2 — Convergence under transient errors**
 - **Stimulus:** The Gardener API returns a 429 (rate-limited) or 503 (temporary unavailability) response during shoot creation.
-- **Response:** The FSM returns an error; `controller-runtime` requeues the event with exponential backoff. On the next reconcile, the FSM re-enters `sFnWaitingShootCreation` and successfully polls until the Shoot is ready.
+- **Response:** The FSM returns an error. `controller-runtime` requeues the event with exponential backoff. On the next reconcile, the FSM re-enters `sFnWaitingShootCreation` and successfully polls until the Shoot is ready.
 - **Measure:** The cluster reaches `Ready` state within the configured retry window; no permanent `Failed` state is set for transient errors.
 
 **QS-R3 — Safe concurrent reconciliation**
 - **Stimulus:** 25 `Runtime` CRs are created simultaneously (the default worker count).
 - **Response:** Each `Runtime` CR is reconciled independently in its own goroutine. No shared mutable state exists between FSM instances.
-- **Measure:** All 25 clusters are provisioned successfully; no data races are detected.
+- **Measure:** All 25 clusters are provisioned successfully. Tests detect no data races.
 
 ### Observability
 
@@ -65,7 +65,7 @@ Quality Scenarios
 ### Security
 
 **QS-S1 — Kubeconfig rotation**
-- **Stimulus:** A kubeconfig has been in use for `minimal-rotation-time * expiration-time` (default: ~14.4 hours with a 24h expiry and 0.6 ratio).
+- **Stimulus:** A kubeconfig has been in use for the rotation threshold. For the formula and default values, see the Security Concepts section in [Cross-Cutting Concepts](./01-80-crosscutting-concepts.md).
 - **Response:** The GardenerCluster Controller detects the age threshold and requests a new kubeconfig from Gardener, replacing the existing Secret.
 - **Measure:** No kubeconfig older than `expiration-time` is active; rotation completes before the existing kubeconfig expires.
 
@@ -83,8 +83,8 @@ Quality Scenarios
 
 **QS-M1 — FSM extensibility**
 - **Stimulus:** A developer needs to add a new post-provisioning step (e.g., installing a new SKR component).
-- **Response:** A new `sFn` function is created in `internal/controller/runtime/fsm/` with the standard `stateFn` signature. It is inserted into the state chain by having the preceding state return it as the next state.
-- **Measure:** No existing state functions need to be modified; the new step is independently testable with a mock `systemState`.
+- **Response:** Create a new `sFn` function in `internal/controller/runtime/fsm/` with the standard `stateFn` signature and insert it into the state chain by having the preceding state return it as the next state.
+- **Measure:** You don't need to modify any existing state functions; the new step is independently testable with a mock `systemState`.
 
 **QS-M2 — API stability**
 - **Stimulus:** KEB is updated to pass a new optional field in the `Runtime` CR spec.

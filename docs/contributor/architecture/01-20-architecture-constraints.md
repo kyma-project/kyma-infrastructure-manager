@@ -13,7 +13,7 @@ Technical Constraints
 | Namespace isolation on KCP                  | The controller manager is restricted to the `kcp-system` namespace; `Runtime` and `GardenerCluster` CRs may only be created there.                                       |
 | Supported cloud providers                   | Only `aws`, `azure`, `gcp`, `openstack`, and `alicloud` are valid values for `spec.shoot.provider.type`. Provider-specific Gardener extensions are pre-loaded at startup. |
 
-Organisational Constraints
+Organizational Constraints
 --------------------------
 
 | Constraint                                   | Explanation                                                                                                                                                 |

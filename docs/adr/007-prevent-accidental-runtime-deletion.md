@@ -29,9 +29,9 @@ In both cases the deletion reaches Kubernetes before any human or automated chec
 ### Requirements for a Protection Mechanism
 
 1. **Two-step confirmation:** At least one explicit preparatory action (separate from the `kubectl delete` call itself) must be completed before a `Runtime` CR deletion is accepted. This prevents a single erroneous command from triggering deprovisioning.
-2. **Rejection at the API level:** The deletion request must be refused by the Kubernetes API server before it reaches KIM. A controller-side finalizer alone is insufficient because a misconfigured or compromised controller could still process the deletion.
+2. **Rejection at the API level:** The Kubernetes API server must refuse the deletion request before it reaches KIM. A controller-side finalizer alone is insufficient because a misconfigured or compromised controller could still process the deletion.
 3. **Auditability:** Every rejection and every accepted deletion must produce an audit trail entry so incidents can be reconstructed.
-4. **Minimal operational burden:** The confirmation step must be simple enough for a human to perform correctly under time pressure, and must be automatable by KEB for programmatic deletions.
+4. **Minimal operational burden:** The confirmation step must be simple enough for a human to perform correctly under time pressure, and KEB must be able to automate it for programmatic deletions.
 
 ### Options
 
@@ -50,30 +50,30 @@ The Runtime Controller already manages a finalizer (`runtime-controller.infrastr
 
 #### Option 2: Validating Admission Webhook
 
-A Kubernetes `ValidatingWebhookConfiguration` intercepts every `DELETE` request for `Runtime` objects before it is persisted. The webhook rejects the request with HTTP 403 and a human-readable message unless the Runtime CR carries a specific annotation added as a separate, prior action.
+A Kubernetes `ValidatingWebhookConfiguration` intercepts every `DELETE` request for `Runtime` objects before it is persisted. Unless the Runtime CR carries a specific annotation added as a separate, prior action, the webhook rejects the request with HTTP 403 and a human-readable message.
 
 Proposed two-step protocol:
-1. **Step 1 — annotate:** The caller (human or KEB) sets the annotation `operator.kyma-project.io/deletion-confirmed` on the Runtime CR to the current UTC timestamp in RFC 3339 format (e.g. `2026-04-29T14:00:00Z`) using a `kubectl annotate` or PATCH request.
-2. **Step 2 — delete:** The caller issues the `kubectl delete runtime <name>` command within a short time window (default: 2 minutes) after setting the annotation. The webhook validates that the timestamp is not in the future, and that the current time falls within the configured acceptance window. Requests outside the window are rejected.
+1. **Step 1: annotate:** The caller (human or KEB) sets the annotation `operator.kyma-project.io/deletion-confirmed` on the Runtime CR to the current UTC timestamp in RFC 3339 format (for example, `2026-04-29T14:00:00Z`) using a `kubectl annotate` or PATCH request.
+2. **Step 2: delete:** The caller issues the `kubectl delete runtime <name>` command within a short time window (default: 2 minutes) after setting the annotation. The webhook validates that the timestamp is not in the future, and that the current time falls within the configured acceptance window. The webhook rejects requests outside the window.
 
 The webhook is the enforcement point; it runs in a separate process (or as a sub-handler in the KIM manager process) and has no dependency on the reconciliation loop.
 
 **Pros:**
 - Satisfies requirement 2: the API server rejects the deletion before it reaches etcd or any controller.
 - Satisfies requirement 1: annotation and deletion are two distinct API calls; a single erroneous command cannot satisfy both.
-- The time-window constraint makes the annotation self-expiring: once the window elapses the annotation is stale and a fresh annotation is required, which eliminates the retry-gap problem (a transient rejection does not leave a permanently valid annotation on the object).
-- Future timestamps are rejected, preventing pre-staging of the annotation.
-- Works regardless of the state of the KIM reconciler (e.g., even if the controller is temporarily down, the webhook still rejects unannotated deletions provided the webhook is reachable).
+- The time-window constraint makes the annotation self-expiring: once the window elapses, the annotation is stale and the caller must provide a fresh one. This eliminates the retry-gap problem — a transient rejection does not leave a permanently valid annotation on the object.
+- The webhook rejects future timestamps, preventing pre-staging of the annotation.
+- Even if the KIM controller is temporarily down, the webhook still rejects unannotated deletions, as long as the webhook itself is reachable.
 - Audit trail: every rejected deletion appears as a `403 Forbidden` response in the Kubernetes audit log; every accepted deletion carries the timestamp annotation in the audit record, making the confirmation time recoverable during post-mortems.
 - Automatable: KEB can perform both steps programmatically with no user interaction.
 
 **Cons:**
 - Adds an operational dependency: if the webhook pod is unavailable and the `failurePolicy` is `Fail`, all Runtime deletions (including legitimate ones) are blocked. If `failurePolicy` is `Ignore`, the protection is bypassed during outages.
 - Requires a TLS-secured HTTPS server, a `ValidatingWebhookConfiguration` resource, and a CA bundle rotation mechanism.
-- Needs careful RBAC design to prevent the annotation from being added by any service account that also has delete permission (which would reduce the two-step requirement to a single automated step).
-- The caller and the webhook server must have sufficiently synchronised clocks. A clock skew larger than the acceptance window would either block valid deletions or extend the window unintentionally. Mitigation: rely on NTP synchronisation, which is standard for Kubernetes nodes.
+- The solution requires careful RBAC design. A service account that can both annotate and delete a Runtime CR would reduce the two-step protocol to a single automated step.
+- The caller and the webhook server must have sufficiently synchronized clocks. A clock skew larger than the acceptance window would either block valid deletions or extend the window unintentionally. Mitigation: rely on NTP synchronization, which is standard for Kubernetes nodes.
 
-#### Option 3: OPA / Kyverno Policy
+#### Option 3: OPA or Kyverno Policy
 
 An external policy engine (Open Policy Agent Gatekeeper or Kyverno) enforces the same annotation-before-delete rule as Option 2.
 
@@ -102,7 +102,7 @@ The annotation value must be a valid RFC 3339 UTC timestamp that:
 
 If either condition is not met the webhook rejects the request with HTTP 403 and a message stating the reason (missing annotation, future timestamp, or expired window). The caller must re-annotate with the current time and retry.
 
-This design inherently resolves the annotation-persistence-after-retry problem: an annotation set at time T is only valid until T + window. A transient rejection (e.g. webhook timeout) does not leave a permanently valid annotation; once the window elapses the annotation is stale and a fresh annotation is required.
+This design inherently resolves the annotation-persistence-after-retry problem: an annotation set at time T is only valid until T + window. A transient rejection (for example, a webhook timeout) does not leave a permanently valid annotation; once the window elapses the annotation is stale and a fresh annotation is required.
 
 ### Implementation sketch
 
@@ -208,7 +208,7 @@ webhooks:
 
 The `deletion-confirmed` annotation must not be freely settable by any service account that also holds the `delete` verb on `runtimes`. Otherwise, a single compromised or buggy service account could annotate and delete in one automated flow, reducing the two-step protocol to a single step.
 
-- **KEB's service account** holds `patch`/`update` on `runtimes` (to apply the annotation) **and** `delete` permission. This is unavoidable for programmatic deletions. **Known limitation:** for the KEB path the two-step requirement is enforced procedurally (annotation must precede delete in KEB's workflow), not technically. The timestamp window mitigates the risk of annotation pre-staging (an annotation set long in advance will have expired by the time the delete is issued) but a bug or compromise in KEB that sets the annotation and immediately deletes within the window would bypass the intent of the two-step protocol. This limitation is accepted for the KEB path; future work may introduce a separate, annotation-only service account for KEB distinct from its delete credential.
+- **KEB's service account** holds `patch`/`update` on `runtimes` (to apply the annotation) **and** `delete` permission. This is unavoidable for programmatic deletions. **Known limitation:** for the KEB path KEB enforces the two-step requirement procedurally (annotation must precede delete in KEB's workflow), not technically. The timestamp window mitigates the risk of annotation pre-staging (an annotation set long in advance will have expired by the time the delete is issued) but a bug or compromise in KEB that sets the annotation and immediately deletes within the window would bypass the intent of the two-step protocol. This limitation is accepted for the KEB path; future work may introduce a separate, annotation-only service account for KEB distinct from its delete credential.
 
 ## Consequences
 
@@ -223,5 +223,5 @@ The `deletion-confirmed` annotation must not be freely settable by any service a
 **Disadvantages and mitigations:**
 - The KIM webhook server becomes a critical component on KCP: if it is unavailable (with `failurePolicy: Fail`), Runtime deletions are blocked. Mitigation: the webhook server runs inside the same manager process as the controllers, benefits from the same HA/leader-election setup, and should be included in KCP readiness checks.
 - The time-window adds a deadline for the caller: the DELETE must follow the annotation within 2 minutes (configurable). Mitigation: the window is configurable; KEB automates both steps back-to-back; human operators follow a runbook that keeps the steps close together.
-- Clock skew between the caller and the webhook server could cause spurious rejections if skew exceeds the window. Mitigation: rely on NTP synchronisation, which is standard for Kubernetes nodes; skew is expected to be well under one second.
+- Clock skew between the caller and the webhook server could cause spurious rejections if skew exceeds the window. Mitigation: rely on NTP synchronization, which is standard for Kubernetes nodes; skew is expected to be well under one second.
 - The two-step requirement for KEB is enforced only procedurally, not technically (KEB holds both annotation and delete permissions). Mitigation: the timestamp window limits the exposure period; future work may separate KEB's annotation credential from its delete credential.

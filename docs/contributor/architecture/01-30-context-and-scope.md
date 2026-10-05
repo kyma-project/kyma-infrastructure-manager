@@ -36,7 +36,7 @@ Kyma Infrastructure Manager (KIM) sits between the Kyma Environment Broker (KEB)
 
 | Communication Partner        | Input to KIM                                                   | Output from KIM                                                          |
 |------------------------------|----------------------------------------------------------------|--------------------------------------------------------------------------|
-| KEB| `Runtime` custom resource (CR) (create / update / delete) in `kcp-system` namespace    | `Runtime.status.state`, `status.conditions`, kubeconfig Secret           |
+| KEB | `Runtime` custom resource (CR) (create / update / delete) in `kcp-system` namespace    | `Runtime.status.state`, `status.conditions`, kubeconfig Secret           |
 | Gardener API Server          | Shoot status, shoot last operation, shoot errors               | Shoot CR (create / patch / delete), deletion confirmation annotation     |
 | SKR Cluster                  | `RegistryCacheConfig` CR, bootstrap deployment status          | `kyma-system` namespace, ClusterRoleBindings, OIDC ConfigMaps, kubeconfig Secret, bootstrapper manifests |
 | Runtime Watcher              | Change notifications for SKR resources                         | (none; used as a trigger to re-reconcile the Runtime CR)                 |
@@ -49,7 +49,7 @@ KIM communicates with three distinct Kubernetes API servers using different clie
 | Channel                          | Protocol / Transport                        | Authentication                           | Rate Limiting                          |
 |----------------------------------|---------------------------------------------|------------------------------------------|----------------------------------------|
 | KCP cluster (own namespace)      | Kubernetes in-cluster config                | ServiceAccount (mounted token)           | Default controller-runtime limits       |
-| Gardener project namespace       | REST over HTTPS; kubeconfig from file/Secret| kubeconfig provided via `--gardener-kubeconfig-path` | Configurable QPS (`--gardener-ratelimiter-qps`, default 5) and burst (`--gardener-ratelimiter-burst`, default 10) |
+| Gardener project namespace       | REST over HTTPS; kubeconfig from file/Secret| kubeconfig provided using `--gardener-kubeconfig-path` | Configurable QPS (`--gardener-ratelimiter-qps`, default 5) and burst (`--gardener-ratelimiter-burst`, default 10) |
 | SKR cluster                      | REST over HTTPS; dynamic kubeconfig         | Admin kubeconfig from Garden-generated Secret | Per-reconciliation client, no shared pool |
 
 **Feature flag channels:**

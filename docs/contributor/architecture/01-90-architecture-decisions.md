@@ -1,15 +1,14 @@
-Design Decisions
-================
+Architecture Decisions
+======================
 
 The following architecture decision records (ADRs) document the most significant design choices made during Kyma Infrastructure Manager's (KIM's) development. Full ADR texts are located in `docs/adr/`.
 
 | ADR | Title                               | Status   | Summary                                                                                                                                                                                                                     |
-| ADR | Title                               | Status   | Summary                                                                                                                                                                                                                     |
 |-----|-------------------------------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | 001 | Provisioning Architecture and API   | Accepted | Defines the contract between KEB and KIM. KEB creates `Runtime` CRs with user-configurable infrastructure properties; KIM applies provider defaults and hardcoded configuration. KIM is the sole entity that calls the Gardener API. |
 | 002 | Registry Cache (v1)                 | Accepted | Introduces a dedicated Registry Cache Config Controller (Option 3) to separate the concern of reading SKR cache config from applying it to Gardener. The Runtime CR gains an `imageRegistryCache` field; the new controller sets it based on `RegistryCacheConfig` CRs found on SKR. |
-| 003 | Registry Cache (v2)                 | Proposed | Refines the v1 approach: uses the official `RegistryCacheConfig` CRD (from the Kyma registry-cache module), adds a validating webhook on SKR, integrates the Runtime Watcher for push-based notifications, and has the Runtime Controller manage credential Secret synchronisation between SKR and Garden. |
-| 004 | Prevent accidental Runtime deletion | Proposed | Implements a validating admission webhook embedded in KIM that rejects `DELETE` requests on `Runtime` CRs unless the `operator.kyma-project.io/deletion-confirmed: "true"` annotation has been applied in a prior API call, enforcing a two-step deletion protocol. |
+| 003 | Registry Cache (v2)                 | Proposed | Refines the v1 approach: uses the official `RegistryCacheConfig` CRD (from the Kyma registry-cache module), adds a validating webhook on SKR, integrates the Runtime Watcher for push-based notifications, and has the Runtime Controller manage credential Secret synchronization between SKR and Garden. |
+| 007 | Prevent accidental Runtime deletion | Proposed | Implements a validating admission webhook embedded in KIM that rejects `DELETE` requests on `Runtime` CRs unless the `operator.kyma-project.io/deletion-confirmed` annotation has been applied in a prior API call set to a current UTC timestamp in RFC 3339 format, enforcing a two-step deletion protocol. |
 Additional architectural decisions captured in code comments or commit history:
 
 | Decision                                         | Location                                             | Rationale                                                                                                                           |

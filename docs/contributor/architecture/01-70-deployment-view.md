@@ -59,7 +59,7 @@ Kyma Infrastructure Manager (KIM) operates across three distinct Kubernetes clus
 Infrastructure Level 2
 -----------------------
 
-### KCP Cluster — Container Configuration
+### KCP Cluster: Container Configuration
 
 | Resource            | Value / Detail                                           |
 |---------------------|----------------------------------------------------------|
@@ -71,10 +71,10 @@ Infrastructure Level 2
 | Health probes       | Liveness and readiness on `:8081`                       |
 | ConfigMap reload    | Converter config changes trigger in-process reload (no pod restart required) |
 
-### Gardener Cluster — Access Pattern
+### Gardener Cluster: Access Pattern
 
 KIM connects using a kubeconfig mounted from a Secret. Requests are rate-limited to avoid overwhelming the Gardener API server during bulk operations. The `--gardener-ratelimiter-qps` and `--gardener-ratelimiter-burst` flags tune these limits.
 
-### SKR Clusters — Access Pattern
+### SKR Clusters: Access Pattern
 
 KIM creates a short-lived Kubernetes client per reconciliation cycle using the admin kubeconfig obtained from Gardener. There is no persistent connection pool to SKR clusters; connections are created on demand and discarded after use.
