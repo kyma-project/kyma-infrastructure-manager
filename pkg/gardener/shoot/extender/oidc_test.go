@@ -5,7 +5,6 @@ import (
 
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 
-	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/stretchr/testify/assert"
@@ -33,7 +32,7 @@ func TestOidcExtender(t *testing.T) {
 					Name: "shoot",
 					Kubernetes: imv1.Kubernetes{
 						KubeAPIServer: imv1.APIServer{
-							OidcConfig: gardener.OIDCConfig{
+							OidcConfig: imv1.GardenerOIDCConfig{
 								ClientID:      &defaultOidc.ClientID,
 								GroupsClaim:   &defaultOidc.GroupsClaim,
 								IssuerURL:     &defaultOidc.IssuerURL,
@@ -53,7 +52,6 @@ func TestOidcExtender(t *testing.T) {
 		// then
 		require.NoError(t, err)
 
-		require.Nil(t, shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig) //nolint:staticcheck
 		require.NotNil(t, shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication)
 		assert.Equal(t, "structured-auth-config-shoot", shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName)
 	})
