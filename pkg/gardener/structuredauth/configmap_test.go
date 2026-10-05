@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -59,14 +60,14 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 	tests := []struct {
 		name              string
 		cmName            string
-		oidcConfig        gardener.OIDCConfig
+		oidcConfig        imv1.GardenerOIDCConfig
 		existingConfigMap *corev1.ConfigMap
-		prepareFunc       func(oidcConfig *gardener.OIDCConfig) error
+		prepareFunc       func(oidcConfig *imv1.GardenerOIDCConfig) error
 	}{
 		{
 			name:   "Should create config map with OIDC config",
 			cmName: "cm1",
-			oidcConfig: gardener.OIDCConfig{
+			oidcConfig: imv1.GardenerOIDCConfig{
 				ClientID:       ptr.To("client"),
 				IssuerURL:      ptr.To("issuer"),
 				UsernameClaim:  ptr.To("username"),
@@ -78,7 +79,7 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 		{
 			name:   "Should create config map with OIDC config and use default groups prefix",
 			cmName: "cm2",
-			oidcConfig: gardener.OIDCConfig{
+			oidcConfig: imv1.GardenerOIDCConfig{
 				ClientID:       ptr.To("client"),
 				IssuerURL:      ptr.To("issuer"),
 				UsernameClaim:  ptr.To("username"),
@@ -102,7 +103,7 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 					"config.yaml": string(configBytes),
 				},
 			},
-			oidcConfig: gardener.OIDCConfig{
+			oidcConfig: imv1.GardenerOIDCConfig{
 				ClientID:       ptr.To("client1"),
 				IssuerURL:      ptr.To("issuer1"),
 				UsernameClaim:  ptr.To("username1"),

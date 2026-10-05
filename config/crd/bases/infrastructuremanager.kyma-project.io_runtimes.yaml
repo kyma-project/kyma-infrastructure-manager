@@ -254,51 +254,45 @@ spec:
                                 Note: Descriptions were taken from the Kubernetes documentation.
                               properties:
                                 caBundle:
-                                  description: If set, the OpenID server's certificate
-                                    will be verified by one of the authorities in
-                                    the oidc-ca-file, otherwise the host's root CA
-                                    set will be used.
+                                  description: 'CABundle: if set, the OpenID server''s
+                                    certificate will be verified by one of the authorities
+                                    in the oidc-ca-file, otherwise the host''s root
+                                    CA set will be used.'
                                   type: string
                                 clientAuthentication:
                                   description: |-
                                     ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
 
                                     Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31.
-                                    It's use was planned for generating OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
                                   properties:
                                     extraConfig:
                                       additionalProperties:
                                         type: string
-                                      description: |-
-                                        Extra configuration added to kubeconfig's auth-provider.
-                                        Must not be any of idp-issuer-url, client-id, client-secret, idp-certificate-authority, idp-certificate-authority-data, id-token or refresh-token
+                                      description: ExtraConfig is extra configuration
+                                        added to kubeconfig's auth-provider.
                                       type: object
                                     secret:
-                                      description: The client Secret for the OpenID
-                                        Connect client.
+                                      description: Secret is the client Secret for
+                                        the OpenID Connect client.
                                       type: string
                                   type: object
                                 clientID:
-                                  description: The client ID for the OpenID Connect
-                                    client, must be set.
+                                  description: ClientID is the client ID for the OpenID
+                                    Connect client, must be set.
                                   type: string
                                 groupsClaim:
-                                  description: If provided, the name of a custom OpenID
-                                    Connect claim for specifying user groups. The
-                                    claim value is expected to be a string or array
-                                    of strings. This flag is experimental, please
-                                    see the authentication documentation for further
-                                    details.
+                                  description: 'GroupsClaim: if provided, the name
+                                    of a custom OpenID Connect claim for specifying
+                                    user groups.'
                                   type: string
                                 groupsPrefix:
-                                  description: If provided, all groups will be prefixed
-                                    with this value to prevent conflicts with other
-                                    authentication strategies.
+                                  description: 'GroupsPrefix: if provided, all groups
+                                    will be prefixed with this value to prevent conflicts
+                                    with other authentication strategies.'
                                   type: string
                                 issuerURL:
-                                  description: The URL of the OpenID issuer, only
-                                    HTTPS scheme will be accepted. Used to verify
-                                    the OIDC JSON Web Token (JWT).
+                                  description: IssuerURL is the URL of the OpenID
+                                    issuer, only HTTPS scheme will be accepted.
                                   type: string
                                 jwks:
                                   format: byte
@@ -306,114 +300,95 @@ spec:
                                 requiredClaims:
                                   additionalProperties:
                                     type: string
-                                  description: key=value pairs that describes a required
-                                    claim in the ID Token. If set, the claim is verified
-                                    to be present in the ID Token with a matching
-                                    value.
+                                  description: RequiredClaims are key=value pairs
+                                    that describe required claims in the ID Token.
                                   type: object
                                 signingAlgs:
-                                  description: List of allowed JOSE asymmetric signing
-                                    algorithms. JWTs with a 'alg' header value not
-                                    in this list will be rejected. Values are defined
-                                    by RFC 7518 https://tools.ietf.org/html/rfc7518#section-3.1
+                                  description: SigningAlgs is the list of allowed
+                                    JOSE asymmetric signing algorithms.
                                   items:
                                     type: string
                                   type: array
                                 usernameClaim:
-                                  description: The OpenID claim to use as the user
-                                    name. Note that claims other than the default
-                                    ('sub') is not guaranteed to be unique and immutable.
-                                    This flag is experimental, please see the authentication
-                                    documentation for further details. (default "sub")
+                                  description: UsernameClaim is the OpenID claim to
+                                    use as the user name. (default "sub")
                                   type: string
                                 usernamePrefix:
-                                  description: If provided, all usernames will be
-                                    prefixed with this value. If not provided, username
-                                    claims other than 'email' are prefixed by the
-                                    issuer URL to avoid clashes. To skip any prefixing,
-                                    provide the value '-'.
+                                  description: 'UsernamePrefix: if provided, all usernames
+                                    will be prefixed with this value.'
                                   type: string
                               type: object
                             type: array
                           oidcConfig:
                             description: |-
-                              OIDCConfig contains configuration settings for the OIDC provider.
+                              GardenerOIDCConfig contains configuration settings for the OIDC provider.
+                              It mirrors the former github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig
+                              type, which was tombstoned/removed in gardener apis >= v1.149.0 (KubeAPIServerConfig
+                              no longer carries a legacy inline OIDC config; OIDC is configured via structured
+                              authentication). The field names, JSON tags and types are kept identical to preserve
+                              the Runtime CRD schema.
                               Note: Descriptions were taken from the Kubernetes documentation.
                             properties:
                               caBundle:
-                                description: If set, the OpenID server's certificate
-                                  will be verified by one of the authorities in the
-                                  oidc-ca-file, otherwise the host's root CA set will
-                                  be used.
+                                description: 'CABundle: if set, the OpenID server''s
+                                  certificate will be verified by one of the authorities
+                                  in the oidc-ca-file, otherwise the host''s root
+                                  CA set will be used.'
                                 type: string
                               clientAuthentication:
                                 description: |-
                                   ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
 
                                   Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31.
-                                  It's use was planned for generating OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
                                 properties:
                                   extraConfig:
                                     additionalProperties:
                                       type: string
-                                    description: |-
-                                      Extra configuration added to kubeconfig's auth-provider.
-                                      Must not be any of idp-issuer-url, client-id, client-secret, idp-certificate-authority, idp-certificate-authority-data, id-token or refresh-token
+                                    description: ExtraConfig is extra configuration
+                                      added to kubeconfig's auth-provider.
                                     type: object
                                   secret:
-                                    description: The client Secret for the OpenID
-                                      Connect client.
+                                    description: Secret is the client Secret for the
+                                      OpenID Connect client.
                                     type: string
                                 type: object
                               clientID:
-                                description: The client ID for the OpenID Connect
-                                  client, must be set.
+                                description: ClientID is the client ID for the OpenID
+                                  Connect client, must be set.
                                 type: string
                               groupsClaim:
-                                description: If provided, the name of a custom OpenID
-                                  Connect claim for specifying user groups. The claim
-                                  value is expected to be a string or array of strings.
-                                  This flag is experimental, please see the authentication
-                                  documentation for further details.
+                                description: 'GroupsClaim: if provided, the name of
+                                  a custom OpenID Connect claim for specifying user
+                                  groups.'
                                 type: string
                               groupsPrefix:
-                                description: If provided, all groups will be prefixed
-                                  with this value to prevent conflicts with other
-                                  authentication strategies.
+                                description: 'GroupsPrefix: if provided, all groups
+                                  will be prefixed with this value to prevent conflicts
+                                  with other authentication strategies.'
                                 type: string
                               issuerURL:
-                                description: The URL of the OpenID issuer, only HTTPS
-                                  scheme will be accepted. Used to verify the OIDC
-                                  JSON Web Token (JWT).
+                                description: IssuerURL is the URL of the OpenID issuer,
+                                  only HTTPS scheme will be accepted.
                                 type: string
                               requiredClaims:
                                 additionalProperties:
                                   type: string
-                                description: key=value pairs that describes a required
-                                  claim in the ID Token. If set, the claim is verified
-                                  to be present in the ID Token with a matching value.
+                                description: RequiredClaims are key=value pairs that
+                                  describe required claims in the ID Token.
                                 type: object
                               signingAlgs:
-                                description: List of allowed JOSE asymmetric signing
-                                  algorithms. JWTs with a 'alg' header value not in
-                                  this list will be rejected. Values are defined by
-                                  RFC 7518 https://tools.ietf.org/html/rfc7518#section-3.1
+                                description: SigningAlgs is the list of allowed JOSE
+                                  asymmetric signing algorithms.
                                 items:
                                   type: string
                                 type: array
                               usernameClaim:
-                                description: The OpenID claim to use as the user name.
-                                  Note that claims other than the default ('sub')
-                                  is not guaranteed to be unique and immutable. This
-                                  flag is experimental, please see the authentication
-                                  documentation for further details. (default "sub")
+                                description: UsernameClaim is the OpenID claim to
+                                  use as the user name. (default "sub")
                                 type: string
                               usernamePrefix:
-                                description: If provided, all usernames will be prefixed
-                                  with this value. If not provided, username claims
-                                  other than 'email' are prefixed by the issuer URL
-                                  to avoid clashes. To skip any prefixing, provide
-                                  the value '-'.
+                                description: 'UsernamePrefix: if provided, all usernames
+                                  will be prefixed with this value.'
                                 type: string
                             type: object
                         type: object
@@ -890,6 +865,13 @@ spec:
                                         ImageMinimumGCAge is the minimum age of an unused image before it can be garbage collected.
                                         Default: 2m0s
                                       type: string
+                                    imagePullCredentialsVerificationPolicy:
+                                      description: |-
+                                        ImagePullCredentialsVerificationPolicy determines how credentials should be verified when pulling images that
+                                        already exist on the node. It corresponds to the kubelet's `imagePullCredentialsVerificationPolicy` field and is only
+                                        effective for Kubernetes versions >= 1.35. May be one of {"NeverVerify", "NeverVerifyPreloadedImages",
+                                        "NeverVerifyAllowlistedImages", "AlwaysVerify"}. Defaults to "NeverVerifyPreloadedImages" (the kubelet default).
+                                      type: string
                                     kubeReserved:
                                       description: |-
                                         KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).
@@ -955,6 +937,16 @@ spec:
                                         of process IDs per pod allowed by the kubelet.
                                       format: int64
                                       type: integer
+                                    preloadedImagesVerificationAllowlist:
+                                      description: |-
+                                        PreloadedImagesVerificationAllowlist specifies a list of images that are exempted from credential
+                                        re-verification for the "NeverVerifyAllowlistedImages" ImagePullCredentialsVerificationPolicy. The list accepts a
+                                        full path segment wildcard suffix "/*". Only image specs without an image tag or digest must be used. It
+                                        corresponds to the kubelet's `preloadedImagesVerificationAllowlist` field and is only effective for Kubernetes versions
+                                        >= 1.35.
+                                      items:
+                                        type: string
+                                      type: array
                                     protectKernelDefaults:
                                       description: |-
                                         ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
@@ -985,50 +977,18 @@ spec:
                                         SerializeImagePulls describes whether the images are pulled one at a time.
                                         Default: true
                                       type: boolean
+                                    singleProcessOOMKill:
+                                      description: |-
+                                        SingleProcessOOMKill, if true, will prevent the `memory.oom.group` flag from being set for container
+                                        cgroups in cgroups v2. This causes processes in the container to be OOM killed individually instead of
+                                        as a group. It means that if true, the behavior aligns with the behavior of cgroups v1.
+                                      type: boolean
                                     streamingConnectionIdleTimeout:
                                       description: |-
                                         StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed.
                                         This field cannot be set lower than "30s" or greater than "4h".
                                         Default: "5m".
                                       type: string
-                                    systemReserved:
-                                      description: |-
-                                        SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
-                                        When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
-
-                                        Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31.
-                                        Please merge existing resource reservations into the kubeReserved field.
-                                      properties:
-                                        cpu:
-                                          anyOf:
-                                          - type: integer
-                                          - type: string
-                                          description: CPU is the reserved cpu.
-                                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                          x-kubernetes-int-or-string: true
-                                        ephemeralStorage:
-                                          anyOf:
-                                          - type: integer
-                                          - type: string
-                                          description: EphemeralStorage is the reserved
-                                            ephemeral-storage.
-                                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                          x-kubernetes-int-or-string: true
-                                        memory:
-                                          anyOf:
-                                          - type: integer
-                                          - type: string
-                                          description: Memory is the reserved memory.
-                                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                          x-kubernetes-int-or-string: true
-                                        pid:
-                                          anyOf:
-                                          - type: integer
-                                          - type: string
-                                          description: PID is the reserved process-ids.
-                                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                          x-kubernetes-int-or-string: true
-                                      type: object
                                   type: object
                                 version:
                                   description: |-
@@ -1085,6 +1045,12 @@ spec:
                                 configurations for different worker-pools. Eg. MachineDrainTimeout,
                                 MachineHealthTimeout.
                               properties:
+                                autoPreserveFailedMachineMax:
+                                  description: |-
+                                    AutoPreserveFailedMachineMax is the maximum number of machines that can be auto-preserved by MCM for the worker pool.
+                                    This value is distributed across zones like Minimum and Maximum.
+                                  format: int32
+                                  type: integer
                                 disableHealthTimeout:
                                   description: |-
                                     DisableHealthTimeout if set to true, health timeout will be ignored. Leading to machine never being declared failed.
@@ -1107,6 +1073,14 @@ spec:
                                 machineHealthTimeout:
                                   description: MachineHealthTimeout is the period
                                     after which machine is declared failed.
+                                  type: string
+                                machinePreserveTimeout:
+                                  description: |-
+                                    MachinePreserveTimeout defines the duration after which machine preservation is disabled.
+                                    If preservation is disabled while the machine is in the Failed phase, the machine transitions
+                                    to the Terminating phase. For machines in any other phase, disabling preservation does not
+                                    alter the current phase, and normal behavior and phase transitions continue as usual.
+                                    However, the Cluster Autoscaler (CA) may scale down the machine if required.
                                   type: string
                                 maxEvictRetries:
                                   description: MaxEvictRetries are the number of eviction
@@ -1714,6 +1688,13 @@ spec:
                                         ImageMinimumGCAge is the minimum age of an unused image before it can be garbage collected.
                                         Default: 2m0s
                                       type: string
+                                    imagePullCredentialsVerificationPolicy:
+                                      description: |-
+                                        ImagePullCredentialsVerificationPolicy determines how credentials should be verified when pulling images that
+                                        already exist on the node. It corresponds to the kubelet's `imagePullCredentialsVerificationPolicy` field and is only
+                                        effective for Kubernetes versions >= 1.35. May be one of {"NeverVerify", "NeverVerifyPreloadedImages",
+                                        "NeverVerifyAllowlistedImages", "AlwaysVerify"}. Defaults to "NeverVerifyPreloadedImages" (the kubelet default).
+                                      type: string
                                     kubeReserved:
                                       description: |-
                                         KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).
@@ -1779,6 +1760,16 @@ spec:
                                         of process IDs per pod allowed by the kubelet.
                                       format: int64
                                       type: integer
+                                    preloadedImagesVerificationAllowlist:
+                                      description: |-
+                                        PreloadedImagesVerificationAllowlist specifies a list of images that are exempted from credential
+                                        re-verification for the "NeverVerifyAllowlistedImages" ImagePullCredentialsVerificationPolicy. The list accepts a
+                                        full path segment wildcard suffix "/*". Only image specs without an image tag or digest must be used. It
+                                        corresponds to the kubelet's `preloadedImagesVerificationAllowlist` field and is only effective for Kubernetes versions
+                                        >= 1.35.
+                                      items:
+                                        type: string
+                                      type: array
                                     protectKernelDefaults:
                                       description: |-
                                         ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
@@ -1809,50 +1800,18 @@ spec:
                                         SerializeImagePulls describes whether the images are pulled one at a time.
                                         Default: true
                                       type: boolean
+                                    singleProcessOOMKill:
+                                      description: |-
+                                        SingleProcessOOMKill, if true, will prevent the `memory.oom.group` flag from being set for container
+                                        cgroups in cgroups v2. This causes processes in the container to be OOM killed individually instead of
+                                        as a group. It means that if true, the behavior aligns with the behavior of cgroups v1.
+                                      type: boolean
                                     streamingConnectionIdleTimeout:
                                       description: |-
                                         StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed.
                                         This field cannot be set lower than "30s" or greater than "4h".
                                         Default: "5m".
                                       type: string
-                                    systemReserved:
-                                      description: |-
-                                        SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
-                                        When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
-
-                                        Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31.
-                                        Please merge existing resource reservations into the kubeReserved field.
-                                      properties:
-                                        cpu:
-                                          anyOf:
-                                          - type: integer
-                                          - type: string
-                                          description: CPU is the reserved cpu.
-                                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                          x-kubernetes-int-or-string: true
-                                        ephemeralStorage:
-                                          anyOf:
-                                          - type: integer
-                                          - type: string
-                                          description: EphemeralStorage is the reserved
-                                            ephemeral-storage.
-                                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                          x-kubernetes-int-or-string: true
-                                        memory:
-                                          anyOf:
-                                          - type: integer
-                                          - type: string
-                                          description: Memory is the reserved memory.
-                                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                          x-kubernetes-int-or-string: true
-                                        pid:
-                                          anyOf:
-                                          - type: integer
-                                          - type: string
-                                          description: PID is the reserved process-ids.
-                                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                          x-kubernetes-int-or-string: true
-                                      type: object
                                   type: object
                                 version:
                                   description: |-
@@ -1909,6 +1868,12 @@ spec:
                                 configurations for different worker-pools. Eg. MachineDrainTimeout,
                                 MachineHealthTimeout.
                               properties:
+                                autoPreserveFailedMachineMax:
+                                  description: |-
+                                    AutoPreserveFailedMachineMax is the maximum number of machines that can be auto-preserved by MCM for the worker pool.
+                                    This value is distributed across zones like Minimum and Maximum.
+                                  format: int32
+                                  type: integer
                                 disableHealthTimeout:
                                   description: |-
                                     DisableHealthTimeout if set to true, health timeout will be ignored. Leading to machine never being declared failed.
@@ -1931,6 +1896,14 @@ spec:
                                 machineHealthTimeout:
                                   description: MachineHealthTimeout is the period
                                     after which machine is declared failed.
+                                  type: string
+                                machinePreserveTimeout:
+                                  description: |-
+                                    MachinePreserveTimeout defines the duration after which machine preservation is disabled.
+                                    If preservation is disabled while the machine is in the Failed phase, the machine transitions
+                                    to the Terminating phase. For machines in any other phase, disabling preservation does not
+                                    alter the current phase, and normal behavior and phase transitions continue as usual.
+                                    However, the Cluster Autoscaler (CA) may scale down the machine if required.
                                   type: string
                                 maxEvictRetries:
                                   description: MaxEvictRetries are the number of eviction

@@ -293,7 +293,7 @@ func CreateRuntimeStub(resourceName string) *imv1.Runtime {
 				Purpose: "production",
 				Kubernetes: imv1.Kubernetes{
 					KubeAPIServer: imv1.APIServer{
-						OidcConfig: gardener.OIDCConfig{
+						OidcConfig: imv1.GardenerOIDCConfig{
 							ClientID:       ptr.To("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
 							GroupsClaim:    ptr.To("groups"),
 							IssuerURL:      ptr.To("https://example.com"),

@@ -1,11 +1,10 @@
 package structuredauth
 
 import (
-	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 )
 
-func GetOIDCConfigOrDefault(runtime imv1.Runtime, defaultOIDC gardener.OIDCConfig) gardener.OIDCConfig {
+func GetOIDCConfigOrDefault(runtime imv1.Runtime, defaultOIDC imv1.GardenerOIDCConfig) imv1.GardenerOIDCConfig {
 	oidcConfig := runtime.Spec.Shoot.Kubernetes.KubeAPIServer.OidcConfig
 
 	if oidcConfig.IssuerURL == nil || oidcConfig.ClientID == nil {
@@ -13,14 +12,4 @@ func GetOIDCConfigOrDefault(runtime imv1.Runtime, defaultOIDC gardener.OIDCConfi
 	}
 
 	return oidcConfig
-}
-
-func OIDCConfigured(shoot gardener.Shoot) bool {
-	if shoot.Spec.Kubernetes.KubeAPIServer == nil {
-		return false
-	}
-	// nolint: staticcheck
-	oidcConfig := shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig
-
-	return oidcConfig != nil && oidcConfig.IssuerURL != nil && oidcConfig.ClientID != nil
 }
