@@ -1,0 +1,145 @@
+Cross-Cutting Concepts
+======================
+
+Domain Model
+------------
+
+The core domain objects and their relationships:
+
+```
+┌───────────────────────┐          ┌─────────────────────────────┐
+│  Runtime (KCP)        │ 1──────1 │  Shoot (Gardener)           │
+│  ─────────────────    │          │  ─────────────────          │
+│  spec.shoot           │          │  provider, region, workers  │
+│  spec.security        │          │  extensions (DNS, certs,    │
+│  spec.imageRegistryCache│        │  registry-cache, etc.)      │
+│  status.state         │          │  status.lastOperation       │
+│  status.conditions    │          └─────────────────────────────┘
+└───────────────────────┘
+         │                                     │
+         │ 1                                   │ 1
+         ▼                                     ▼
+┌───────────────────────┐          ┌─────────────────────────────┐
+│  Kubeconfig Secret    │          │  SKR Cluster                │
+│  (KCP, kcp-system)    │          │  (provisioned by Gardener)  │
+└───────────────────────┘          │                             │
+                                   │  RegistryCacheConfig CRs    │
+┌───────────────────────┐          │  kyma-system namespace      │
+│  GardenerCluster (KCP)│          │  ClusterRoleBindings        │
+│  (legacy; kubeconfig  │          │  OIDC ConfigMaps            │
+│   rotation only)      │          └─────────────────────────────┘
+└───────────────────────┘
+```
+
+**Runtime** is the primary domain object. Its `spec` represents the desired state; its `status` represents the observed state as reported by Kyma Infrastructure Manager (KIM).
+
+**Shoot** is the Gardener representation of a managed Kubernetes cluster. KIM converts a `Runtime` spec into a `Shoot` spec, applying provider defaults from the converter configuration.
+
+**GardenerCluster** is a legacy CR retained for kubeconfig rotation. New provisioning functionality uses the `Runtime` CR exclusively.
+
+Reconciliation Pattern
+----------------------
+
+All controllers follow the Kubernetes reconciliation pattern:
+
+1. **Observe**: Read the current state of all relevant resources (Runtime CR, Shoot, Secrets).
+2. **Diff**: Compare desired state (CR spec) with observed state.
+3. **Act**: Create, update, or delete resources to converge toward the desired state.
+4. **Report**: Update `status.state` and `status.conditions` to reflect outcomes.
+
+All reconciliation operations must be **idempotent**: running the same reconcile loop multiple times must produce the same result and must not cause unintended side effects.
+
+Finite State Machine Pattern
+-----------------------------
+
+The Runtime Controller uses a Finite State Machine to manage the complex, multi-step provisioning workflow:
+
+```go
+// Each state is a function with this signature
+type stateFn func(ctx context.Context, r *fsm, s *systemState) (stateFn, *ctrl.Result, error)
+```
+
+**Transitions:** A state function returns the next state function, a requeue result, or `nil` (done). The FSM loop calls state functions sequentially until one returns a result or error.
+
+**State isolation:** Each state function is responsible for exactly one step. It reads what it needs from `systemState`, performs its operation, updates `systemState` if necessary, and returns the next state.
+
+**Error handling:** Transient errors cause the FSM to return an error, which triggers a requeue by `controller-runtime`. Permanent errors (e.g., missing required labels) set `status.state = Failed` and do not requeue.
+
+**Requeue delays** are defined as named constants in the FSM package:
+
+| Constant                      | Value | Used when                              |
+|-------------------------------|-------|----------------------------------------|
+| `requeueAfterShootCreate`     | 60s   | Waiting for Shoot creation             |
+| `requeueAfterShootDelete`     | 90s   | Waiting for Shoot deletion             |
+| `requeueAfterShootReconcile`  | 30s   | Waiting for Shoot patch reconciliation |
+| `requeueAfterControlPlane`    | 10s   | Waiting for control plane readiness    |
+| `requeueAfterGardener`        | 15s   | General Gardener operation retry       |
+
+Status and Conditions
+----------------------
+
+KIM uses two complementary status mechanisms on the `Runtime` CR:
+
+**`status.state`** (coarse-grained, for automation):
+
+| Value         | Meaning                                             |
+|---------------|-----------------------------------------------------|
+| `Pending`     | Provisioning is in progress                         |
+| `Ready`       | Cluster is fully provisioned and configured         |
+| `Terminating` | Cluster deletion is in progress                     |
+| `Failed`      | A non-recoverable error occurred                    |
+
+**`status.conditions`** (fine-grained, for observability):
+
+| Condition Type                  | Set when                                                |
+|---------------------------------|---------------------------------------------------------|
+| `Provisioned`                   | Gardener Shoot is created and reconciled                |
+| `KubeconfigReady`               | Kubeconfig Secret is present in `kcp-system`            |
+| `OidcAndConfigMapConfigured`    | OIDC and ConfigMaps are applied on SKR                  |
+| `KymaSystemNSCreated`           | `kyma-system` namespace exists on SKR                   |
+| `Configured`                    | All post-provisioning configuration steps succeeded     |
+| `Deprovisioned`                 | Shoot has been deleted                                  |
+| `RegistryCacheConfigured`       | Registry cache extension is active                      |
+| `RuntimeBootstrapperReady`      | Runtime bootstrapper is installed and healthy           |
+
+Security Concepts
+-----------------
+
+**Kubeconfig rotation:** Kubeconfigs are time-limited. The GardenerCluster Controller rotates them before they expire, using the formula: rotate when `age > minimal-rotation-time * expiration-time`. Both parameters are configurable. Default values (0.6 ratio, 24h expiry) ensure rotation begins at ~14.4 hours after issuance.
+
+**Namespace isolation:** The controller manager is restricted to `kcp-system`. `Runtime` CRs created outside this namespace are ignored.
+
+**Credential handling:** The Runtime Controller reads registry credential Secrets from the SKR cluster and writes them to the Gardener project namespace. It never writes them to KCP. When you remove the registry cache configuration, KIM cleans up the credentials.
+
+**Network filtering:** The `spec.security.networking.filter` field on the `Runtime` CR controls Gardener's `shoot-networking-filter` extension. Egress filtering is the default mode. Ingress blackholing is opt-in.
+
+**API server ACL:** When `--api-server-acl-enabled=true`, the FSM patch step applies `spec.shoot.kubernetes.kubeAPIServer.acl.allowedCIDRs` to the Shoot, restricting API server access to the listed CIDR ranges.
+
+**Audit logging:** Audit log configuration is mandatory by default (`--audit-log-mandatory=true`). KIM maps the Runtime's tenant ID (derived from labels) to an audit log backend defined in the converter configuration. Provisioning fails if no mapping is found.
+
+Observability
+-------------
+
+KIM uses three complementary observability mechanisms:
+
+**Prometheus metrics** (`internal/controller/metrics/`):
+- `infrastructure_manager_runtime_state`: gauge per Runtime, labelled by state
+- Reconciliation counts and error rates via `controller-runtime`'s built-in metrics
+
+**Structured logging** (via `logr` / `slog` backend):
+- All log entries include `runtime` (name/namespace) and `state` fields
+- Log level is configurable at runtime via `--log-level`
+- The Config Reload Watcher can change the log level without restarting KIM
+
+**Kubernetes Events:**
+- `sFnEmitEvent` records a `corev1.Event` on the `Runtime` CR at each significant state transition
+- Events are visible via `kubectl describe runtime <name>`
+
+Configuration Management
+------------------------
+
+KIM's behaviour is controlled by two orthogonal configuration mechanisms:
+
+**CLI flags** (startup-time, process-scoped): Feature flags, rate limits, timeout values. Changing these requires a pod restart. For the full list of flags, see [Context and Scope](./01-30-context-and-scope.md).
+
+**Converter configuration file** (runtime-reloadable, file-backed): Provider defaults for Kubernetes versions, machine images, networking ranges, and audit log tenant mappings. Stored in a ConfigMap mounted into the pod. The Config Reload Watcher detects file changes and reloads the configuration in-process without a restart.
