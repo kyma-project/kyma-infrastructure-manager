@@ -15,7 +15,7 @@ jobs:
         go-version-file: 'go.mod'
     - name: vulncheck
       run: |
-        go install golang.org/x/vuln/cmd/govulncheck@latest
+        go install golang.org/x/vuln/cmd/govulncheck@v1.1.4 # https://github.com/golang/vuln/releases/tag/v1.1.4
 
         # Suppressed IDs (Go vuln DB record has an unfixed open-ended range despite upstream patch):
         # GO-2026-6568: gardener/gardener authorization bypass — patched in v1.142.6/v1.143.3/v1.144.2/v1.145.0
