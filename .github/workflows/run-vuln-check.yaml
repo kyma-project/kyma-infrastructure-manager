@@ -38,9 +38,12 @@ jobs:
                 msg = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            # Each JSON line is a govulncheck.Message; findings have a 'finding' key
+            if not isinstance(msg, dict):
+                continue
             finding = msg.get('finding')
-            if finding and finding.get('osv', '') not in suppressed:
+            if not isinstance(finding, dict):
+                continue
+            if finding.get('osv', '') not in suppressed:
                 found.append(finding)
         if found:
             print('Unsuppressed vulnerabilities found:')
