@@ -5,6 +5,7 @@ import (
 	"io"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 )
 
 type Config struct {
@@ -62,8 +63,8 @@ type OidcProvider struct {
 	UsernamePrefix string   `json:"usernamePrefix" validate:"required"`
 }
 
-func (p OidcProvider) ToOIDCConfig() gardener.OIDCConfig {
-	return gardener.OIDCConfig{
+func (p OidcProvider) ToOIDCConfig() imv1.GardenerOIDCConfig {
+	return imv1.GardenerOIDCConfig{
 		ClientID:       &p.ClientID,
 		GroupsClaim:    &p.GroupsClaim,
 		IssuerURL:      &p.IssuerURL,
