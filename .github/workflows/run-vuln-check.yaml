@@ -9,8 +9,47 @@ jobs:
   govuln:
     runs-on: ubuntu-latest
     steps:
-    - name: vulncheck
-      uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+    - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
       with:
         go-version-file: 'go.mod'
-        go-package: ./...
+    - name: vulncheck
+      run: |
+        go install golang.org/x/vuln/cmd/govulncheck@v1.1.4 # https://github.com/golang/vuln/releases/tag/v1.1.4
+
+        # Suppressed IDs (Go vuln DB record has an unfixed open-ended range despite upstream patch):
+        # GO-2026-6568: gardener/gardener authorization bypass — patched in v1.142.6/v1.143.3/v1.144.2/v1.145.0
+        #               but vuln DB entry still carries {introduced:0} with no fixed event for v1.145+
+        #               Track: https://github.com/kyma-project/kyma-infrastructure-manager/pull/1594
+        SUPPRESSED="GO-2026-6568"
+
+        # govulncheck exits 3 when vulnerabilities are found; capture output regardless
+        OUTPUT=$(govulncheck -format json ./... 2>&1) || true
+
+        echo "$OUTPUT" | python3 -I -c "
+        import json, sys
+        suppressed = set('$SUPPRESSED'.split())
+        found = []
+        for line in sys.stdin:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                msg = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(msg, dict):
+                continue
+            finding = msg.get('finding')
+            if not isinstance(finding, dict):
+                continue
+            if finding.get('osv', '') not in suppressed:
+                found.append(finding)
+        if found:
+            print('Unsuppressed vulnerabilities found:')
+            for f in found:
+                print(f'  {f[\"osv\"]}: fixed in {f.get(\"fixed_version\", \"N/A\")}')
+            sys.exit(1)
+        else:
+            print('No unsuppressed vulnerabilities found.')
+        "
