@@ -92,5 +92,5 @@ Quality
 
 **QS-P1 - Provisioning throughput**
 - **Stimulus:** A burst of 25 new Runtime CRs is created simultaneously.
-- **Response:** The Runtime Controller processes all 25 in parallel using the configured worker pool (`--runtime-ctrl-workers-cnt`, default 25). Gardener API calls are rate-limited to 5 QPS to avoid overloading the Gardener API server.
+- **Response:** Runtime Controller processes all 25 in parallel using the configured worker pool (`--runtime-ctrl-workers-cnt`, default 25). Gardener API calls are rate-limited to 5 QPS to avoid overloading the Gardener API server.
 - **Measure:** All 25 clusters reach `Pending` (Shoot created) state within the Gardener rate limit window; no worker starvation occurs.

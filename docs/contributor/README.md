@@ -1,6 +1,6 @@
 # Contributor Documentation
 
-This directory contains contributor-facing documentation for the Kyma Infrastructure Manager (KIM).
+This directory contains contributor-facing documentation for Kyma Infrastructure Manager (KIM).
 
 ## Table of Contents
 
