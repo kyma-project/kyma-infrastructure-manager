@@ -37,7 +37,7 @@ In both cases the deletion reaches Kubernetes before any human or automated chec
 
 #### Option 1: Controller-Side Finalizer Only
 
-The Runtime Controller already manages a finalizer (`runtime-controller.infrastructure-manager.kyma-project.io/deletion-hook`) that prevents the CR from disappearing until the Shoot is deleted. Adding a second, operator-controlled finalizer would mean the CR stays in a `Terminating` state until a human removes the second finalizer.
+Runtime Controller already manages a finalizer (`runtime-controller.infrastructure-manager.kyma-project.io/deletion-hook`) that prevents the CR from disappearing until the Shoot is deleted. Adding a second, operator-controlled finalizer would mean the CR stays in a `Terminating` state until a human removes the second finalizer.
 
 **Pros:**
 - No additional Kubernetes components required; implemented entirely within KIM.
