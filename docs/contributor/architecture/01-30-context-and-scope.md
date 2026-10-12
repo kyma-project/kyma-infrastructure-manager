@@ -21,9 +21,9 @@ Kyma Infrastructure Manager (KIM) sits between Kyma Environment Broker (KEB) and
               │                                          │                  │
               ▼                                          ▼                  ▼
   ┌───────────────────────┐          ┌────────────────────────┐  ┌──────────────────┐
-  │  Gardener API Server  │          │  SKR Cluster           │  │  Runtime Watcher │
+  │  Gardener API Server  │          │  Kyma Cluster          │  │  Runtime Watcher │
   │  (Garden cluster)     │          │  (Shoot Kubernetes     │  │  (event source   │
-  │                       │          │   Runtime)             │  │   for SKR CRs)   │
+  │                       │          │   Runtime)             │  │   for Kyma CRs)  │
   │  - Shoot resources    │          │                        │  └──────────────────┘
   │  - SecretBindings     │          │  - RegistryCacheConfig │
   │  - Kubeconfig secrets │          │  - kyma-system NS      │

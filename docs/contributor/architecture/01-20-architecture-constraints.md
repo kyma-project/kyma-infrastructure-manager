@@ -6,7 +6,7 @@
 |---------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Kubernetes Operator pattern (kubebuilder v4) | Kyma Infrastructure Manager (KIM) is built exclusively on the `controller-runtime` operator framework. All automation must be expressed as reconciliation loops over CRDs, not as standalone services.  |
 | Gardener as the only cluster provisioner    | All Shoot cluster lifecycle operations (create, update, delete) are delegated to Gardener. KIM must not directly call hyperscaler APIs.                                   |
-| Multi-cluster operation                     | KIM runs on Kyma Control Plane (KCP) cluster and manages resources on two additional clusters: the Gardener project namespace and each SKR (Shoot cluster). |
+| Multi-cluster operation                     | KIM runs on Kyma Control Plane (KCP) cluster and manages resources on two additional clusters: the Gardener project namespace and each Kyma runtime. |
 | Go 1.26+ / module-based build               | The codebase must compile with Go 1.26 or later. All dependencies are managed through `go.mod`; replace directives are used for Gardener forks.                           |
 | Namespace isolation on KCP                  | The controller manager is restricted to the `kcp-system` namespace; Runtime and GardenerCluster CRs may only be created there.                                       |
 | Supported cloud providers                   | Only `aws`, `azure`, `gcp`, `openstack`, and `alicloud` are valid values for `spec.shoot.provider.type`. Provider-specific Gardener extensions are pre-loaded at startup. |

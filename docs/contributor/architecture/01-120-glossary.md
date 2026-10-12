@@ -25,6 +25,6 @@
 | Runtime Bootstrapper        | An optional component installed by KIM on Kyma clusters after provisioning. It installs base Kyma components required for module management.                                                                          |
 | Runtime Watcher             | A component (external to KIM) that watches Kyma clusters for CR changes and emits events to KIM.                                          |
 | Shoot                       | The Gardener CRD representing a managed Kubernetes cluster. KIM creates and manages Shoot resources in the Garden cluster.                    |
-| SKR                         | Shoot Kubernetes Runtime — the Kubernetes cluster provisioned by Gardener for a given `Shoot` CR. This is the cluster that end users interact with; it runs their applications and Kyma modules.                    |
+| SKR                         | Shoot Kubernetes Runtime — a former acronym for the Kubernetes cluster provisioned by Gardener for a given `Shoot` CR. This documentation uses "Kyma cluster" instead. |
 | stateFn                     | A Go function type (`func(context.Context, *fsm, *systemState) (stateFn, *ctrl.Result, error)`) that represents a single step in the Runtime Controller's Finite State Machine.                                     |
 | systemState                 | The data structure passed between FSM state functions. It holds the current Runtime CR instance and any intermediate data accumulated during the reconciliation cycle.                                              |

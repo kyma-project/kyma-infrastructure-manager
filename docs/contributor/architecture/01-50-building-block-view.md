@@ -31,12 +31,12 @@ Kyma Infrastructure Manager (KIM) is a single binary composed of several control
 |-----------------------------------|-------------------------------------------------------------------------------------------------------|
 | Runtime Controller (FSM)          | Full lifecycle of Gardener Shoot clusters: create, patch, configure, extend, and delete               |
 | GardenerCluster Controller        | Time-based kubeconfig rotation for `GardenerCluster` CRs                                              |
-| Registry Cache Config Controller  | Reads `RegistryCacheConfig` CRs from SKR clusters and propagates cache config to `Runtime` CRs       |
+| Registry Cache Config Controller  | Reads `RegistryCacheConfig` CRs from Kyma clusters and propagates cache config to `Runtime` CRs       |
 | Config Reload Watcher             | Watches the converter config file on disk and reloads KIM configuration without restart               |
 | `pkg/gardener`                    | Gardener client construction, Shoot helpers, kubeconfig generation, error handling                    |
 | `pkg/config`                      | Converter configuration: provider defaults, machine images, audit log mappings, Kubernetes versions   |
 | `internal/registrycache`          | Helpers for syncing registry credential secrets and updating Registry Cache status                    |
-| `internal/rtbootstrapper`         | Installs, upgrades, and validates runtime bootstrapper manifests on SKR                               |
+| `internal/rtbootstrapper`         | Installs, upgrades, and validates runtime bootstrapper manifests on Kyma clusters                               |
 | `internal/controller/metrics`     | Prometheus metrics for runtime states and provisioning outcomes                                       |
 
 ## Level 2: Runtime Controller
@@ -100,12 +100,12 @@ For requeue delay values, see [Cross-Cutting Concepts](./01-80-crosscutting-conc
 | `sFnWaitingShootCreation`              | `runtime_fsm_waiting_shoot_creation.go`         | Polls Shoot until it reaches a reconciled state                         |
 | `sFnPatchShoot`                        | `runtime_fsm_patch_shoot.go`                    | Applies audit log, OIDC, ACL, and networking filter updates to an existing Shoot         |
 | `sFnWaitingForShootReconcile`          | `runtime_fsm_waiting_for_shoot_reconcile.go`    | Waits for Gardener to reconcile the patched Shoot                       |
-| `sFnConfigureSKR`                      | `runtime_fsm_configure_skr.go`                  | Creates kubeconfig Secret; creates OIDC ConfigMaps on SKR                               |
-| `sFnCreateKymaNamespace`               | `runtime_fsm_create_kyma_namespace.go`          | Creates `kyma-system` namespace on SKR                                                   |
-| `sFnApplyClusterRoleBindings`          | `runtime_fsm_apply_clusterrolebindings.go`      | Creates ClusterRoleBindings for cluster administrators on SKR                            |
-| `sFnPrepareRegistryCache`              | `runtime_fsm_prepare_registry_cache.go`         | Syncs registry credential secrets from SKR to Garden cluster                             |
-| `sFnFinalizeRegistryCache`             | `runtime_fsm_finalize_registry_cache.go`        | Applies `registry-cache` Gardener extension and updates SKR status                       |
-| `sFnInitializeRuntimeBootstrapper`     | `runtime_fsm_initialize_runtime_bootstrapper.go`| Installs / upgrades runtime bootstrapper on SKR                                          |
+| `sFnConfigureSKR`                      | `runtime_fsm_configure_skr.go`                  | Creates kubeconfig Secret; creates OIDC ConfigMaps on the Kyma cluster                  |
+| `sFnCreateKymaNamespace`               | `runtime_fsm_create_kyma_namespace.go`          | Creates `kyma-system` namespace on the Kyma cluster                                      |
+| `sFnApplyClusterRoleBindings`          | `runtime_fsm_apply_clusterrolebindings.go`      | Creates ClusterRoleBindings for cluster administrators on the Kyma cluster               |
+| `sFnPrepareRegistryCache`              | `runtime_fsm_prepare_registry_cache.go`         | Syncs registry credential secrets from the Kyma cluster to the Garden cluster            |
+| `sFnFinalizeRegistryCache`             | `runtime_fsm_finalize_registry_cache.go`        | Applies `registry-cache` Gardener extension and updates Kyma cluster status              |
+| `sFnInitializeRuntimeBootstrapper`     | `runtime_fsm_initialize_runtime_bootstrapper.go`| Installs / upgrades runtime bootstrapper on the Kyma cluster                             |
 | `sFnDeleteShoot`                       | `runtime_fsm_delete_shoot.go`                   | Annotates Shoot for deletion and waits for removal                      |
 | `sFnDeleteKubeconfig`                  | `runtime_fsm_delete_kubeconfig.go`              | Removes kubeconfig Secret from KCP                                                       |
 | `sFnUpdateStatus`                      | `runtime_fsm_update_status.go`                  | Persists status changes to the Runtime CR                                                |
@@ -115,7 +115,7 @@ For requeue delay values, see [Cross-Cutting Concepts](./01-80-crosscutting-conc
 
 ### Whitebox GardenerCluster Controller
 
-**Purpose:** Generates and rotates dynamic kubeconfigs for SKR clusters. Kubeconfigs are stored as Kubernetes Secrets in the `kcp-system` namespace.
+**Purpose:** Generates and rotates dynamic kubeconfigs for Kyma clusters. Kubeconfigs are stored as Kubernetes Secrets in the `kcp-system` namespace.
 
 **Rotation policy:** For the kubeconfig rotation formula and default values, see the Security Concepts section in [Cross-Cutting Concepts](./01-80-crosscutting-concepts.md).
 
@@ -125,7 +125,7 @@ For requeue delay values, see [Cross-Cutting Concepts](./01-80-crosscutting-conc
 
 ### Whitebox Registry Cache Config Controller
 
-**Purpose:** Watches `RegistryCacheConfig` CRs on SKR clusters and synchronizes their content into the `spec.imageRegistryCache` field of the corresponding `Runtime` CR on KCP.
+**Purpose:** Watches `RegistryCacheConfig` CRs on Kyma clusters and synchronizes their content into the `spec.imageRegistryCache` field of the corresponding `Runtime` CR on KCP.
 
 **Trigger:** Time-based requeue (periodic polling); in a future phase also triggered by the Runtime Watcher.
 

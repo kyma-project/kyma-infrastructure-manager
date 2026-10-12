@@ -123,7 +123,7 @@ GardenerCluster CR    GardenerCluster Controller     Gardener API     KCP Secret
 ## Scenario 5: Registry Cache Configuration
 
 ```
-SKR User    SKR Cluster    Registry Cache Config Controller    Runtime Controller    Gardener API
+Kyma User   Kyma Cluster   Registry Cache Config Controller    Runtime Controller    Gardener API
     │             │                    │                              │                   │
     │ create      │                    │                              │                   │
     │ RegistryCache│                   │                              │                   │

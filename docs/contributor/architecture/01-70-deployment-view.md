@@ -38,7 +38,7 @@ Kyma Infrastructure Manager (KIM) operates across three distinct Kubernetes clus
                               │                                          │
                               ▼                                          ▼
 ┌─────────────────────────────────────────┐   ┌────────────────────────────────────┐
-│  Gardener (Garden) Cluster              │   │  SKR Clusters (one per Runtime)    │
+│  Gardener (Garden) Cluster              │   │  Kyma Clusters (one per Runtime)   │
 │  Namespace: <gardener-project>          │   │                                    │
 │                                         │   │  KIM creates / reads:              │
 │  KIM creates / reads:                   │   │  - kyma-system namespace           │
@@ -52,7 +52,7 @@ Kyma Infrastructure Manager (KIM) operates across three distinct Kubernetes clus
 └─────────────────────────────────────────┘   └────────────────────────────────────┘
 ```
 
-**Motivation:** The multi-cluster topology is dictated by the Gardener architecture. Gardener manages Shoot clusters from a dedicated Garden project namespace. KIM bridges the declarative `Runtime` custom resource (CR) on KCP with Gardener's imperative Shoot API and then reaches into the provisioned SKR for post-provisioning configuration.
+**Motivation:** The multi-cluster topology is dictated by the Gardener architecture. Gardener manages Shoot clusters from a dedicated Garden project namespace. KIM bridges the declarative `Runtime` custom resource (CR) on KCP with Gardener's imperative Shoot API and then reaches into the provisioned Kyma cluster for post-provisioning configuration.
 
 ## Infrastructure Level 2
 
@@ -72,6 +72,6 @@ Kyma Infrastructure Manager (KIM) operates across three distinct Kubernetes clus
 
 KIM connects using a kubeconfig mounted from a Secret. Requests are rate-limited to avoid overwhelming the Gardener API server during bulk operations. The `--gardener-ratelimiter-qps` and `--gardener-ratelimiter-burst` flags tune these limits.
 
-### SKR Clusters: Access Pattern
+### Kyma Clusters: Access Pattern
 
-KIM creates a short-lived Kubernetes client per reconciliation cycle using the admin kubeconfig obtained from Gardener. There is no persistent connection pool to SKR clusters; connections are created on demand and discarded after use.
+KIM creates a short-lived Kubernetes client per reconciliation cycle using the admin kubeconfig obtained from Gardener. There is no persistent connection pool to Kyma clusters; connections are created on demand and discarded after use.

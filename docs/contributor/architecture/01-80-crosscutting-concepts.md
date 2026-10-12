@@ -18,7 +18,7 @@ The core domain objects and their relationships:
          │ 1                                   │ 1
          ▼                                     ▼
 ┌───────────────────────┐          ┌─────────────────────────────┐
-│  Kubeconfig Secret    │          │  SKR Cluster                │
+│  Kubeconfig Secret    │          │  Kyma Cluster               │
 │  (KCP, kcp-system)    │          │  (provisioned by Gardener)  │
 └───────────────────────┘          │                             │
                                    │  RegistryCacheConfig CRs    │
@@ -90,8 +90,8 @@ KIM uses two complementary status mechanisms on the `Runtime` CR:
 |---------------------------------|---------------------------------------------------------|
 | `Provisioned`                   | Gardener Shoot is created and reconciled                |
 | `KubeconfigReady`               | Kubeconfig Secret is present in `kcp-system`            |
-| `OidcAndConfigMapConfigured`    | OIDC and ConfigMaps are applied on SKR                  |
-| `KymaSystemNSCreated`           | `kyma-system` namespace exists on SKR                   |
+| `OidcAndConfigMapConfigured`    | OIDC and ConfigMaps are applied on the Kyma cluster             |
+| `KymaSystemNSCreated`           | `kyma-system` namespace exists on the Kyma cluster              |
 | `Configured`                    | All post-provisioning configuration steps succeeded     |
 | `Deprovisioned`                 | Shoot has been deleted                                  |
 | `RegistryCacheConfigured`       | Registry cache extension is active                      |
@@ -103,7 +103,7 @@ KIM uses two complementary status mechanisms on the `Runtime` CR:
 
 **Namespace isolation:** The controller manager is restricted to `kcp-system`. `Runtime` CRs created outside this namespace are ignored.
 
-**Credential handling:** The Runtime Controller reads registry credential Secrets from the SKR cluster and writes them to the Gardener project namespace. It never writes them to KCP. When you remove the registry cache configuration, KIM cleans up the credentials.
+**Credential handling:** The Runtime Controller reads registry credential Secrets from the Kyma cluster and writes them to the Gardener project namespace. It never writes them to KCP. When you remove the registry cache configuration, KIM cleans up the credentials.
 
 **Network filtering:** The `spec.security.networking.filter` field on the `Runtime` CR controls Gardener's `shoot-networking-filter` extension. Egress filtering is the default mode. Ingress blackholing is opt-in.
 
