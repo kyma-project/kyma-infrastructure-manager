@@ -6,7 +6,7 @@ about: Decision record
 
 Created on 2026-04-22 by Tobias Schuhmacher (@tobiscr).
 
-## Decision log
+## Decision Log
 
 | Name | Description |
 |-----------------------|------------------------------------------------------------------------------------|
@@ -18,17 +18,17 @@ Created on 2026-04-22 by Tobias Schuhmacher (@tobiscr).
 
 ## Context
 
-Kyma landscapes have been accidentally deleted in the past. Incidents were limited to the DEV landscape, but the same failure modes could affect customer-critical STAGE and PROD landscapes. Two distinct root causes have been observed:
+Kyma landscapes have been accidentally deleted in the past. Incidents were limited to the DEV landscape, but the same failure modes could affect customer-critical STAGE and PROD landscapes. The following distinct root causes have been observed:
 
-**Human error:** SRE or on-call engineers execute an incorrect `kubectl delete` command, or a broad `kubectl delete` targeting the wrong resource type or namespace removes Runtime CRs as collateral damage.
+- **Human error:** SRE or on-call engineers execute an incorrect `kubectl delete` command, or a broad `kubectl delete` targeting the wrong resource type or namespace removes Runtime CRs as collateral damage.
 
-**Software failure:** A cleanup or maintenance job contains a bug that removes all Runtime CRs in a landscape, or a job intended only for DEV is mistakenly deployed to STAGE or PROD and deletes all clusters there. An additional trigger is a CRD schema change that causes Kubernetes to cascade-delete existing custom resources (CRs).
+- **Software failure:** A cleanup or maintenance job contains a bug that removes all Runtime CRs in a landscape, or a job intended only for DEV is mistakenly deployed to STAGE or PROD and deletes all clusters there. An additional trigger is a CRD schema change that causes Kubernetes to cascade-delete existing custom resources (CRs).
 
 In both cases the deletion reaches Kubernetes before any human or automated check can intervene, and KIM immediately begins deprovisioning the Gardener Shoot clusters. By the time the mistake is noticed, cluster deletion may already be irreversible.
 
 ### Requirements for a Protection Mechanism
 
-1. **Two-step confirmation:** At least one explicit preparatory action (separate from the `kubectl delete` call itself) must be completed before a `Runtime` CR deletion is accepted. This prevents a single erroneous command from triggering deprovisioning.
+1. **Two-step confirmation:** At least one explicit preparatory action (separate from the `kubectl delete` call itself) must be completed before a Runtime CR deletion is accepted. This prevents a single erroneous command from triggering deprovisioning.
 2. **Rejection at the API level:** The Kubernetes API server must refuse the deletion request before it reaches KIM. A controller-side finalizer alone is insufficient because a misconfigured or compromised controller could still process the deletion.
 3. **Auditability:** Every rejection and every accepted deletion must produce an audit trail entry so incidents can be reconstructed.
 4. **Minimal operational burden:** The confirmation step must be simple enough for a human to perform correctly under time pressure, and KEB must be able to automate it for programmatic deletions.
@@ -44,7 +44,7 @@ The Runtime Controller already manages a finalizer (`runtime-controller.infrastr
 - Uses an established Kubernetes pattern.
 
 **Cons:**
-- A CR in `Terminating` state still triggers reconciliation; the Runtime Controller must be changed to distinguish between "intentional deletion that has been confirmed" and "accidental deletion that must be blocked".
+- A CR in `Terminating` state still triggers reconciliation; Runtime Controller must be changed to distinguish between intentional deletion that has been confirmed and accidental deletion that must be blocked.
 - Does not satisfy requirement 2: the deletion event reaches KIM before it can be blocked. A bug or misconfiguration in KIM could still process the deletion.
 - Does not satisfy requirement 1 cleanly: the only gate is removing the second finalizer, which is a single action.
 
@@ -68,7 +68,7 @@ The webhook is the enforcement point; it runs in a separate process (or as a sub
 - Automatable: KEB can perform both steps programmatically with no user interaction.
 
 **Cons:**
-- Adds an operational dependency: if the webhook pod is unavailable and the `failurePolicy` is `Fail`, all Runtime deletions (including legitimate ones) are blocked. If `failurePolicy` is `Ignore`, the protection is bypassed during outages.
+- Adds an operational dependency: if the webhook Pod is unavailable and the `failurePolicy` is `Fail`, all Runtime deletions (including legitimate ones) are blocked. If `failurePolicy` is `Ignore`, the protection is bypassed during outages.
 - Requires a TLS-secured HTTPS server, a `ValidatingWebhookConfiguration` resource, and a CA bundle rotation mechanism.
 - The solution requires careful RBAC design. A service account that can both annotate and delete a Runtime CR would reduce the two-step protocol to a single automated step.
 - The caller and the webhook server must have sufficiently synchronized clocks. A clock skew larger than the acceptance window would either block valid deletions or extend the window unintentionally. Mitigation: rely on NTP synchronization, which is standard for Kubernetes nodes.
@@ -96,15 +96,15 @@ The webhook intercepts `DELETE` operations on `Runtime` objects (group `infrastr
 operator.kyma-project.io/deletion-confirmed: "<RFC 3339 UTC timestamp>"
 ```
 
-The annotation value must be a valid RFC 3339 UTC timestamp that:
-1. Is **not in the future** (prevents pre-staging of the confirmation).
-2. Falls **within the acceptance window** counted from the annotation timestamp to the moment the DELETE request arrives at the webhook (default: 2 minutes, configurable via a KIM manager flag).
+The annotation value must be a valid RFC 3339 UTC timestamp that meets both of the following conditions:
+1. It's **not in the future** (prevents pre-staging of the confirmation).
+2. It falls **within the acceptance window** counted from the annotation timestamp to the moment the DELETE request arrives at the webhook (default: 2 minutes, configurable via a KIM flag).
 
-If either condition is not met the webhook rejects the request with HTTP 403 and a message stating the reason (missing annotation, future timestamp, or expired window). The caller must re-annotate with the current time and retry.
+If either condition is not met, the webhook rejects the request with HTTP 403 and a message stating the reason (missing annotation, future timestamp, or expired window). The caller must re-annotate with the current time and retry.
 
 This design inherently resolves the annotation-persistence-after-retry problem: an annotation set at time T is only valid until T + window. A transient rejection (for example, a webhook timeout) does not leave a permanently valid annotation; once the window elapses the annotation is stale and a fresh annotation is required.
 
-### Implementation sketch
+### Implementation Sketch
 
 **Webhook handler** (`internal/webhook/runtime_deletion_webhook.go`):
 
@@ -208,7 +208,7 @@ webhooks:
 
 The `deletion-confirmed` annotation must not be freely settable by any service account that also holds the `delete` verb on `runtimes`. Otherwise, a single compromised or buggy service account could annotate and delete in one automated flow, reducing the two-step protocol to a single step.
 
-- **KEB's service account** holds `patch`/`update` on `runtimes` (to apply the annotation) **and** `delete` permission. This is unavoidable for programmatic deletions. **Known limitation:** for the KEB path KEB enforces the two-step requirement procedurally (annotation must precede delete in KEB's workflow), not technically. The timestamp window mitigates the risk of annotation pre-staging (an annotation set long in advance will have expired by the time the delete is issued) but a bug or compromise in KEB that sets the annotation and immediately deletes within the window would bypass the intent of the two-step protocol. This limitation is accepted for the KEB path; future work may introduce a separate, annotation-only service account for KEB distinct from its delete credential.
+- **KEB's service account** holds `patch`/`update` on `runtimes` (to apply the annotation) **and** `delete` permission. This is unavoidable for programmatic deletions. **Known limitation:** for the KEB path, KEB enforces the two-step requirement procedurally (annotation must precede delete in KEB's workflow), not technically. The timestamp window mitigates the risk of annotation pre-staging (an annotation set long in advance will have expired by the time the delete is issued), but a bug or compromise in KEB that sets the annotation and immediately deletes within the window would bypass the intent of the two-step protocol. This limitation is accepted for the KEB path; future work may introduce a separate, annotation-only service account for KEB distinct from its delete credential.
 
 ## Consequences
 

@@ -1,8 +1,6 @@
-Deployment View
-===============
+# Deployment View
 
-Infrastructure Level 1
------------------------
+## Infrastructure Level 1
 
 Kyma Infrastructure Manager (KIM) operates across three distinct Kubernetes clusters simultaneously.
 
@@ -56,8 +54,7 @@ Kyma Infrastructure Manager (KIM) operates across three distinct Kubernetes clus
 
 **Motivation:** The multi-cluster topology is dictated by the Gardener architecture. Gardener manages Shoot clusters from a dedicated Garden project namespace. KIM bridges the declarative `Runtime` custom resource (CR) on KCP with Gardener's imperative Shoot API and then reaches into the provisioned SKR for post-provisioning configuration.
 
-Infrastructure Level 2
------------------------
+## Infrastructure Level 2
 
 ### KCP Cluster: Container Configuration
 

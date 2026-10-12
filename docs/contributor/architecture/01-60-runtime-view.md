@@ -1,10 +1,8 @@
-Runtime View
-============
+# Runtime View
 
 This section describes the most architecturally significant runtime scenarios.
 
-Scenario 1: Initial Cluster Provisioning
------------------------------------------
+## Scenario 1: Initial Cluster Provisioning
 
 Triggered when KEB creates a new `Runtime` custom resource (CR) in the `kcp-system` namespace.
 
@@ -50,8 +48,7 @@ Notable aspects:
 - The `sFnPatchShoot` step merges KIM-managed fields onto the Shoot without overwriting fields managed by Gardener.
 - Optional steps (registry cache, runtime bootstrapper) are only entered when the corresponding feature flags are enabled and the Runtime CR contains the relevant configuration.
 
-Scenario 2: Cluster Update (Shoot Patch)
------------------------------------------
+## Scenario 2: Cluster Update (Shoot Patch)
 
 Triggered when KEB updates an existing `Runtime` CR (e.g., new Kubernetes version, changed OIDC config).
 
@@ -76,8 +73,7 @@ KEB                KCP API Server        Runtime Controller (FSM)        Gardene
  │                       │◄────────────────────────│                          │
 ```
 
-Scenario 3: Cluster Deletion
-------------------------------
+## Scenario 3: Cluster Deletion
 
 Triggered when KEB sets a `deletionTimestamp` on the `Runtime` CR.
 
@@ -105,8 +101,7 @@ KEB                KCP API Server        Runtime Controller (FSM)        Gardene
  │                       │◄────────────────────────│                          │
 ```
 
-Scenario 4: Kubeconfig Rotation
---------------------------------
+## Scenario 4: Kubeconfig Rotation
 
 Handled independently by the GardenerCluster Controller.
 
@@ -125,8 +120,7 @@ GardenerCluster CR    GardenerCluster Controller     Gardener API     KCP Secret
         │                       │ update GardenerCluster status              │
 ```
 
-Scenario 5: Registry Cache Configuration
------------------------------------------
+## Scenario 5: Registry Cache Configuration
 
 ```
 SKR User    SKR Cluster    Registry Cache Config Controller    Runtime Controller    Gardener API

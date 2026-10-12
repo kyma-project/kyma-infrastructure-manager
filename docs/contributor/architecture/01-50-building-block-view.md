@@ -1,8 +1,6 @@
-Building Block View
-===================
+# Building Block View
 
-Whitebox Overall System
------------------------
+## Whitebox Overall System
 
 Kyma Infrastructure Manager (KIM) is a single binary composed of several controllers that share a common controller manager. Each controller is responsible for one concern of the cluster lifecycle.
 
@@ -41,8 +39,7 @@ Kyma Infrastructure Manager (KIM) is a single binary composed of several control
 | `internal/rtbootstrapper`         | Installs, upgrades, and validates runtime bootstrapper manifests on SKR                               |
 | `internal/controller/metrics`     | Prometheus metrics for runtime states and provisioning outcomes                                       |
 
-Level 2: Runtime Controller
------------------------------
+## Level 2: Runtime Controller
 
 The Runtime Controller is the most complex building block. It delegates all work to a Finite State Machine.
 
@@ -114,8 +111,7 @@ For requeue delay values, see [Cross-Cutting Concepts](./01-80-crosscutting-conc
 | `sFnUpdateStatus`                      | `runtime_fsm_update_status.go`                  | Persists status changes to the Runtime CR                                                |
 | `sFnEmitEvent`                         | `runtime_fsm_emit_event.go`                     | Records a Kubernetes Event on the Runtime CR                                             |
 
-Level 2: GardenerCluster Controller
---------------------------------------
+## Level 2: GardenerCluster Controller
 
 ### Whitebox GardenerCluster Controller
 
@@ -125,8 +121,7 @@ Level 2: GardenerCluster Controller
 
 **Directory:** `internal/controller/kubeconfig/`
 
-Level 2: Registry Cache Config Controller
--------------------------------------------
+## Level 2: Registry Cache Config Controller
 
 ### Whitebox Registry Cache Config Controller
 

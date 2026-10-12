@@ -1,5 +1,4 @@
-Solution Strategy
-=================
+# Solution Strategy
 
 The table below summarises the most important architectural decisions and the reasoning behind them.
 

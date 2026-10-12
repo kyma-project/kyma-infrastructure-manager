@@ -1,8 +1,6 @@
-System Scope and Context
-========================
+# System Scope and Context
 
-Business Context
-----------------
+## Business Context
 
 Kyma Infrastructure Manager (KIM) sits between the Kyma Environment Broker (KEB) and the Gardener infrastructure provisioning system. The diagram below shows the system boundary and all external communication partners.
 
@@ -41,8 +39,7 @@ Kyma Infrastructure Manager (KIM) sits between the Kyma Environment Broker (KEB)
 | SKR Cluster                  | `RegistryCacheConfig` CR, bootstrap deployment status          | `kyma-system` namespace, ClusterRoleBindings, OIDC ConfigMaps, kubeconfig Secret, bootstrapper manifests |
 | Runtime Watcher              | Change notifications for SKR resources                         | (none; used as a trigger to re-reconcile the Runtime CR)                 |
 
-Technical Context
------------------
+## Technical Context
 
 KIM communicates with three distinct Kubernetes API servers using different client configurations:
 

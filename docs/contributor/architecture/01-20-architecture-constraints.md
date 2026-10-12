@@ -1,8 +1,6 @@
-Architecture Constraints
-========================
+# Architecture Constraints
 
-Technical Constraints
----------------------
+## Technical Constraints
 
 | Constraint                                  | Explanation                                                                                                                                                              |
 |---------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -13,8 +11,7 @@ Technical Constraints
 | Namespace isolation on KCP                  | The controller manager is restricted to the `kcp-system` namespace; `Runtime` and `GardenerCluster` CRs may only be created there.                                       |
 | Supported cloud providers                   | Only `aws`, `azure`, `gcp`, `openstack`, and `alicloud` are valid values for `spec.shoot.provider.type`. Provider-specific Gardener extensions are pre-loaded at startup. |
 
-Organizational Constraints
---------------------------
+## Organizational Constraints
 
 | Constraint                                   | Explanation                                                                                                                                                 |
 |----------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -23,8 +20,7 @@ Organizational Constraints
 | Audit log mandatory by default               | The `--audit-log-mandatory` flag defaults to `true`; clusters for which no audit log configuration exists must fail provisioning rather than proceed silently. |
 | Feature flags required for new capabilities  | New capabilities (registry cache, runtime bootstrapper, API server ACL) are hidden behind feature flags and disabled by default.                             |
 
-Conventions
------------
+## Conventions
 
 | Convention                          | Explanation                                                                                                                |
 |-------------------------------------|----------------------------------------------------------------------------------------------------------------------------|

@@ -1,8 +1,6 @@
-Cross-Cutting Concepts
-======================
+# Cross-Cutting Concepts
 
-Domain Model
-------------
+## Domain Model
 
 The core domain objects and their relationships:
 
@@ -37,8 +35,7 @@ The core domain objects and their relationships:
 
 **GardenerCluster** is a legacy CR retained for kubeconfig rotation. New provisioning functionality uses the `Runtime` CR exclusively.
 
-Reconciliation Pattern
-----------------------
+## Reconciliation Pattern
 
 All controllers follow the Kubernetes reconciliation pattern:
 
@@ -49,8 +46,7 @@ All controllers follow the Kubernetes reconciliation pattern:
 
 All reconciliation operations must be **idempotent**: running the same reconcile loop multiple times must produce the same result and must not cause unintended side effects.
 
-Finite State Machine Pattern
------------------------------
+## Finite State Machine Pattern
 
 The Runtime Controller uses a Finite State Machine to manage the complex, multi-step provisioning workflow:
 
@@ -75,8 +71,7 @@ type stateFn func(ctx context.Context, r *fsm, s *systemState) (stateFn, *ctrl.R
 | `requeueAfterControlPlane`    | 10s   | Waiting for control plane readiness    |
 | `requeueAfterGardener`        | 15s   | General Gardener operation retry       |
 
-Status and Conditions
-----------------------
+## Status and Conditions
 
 KIM uses two complementary status mechanisms on the `Runtime` CR:
 
@@ -102,8 +97,7 @@ KIM uses two complementary status mechanisms on the `Runtime` CR:
 | `RegistryCacheConfigured`       | Registry cache extension is active                      |
 | `RuntimeBootstrapperReady`      | Runtime bootstrapper is installed and healthy           |
 
-Security Concepts
------------------
+## Security Concepts
 
 **Kubeconfig rotation:** Kubeconfigs are time-limited. The GardenerCluster Controller rotates them before they expire, using the formula: rotate when `age > minimal-rotation-time * expiration-time`. Both parameters are configurable. Default values (0.6 ratio, 24h expiry) ensure rotation begins at ~14.4 hours after issuance.
 
@@ -117,8 +111,7 @@ Security Concepts
 
 **Audit logging:** Audit log configuration is mandatory by default (`--audit-log-mandatory=true`). KIM maps the Runtime's tenant ID (derived from labels) to an audit log backend defined in the converter configuration. Provisioning fails if no mapping is found.
 
-Observability
--------------
+## Observability
 
 KIM uses three complementary observability mechanisms:
 
@@ -135,8 +128,7 @@ KIM uses three complementary observability mechanisms:
 - `sFnEmitEvent` records a `corev1.Event` on the `Runtime` CR at each significant state transition
 - Events are visible via `kubectl describe runtime <name>`
 
-Configuration Management
-------------------------
+## Configuration Management
 
 KIM's behaviour is controlled by two orthogonal configuration mechanisms:
 

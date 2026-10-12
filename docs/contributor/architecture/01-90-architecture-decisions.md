@@ -1,5 +1,4 @@
-Architecture Decisions
-======================
+# Architecture Decisions
 
 The following architecture decision records (ADRs) document the most significant design choices made during Kyma Infrastructure Manager's (KIM's) development. Full ADR texts are located in `docs/adr/`.
 
