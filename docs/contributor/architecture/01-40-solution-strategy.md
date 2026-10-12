@@ -1,6 +1,6 @@
 # Solution Strategy
 
-The table below summarises the most important architectural decisions and the reasoning behind them.
+The following table summarises the most important architectural decisions and the reasoning behind them.
 
 | Decision                                  | Choice Made                                              | Rationale                                                                                                                                                                                         |
 |-------------------------------------------|----------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

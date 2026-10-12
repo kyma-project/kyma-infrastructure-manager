@@ -48,7 +48,7 @@ All reconciliation operations must be **idempotent**: running the same reconcile
 
 ## Finite State Machine Pattern
 
-The Runtime Controller uses a Finite State Machine to manage the complex, multi-step provisioning workflow:
+Runtime Controller uses a Finite State Machine to manage the complex, multi-step provisioning workflow:
 
 ```go
 // Each state is a function with this signature
@@ -95,7 +95,7 @@ KIM uses two complementary status mechanisms on the `Runtime` CR:
 | `Configured`                    | All post-provisioning configuration steps succeeded     |
 | `Deprovisioned`                 | Shoot has been deleted                                  |
 | `RegistryCacheConfigured`       | Registry cache extension is active                      |
-| `RuntimeBootstrapperReady`      | Runtime bootstrapper is installed and healthy           |
+| `RuntimeBootstrapperReady`      | Runtime Bootstrapper is installed and healthy           |
 
 ## Security Concepts
 
@@ -121,17 +121,17 @@ KIM uses three complementary observability mechanisms:
 
 **Structured logging** (via `logr` / `slog` backend):
 - All log entries include `runtime` (name/namespace) and `state` fields
-- Log level is configurable at runtime via `--log-level`
+- Log level is configurable at runtime using `--log-level`
 - The Config Reload Watcher can change the log level without restarting KIM
 
 **Kubernetes Events:**
 - `sFnEmitEvent` records a `corev1.Event` on the `Runtime` CR at each significant state transition
-- Events are visible via `kubectl describe runtime <name>`
+- Events are visible using `kubectl describe runtime <name>`
 
 ## Configuration Management
 
 KIM's behaviour is controlled by two orthogonal configuration mechanisms:
 
-**CLI flags** (startup-time, process-scoped): Feature flags, rate limits, timeout values. Changing these requires a pod restart. For the full list of flags, see [Context and Scope](./01-30-context-and-scope.md).
+**CLI flags** (startup-time, process-scoped): Feature flags, rate limits, timeout values. Changing these requires a Pod restart. For the full list of flags, see [Context and Scope](./01-30-context-and-scope.md).
 
-**Converter configuration file** (runtime-reloadable, file-backed): Provider defaults for Kubernetes versions, machine images, networking ranges, and audit log tenant mappings. Stored in a ConfigMap mounted into the pod. The Config Reload Watcher detects file changes and reloads the configuration in-process without a restart.
+**Converter configuration file** (runtime-reloadable, file-backed): Provider defaults for Kubernetes versions, machine images, networking ranges, and audit log tenant mappings. Stored in a ConfigMap mounted into the Pod. The Config Reload Watcher detects file changes and reloads the configuration in-process without a restart.

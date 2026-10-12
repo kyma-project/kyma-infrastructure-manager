@@ -35,13 +35,13 @@ Kyma Infrastructure Manager (KIM) is a single binary composed of several control
 | Config Reload Watcher             | Watches the converter config file on disk and reloads KIM configuration without restart               |
 | `pkg/gardener`                    | Gardener client construction, Shoot helpers, kubeconfig generation, error handling                    |
 | `pkg/config`                      | Converter configuration: provider defaults, machine images, audit log mappings, Kubernetes versions   |
-| `internal/registrycache`          | Helpers for syncing registry credential secrets and updating registry cache status                    |
+| `internal/registrycache`          | Helpers for syncing registry credential secrets and updating Registry Cache status                    |
 | `internal/rtbootstrapper`         | Installs, upgrades, and validates runtime bootstrapper manifests on SKR                               |
 | `internal/controller/metrics`     | Prometheus metrics for runtime states and provisioning outcomes                                       |
 
 ## Level 2: Runtime Controller
 
-The Runtime Controller is the most complex building block. It delegates all work to a Finite State Machine.
+Runtime Controller is the most complex building block. It delegates all work to a Finite State Machine.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐

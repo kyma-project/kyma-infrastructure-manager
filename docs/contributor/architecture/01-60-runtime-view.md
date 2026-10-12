@@ -43,14 +43,14 @@ KEB                KCP API Server        Runtime Controller (FSM)        Gardene
  │◄──────────────────────│                         │                          │
 ```
 
-Notable aspects:
+This scenario has the following notable aspects:
 - The FSM loop runs synchronously within a single `Reconcile()` call where possible; steps that require waiting on Gardener return a `ctrl.Result{RequeueAfter: ...}` so the controller releases the worker thread.
 - The `sFnPatchShoot` step merges KIM-managed fields onto the Shoot without overwriting fields managed by Gardener.
 - Optional steps (registry cache, runtime bootstrapper) are only entered when the corresponding feature flags are enabled and the Runtime CR contains the relevant configuration.
 
 ## Scenario 2: Cluster Update (Shoot Patch)
 
-Triggered when KEB updates an existing `Runtime` CR (e.g., new Kubernetes version, changed OIDC config).
+Triggered when KEB updates an existing `Runtime` CR (for example, new Kubernetes version, changed OIDC config).
 
 ```
 KEB                KCP API Server        Runtime Controller (FSM)        Gardener API
