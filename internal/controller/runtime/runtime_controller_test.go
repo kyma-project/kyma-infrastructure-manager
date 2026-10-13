@@ -253,6 +253,88 @@ var _ = Describe("Runtime Controller", func() {
 			Expect(runtime.Status.ShootLastOperation).To(Not(BeNil()))
 			Expect(customTracker.IsSequenceFullyUsed()).To(BeTrue())
 		})
+
+		It("Should provision Runtime with dedicated audit logging and copy read credentials to SKR", func() {
+			const DedicatedAuditLogResourceName = "test-resource-dedicated-auditlog"
+			setupGardenerTestClientForDedicatedAuditLogProvisioning()
+
+			dedicatedTypeNamespacedName := types.NamespacedName{
+				Name:      DedicatedAuditLogResourceName,
+				Namespace: "default",
+			}
+
+			By("Create Runtime CR with AuditLogAccessEnabled")
+			runtimeStub := CreateRuntimeStubWithDedicatedAuditLog(DedicatedAuditLogResourceName)
+			Expect(k8sClient.Create(ctx, runtimeStub)).To(Succeed())
+
+			By("Wait for Runtime to have finalizer")
+			Eventually(func() bool {
+				runtime := imv1.Runtime{}
+				if err := k8sClient.Get(ctx, dedicatedTypeNamespacedName, &runtime); err != nil {
+					return false
+				}
+				return controllerutil.ContainsFinalizer(&runtime, imv1.Finalizer)
+			}, time.Second*60, time.Second*3).Should(BeTrue())
+
+			By("Wait for Runtime to process shoot creation and reach Pending state")
+			Eventually(func() bool {
+				runtime := imv1.Runtime{}
+				if err := k8sClient.Get(ctx, dedicatedTypeNamespacedName, &runtime); err != nil {
+					return false
+				}
+				return runtime.Status.State == imv1.RuntimeStatePending &&
+					runtime.IsConditionSetWithStatus(imv1.ConditionTypeRuntimeProvisioned, imv1.ConditionReasonShootCreationPending, "Unknown")
+			}, time.Second*60, time.Second*3).Should(BeTrue())
+
+			By("Wait for Runtime to reach Ready state with dedicated audit log conditions")
+			Eventually(func() bool {
+				runtime := imv1.Runtime{}
+				if err := k8sClient.Get(ctx, dedicatedTypeNamespacedName, &runtime); err != nil {
+					return false
+				}
+
+				gardenCluster := imv1.GardenerCluster{}
+				if err := k8sClient.Get(ctx, types.NamespacedName{Name: runtime.Labels[imv1.LabelKymaRuntimeID], Namespace: runtime.Namespace}, &gardenCluster); err != nil {
+					return false
+				}
+
+				// The second controller normally should do that
+				if gardenCluster.Status.State != imv1.ReadyState {
+					gardenCluster.Status.State = imv1.ReadyState
+					_ = k8sClient.Status().Update(ctx, &gardenCluster)
+					return false
+				}
+
+				// Check runtime state is Ready
+				if runtime.Status.State != imv1.RuntimeStateReady {
+					return false
+				}
+
+				// Check provisioning is completed
+				if !runtime.IsProvisioningCompletedStatusSet() {
+					return false
+				}
+
+				// Check audit log credentials copied condition
+				if !runtime.IsConditionSet(imv1.ConditionTypeAuditLogCredentialsCopied, imv1.ConditionReasonCredentialsCopied) {
+					return false
+				}
+
+				return true
+			}, time.Minute*2, time.Second*3).Should(BeTrue())
+
+			By("Clean up Runtime CR")
+			setupGardenerTestClientForDelete()
+			runtime := imv1.Runtime{}
+			Expect(k8sClient.Get(ctx, dedicatedTypeNamespacedName, &runtime)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, &runtime)).To(Succeed())
+
+			// Wait for deletion
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, dedicatedTypeNamespacedName, &imv1.Runtime{})
+				return k8serrors.IsNotFound(err)
+			}, time.Second*60, time.Second*3).Should(BeTrue())
+		})
 	})
 })
 
@@ -313,4 +395,11 @@ func CreateRuntimeStub(resourceName string) *imv1.Runtime {
 		},
 	}
 	return resource
+}
+
+func CreateRuntimeStubWithDedicatedAuditLog(resourceName string) *imv1.Runtime {
+	runtime := CreateRuntimeStub(resourceName)
+	runtime.Labels[imv1.LabelKymaRuntimeID] = "dedicated-auditlog-runtime-id"
+	runtime.Spec.AuditLogAccessEnabled = ptr.To(true)
+	return runtime
 }
