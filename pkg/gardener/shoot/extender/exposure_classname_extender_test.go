@@ -1,11 +1,11 @@
 package extender
 
 import (
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"testing"
 
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

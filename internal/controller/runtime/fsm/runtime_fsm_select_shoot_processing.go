@@ -7,10 +7,10 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/go-logr/logr"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/log_level"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
-	reconciler "github.com/kyma-project/infrastructure-manager/pkg/reconciler"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/internal/log_level"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/extender"
+	reconciler "github.com/kyma-project/kyma-infrastructure-manager/pkg/reconciler"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 

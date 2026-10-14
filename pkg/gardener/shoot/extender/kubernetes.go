@@ -3,7 +3,7 @@ package extender
 import (
 	"github.com/Masterminds/semver/v3"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
 )
 
 // NewKubernetesExtender creates a new Kubernetes extender function.

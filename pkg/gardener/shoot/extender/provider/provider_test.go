@@ -5,8 +5,8 @@ import (
 	"time"
 
 	awsinfra "github.com/gardener/gardener-extension-provider-aws/pkg/apis/aws/v1alpha1"
-	"github.com/kyma-project/infrastructure-manager/pkg/config"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/config"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -14,8 +14,8 @@ import (
 	"sigs.k8s.io/yaml"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/auditlog"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"

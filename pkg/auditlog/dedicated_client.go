@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	auditlogv1 "github.com/kyma-project/infrastructure-manager/pkg/auditlog/v1beta1"
+	auditlogv1 "github.com/kyma-project/kyma-infrastructure-manager/pkg/auditlog/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

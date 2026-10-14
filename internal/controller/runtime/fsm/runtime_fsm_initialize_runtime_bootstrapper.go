@@ -2,9 +2,9 @@ package fsm
 
 import (
 	"context"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/log_level"
-	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/internal/log_level"
+	"github.com/kyma-project/kyma-infrastructure-manager/internal/rtbootstrapper"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"time"

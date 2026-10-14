@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

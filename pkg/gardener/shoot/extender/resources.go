@@ -2,8 +2,8 @@ package extender
 
 import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	v1 "k8s.io/api/autoscaling/v1"
 	"slices"
 	"strings"

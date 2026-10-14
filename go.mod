@@ -1,4 +1,4 @@
-module github.com/kyma-project/infrastructure-manager
+module github.com/kyma-project/kyma-infrastructure-manager
 
 go 1.27.2
 

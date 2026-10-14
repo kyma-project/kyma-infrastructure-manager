@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

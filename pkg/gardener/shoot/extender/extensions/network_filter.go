@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apimachineryRuntime "k8s.io/apimachinery/pkg/runtime"
 )

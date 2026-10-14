@@ -6,19 +6,19 @@ import (
 	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
 	"reflect"
 
-	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/auditlog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/log_level"
-	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
-	gardener_shoot "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/token"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/structuredauth"
-	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/internal/log_level"
+	"github.com/kyma-project/kyma-infrastructure-manager/internal/registrycache"
+	gardener_shoot "github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/extender"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/extender/token"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/structuredauth"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/reconciler"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -99,7 +99,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 	// The additional Update function is required to fully replace collections with the ones defined in updated runtime object.
 	// This is a workaround for the sigs.k8s.io/controller-runtime/pkg/client, which does not support replacing collections with client.Patch.
 	// The client is able to add an item to the collection, but not to remove it.
-	// More info: https://github.com/kyma-project/infrastructure-manager/issues/640
+	// More info: https://github.com/kyma-project/kyma-infrastructure-manager/issues/640
 
 	if workersShouldBeUpdated || hasRegistryCacheCountChanged {
 		copyShoot := s.shoot.DeepCopy()

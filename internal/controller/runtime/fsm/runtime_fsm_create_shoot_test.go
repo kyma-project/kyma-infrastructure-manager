@@ -4,10 +4,10 @@ import (
 	"context"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
-	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
-	auditlogmocks "github.com/kyma-project/infrastructure-manager/pkg/auditlog/mocks"
-	"github.com/kyma-project/infrastructure-manager/pkg/config"
+	fsm_testing "github.com/kyma-project/kyma-infrastructure-manager/internal/controller/runtime/fsm/testing"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/auditlog"
+	auditlogmocks "github.com/kyma-project/kyma-infrastructure-manager/pkg/auditlog/mocks"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/config"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
 	"github.com/stretchr/testify/mock"

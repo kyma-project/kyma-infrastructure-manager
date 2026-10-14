@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	auditlogv1 "github.com/kyma-project/infrastructure-manager/pkg/auditlog/v1beta1"
+	auditlogv1 "github.com/kyma-project/kyma-infrastructure-manager/pkg/auditlog/v1beta1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"

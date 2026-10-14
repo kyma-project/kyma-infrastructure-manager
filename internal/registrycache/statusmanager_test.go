@@ -6,7 +6,7 @@ import (
 	util "k8s.io/apimachinery/pkg/util/runtime"
 	"testing"
 
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
 	registrycache "github.com/kyma-project/registry-cache/api/v1beta1"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime"

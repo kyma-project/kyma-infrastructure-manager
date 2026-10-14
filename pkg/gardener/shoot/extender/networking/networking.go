@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	hyperscaler2 "github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	hyperscaler2 "github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 

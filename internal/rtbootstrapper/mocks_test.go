@@ -7,7 +7,7 @@ package rtbootstrapper
 import (
 	"context"
 
-	"github.com/kyma-project/infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/api/v1"
 	mock "github.com/stretchr/testify/mock"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"

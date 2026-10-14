@@ -6,8 +6,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
+	"github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/internal/controller/runtime/fsm/mocks"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

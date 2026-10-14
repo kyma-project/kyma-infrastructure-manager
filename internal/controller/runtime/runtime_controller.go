@@ -18,13 +18,13 @@ package runtime
 
 import (
 	"context"
-	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
+	"github.com/kyma-project/kyma-infrastructure-manager/internal/rtbootstrapper"
 	"sync/atomic"
 
 	"github.com/go-logr/logr"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm"
-	"github.com/kyma-project/infrastructure-manager/internal/log_level"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/internal/controller/runtime/fsm"
+	"github.com/kyma-project/kyma-infrastructure-manager/internal/log_level"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
 	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	registrycache "github.com/kyma-project/registry-cache/api/v1beta1"
 	"github.com/stretchr/testify/assert"

@@ -22,9 +22,9 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
-	"github.com/kyma-project/infrastructure-manager/internal/log_level"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/internal/controller/metrics"
+	"github.com/kyma-project/kyma-infrastructure-manager/internal/log_level"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/kyma-project/infrastructure-manager/pkg/config"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

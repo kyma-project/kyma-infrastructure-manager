@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kyma-project/infrastructure-manager/test/e2e/utils"
+	"github.com/kyma-project/kyma-infrastructure-manager/test/e2e/utils"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

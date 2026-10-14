@@ -3,8 +3,8 @@ package fsm
 import (
 	"context"
 	"errors"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/internal/registrycache"
 	"testing"
 	"time"
 

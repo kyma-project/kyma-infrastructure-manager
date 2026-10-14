@@ -5,8 +5,8 @@ import (
 	"fmt"
 	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 )
 
 func HasRegistryCacheCountChanged(currentExtensions []gardener.Extension, desiredRegistryCacheConfig []imv1.ImageRegistryCache) (bool, error) {

@@ -6,7 +6,7 @@ import (
 	"os"
 
 	registrycacheext "github.com/gardener/gardener-extension-registry-cache/pkg/apis/registry/v1alpha3"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	registrycache "github.com/kyma-project/registry-cache/api/v1beta1"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -21,9 +21,9 @@ import (
 	"testing"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/pkg/config"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/config"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -6,7 +6,7 @@ package mocks
 import (
 	"context"
 
-	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/auditlog"
 	"github.com/stretchr/testify/mock"
 )
 

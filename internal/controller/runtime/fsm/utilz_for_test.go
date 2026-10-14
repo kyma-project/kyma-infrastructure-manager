@@ -6,13 +6,13 @@ import (
 	"time"
 
 	gardener_api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
-	metrics_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/metrics/mocks"
-	fsm_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
-	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
-	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
-	"github.com/kyma-project/infrastructure-manager/pkg/config"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/internal/controller/metrics"
+	metrics_mocks "github.com/kyma-project/kyma-infrastructure-manager/internal/controller/metrics/mocks"
+	fsm_mocks "github.com/kyma-project/kyma-infrastructure-manager/internal/controller/runtime/fsm/mocks"
+	fsm_testing "github.com/kyma-project/kyma-infrastructure-manager/internal/controller/runtime/fsm/testing"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/auditlog"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/config"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
 	"github.com/onsi/gomega/types"

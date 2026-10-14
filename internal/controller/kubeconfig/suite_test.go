@@ -22,9 +22,9 @@ import (
 	"testing"
 	"time"
 
-	infrastructuremanagerv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	kubeconfig_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/kubeconfig/mocks"
-	metrics "github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
+	infrastructuremanagerv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	kubeconfig_mocks "github.com/kyma-project/kyma-infrastructure-manager/internal/controller/kubeconfig/mocks"
+	metrics "github.com/kyma-project/kyma-infrastructure-manager/internal/controller/metrics"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
 	"github.com/pkg/errors"

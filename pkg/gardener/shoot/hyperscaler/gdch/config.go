@@ -3,7 +3,7 @@ package gdch
 import (
 	"encoding/json"
 
-	"github.com/kyma-project/infrastructure-manager/pkg/config"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/config"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

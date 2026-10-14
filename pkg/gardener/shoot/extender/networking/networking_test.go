@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/extender/testutils"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"

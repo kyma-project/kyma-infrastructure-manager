@@ -6,9 +6,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/log_level"
-	imgardenerhandler "github.com/kyma-project/infrastructure-manager/pkg/gardener"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/internal/log_level"
+	imgardenerhandler "github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 

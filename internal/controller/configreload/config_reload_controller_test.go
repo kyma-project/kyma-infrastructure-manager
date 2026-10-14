@@ -5,8 +5,8 @@ import (
 	"time"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/pkg/reconciler"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/reconciler"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"

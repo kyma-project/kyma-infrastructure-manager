@@ -2,7 +2,7 @@ package fsm
 
 import (
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/extender/maintenance"
 )
 
 func getMaintenanceTimeWindow(s *systemState, m *fsm) *gardener.MaintenanceTimeWindow {

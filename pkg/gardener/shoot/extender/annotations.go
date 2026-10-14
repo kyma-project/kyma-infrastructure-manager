@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
 )
 
 // Provisioner was setting the following annotations:

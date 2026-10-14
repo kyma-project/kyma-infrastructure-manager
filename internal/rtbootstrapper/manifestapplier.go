@@ -3,7 +3,7 @@ package rtbootstrapper
 import (
 	"context"
 	"fmt"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
 	"io"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	v1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
 )
 
 func Test_addGardenerCloudDelConfirmation(t *testing.T) {

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	fsm_mocks "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/mocks"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
+	fsm_mocks "github.com/kyma-project/kyma-infrastructure-manager/internal/controller/runtime/fsm/mocks"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"github.com/stretchr/testify/mock"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -15,9 +15,9 @@ import (
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	authenticationv1alpha1 "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	fsm_testing "github.com/kyma-project/infrastructure-manager/internal/controller/runtime/fsm/testing"
-	"github.com/kyma-project/infrastructure-manager/pkg/config"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	fsm_testing "github.com/kyma-project/kyma-infrastructure-manager/internal/controller/runtime/fsm/testing"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

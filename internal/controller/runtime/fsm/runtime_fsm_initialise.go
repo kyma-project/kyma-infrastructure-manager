@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/kyma-project/infrastructure-manager/internal/log_level"
-	"github.com/kyma-project/infrastructure-manager/internal/registrycache"
+	"github.com/kyma-project/kyma-infrastructure-manager/internal/log_level"
+	"github.com/kyma-project/kyma-infrastructure-manager/internal/registrycache"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/internal/controller/metrics"
 	"k8s.io/apimachinery/pkg/api/meta"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"

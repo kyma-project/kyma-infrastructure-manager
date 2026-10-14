@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/kyma-project/infrastructure-manager/pkg/auditlog"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/extensions"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/auditlog"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/extender/extensions"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

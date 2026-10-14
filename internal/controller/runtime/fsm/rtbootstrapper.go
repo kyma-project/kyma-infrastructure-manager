@@ -2,8 +2,8 @@ package fsm
 
 import (
 	"context"
-	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
-	"github.com/kyma-project/infrastructure-manager/internal/rtbootstrapper"
+	imv1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
+	"github.com/kyma-project/kyma-infrastructure-manager/internal/rtbootstrapper"
 )
 
 //mockery:generate: true

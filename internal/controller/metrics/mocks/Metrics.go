@@ -5,7 +5,7 @@ package mocks
 import (
 	time "time"
 
-	v1 "github.com/kyma-project/infrastructure-manager/api/v1"
+	v1 "github.com/kyma-project/kyma-infrastructure-manager/api/v1"
 	mock "github.com/stretchr/testify/mock"
 	corev1 "k8s.io/api/core/v1"
 )

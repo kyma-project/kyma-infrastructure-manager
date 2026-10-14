@@ -2,7 +2,7 @@ package alicloud
 
 import (
 	alicloud "github.com/gardener/gardener-extension-provider-alicloud/pkg/apis/alicloud/v1alpha1"
-	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/networking"
+	"github.com/kyma-project/kyma-infrastructure-manager/pkg/gardener/shoot/hyperscaler/networking"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
