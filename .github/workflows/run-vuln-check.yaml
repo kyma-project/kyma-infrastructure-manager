@@ -9,8 +9,56 @@ jobs:
   govuln:
     runs-on: ubuntu-latest
     steps:
-    - name: vulncheck
-      uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
       with:
         go-version-file: 'go.mod'
-        go-package: ./...
+    - name: vulncheck
+      run: |
+        go install golang.org/x/vuln/cmd/govulncheck@v1.9.0 # https://github.com/golang/vuln/releases/tag/v1.9.0
+
+        # Suppressed IDs (Go vuln DB record has an unfixed open-ended range despite upstream patch):
+        # GO-2026-6568: gardener/gardener authorization bypass — bumped to v1.142.6 (patched release),
+        #               but vuln DB entry still carries {introduced:0} with no fixed event, so govulncheck
+        #               continues to report "Fixed in: N/A" regardless of version.
+        #               Track: https://github.com/kyma-project/kyma-infrastructure-manager/pull/1591
+        SUPPRESSED="GO-2026-6568"
+
+        # govulncheck exits 3 when vulnerabilities are found; capture output regardless.
+        # Other non-zero exit codes (e.g. 2 = scanner load failure) are treated as errors.
+        set +e
+        OUTPUT=$(govulncheck -format json ./... 2>&1)
+        STATUS=$?
+        set -e
+        if [ "$STATUS" -ne 0 ] && [ "$STATUS" -ne 3 ]; then
+          printf '%s\n' "$OUTPUT" >&2
+          exit "$STATUS"
+        fi
+
+        echo "$OUTPUT" | python3 -I -c "
+        import json, sys
+        suppressed = set('$SUPPRESSED'.split())
+        found = []
+        for line in sys.stdin:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                msg = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(msg, dict):
+                continue
+            finding = msg.get('finding')
+            if not isinstance(finding, dict):
+                continue
+            if finding.get('osv', '') not in suppressed:
+                found.append(finding)
+        if found:
+            print('Unsuppressed vulnerabilities found:')
+            for f in found:
+                print(f'  {f[\"osv\"]}: fixed in {f.get(\"fixed_version\", \"N/A\")}')
+            sys.exit(1)
+        else:
+            print('No unsuppressed vulnerabilities found.')
+        "
