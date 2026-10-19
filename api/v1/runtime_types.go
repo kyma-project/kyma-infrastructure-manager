@@ -212,17 +212,70 @@ type Kubernetes struct {
 	KubeAPIServer APIServer `json:"kubeAPIServer,omitempty"`
 }
 
+// GardenerOIDCConfig contains configuration settings for the OIDC provider.
+// It mirrors the former github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig
+// type, which was tombstoned/removed in gardener apis >= v1.149.0 (KubeAPIServerConfig
+// no longer carries a legacy inline OIDC config; OIDC is configured via structured
+// authentication). The field names, JSON tags and types are kept identical to preserve
+// the Runtime CRD schema.
+// Note: Descriptions were taken from the Kubernetes documentation.
+type GardenerOIDCConfig struct {
+	// CABundle: if set, the OpenID server's certificate will be verified by one of the authorities in the oidc-ca-file, otherwise the host's root CA set will be used.
+	// +optional
+	CABundle *string `json:"caBundle,omitempty"`
+	// ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
+	//
+	// Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31.
+	// +optional
+	ClientAuthentication *OpenIDConnectClientAuthentication `json:"clientAuthentication,omitempty"`
+	// ClientID is the client ID for the OpenID Connect client, must be set.
+	// +optional
+	ClientID *string `json:"clientID,omitempty"`
+	// GroupsClaim: if provided, the name of a custom OpenID Connect claim for specifying user groups.
+	// +optional
+	GroupsClaim *string `json:"groupsClaim,omitempty"`
+	// GroupsPrefix: if provided, all groups will be prefixed with this value to prevent conflicts with other authentication strategies.
+	// +optional
+	GroupsPrefix *string `json:"groupsPrefix,omitempty"`
+	// IssuerURL is the URL of the OpenID issuer, only HTTPS scheme will be accepted.
+	// +optional
+	IssuerURL *string `json:"issuerURL,omitempty"`
+	// RequiredClaims are key=value pairs that describe required claims in the ID Token.
+	// +optional
+	RequiredClaims map[string]string `json:"requiredClaims,omitempty"`
+	// SigningAlgs is the list of allowed JOSE asymmetric signing algorithms.
+	// +optional
+	SigningAlgs []string `json:"signingAlgs,omitempty"`
+	// UsernameClaim is the OpenID claim to use as the user name. (default "sub")
+	// +optional
+	UsernameClaim *string `json:"usernameClaim,omitempty"`
+	// UsernamePrefix: if provided, all usernames will be prefixed with this value.
+	// +optional
+	UsernamePrefix *string `json:"usernamePrefix,omitempty"`
+}
+
+// OpenIDConnectClientAuthentication mirrors the former
+// github.com/gardener/gardener/pkg/apis/core/v1beta1.OpenIDConnectClientAuthentication type.
+type OpenIDConnectClientAuthentication struct {
+	// ExtraConfig is extra configuration added to kubeconfig's auth-provider.
+	// +optional
+	ExtraConfig map[string]string `json:"extraConfig,omitempty"`
+	// Secret is the client Secret for the OpenID Connect client.
+	// +optional
+	Secret *string `json:"secret,omitempty"` // #nosec: G117 -- Field name for API spec.
+}
+
 // OIDCConfig contains configuration settings for the OIDC provider.
 // Note: Descriptions were taken from the Kubernetes documentation.
 type OIDCConfig struct {
-	gardener.OIDCConfig `json:",omitempty"`
-	JWKS                []byte `json:"jwks,omitempty"`
+	GardenerOIDCConfig `json:",omitempty"`
+	JWKS               []byte `json:"jwks,omitempty"`
 }
 
 type APIServer struct {
-	OidcConfig           gardener.OIDCConfig `json:"oidcConfig,omitempty"`
-	AdditionalOidcConfig *[]OIDCConfig       `json:"additionalOidcConfig,omitempty"`
-	ACL                  *ACL                `json:"acl,omitempty"`
+	OidcConfig           GardenerOIDCConfig `json:"oidcConfig,omitempty"`
+	AdditionalOidcConfig *[]OIDCConfig      `json:"additionalOidcConfig,omitempty"`
+	ACL                  *ACL               `json:"acl,omitempty"`
 }
 type ACL struct {
 	AllowedCIDRs []string `json:"allowedCIDRs,omitempty"`
