@@ -36,7 +36,7 @@ Kyma Infrastructure Manager (KIM) is a single binary composed of several control
 | `pkg/gardener`                    | Gardener client construction, Shoot helpers, kubeconfig generation, error handling                    |
 | `pkg/config`                      | Converter configuration: provider defaults, machine images, audit log mappings, Kubernetes versions   |
 | `internal/registrycache`          | Helpers for syncing registry credential secrets and updating Registry Cache status                    |
-| `internal/rtbootstrapper`         | Installs, upgrades, and validates runtime bootstrapper manifests on Kyma clusters                               |
+| `internal/rtbootstrapper`         | Installs, upgrades, and validates Runtime Bootstrapper manifests on Kyma clusters                               |
 | `internal/controller/metrics`     | Prometheus metrics for runtime states and provisioning outcomes                                       |
 
 ## Level 2: Runtime Controller

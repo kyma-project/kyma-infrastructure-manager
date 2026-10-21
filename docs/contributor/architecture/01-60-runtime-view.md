@@ -50,7 +50,7 @@ This scenario has the following notable aspects:
 
 ## Scenario 2: Cluster Update (Shoot Patch)
 
-Triggered when KEB updates an existing `Runtime` CR (for example, new Kubernetes version, changed OIDC config).
+Triggered when KEB updates an existing Runtime CR (for example, new Kubernetes version, changed OIDC config).
 
 ```
 KEB                KCP API Server        Runtime Controller (FSM)        Gardener API
