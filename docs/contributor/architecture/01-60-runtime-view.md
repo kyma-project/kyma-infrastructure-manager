@@ -75,7 +75,7 @@ KEB                KCP API Server        Runtime Controller (FSM)        Gardene
 
 ## Scenario 3: Cluster Deletion
 
-Triggered when KEB sets a `deletionTimestamp` on the `Runtime` CR.
+Triggered when KEB sets a `deletionTimestamp` on the Runtime CR.
 
 ```
 KEB                KCP API Server        Runtime Controller (FSM)        Gardener API

@@ -33,7 +33,7 @@ The core domain objects and their relationships:
 
 **Shoot** is the Gardener representation of a managed Kubernetes cluster. KIM converts a `Runtime` spec into a `Shoot` spec, applying provider defaults from the converter configuration.
 
-**GardenerCluster** is a legacy CR retained for kubeconfig rotation. New provisioning functionality uses the `Runtime` CR exclusively.
+**GardenerCluster** is a legacy CR retained for kubeconfig rotation. New provisioning functionality uses the Runtime CR exclusively.
 
 ## Reconciliation Pattern
 
@@ -73,7 +73,7 @@ type stateFn func(ctx context.Context, r *fsm, s *systemState) (stateFn, *ctrl.R
 
 ## Status and Conditions
 
-KIM uses two complementary status mechanisms on the `Runtime` CR:
+KIM uses two complementary status mechanisms on the Runtime CR:
 
 **`status.state`** (coarse-grained, for automation):
 
@@ -101,11 +101,11 @@ KIM uses two complementary status mechanisms on the `Runtime` CR:
 
 **Kubeconfig rotation:** Kubeconfigs are time-limited. The GardenerCluster Controller rotates them before they expire, using the formula: rotate when `age > minimal-rotation-time * expiration-time`. Both parameters are configurable. Default values (0.6 ratio, 24h expiry) ensure rotation begins at ~14.4 hours after issuance.
 
-**Namespace isolation:** The controller manager is restricted to `kcp-system`. `Runtime` CRs created outside this namespace are ignored.
+**Namespace isolation:** The controller manager is restricted to `kcp-system`. Runtime CRs created outside this namespace are ignored.
 
 **Credential handling:** The Runtime Controller reads registry credential Secrets from the Kyma cluster and writes them to the Gardener project namespace. It never writes them to KCP. When you remove the registry cache configuration, KIM cleans up the credentials.
 
-**Network filtering:** The `spec.security.networking.filter` field on the `Runtime` CR controls Gardener's `shoot-networking-filter` extension. Egress filtering is the default mode. Ingress blackholing is opt-in.
+**Network filtering:** The `spec.security.networking.filter` field on the Runtime CR controls Gardener's `shoot-networking-filter` extension. Egress filtering is the default mode. Ingress blackholing is opt-in.
 
 **API server ACL:** When `--api-server-acl-enabled=true`, the FSM patch step applies `spec.shoot.kubernetes.kubeAPIServer.acl.allowedCIDRs` to the Shoot, restricting API server access to the listed CIDR ranges.
 
@@ -125,7 +125,7 @@ KIM uses three complementary observability mechanisms:
 - The Config Reload Watcher can change the log level without restarting KIM
 
 **Kubernetes Events:**
-- `sFnEmitEvent` records a `corev1.Event` on the `Runtime` CR at each significant state transition
+- `sFnEmitEvent` records a `corev1.Event` on the Runtime CR at each significant state transition
 - Events are visible using `kubectl describe runtime <name>`
 
 ## Configuration Management

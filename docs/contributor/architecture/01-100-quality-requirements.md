@@ -28,7 +28,7 @@ Quality
 ### Reliability
 
 **QS-R1 - Idempotency of reconciliation**
-- **Stimulus:** The Runtime Controller reconciles the same `Runtime` CR twice in quick succession (for example, due to a spurious watch event after a status update).
+- **Stimulus:** The Runtime Controller reconciles the same Runtime CR twice in quick succession (for example, due to a spurious watch event after a status update).
 - **Response:** The second reconciliation detects that all desired states have already been applied and completes without making any API calls to Gardener or the Kyma runtime.
 - **Measure:** The controller creates no duplicate Shoots and sends no unnecessary patch requests to Gardener.
 
@@ -39,14 +39,14 @@ Quality
 
 **QS-R3 - Safe concurrent reconciliation**
 - **Stimulus:** A burst of 25 new Runtime CRs is created simultaneously.
-- **Response:** Each `Runtime` CR is reconciled independently in its own goroutine. No shared mutable state exists between FSM instances.
+- **Response:** Each Runtime CR is reconciled independently in its own goroutine. No shared mutable state exists between FSM instances.
 - **Measure:** All 25 clusters are provisioned successfully. Tests detect no data races.
 
 ### Observability
 
 **QS-O1 - Status accuracy**
 - **Stimulus:** The Gardener Shoot creation fails due to an invalid machine type.
-- **Response:** Within one reconcile cycle, **status.state** is set to `Failed`, a `Provisioned` condition is added with reason `GardenerErr`, and a Kubernetes Event is recorded on the `Runtime` CR.
+- **Response:** Within one reconcile cycle, **status.state** is set to `Failed`, a `Provisioned` condition is added with reason `GardenerErr`, and a Kubernetes Event is recorded on the Runtime CR.
 - **Measure:** `kubectl describe runtime <name>` shows the error reason and message without requiring log inspection.
 
 **QS-O2 - Metrics completeness**
@@ -84,7 +84,7 @@ Quality
 - **Measure:** You don't need to modify any existing state functions; the new step is independently testable with a mock `systemState`.
 
 **QS-M2 - API stability**
-- **Stimulus:** KEB is updated to pass a new optional field in the `Runtime` CR spec.
+- **Stimulus:** KEB is updated to pass a new optional field in the Runtime CR spec.
 - **Response:** The field is additive and backward-compatible. Existing Runtime CRs without the field continue to be processed without error; KIM applies a zero-value default for the new field.
 - **Measure:** No migration of existing Runtime CRs is required; no downtime during the KIM upgrade.
 

@@ -31,7 +31,7 @@ Kyma Infrastructure Manager (KIM) is a single binary composed of several control
 |-----------------------------------|-------------------------------------------------------------------------------------------------------|
 | Runtime Controller (FSM)          | Full lifecycle of Gardener Shoot clusters: create, patch, configure, extend, and delete               |
 | GardenerCluster Controller        | Time-based kubeconfig rotation for `GardenerCluster` CRs                                              |
-| Registry Cache Config Controller  | Reads `RegistryCacheConfig` CRs from Kyma clusters and propagates cache config to `Runtime` CRs       |
+| Registry Cache Config Controller  | Reads `RegistryCacheConfig` CRs from Kyma clusters and propagates cache config to Runtime CRs       |
 | Config Reload Watcher             | Watches the converter config file on disk and reloads KIM configuration without restart               |
 | `pkg/gardener`                    | Gardener client construction, Shoot helpers, kubeconfig generation, error handling                    |
 | `pkg/config`                      | Converter configuration: provider defaults, machine images, audit log mappings, Kubernetes versions   |
@@ -125,7 +125,7 @@ For requeue delay values, see [Cross-Cutting Concepts](./01-80-crosscutting-conc
 
 ### Whitebox Registry Cache Config Controller
 
-**Purpose:** Watches `RegistryCacheConfig` CRs on Kyma clusters and synchronizes their content into the `spec.imageRegistryCache` field of the corresponding `Runtime` CR on KCP.
+**Purpose:** Watches `RegistryCacheConfig` CRs on Kyma clusters and synchronizes their content into the `spec.imageRegistryCache` field of the corresponding Runtime CR on KCP.
 
 **Trigger:** Time-based requeue (periodic polling); in a future phase also triggered by the Runtime Watcher.
 
