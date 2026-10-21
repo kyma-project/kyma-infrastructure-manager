@@ -7,10 +7,10 @@ Proposed
 # Requirements
 
 - The user should be able to configure the cache for specific image registries.
-- Credentials for the image registries should be stored in secrets on SKR, and transferred to Garden cluster.
+- Credentials for the image registries should be stored in secrets on Kyma cluster, and transferred to Garden cluster.
 - The user should be able to view the status of the registry cache configuration.
 - The Gardener extension `registry-cache` is used to implement the registry cache functionality.
-- In the first phase, KIM periodically pulls the registry cache configuration from SKR.
+- In the first phase, KIM periodically pulls the registry cache configuration from Kyma cluster.
 - At some point, the Runtime Watcher is used to trigger events to notify KIM that the configuration has changed.
 
 # Decision
@@ -20,25 +20,25 @@ The overall architecture is based on the following proposal: https://github.com/
 ![](./assets/caching-in-kim-v2.drawio.svg)
 
 Highlights:
-- The registry cache configuration is stored in the `RegistryCacheConfig` CRD in the SKR cluster. The `RegistryCacheConfig` CRD is a part of the Kyma module.
-- The Registry Cache Controller synchronizes the registry cache configuration between SKR and the Runtime CR.
+- The registry cache configuration is stored in the `RegistryCacheConfig` CRD in the Kyma cluster. The `RegistryCacheConfig` CRD is a part of the Kyma module.
+- The Registry Cache Controller synchronizes the registry cache configuration between Kyma cluster and the Runtime CR.
 - The Runtime Controller:
   - Configures the `registry-cache` extension 
-  - Synchronizes credential secrets between SKR and the Garden cluster 
-  - Updates the status of the registry cache configuration in SKR
-  - Removes credential secrets from the Garden cluster when the registry cache configuration is removed from SKR.
+  - Synchronizes credential secrets between Kyma cluster and the Garden cluster 
+  - Updates the status of the registry cache configuration in Kyma cluster
+  - Removes credential secrets from the Garden cluster when the registry cache configuration is removed from Kyma cluster.
 - The Runtime Watcher triggers events to notify KIM that the configuration changed.
 - The Registry Cache Webhook validates the registry cache configuration in the Registry Cache CR.
 
 The operation flow is as follows:
-1. The user creates a `RegistryCacheConfig` CR with the cache configuration in the SKR.
+1. The user creates a `RegistryCacheConfig` CR with the cache configuration in the Kyma cluster.
 2. The Registry Cache CR validating webhook verifies the configuration.
 3. The Runtime Watcher triggers an event notifying KIM of the new configuration.
 4. The Registry Cache Config Controller (if the Registry Cache module is enabled) reads the configuration from the `RegistryCacheConfig` CR and applies it to the Runtime CR.
-5. The Runtime Controller synchronizes credential secrets between the SKR and the Garden cluster, and sets the registry cache configuration status in the SKR to `Pending`.
+5. The Runtime Controller synchronizes credential secrets between the Kyma cluster and the Garden cluster, and sets the registry cache configuration status in the Kyma cluster to `Pending`.
 6. The Runtime Controller configures the `registry-cache` extension.
-7. If the registry cache configuration is removed from the SKR, the Runtime Controller cleans up secrets from the Garden cluster.
-8. The Runtime Controller updates the registry cache configuration status in the SKR to Ready.
+7. If the registry cache configuration is removed from the Kyma cluster, the Runtime Controller cleans up secrets from the Garden cluster.
+8. The Runtime Controller updates the registry cache configuration status in the Kyma cluster to Ready.
 
 ## API
 

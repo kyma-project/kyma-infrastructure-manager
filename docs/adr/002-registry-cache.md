@@ -7,9 +7,9 @@ Accepted
 # Requirements
 
 - The user should be able to configure the cache for specific image registries.
-- Credentials for the image registries should be stored in secrets on SKR. 
+- Credentials for the image registries should be stored in secrets on Kyma cluster.
 - The Gardener extension `registry-cache` will be used to implement the registry cache functionality.
-- In the first phase KIM, will periodically pull the registry cache configuration from SKR.
+- In the first phase KIM, will periodically pull the registry cache configuration from Kyma cluster.
 - At some point, the Runtime Watcher will be used to trigger events to notify KIM that the configuration changed.
 
 # Options
@@ -26,7 +26,7 @@ It seems to be obvious to implement the configuration of the `registry-cache` ex
 - How do we implement time-based reconciliation? What will be the impact on the existing implementation?
 
 Conclusions:
-- Introducing a new property to the Runtime CR does not seem to be a good idea. It would require two steps from the user: preparing configuration on SKR, and enabling caching in the BTP.
+- Introducing a new property to the Runtime CR does not seem to be a good idea. It would require two steps from the user: preparing configuration on Kyma cluster, and enabling caching in the BTP.
 - Currently, in some states of the state machine we don't requeue the event. As a result of introducing time-based reconciliation, we would need to change the implementation of the state machine.
 
 ### Summary
@@ -41,7 +41,7 @@ Cons:
 
 ## Option 2: Implement Periodic Checks with Go Routines and Directly Modify the Shoot to Configure `registry-cache` Extension
 
-The second approach would be to implement a Go routine that periodically checks all the SKRs for the cache configuration.
+The second approach would be to implement a Go routine that periodically checks all the Kyma clusters for the cache configuration.
 
 There are the following questions:
 - Should we directly modify the shoot to configure the `registry-cache` extension?
@@ -74,11 +74,11 @@ Conclusions:
 - Direct shoot modification violates the architecture. The Runtime Controller should be fully responsible for configuring the shoot.
 - The implementation will require introducing a new property to the Runtime CR to enable the cache.
 - The new controller will be listening on the secret events, and will be responsible for setting up the enable cache property on the Runtime CR.
-- The new controller will be triggered in time-based manner to periodically check the SKRs for the cache configuration.
+- The new controller will be triggered in time-based manner to periodically check the Kyma clusters for the cache configuration.
 
 ### Summary
 Pros:
-- Responsibilities are clearly defined. The new controller reads the SKR to find the configuration and sets up the enable cache property.
+- Responsibilities are clearly defined. The new controller reads the Kyma cluster to find the configuration and sets up the enable cache property.
 - It is easy to implement time-based reconciliation in a separate controller.
 - Integrating the Runtime Watcher will be relatively easy.
 
