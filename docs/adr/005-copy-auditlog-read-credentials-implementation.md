@@ -252,7 +252,7 @@ status:
 | GetDedicatedAuditLogData fails | False | CredentialsCopyErr | Requeue with ControlPlaneRequeueDuration |
 | Runtime client unavailable | False | CredentialsCopyErr | Requeue with ControlPlaneRequeueDuration |
 | Source secret not found | False | CredentialsCopyErr | Requeue with ControlPlaneRequeueDuration |
-| Apply to SKR fails | False | CredentialsCopyErr | Requeue with ControlPlaneRequeueDuration |
+| Apply to Kyma cluster fails | False | CredentialsCopyErr | Requeue with ControlPlaneRequeueDuration |
 | ReadCredsSecretName empty | (no condition) | - | Skip copy, complete provisioning |
 | Success | True | CredentialsCopied | Complete provisioning |
 
@@ -282,7 +282,7 @@ The implementation is fully idempotent:
 Secret cleanup is automatic:
 
 1. Runtime deletion triggers shoot deletion
-2. SKR cluster deletion includes `kyma-system` namespace deletion
+2. Kyma cluster deletion includes `kyma-system` namespace deletion
 3. All secrets in `kyma-system` are garbage collected
 4. No explicit cleanup code required in KIM
 
@@ -296,7 +296,7 @@ Test cases:
 1. `should copy credentials and complete provisioning` - Happy path
 2. `should skip copy and complete when ReadCredsSecretName is empty` - No-op case
 3. `should requeue on GetDedicatedAuditLogData error` - Data fetch failure
-4. `should requeue on runtime client error` - SKR client failure
+4. `should requeue on runtime client error` - Kyma cluster client failure
 5. `should requeue when source secret not found` - Source secret missing
 6. `should handle idempotent re-runs when secret already exists` - Update existing secret
 
@@ -307,7 +307,7 @@ Manual verification steps:
 2. Wait for provisioning to complete
 3. Verify `CustomAuditLogConfigured` condition is True
 4. Verify `AuditLogCredentialsCopied` condition is True
-5. Connect to SKR cluster
+5. Connect to Kyma cluster
 6. Verify secret exists: `kubectl get secret auditlog-read-credentials -n kyma-system`
 7. Verify secret has correct labels and data
 

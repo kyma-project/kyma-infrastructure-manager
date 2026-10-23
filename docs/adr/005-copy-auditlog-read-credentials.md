@@ -1,6 +1,6 @@
 # Context
 
-This document defines the architecture for copying dedicated audit log read credentials to the Kyma Runtime cluster (SKR) as part of the dedicated audit logging feature described in [ADR 004: Dedicated Audit Logging](./004-dedicated-audit-logging.md).
+This document defines the architecture for copying dedicated audit log read credentials to the Kyma cluster as part of the dedicated audit logging feature described in [ADR 004: Dedicated Audit Logging](./004-dedicated-audit-logging.md).
 
 # Status
 
@@ -28,7 +28,7 @@ The AuditLogCR contains a reference to read credentials in `spec.config.readCred
 - Lives in the KCP namespace alongside the AuditLogCR
 - Contains OAuth credentials for read-only access to audit logs
 - Is managed by KALM (Kyma Audit Log Manager)
-- Needs to be copied to the SKR's `kyma-system` namespace as `auditlog-read-credentials`
+- Needs to be copied to the Kyma cluster's `kyma-system` namespace as `auditlog-read-credentials`
 
 Users can then use these credentials to query their dedicated audit logs via the audit log service API.
 
@@ -41,15 +41,15 @@ sFnWaitForShootCreation
     ↓
 sFnHandleKubeconfig
     ↓
-sFnCreateKymaNamespace          ← Creates kyma-system namespace in SKR
+sFnCreateKymaNamespace          ← Creates kyma-system namespace in Kyma cluster
     ↓
 sFnInitializeRuntimeBootstrapper
     ↓
 sFnCleanupRegistryCacheGardenSecrets
     ↓
-sFnConfigureSKR                 ← Applies ConfigMap + OIDC to SKR
+sFnConfigureSKR                 ← Applies ConfigMap + OIDC to Kyma cluster
     ↓
-sFnApplyClusterRoleBindings     ← Applies ClusterRoleBindings to SKR
+sFnApplyClusterRoleBindings     ← Applies ClusterRoleBindings to Kyma cluster
     ↓
 sFnMigrateToDedicatedAuditLog   ← Claims AuditLogCR, patches shoot
     ↓
@@ -68,18 +68,18 @@ Add read credentials copy as a final step within the existing `sFnMigrateToDedic
 - Simple flow
 
 ### Cons
-- Mixed concerns (Gardener vs SKR operations)
+- Mixed concerns (Gardener vs Kyma cluster operations)
 - State complexity increases
 - Requeue ambiguity
 
 ---
 
-## Option 2: Use Existing SKR Configuration State
+## Option 2: Use Existing Kyma Cluster Configuration State
 
 Extend `sFnConfigureSKR` or `sFnApplyClusterRoleBindings`.
 
 ### Pros
-- Reuses existing SKR client
+- Reuses existing Kyma cluster client
 - Follows existing patterns
 
 ### Cons
@@ -106,7 +106,7 @@ Create a dedicated state that runs after `sFnMigrateToDedicatedAuditLog`.
 
 # Decision
 
-We create a new FSM state `sFnCopyAuditLogReadCredentials` that executes after `sFnMigrateToDedicatedAuditLog` to copy read credentials to SKR.
+We create a new FSM state `sFnCopyAuditLogReadCredentials` that executes after `sFnMigrateToDedicatedAuditLog` to copy read credentials to Kyma cluster.
 
 ## New FSM Flow
 
@@ -115,7 +115,7 @@ sFnApplyClusterRoleBindings
     ↓
 sFnMigrateToDedicatedAuditLog   ← Claims AuditLogCR, patches shoot
     ↓
-sFnCopyAuditLogReadCredentials  ← NEW: Copies read credentials to SKR
+sFnCopyAuditLogReadCredentials  ← NEW: Copies read credentials to Kyma cluster
     ↓
 Complete (updateStatusAndStop)
 ```
