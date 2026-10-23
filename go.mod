@@ -4,14 +4,14 @@ go 1.27.3
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
-	github.com/gardener/gardener v1.151.2
+	github.com/gardener/gardener v1.152.0
 	github.com/gardener/gardener-extension-provider-alicloud v1.71.0
-	github.com/gardener/gardener-extension-provider-aws v1.68.3
+	github.com/gardener/gardener-extension-provider-aws v1.75.1
 	github.com/gardener/gardener-extension-provider-gcp v1.50.0
 	github.com/gardener/gardener-extension-provider-openstack v1.53.1
 	github.com/gardener/gardener-extension-registry-cache v0.21.0
 	github.com/gardener/gardener-extension-runtime-gvisor v0.33.0
-	github.com/gardener/gardener/pkg/apis v1.151.2
+	github.com/gardener/gardener/pkg/apis v1.152.0
 	github.com/gardener/oidc-webhook-authenticator v0.42.0
 	github.com/go-logr/logr v1.4.4
 	github.com/go-playground/validator/v10 v10.30.3
@@ -20,7 +20,7 @@ require (
 	github.com/kyma-project/registry-cache v0.0.0-20260702083050-7fec976a2def
 	github.com/kyma-project/runtime-watcher/listener v1.4.3
 	github.com/onsi/ginkgo/v2 v2.33.1
-	github.com/onsi/gomega v1.43.0
+	github.com/onsi/gomega v1.44.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.24.1
 	github.com/stretchr/testify v1.12.1
