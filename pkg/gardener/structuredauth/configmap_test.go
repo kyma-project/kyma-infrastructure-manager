@@ -120,7 +120,7 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			err := CreateOrUpdateStructuredAuthConfigMap(context.Background(), fakeClient, types.NamespacedName{Namespace: "default", Name: tt.cmName}, tt.oidcConfig)
+			err := CreateOrUpdateStructuredAuthConfigMap(context.Background(), fakeClient, types.NamespacedName{Namespace: "default", Name: tt.cmName}, tt.oidcConfig, "")
 			require.NoError(t, err)
 
 			cm := &corev1.ConfigMap{}
@@ -150,8 +150,94 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 	}
 }
 
-func TestDeleteStructuredConfigMap(t *testing.T) {
+func TestToAuthenticationConfigurationAudiences(t *testing.T) {
+	baseOIDC := func() imv1.GardenerOIDCConfig {
+		return imv1.GardenerOIDCConfig{
+			ClientID:       ptr.To("operator-client"),
+			IssuerURL:      ptr.To("issuer"),
+			UsernameClaim:  ptr.To("username"),
+			UsernamePrefix: ptr.To("prefix"),
+			GroupsClaim:    ptr.To("groups"),
+		}
+	}
 
+	t.Run("includes both operator and shared-IAS client IDs with MatchAny", func(t *testing.T) {
+		authConfig := toAuthenticationConfiguration(baseOIDC(), "shared-ias-client")
+
+		issuer := authConfig.JWT[0].Issuer
+		assert.Equal(t, []string{"operator-client", "shared-ias-client"}, issuer.Audiences)
+		assert.Equal(t, "MatchAny", issuer.AudienceMatchPolicy)
+	})
+
+	t.Run("single audience and no match policy when shared-IAS ID is empty", func(t *testing.T) {
+		authConfig := toAuthenticationConfiguration(baseOIDC(), "")
+
+		issuer := authConfig.JWT[0].Issuer
+		assert.Equal(t, []string{"operator-client"}, issuer.Audiences)
+		assert.Equal(t, "", issuer.AudienceMatchPolicy)
+	})
+
+	t.Run("single audience and no match policy when shared-IAS ID equals operator ID", func(t *testing.T) {
+		authConfig := toAuthenticationConfiguration(baseOIDC(), "operator-client")
+
+		issuer := authConfig.JWT[0].Issuer
+		assert.Equal(t, []string{"operator-client"}, issuer.Audiences)
+		assert.Equal(t, "", issuer.AudienceMatchPolicy)
+	})
+}
+
+func TestToAuthenticationConfigurationUsernamePrefix(t *testing.T) {
+	oidcWithPrefix := func(prefix *string) imv1.GardenerOIDCConfig {
+		return imv1.GardenerOIDCConfig{
+			ClientID:       ptr.To("client"),
+			IssuerURL:      ptr.To("issuer"),
+			UsernameClaim:  ptr.To("username"),
+			UsernamePrefix: prefix,
+			GroupsClaim:    ptr.To("groups"),
+		}
+	}
+
+	t.Run("translates BTP no-prefix sentinel - to empty string", func(t *testing.T) {
+		authConfig := toAuthenticationConfiguration(oidcWithPrefix(ptr.To("-")), "")
+
+		assert.Equal(t, ptr.To(""), authConfig.JWT[0].ClaimMappings.Username.Prefix)
+	})
+
+	t.Run("passes a normal prefix through unchanged", func(t *testing.T) {
+		authConfig := toAuthenticationConfiguration(oidcWithPrefix(ptr.To("sap:")), "")
+
+		assert.Equal(t, ptr.To("sap:"), authConfig.JWT[0].ClaimMappings.Username.Prefix)
+	})
+
+	t.Run("passes nil prefix through unchanged", func(t *testing.T) {
+		authConfig := toAuthenticationConfiguration(oidcWithPrefix(nil), "")
+
+		assert.Nil(t, authConfig.JWT[0].ClaimMappings.Username.Prefix)
+	})
+}
+
+// TestToAuthenticationConfigurationStandardLandscapeUnchanged guards the PR-A anti-goal:
+// a landscape that does not use the "-" prefix and supplies no distinct shared-IAS client ID
+// must produce exactly the output it did before the audience/prefix changes.
+func TestToAuthenticationConfigurationStandardLandscapeUnchanged(t *testing.T) {
+	oidcConfig := imv1.GardenerOIDCConfig{
+		ClientID:       ptr.To("client"),
+		IssuerURL:      ptr.To("issuer"),
+		UsernameClaim:  ptr.To("username"),
+		UsernamePrefix: ptr.To("sap:"),
+		GroupsClaim:    ptr.To("groups"),
+		GroupsPrefix:   ptr.To("groups-prefix"),
+	}
+
+	authConfig := toAuthenticationConfiguration(oidcConfig, "")
+
+	issuer := authConfig.JWT[0].Issuer
+	assert.Equal(t, []string{"client"}, issuer.Audiences)
+	assert.Equal(t, "", issuer.AudienceMatchPolicy)
+	assert.Equal(t, ptr.To("sap:"), authConfig.JWT[0].ClaimMappings.Username.Prefix)
+}
+
+func TestDeleteStructuredConfigMap(t *testing.T) {
 	scheme := runtime.NewScheme()
 
 	err := corev1.AddToScheme(scheme)

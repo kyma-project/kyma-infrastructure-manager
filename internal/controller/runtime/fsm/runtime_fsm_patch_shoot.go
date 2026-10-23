@@ -43,6 +43,7 @@ func sFnPatchExistingShoot(ctx context.Context, m *fsm, s *systemState) (stateFn
 		m.GardenClient,
 		types.NamespacedName{Name: cmName, Namespace: m.ShootNamesapace},
 		oidcConfig,
+		m.ClusterConfig.DefaultSharedIASTenant.ClientID,
 	)
 
 	if err != nil {
