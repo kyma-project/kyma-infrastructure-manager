@@ -42,6 +42,7 @@ type GDCHConfig struct {
 
 type OpenStackConfig struct {
 	CloudProfileName string `json:"cloudProfileName"`
+	FloatingPoolName string `json:"floatingPoolName"`
 }
 
 type DNSConfig struct {

@@ -85,6 +85,7 @@ func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
 			opts.MachineImage,
 			opts.Provider.Worker,
 			opts.Provider.GDCH,
+			opts.Provider.OpenStack,
 		),
 		extender2.ExtendWithGVisorNetRawDefault,
 		extender2.NewTolerationsExtender(opts.Tolerations),
@@ -123,7 +124,8 @@ func NewConverterPatch(ctx context.Context, opts PatchOpts) Converter {
 			opts.Provider.Worker,
 			opts.InfrastructureConfig,
 			opts.ControlPlaneConfig,
-			opts.Provider.GDCH))
+			opts.Provider.GDCH,
+			opts.Provider.OpenStack))
 	extendersForPatch = append(extendersForPatch, extender2.ExtendWithGVisorNetRawDefault)
 
 	extendersForPatch = append(extendersForPatch,

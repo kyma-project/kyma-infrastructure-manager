@@ -81,7 +81,7 @@ func TestProviderExtenderForCreateOpenstack(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, config.GDCHConfig{})
+			extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, config.GDCHConfig{}, config.OpenStackConfig{FloatingPoolName: "FloatingIP-external-iaas-sov-shared-01"})
 			err := extender(tc.Runtime, &shoot)
 
 			// then
@@ -298,7 +298,7 @@ func TestProviderExtenderForPatchWorkersUpdateOpenstack(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderPatchOperation(false, tc.CurrentShootWorkers, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig, config.GDCHConfig{})
+			extender := NewProviderExtenderPatchOperation(false, tc.CurrentShootWorkers, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig, config.GDCHConfig{}, config.OpenStackConfig{FloatingPoolName: "FloatingIP-external-iaas-sov-shared-01"})
 			err := extender(tc.Runtime, &shoot)
 
 			// then
@@ -311,7 +311,7 @@ func TestProviderExtenderForPatchWorkersUpdateOpenstack(t *testing.T) {
 }
 
 func fixOpenstackInfrastructureConfig(workersCIDR string) *runtime.RawExtension {
-	infraConfig, _ := ops.GetInfrastructureConfig(workersCIDR, []string{})
+	infraConfig, _ := ops.GetInfrastructureConfig(workersCIDR, "FloatingIP-external-iaas-sov-shared-01")
 	return &runtime.RawExtension{Raw: infraConfig}
 }
 
@@ -331,4 +331,5 @@ func assertProviderSpecificConfigOpenstack(t *testing.T, shoot gardener.Shoot, e
 	err = json.Unmarshal(shoot.Spec.Provider.InfrastructureConfig.Raw, &infraConfig)
 	require.NoError(t, err)
 	assert.Equal(t, expectedWorkersCIDR, infraConfig.Networks.Workers)
+	assert.Equal(t, "FloatingIP-external-iaas-sov-shared-01", infraConfig.FloatingPoolName)
 }
