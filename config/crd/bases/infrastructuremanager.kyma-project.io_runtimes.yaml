@@ -231,6 +231,14 @@ spec:
                         required:
                         - failureTolerance
                         type: object
+                      zones:
+                        description: |-
+                          Zones is a list of availability zones in which the control plane components should be placed.
+                          Requires the referenced CloudProfile to have spec.controlPlane.allowZonePinning set to true.
+                          This field is immutable once set.
+                        items:
+                          type: string
+                        type: array
                     type: object
                   enableNvidiaOpenshell:
                     type: boolean
