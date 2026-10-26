@@ -70,7 +70,7 @@ All of below fields are mandatory
 | **cluster.defaultSharedIASTenant.IssuerURL**                                       | string | The URL of the OIDC issuer. | Yes | Yes | Yes |
 | **cluster.defaultSharedIASTenant.SigningAlgs**                                     | list | A list of supported signing algorithms for the OIDC token. | Yes | Yes | Yes |
 | **cluster.defaultSharedIASTenant.UsernameClaim**                                   | string | The claim in the OIDC token to be used as the username. | Yes | Yes | Yes |
-| **cluster.defaultSharedIASTenant.UsernamePrefix**                                  | string | A prefix to be added to the username claim. | Yes | Yes | Yes |
+| **cluster.defaultSharedIASTenant.UsernamePrefix**                                  | string | A prefix to be added to the username claim. The value `-` follows the BTP/Kubernetes "no prefix" convention and is written as an empty prefix. | Yes | Yes | Yes |
 | **converter.kubernetes.defaultVersion**                                            | string | The default Kubernetes version for newly created Shoot clusters. | Yes | Yes | Yes |
 | **converter.kubernetes.enableKubernetesVersionAutoUpdate**                         | bool | If `true`, the Kubernetes version of the Shoot cluster is automatically updated to newer patch versions. | Yes | Yes | Yes |
 | **converter.kubernetes.enableMachineImageVersionAutoUpdate**                       | bool | If `true`, the machine image version of the Shoot cluster is automatically updated. | Yes | Yes | Yes |
@@ -79,7 +79,7 @@ All of below fields are mandatory
 | **converter.kubernetes.defaultOperatorOidc.IssuerURL**                             | string | The OIDC issuer URL for the operator. | Yes | Yes | Yes |
 | **converter.kubernetes.defaultOperatorOidc.SigningAlgs**                           | list | The supported OIDC signing algorithms for the operator. | Yes | Yes | Yes |
 | **converter.kubernetes.defaultOperatorOidc.UsernameClaim**                         | string | The OIDC username claim for the operator. | Yes | Yes | Yes |
-| **converter.kubernetes.defaultOperatorOidc.UsernamePrefix**                        | string | The username prefix for the operator. | Yes | Yes | Yes |
+| **converter.kubernetes.defaultOperatorOidc.UsernamePrefix**                        | string | The username prefix for the operator. The value `-` follows the BTP/Kubernetes "no prefix" convention and is written as an empty prefix. | Yes | Yes | Yes |
 | **converter.dns.secretName**                                                       | string | The name of the Kubernetes `Secret` containing credentials for the DNS provider. | Yes | Yes | Yes |
 | **converter.dns.domainPrefix**                                                     | string | The domain prefix used for the cluster's DNS records (e.g., `example.com` results in `sub.example.com`). | Yes | Yes | Yes |
 | **converter.dns.providerType**                                                     | string | The type of DNS provider to use for managing DNS records. | Yes | Yes | Yes |
