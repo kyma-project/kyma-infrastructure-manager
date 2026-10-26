@@ -250,6 +250,9 @@ type GardenerOIDCConfig struct {
 	// +optional
 	UsernameClaim *string `json:"usernameClaim,omitempty"`
 	// UsernamePrefix: if provided, all usernames will be prefixed with this value.
+	// The value "-" follows the BTP/Kubernetes convention for "no prefix": it is
+	// written as an empty prefix in the structured authentication configuration
+	// rather than as a literal "-".
 	// +optional
 	UsernamePrefix *string `json:"usernamePrefix,omitempty"`
 }
