@@ -20,8 +20,9 @@ type JWTAuthenticator struct {
 }
 
 type Issuer struct {
-	URL       string   `json:"url"`
-	Audiences []string `json:"audiences"`
+	URL                 string   `json:"url"`
+	Audiences           []string `json:"audiences"`
+	AudienceMatchPolicy string   `json:"audienceMatchPolicy,omitempty"`
 }
 
 type ClaimMappings struct {
@@ -40,7 +41,7 @@ type AuthenticationConfiguration struct {
 	JWT []JWTAuthenticator `json:"jwt"`
 }
 
-func toAuthenticationConfiguration(oidcConfig imv1.GardenerOIDCConfig) AuthenticationConfiguration {
+func toAuthenticationConfiguration(oidcConfig imv1.GardenerOIDCConfig, sharedIASClientID string) AuthenticationConfiguration {
 
 	toJWTAuthenticator := func(oidcConfig imv1.GardenerOIDCConfig) JWTAuthenticator {
 		// If Groups prefix is not set by the KEB, default is set as Gardener requires non-empty value
@@ -50,15 +51,35 @@ func toAuthenticationConfiguration(oidcConfig imv1.GardenerOIDCConfig) Authentic
 			groupsPrefix = oidcConfig.GroupsPrefix
 		}
 
+		// The BTP Cockpit convention "-" means "no prefix". In AuthenticationConfiguration
+		// v1beta1 the prefix is a literal string with no sentinel, so "-" must be written as
+		// "" to disable prefixing. Any other value (including nil) is passed through unchanged.
+		usernamePrefix := oidcConfig.UsernamePrefix
+		if usernamePrefix != nil && *usernamePrefix == "-" {
+			usernamePrefix = ptr.To("")
+		}
+
+		// The operator OIDC client ID is always an accepted audience. The shared-IAS client ID
+		// (used by the KEB-generated end-user kubeconfig) is added when it differs, so both
+		// kubeconfigs authenticate. With more than one audience, v1beta1 requires a match policy.
+		operatorClientID := ptr.Deref(oidcConfig.ClientID, "")
+		audiences := []string{operatorClientID}
+		audienceMatchPolicy := ""
+		if sharedIASClientID != "" && sharedIASClientID != operatorClientID {
+			audiences = append(audiences, sharedIASClientID)
+			audienceMatchPolicy = "MatchAny"
+		}
+
 		return JWTAuthenticator{
 			Issuer: Issuer{
-				URL:       ptr.Deref(oidcConfig.IssuerURL, ""),
-				Audiences: []string{ptr.Deref(oidcConfig.ClientID, "")},
+				URL:                 ptr.Deref(oidcConfig.IssuerURL, ""),
+				Audiences:           audiences,
+				AudienceMatchPolicy: audienceMatchPolicy,
 			},
 			ClaimMappings: ClaimMappings{
 				Username: PrefixedClaim{
 					Claim:  ptr.Deref(oidcConfig.UsernameClaim, ""),
-					Prefix: oidcConfig.UsernamePrefix,
+					Prefix: usernamePrefix,
 				},
 				Groups: PrefixedClaim{
 					Claim:  ptr.Deref(oidcConfig.GroupsClaim, ""),
@@ -80,9 +101,9 @@ func toAuthenticationConfiguration(oidcConfig imv1.GardenerOIDCConfig) Authentic
 	}
 }
 
-func CreateOrUpdateStructuredAuthConfigMap(ctx context.Context, gardenClient client.Client, cmKey types.NamespacedName, oidcConfig imv1.GardenerOIDCConfig) error {
+func CreateOrUpdateStructuredAuthConfigMap(ctx context.Context, gardenClient client.Client, cmKey types.NamespacedName, oidcConfig imv1.GardenerOIDCConfig, sharedIASClientID string) error {
 	creteConfigMapObject := func() (v1.ConfigMap, error) {
-		authenticationConfig := toAuthenticationConfiguration(oidcConfig)
+		authenticationConfig := toAuthenticationConfiguration(oidcConfig, sharedIASClientID)
 		authConfigBytes, err := yaml.Marshal(authenticationConfig)
 		if err != nil {
 			return v1.ConfigMap{}, err
