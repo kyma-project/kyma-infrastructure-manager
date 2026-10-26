@@ -150,6 +150,36 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 	}
 }
 
+func TestToAuthenticationConfigurationUsernamePrefix(t *testing.T) {
+	oidcWithPrefix := func(prefix *string) imv1.GardenerOIDCConfig {
+		return imv1.GardenerOIDCConfig{
+			ClientID:       ptr.To("client"),
+			IssuerURL:      ptr.To("issuer"),
+			UsernameClaim:  ptr.To("username"),
+			UsernamePrefix: prefix,
+			GroupsClaim:    ptr.To("groups"),
+		}
+	}
+
+	t.Run("translates BTP no-prefix sentinel - to empty string", func(t *testing.T) {
+		authConfig := toAuthenticationConfiguration(oidcWithPrefix(ptr.To("-")))
+
+		assert.Equal(t, ptr.To(""), authConfig.JWT[0].ClaimMappings.Username.Prefix)
+	})
+
+	t.Run("passes a normal prefix through unchanged", func(t *testing.T) {
+		authConfig := toAuthenticationConfiguration(oidcWithPrefix(ptr.To("sap:")))
+
+		assert.Equal(t, ptr.To("sap:"), authConfig.JWT[0].ClaimMappings.Username.Prefix)
+	})
+
+	t.Run("passes nil prefix through unchanged", func(t *testing.T) {
+		authConfig := toAuthenticationConfiguration(oidcWithPrefix(nil))
+
+		assert.Nil(t, authConfig.JWT[0].ClaimMappings.Username.Prefix)
+	})
+}
+
 func TestDeleteStructuredConfigMap(t *testing.T) {
 
 	scheme := runtime.NewScheme()

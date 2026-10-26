@@ -50,6 +50,14 @@ func toAuthenticationConfiguration(oidcConfig imv1.GardenerOIDCConfig) Authentic
 			groupsPrefix = oidcConfig.GroupsPrefix
 		}
 
+		// The BTP Cockpit convention "-" means "no prefix". In AuthenticationConfiguration
+		// v1beta1 the prefix is a literal string with no sentinel, so "-" must be written as
+		// "" to disable prefixing. Any other value (including nil) is passed through unchanged.
+		usernamePrefix := oidcConfig.UsernamePrefix
+		if usernamePrefix != nil && *usernamePrefix == "-" {
+			usernamePrefix = ptr.To("")
+		}
+
 		return JWTAuthenticator{
 			Issuer: Issuer{
 				URL:       ptr.Deref(oidcConfig.IssuerURL, ""),
@@ -58,7 +66,7 @@ func toAuthenticationConfiguration(oidcConfig imv1.GardenerOIDCConfig) Authentic
 			ClaimMappings: ClaimMappings{
 				Username: PrefixedClaim{
 					Claim:  ptr.Deref(oidcConfig.UsernameClaim, ""),
-					Prefix: oidcConfig.UsernamePrefix,
+					Prefix: usernamePrefix,
 				},
 				Groups: PrefixedClaim{
 					Claim:  ptr.Deref(oidcConfig.GroupsClaim, ""),
