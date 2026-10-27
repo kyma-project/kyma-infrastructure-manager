@@ -63,7 +63,7 @@ The following table describes the parameters within the JSON object provided to 
 
 All of below fields are mandatory
 
-| Attribute(s)                                                                       | Type | Description | NS2 | CN | GDCH | CCEE (SCI) |
+| Attribute(s)                                                                       | Type | Description | NS2 | China | GDCH | SAP Cloud Infrastructure |
 |:-----------------------------------------------------------------------------------| :--- | :--- | :---: | :---: | :---: | :---: |
 | **cluster.defaultSharedIASTenant.ClientID**                                        | string | The default OIDC client ID for the shared Identity and Access Service (IAS) tenant. | Yes | Yes | Yes | Yes |
 | **cluster.defaultSharedIASTenant.GroupsClaim**                                     | string | The claim in the OIDC token that contains the user's groups. | Yes | Yes | Yes | Yes |

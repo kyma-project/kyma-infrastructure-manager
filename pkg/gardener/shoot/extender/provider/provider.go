@@ -20,6 +20,7 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/openstack"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // InfrastructureConfig and ControlPlaneConfig are generated unless they are specified in the RuntimeCR
@@ -240,8 +241,26 @@ func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, enableDualStack b
 		}
 	case hyperscaler.TypeOpenStack:
 		{
+			// The floating pool is immutable landscape config. On patch (existing infra config
+			// present) carry the existing pool forward instead of the configured one, so a
+			// changed config value can never rewrite it on an existing shoot. If the configured
+			// value differs from the existing one, warn that the change is ignored.
+			floatingPoolName := openstackConfig.FloatingPoolName
+			if existingInfrastructureConfig != nil {
+				existingPool, err := openstack.FloatingPoolNameFromInfrastructureConfig(existingInfrastructureConfig)
+				if err != nil {
+					return nil, nil, err
+				}
+				if openstackConfig.FloatingPoolName != "" && openstackConfig.FloatingPoolName != existingPool {
+					logf.Log.Info("OpenStack floating pool name is immutable and cannot be changed during patch; keeping the existing value",
+						"existingFloatingPoolName", existingPool,
+						"requestedFloatingPoolName", openstackConfig.FloatingPoolName,
+						"shoot", runtimeShoot.Name)
+				}
+				floatingPoolName = existingPool
+			}
 			return getConfigForProvider(runtimeShoot, func(workersCidr string, _ []string) ([]byte, error) {
-				return openstack.GetInfrastructureConfig(workersCidr, openstackConfig.FloatingPoolName)
+				return openstack.GetInfrastructureConfig(workersCidr, floatingPoolName)
 			}, openstack.GetControlPlaneConfig)
 		}
 	case hyperscaler.TypeAlicloud:

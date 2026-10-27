@@ -49,3 +49,14 @@ func NewControlPlaneConfig() *v1alpha1.ControlPlaneConfig {
 		LoadBalancerProvider: defaultLoadBalancerProvider,
 	}
 }
+
+// FloatingPoolNameFromInfrastructureConfig extracts the floating pool name from an existing
+// (JSON-encoded) InfrastructureConfig. Used on patch to keep the pool fixed at its creation
+// value, since it is immutable landscape configuration.
+func FloatingPoolNameFromInfrastructureConfig(raw []byte) (string, error) {
+	var cfg v1alpha1.InfrastructureConfig
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return "", err
+	}
+	return cfg.FloatingPoolName, nil
+}

@@ -315,6 +315,47 @@ func fixOpenstackInfrastructureConfig(workersCIDR string) *runtime.RawExtension 
 	return &runtime.RawExtension{Raw: infraConfig}
 }
 
+func TestProviderExtenderPatchOpenstackFloatingPoolImmutable(t *testing.T) {
+	// A patch must never change the floating pool, even when zones are added (which forces
+	// infra-config regeneration) and the configured pool differs from the one the shoot was
+	// created with. The pool is landscape configuration fixed at creation time.
+	existingPool := "FloatingIP-external-created-with-01"
+	configuredPool := "FloatingIP-external-different-99"
+
+	existingInfra, _ := ops.GetInfrastructureConfig("10.250.0.0/22", existingPool)
+
+	runtimeShoot := imv1.Runtime{
+		Spec: imv1.RuntimeSpec{
+			Shoot: imv1.RuntimeShoot{
+				Provider: fixProviderWithMultipleWorkers(hyperscaler.TypeOpenStack, fixMultipleWorkers([]workerConfig{
+					// adds eu-de-1c relative to the existing shoot worker, forcing regeneration
+					{"main-worker", "openstack.small", "gardenlinux", "1312.4.0", 1, 3, []string{"eu-de-1a", "eu-de-1b", "eu-de-1c"}},
+				})),
+				Networking: imv1.Networking{Nodes: "10.250.0.0/22"},
+			},
+		},
+	}
+	currentShootWorkers := []gardener.Worker{
+		{Name: "main-worker", Zones: []string{"eu-de-1a", "eu-de-1b"}},
+	}
+
+	shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
+
+	extender := NewProviderExtenderPatchOperation(false, currentShootWorkers,
+		config.MachineImageConfig{DefaultName: "gardenlinux", DefaultVersion: "1312.4.0"},
+		config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"},
+		&runtime.RawExtension{Raw: existingInfra}, fixOpenstackControlPlaneConfig(),
+		config.GDCHConfig{}, config.OpenStackConfig{FloatingPoolName: configuredPool})
+
+	err := extender(runtimeShoot, &shoot)
+	require.NoError(t, err)
+
+	var infraConfig ostext.InfrastructureConfig
+	err = json.Unmarshal(shoot.Spec.Provider.InfrastructureConfig.Raw, &infraConfig)
+	require.NoError(t, err)
+	assert.Equal(t, existingPool, infraConfig.FloatingPoolName, "floating pool must be preserved from the existing shoot, not taken from config")
+}
+
 func fixOpenstackControlPlaneConfig() *runtime.RawExtension {
 	controlPlaneConfig, _ := ops.GetControlPlaneConfig([]string{})
 	return &runtime.RawExtension{Raw: controlPlaneConfig}
