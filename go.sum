@@ -256,8 +256,8 @@ github.com/kyma-project/lifecycle-manager/api v1.0.0 h1:gUXHjaNMWSt2tskUHG3tijXm
 github.com/kyma-project/lifecycle-manager/api v1.0.0/go.mod h1:wbr1nMJFdpQo25JLle8oEub1SBpgClulxOPAPqjcm4c=
 github.com/kyma-project/registry-cache v0.0.0-20261022102408-6049effd6e34 h1:7CKf9wmMR1Odx9LuMGXc+/B9XzlvXLz3ceyBXwKJ3ZA=
 github.com/kyma-project/registry-cache v0.0.0-20261022102408-6049effd6e34/go.mod h1:00e29hBy6qCEqPsBd3kvYSRnAsMiU+WkkqqtBMfCVfs=
-github.com/kyma-project/runtime-watcher/listener v1.4.3 h1:2VDqf1lDMB/0TsLZkeUB/peTQ7xq5pr9MA2oPm4HFKY=
-github.com/kyma-project/runtime-watcher/listener v1.4.3/go.mod h1:MZ/SRcTjsV5VHr56pi/9TMb9zsaL56K+sWTCsn+DGfM=
+github.com/kyma-project/runtime-watcher/listener v1.4.4 h1:943f8+IN7Upnc3uZkBskZocw2iOEPTumSe3setD3pGg=
+github.com/kyma-project/runtime-watcher/listener v1.4.4/go.mod h1:+W9MFHBYrSvsFka6wB3Q1IZ+3gBLotUy8ozSFaII1Kw=
 github.com/labstack/echo/v4 v4.15.4 h1:DL45vVYa+BWE+XuW+zZNd9H0YEdZ80UAWJGcTVW4EVs=
 github.com/labstack/echo/v4 v4.15.4/go.mod h1:CuMetKIRwsuO/qlAgMq+KTAalwGoB/h4tC+yPdrTj1g=
 github.com/labstack/gommon v0.5.0 h1:6VSQ2NOzsnEJ5W6+84E0RbcaDDmgB6NIAzWCczTEe6c=
