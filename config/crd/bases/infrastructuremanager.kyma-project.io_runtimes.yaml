@@ -322,8 +322,11 @@ spec:
                                     use as the user name. (default "sub")
                                   type: string
                                 usernamePrefix:
-                                  description: 'UsernamePrefix: if provided, all usernames
-                                    will be prefixed with this value.'
+                                  description: |-
+                                    UsernamePrefix: if provided, all usernames will be prefixed with this value.
+                                    The value "-" follows the BTP/Kubernetes convention for "no prefix": it is
+                                    written as an empty prefix in the structured authentication configuration
+                                    rather than as a literal "-".
                                   type: string
                               type: object
                             type: array
@@ -395,8 +398,11 @@ spec:
                                   use as the user name. (default "sub")
                                 type: string
                               usernamePrefix:
-                                description: 'UsernamePrefix: if provided, all usernames
-                                  will be prefixed with this value.'
+                                description: |-
+                                  UsernamePrefix: if provided, all usernames will be prefixed with this value.
+                                  The value "-" follows the BTP/Kubernetes convention for "no prefix": it is
+                                  written as an empty prefix in the structured authentication configuration
+                                  rather than as a literal "-".
                                 type: string
                             type: object
                         type: object
