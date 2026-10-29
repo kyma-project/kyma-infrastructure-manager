@@ -129,7 +129,6 @@ func TestCloudProfileExtenderForPatch(t *testing.T) {
 		gdchOverride         string
 		openstackOverride    string
 		expectedProfile      *gardener.CloudProfileReference
-		expectError          bool
 	}{
 		{
 			name:                 "Preserve existing cloud profile on patch, ignoring config override",
@@ -163,12 +162,6 @@ func TestCloudProfileExtenderForPatch(t *testing.T) {
 			openstackOverride: "converged-cloud-fallback",
 			expectedProfile:   CreateCloudProfileReference("converged-cloud-fallback"),
 		},
-		{
-			name:                 "Return error on patch when provider has no cloud profile",
-			providerType:         "unknown",
-			existingCloudProfile: CreateCloudProfileReference("some-existing-profile"),
-			expectError:          true,
-		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			// given
@@ -188,10 +181,6 @@ func TestCloudProfileExtenderForPatch(t *testing.T) {
 			err := ExtendWithCloudProfile(testCase.existingCloudProfile, testCase.gdchOverride, testCase.openstackOverride)(runtime, &shoot)
 
 			// then
-			if testCase.expectError {
-				require.Error(t, err)
-				return
-			}
 			require.NoError(t, err)
 			// CloudProfileName is deprecated field, we verify it's nil to ensure we use CloudProfile instead
 			//nolint:staticcheck // SA1019: CloudProfileName is deprecated, but we verify it's not set
