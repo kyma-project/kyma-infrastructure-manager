@@ -20,7 +20,7 @@ With Kyma Environment Broker (KEB) and Lifecycle Manager, KIM builds the foundat
 
 ### Components
 
-![architecture](./assets/keb-kim-arch.drawio.svg)
+![architecture](./assets/keb-kim-arch.drawio.png)
 
 - Business Technology Platform (BTP) - An entry point for managing Kyma runtime.
 - Kyma Environment Broker - Receives requests from BTP and converts cluster-related configuration parameters into Runtime CR.
