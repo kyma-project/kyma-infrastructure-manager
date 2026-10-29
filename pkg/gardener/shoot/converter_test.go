@@ -56,6 +56,54 @@ func TestConverter(t *testing.T) {
 		require.Equalf(t, 5, extensionLen, "unexpected number of extensions: %d, expected: 5", extensionLen)
 	})
 
+	t.Run("Create shoot derives cloud profile from config", func(t *testing.T) {
+		// given
+		runtime := fixRuntime(gardener.ShootPurposeProduction)
+		converterConfig := fixConverterConfig()
+
+		converter := NewConverterCreate(context.Background(), CreateOpts{
+			ConverterConfig:                 converterConfig,
+			NetworkRestrictionGlobalEnabled: true,
+		})
+
+		// when
+		shoot, err := converter.ToShoot(runtime)
+
+		// then: AWS runtime derives the default AWS cloud profile
+		require.NoError(t, err)
+		require.NotNil(t, shoot.Spec.CloudProfile)
+		assert.Equal(t, "aws", shoot.Spec.CloudProfile.Name)
+	})
+
+	t.Run("Patch preserves the existing cloud profile and ignores config", func(t *testing.T) {
+		// given: the existing shoot was created with a landscape-specific profile that
+		// differs from what the current config would derive. The cloud profile is
+		// immutable, so the patch must keep the existing value.
+		runtime := fixRuntime(gardener.ShootPurposeProduction)
+		converterConfig := fixConverterConfig()
+		existingCloudProfile := &gardener.CloudProfileReference{
+			Kind: "CloudProfile",
+			Name: "landscape-specific-profile",
+		}
+
+		converter := NewConverterPatch(context.Background(), PatchOpts{
+			ConverterConfig:      converterConfig,
+			Workers:              fixWorkersWithReversedZones("gardenlinux", "1592.2.0"),
+			ShootK8SVersion:      "1.30",
+			InfrastructureConfig: fixAWSInfrastructureConfig("10.250.0.0/16", []string{"eu-central-1c", "eu-central-1b", "eu-central-1a"}),
+			ControlPlaneConfig:   fixAWSControlPlaneConfig(),
+			ExistingCloudProfile: existingCloudProfile,
+		})
+
+		// when
+		shoot, err := converter.ToShoot(runtime)
+
+		// then
+		require.NoError(t, err)
+		require.NotNil(t, shoot.Spec.CloudProfile)
+		assert.Equal(t, existingCloudProfile, shoot.Spec.CloudProfile)
+	})
+
 	t.Run("Create shoot from Runtime with empty Auditlog Configuration", func(t *testing.T) {
 		// given
 		runtime := fixRuntime(gardener.ShootPurposeProduction)

@@ -17,15 +17,23 @@ const (
 	CloudProfileKind                 = "CloudProfile"
 )
 
-func ExtendWithCloudProfile(gdchCloudProfileOverride, openstackCloudProfileOverride string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+// ExtendWithCloudProfile sets the shoot cloud profile. The cloud profile is immutable in Gardener,
+// so on patch (existingCloudProfile non-nil) the existing reference is preserved exactly — including
+// its Kind, which may be CloudProfile or NamespacedCloudProfile — and a changed config value cannot
+// rewrite it on an existing shoot. On create (existingCloudProfile nil) the value is derived from config.
+func ExtendWithCloudProfile(existingCloudProfile *gardener.CloudProfileReference, gdchCloudProfileOverride, openstackCloudProfileOverride string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		cloudProfileName, err := getCloudProfileName(runtime, gdchCloudProfileOverride, openstackCloudProfileOverride)
+		if existingCloudProfile != nil {
+			shoot.Spec.CloudProfile = existingCloudProfile
+			return nil
+		}
+
+		configuredName, err := getCloudProfileName(runtime, gdchCloudProfileOverride, openstackCloudProfileOverride)
 		if err != nil {
 			return err
 		}
 
-		shoot.Spec.CloudProfile = CreateCloudProfileReference(cloudProfileName)
-
+		shoot.Spec.CloudProfile = CreateCloudProfileReference(configuredName)
 		return nil
 	}
 }
