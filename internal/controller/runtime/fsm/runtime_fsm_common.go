@@ -21,7 +21,7 @@ func updateStatusAndStopWithError(err error) (stateFn, *ctrl.Result, error) {
 }
 
 func requeue() (stateFn, *ctrl.Result, error) {
-	return nil, &ctrl.Result{Requeue: true}, nil
+	return nil, &ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 }
 
 func requeueAfter(d time.Duration) (stateFn, *ctrl.Result, error) {

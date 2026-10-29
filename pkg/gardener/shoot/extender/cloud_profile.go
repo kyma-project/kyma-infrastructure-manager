@@ -17,9 +17,9 @@ const (
 	CloudProfileKind                 = "CloudProfile"
 )
 
-func ExtendWithCloudProfile(gdchCloudProfileOverride string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func ExtendWithCloudProfile(gdchCloudProfileOverride, openstackCloudProfileOverride string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		cloudProfileName, err := getCloudProfileName(runtime, gdchCloudProfileOverride)
+		cloudProfileName, err := getCloudProfileName(runtime, gdchCloudProfileOverride, openstackCloudProfileOverride)
 		if err != nil {
 			return err
 		}
@@ -37,7 +37,7 @@ func CreateCloudProfileReference(cloudProfileName string) *gardener.CloudProfile
 	}
 }
 
-func getCloudProfileName(runtime imv1.Runtime, gdchCloudProfileOverride string) (string, error) {
+func getCloudProfileName(runtime imv1.Runtime, gdchCloudProfileOverride, openstackCloudProfileOverride string) (string, error) {
 	switch runtime.Spec.Shoot.Provider.Type {
 	case hyperscaler.TypeAWS:
 		return DefaultAWSCloudProfileName, nil
@@ -51,6 +51,9 @@ func getCloudProfileName(runtime imv1.Runtime, gdchCloudProfileOverride string) 
 		}
 		return DefaultGDCHCloudProfileName, nil
 	case hyperscaler.TypeOpenStack:
+		if openstackCloudProfileOverride != "" {
+			return openstackCloudProfileOverride, nil
+		}
 		return DefaultOpenStackCloudProfileName, nil
 	case hyperscaler.TypeAlicloud:
 		return DefaultAlicloudCloudProfileName, nil

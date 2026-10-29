@@ -95,7 +95,7 @@ func additionalOidcEmptyOrUndefined(runtime *imv1.Runtime, cfg RCCfg) additional
 	if additionalOIDCConfigUndefined() {
 		additionalOidcConfig = &[]imv1.OIDCConfig{}
 		defaultOIDCConfig := cfg.ClusterConfig.DefaultSharedIASTenant.ToOIDCConfig()
-		*additionalOidcConfig = append(*additionalOidcConfig, imv1.OIDCConfig{OIDCConfig: defaultOIDCConfig})
+		*additionalOidcConfig = append(*additionalOidcConfig, imv1.OIDCConfig{GardenerOIDCConfig: defaultOIDCConfig})
 		runtime.Spec.Shoot.Kubernetes.KubeAPIServer.AdditionalOidcConfig = additionalOidcConfig
 		return additionalOIDCState{}
 	}
@@ -174,7 +174,7 @@ func createOpenIDConnectResource(additionalOidcConfig imv1.OIDCConfig, oidcID in
 		},
 		Spec: authenticationv1alpha1.OIDCAuthenticationSpec{
 			IssuerURL:            *additionalOidcConfig.IssuerURL,
-			ClientID:             *additionalOidcConfig.ClientID,
+			Audiences:            []string{*additionalOidcConfig.ClientID},
 			UsernameClaim:        additionalOidcConfig.UsernameClaim,
 			UsernamePrefix:       additionalOidcConfig.UsernamePrefix,
 			GroupsClaim:          additionalOidcConfig.GroupsClaim,

@@ -5,6 +5,7 @@ import (
 	"io"
 
 	gardener "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 )
 
 type Config struct {
@@ -17,9 +18,10 @@ type ClusterConfig struct {
 }
 
 type ProviderConfig struct {
-	AWS    AWSConfig    `json:"aws"`
-	GDCH   GDCHConfig   `json:"gdch"`
-	Worker WorkerConfig `json:"worker"`
+	AWS       AWSConfig       `json:"aws"`
+	GDCH      GDCHConfig      `json:"gdch"`
+	OpenStack OpenStackConfig `json:"openStack"`
+	Worker    WorkerConfig    `json:"worker"`
 }
 
 type WorkerConfig struct {
@@ -36,6 +38,11 @@ type GDCHConfig struct {
 	ParentReferenceName      string `json:"parentReferenceName"`
 	ParentReferenceNamespace string `json:"parentReferenceNamespace"`
 	ParentReferenceType      string `json:"parentReferenceType"`
+}
+
+type OpenStackConfig struct {
+	CloudProfileName string `json:"cloudProfileName"`
+	FloatingPoolName string `json:"floatingPoolName"`
 }
 
 type DNSConfig struct {
@@ -62,8 +69,8 @@ type OidcProvider struct {
 	UsernamePrefix string   `json:"usernamePrefix" validate:"required"`
 }
 
-func (p OidcProvider) ToOIDCConfig() gardener.OIDCConfig {
-	return gardener.OIDCConfig{
+func (p OidcProvider) ToOIDCConfig() imv1.GardenerOIDCConfig {
+	return imv1.GardenerOIDCConfig{
 		ClientID:       &p.ClientID,
 		GroupsClaim:    &p.GroupsClaim,
 		IssuerURL:      &p.IssuerURL,

@@ -179,7 +179,6 @@ func (controller *GardenerClusterController) resultWithRequeue(cluster *imv1.Gar
 	controller.metrics.SetGardenerClusterStates(*cluster)
 
 	return ctrl.Result{
-		Requeue:      true,
 		RequeueAfter: requeueAfter,
 	}
 }

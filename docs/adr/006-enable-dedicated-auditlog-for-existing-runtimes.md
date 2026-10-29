@@ -15,7 +15,7 @@ The current dedicated audit logging feature (ADR 004) only supports provisioning
 
 1. **Phase 1 (Reserve)**: In `sFnCreateShoot`, before shoot creation, an AuditLogCR is reserved by adding labels
 2. **Phase 2 (Claim)**: In `sFnMigrateToDedicatedAuditLog`, the reserved resource is claimed and the shoot is patched with dedicated config
-3. **Phase 3 (Copy Credentials)**: In `sFnCopyAuditLogReadCredentials`, read credentials are copied to SKR
+3. **Phase 3 (Copy Credentials)**: In `sFnCopyAuditLogReadCredentials`, read credentials are copied to Kyma cluster
 
 ## Current Gap
 
@@ -86,7 +86,7 @@ sFnApplyClusterRoleBindings
     ↓
 sFnMigrateToDedicatedAuditLog (no-op: already configured in sFnPatchExistingShoot)
     ↓
-sFnCopyAuditLogReadCredentials (copies read credentials to SKR)
+sFnCopyAuditLogReadCredentials (copies read credentials to Kyma cluster)
     ↓
 Complete (updateStatusAndStop)
 ```

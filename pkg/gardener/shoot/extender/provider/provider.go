@@ -20,10 +20,11 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler/openstack"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // InfrastructureConfig and ControlPlaneConfig are generated unless they are specified in the RuntimeCR
-func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIMDSv2 bool, machineImageCfg config.MachineImageConfig, workerMachineCfg config.WorkerConfig, gdhcConfig config.GDCHConfig) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIMDSv2 bool, machineImageCfg config.MachineImageConfig, workerMachineCfg config.WorkerConfig, gdhcConfig config.GDCHConfig, openstackConfig config.OpenStackConfig) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
 		provider.Type = rt.Spec.Shoot.Provider.Type
@@ -42,7 +43,7 @@ func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIM
 
 		canEnableDualStack := rt.Spec.Shoot.Networking.DualStack != nil && *rt.Spec.Shoot.Networking.DualStack && infraSupportsDualStack
 
-		infraConfig, controlPlaneConf, err := getConfig(rt.Spec.Shoot, workerZones, canEnableDualStack, nil, gdhcConfig)
+		infraConfig, controlPlaneConf, err := getConfig(rt.Spec.Shoot, workerZones, canEnableDualStack, nil, gdhcConfig, openstackConfig)
 		if err != nil {
 			return err
 		}
@@ -67,7 +68,7 @@ func NewProviderExtenderForCreateOperation(infraSupportsDualStack bool, enableIM
 }
 
 // Zones for patching workes are taken from existing shoot workers
-func NewProviderExtenderPatchOperation(enableIMDSv2 bool, shootWorkers []gardener.Worker, machineImageCfg config.MachineImageConfig, workerMachineCfg config.WorkerConfig, existingInfraConfig, existingControlPlaneConfig *runtime.RawExtension, gdhcOptions config.GDCHConfig) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
+func NewProviderExtenderPatchOperation(enableIMDSv2 bool, shootWorkers []gardener.Worker, machineImageCfg config.MachineImageConfig, workerMachineCfg config.WorkerConfig, existingInfraConfig, existingControlPlaneConfig *runtime.RawExtension, gdhcOptions config.GDCHConfig, openstackOptions config.OpenStackConfig) func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(rt imv1.Runtime, shoot *gardener.Shoot) error {
 		provider := &shoot.Spec.Provider
 		provider.Type = rt.Spec.Shoot.Provider.Type
@@ -106,7 +107,7 @@ func NewProviderExtenderPatchOperation(enableIMDSv2 bool, shootWorkers []gardene
 		} else {
 			mergedWorkerZones := append(workerZonesFromShoot, zonesAdded...)
 
-			infraConfig, controlPlaneConfig, err := getConfig(rt.Spec.Shoot, mergedWorkerZones, false, existingInfraConfig.Raw, gdhcOptions)
+			infraConfig, controlPlaneConfig, err := getConfig(rt.Spec.Shoot, mergedWorkerZones, false, existingInfraConfig.Raw, gdhcOptions, openstackOptions)
 			if err != nil {
 				return err
 			}
@@ -196,7 +197,7 @@ func sortWorkersToShootOrder(runtimeWorkers []gardener.Worker, shootWorkers []ga
 type InfrastructureProviderFunc func(workersCidr string, zones []string) ([]byte, error)
 type ControlPlaneProviderFunc func(zones []string) ([]byte, error)
 
-func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, enableDualStack bool, existingInfrastructureConfig []byte, gdhcConfig config.GDCHConfig) (infrastructureConfig *runtime.RawExtension, controlPlaneConfig *runtime.RawExtension, err error) {
+func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, enableDualStack bool, existingInfrastructureConfig []byte, gdhcConfig config.GDCHConfig, openstackConfig config.OpenStackConfig) (infrastructureConfig *runtime.RawExtension, controlPlaneConfig *runtime.RawExtension, err error) {
 	getConfigForProvider := func(runtimeShoot imv1.RuntimeShoot, infrastructureConfigFunc InfrastructureProviderFunc, controlPlaneConfigFunc ControlPlaneProviderFunc) (*runtime.RawExtension, *runtime.RawExtension, error) {
 		infrastructureConfigBytes, err := infrastructureConfigFunc(runtimeShoot.Networking.Nodes, zones)
 		if err != nil {
@@ -240,7 +241,27 @@ func getConfig(runtimeShoot imv1.RuntimeShoot, zones []string, enableDualStack b
 		}
 	case hyperscaler.TypeOpenStack:
 		{
-			return getConfigForProvider(runtimeShoot, openstack.GetInfrastructureConfig, openstack.GetControlPlaneConfig)
+			// The floating pool is immutable landscape config. On patch (existing infra config
+			// present) carry the existing pool forward instead of the configured one, so a
+			// changed config value can never rewrite it on an existing shoot. If the configured
+			// value differs from the existing one, warn that the change is ignored.
+			floatingPoolName := openstackConfig.FloatingPoolName
+			if existingInfrastructureConfig != nil {
+				existingPool, err := openstack.FloatingPoolNameFromInfrastructureConfig(existingInfrastructureConfig)
+				if err != nil {
+					return nil, nil, err
+				}
+				if openstackConfig.FloatingPoolName != "" && openstackConfig.FloatingPoolName != existingPool {
+					logf.Log.Info("OpenStack floating pool name is immutable and cannot be changed during patch; keeping the existing value",
+						"existingFloatingPoolName", existingPool,
+						"requestedFloatingPoolName", openstackConfig.FloatingPoolName,
+						"shoot", runtimeShoot.Name)
+				}
+				floatingPoolName = existingPool
+			}
+			return getConfigForProvider(runtimeShoot, func(workersCidr string, _ []string) ([]byte, error) {
+				return openstack.GetInfrastructureConfig(workersCidr, floatingPoolName)
+			}, openstack.GetControlPlaneConfig)
 		}
 	case hyperscaler.TypeAlicloud:
 		{

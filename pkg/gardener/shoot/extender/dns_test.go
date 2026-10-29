@@ -58,7 +58,7 @@ func TestDNSExtenderForPatch(t *testing.T) {
 		existingDomain := "existing.domain.com"
 		existingDNS := &gardener.DNS{
 			Domain:    &existingDomain,
-			Providers: []gardener.DNSProvider{},
+			Providers: []gardener.DNSProvider{}, //nolint:staticcheck // Deprecated: migrate to shoot-dns-service extension (#1576)
 		}
 		extender := NewDNSExtenderForPatch(secretName, domainPrefix, dnsProviderType, existingDNS)
 		shoot := testutils.FixEmptyGardenerShoot("test", "dev")
@@ -75,7 +75,7 @@ func TestDNSExtenderForPatch(t *testing.T) {
 	t.Run("Create new DNS config when existing DNS has providers", func(t *testing.T) {
 		existingProviderType := "gcp-clouddns"
 		existingDNS := &gardener.DNS{
-			Providers: []gardener.DNSProvider{
+			Providers: []gardener.DNSProvider{ //nolint:staticcheck // Deprecated: migrate to shoot-dns-service extension (#1576)
 				{Type: &existingProviderType},
 			},
 		}

@@ -87,7 +87,7 @@ The runtime goes through the full provisioning flow:
 - `sFnCreateKymaNamespace` - Create Kyma namespace
 - `sFnInitializeRuntimeBootstrapper` - Initialize bootstrapper
 - `sFnCleanupRegistryCacheGardenSecrets` - Cleanup secrets
-- `sFnConfigureSKR` - Configure SKR
+- `sFnConfigureSKR` - Configure Kyma cluster
 - `sFnApplyClusterRoleBindings` - Apply cluster role bindings
 
 All these steps complete successfully before any dedicated audit logging resources are claimed.

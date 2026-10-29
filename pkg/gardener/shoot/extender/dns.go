@@ -61,12 +61,12 @@ func NewDNSExtenderForCreate(secretName, domainPrefix, dnsProviderType string) f
 		isPrimary := true
 
 		provider := gardener.DNSProvider{
-			Domains: &gardener.DNSIncludeExclude{
+			Domains: &gardener.DNSIncludeExclude{ //nolint:staticcheck // Deprecated: migrate to shoot-dns-service extension (#1576)
 				Include: []string{
 					domain,
 				},
 			},
-			Primary: &isPrimary,
+			Primary: &isPrimary, //nolint:staticcheck // Deprecated: migrate to shoot-dns-service extension (#1576)
 			Type:    &dnsProviderType,
 			CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 				APIVersion: "v1",

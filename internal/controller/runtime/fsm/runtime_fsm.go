@@ -104,9 +104,7 @@ loop:
 		return *result, err
 	}
 
-	return ctrl.Result{
-		Requeue: false,
-	}, err
+	return ctrl.Result{}, err
 }
 
 func NewFsm(log logr.Logger, cfg RCCfg, k8s K8s) Fsm {

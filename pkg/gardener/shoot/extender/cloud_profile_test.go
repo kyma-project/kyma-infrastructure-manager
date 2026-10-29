@@ -14,10 +14,11 @@ import (
 
 func TestExtendWithCloudProfile(t *testing.T) {
 	for _, testCase := range []struct {
-		name            string
-		providerType    string
-		override        string
-		expectedProfile *gardener.CloudProfileReference
+		name              string
+		providerType      string
+		gdchOverride      string
+		openstackOverride string
+		expectedProfile   *gardener.CloudProfileReference
 	}{
 		{
 			name:            "Set cloud profile name for aws",
@@ -40,6 +41,12 @@ func TestExtendWithCloudProfile(t *testing.T) {
 			expectedProfile: CreateCloudProfileReference(DefaultOpenStackCloudProfileName),
 		},
 		{
+			name:              "Override cloud profile for openstack when provided",
+			providerType:      hyperscaler.TypeOpenStack,
+			openstackOverride: "converged-cloud-iaas-de5955",
+			expectedProfile:   CreateCloudProfileReference("converged-cloud-iaas-de5955"),
+		},
+		{
 			name:            "Set cloud profile for alicloud",
 			providerType:    hyperscaler.TypeAlicloud,
 			expectedProfile: CreateCloudProfileReference(DefaultAlicloudCloudProfileName),
@@ -52,14 +59,15 @@ func TestExtendWithCloudProfile(t *testing.T) {
 		{
 			name:            "Override cloud profile for gdch when provided",
 			providerType:    hyperscaler.TypeGDCH,
-			override:        "custom-gdch",
+			gdchOverride:    "custom-gdch",
 			expectedProfile: CreateCloudProfileReference("custom-gdch"),
 		},
 		{
-			name:            "Ignore override for non-gdch providers",
-			providerType:    hyperscaler.TypeAWS,
-			override:        "custom-gdch",
-			expectedProfile: CreateCloudProfileReference(DefaultAWSCloudProfileName),
+			name:              "Ignore overrides for non-matching providers",
+			providerType:      hyperscaler.TypeAWS,
+			gdchOverride:      "custom-gdch",
+			openstackOverride: "custom-openstack",
+			expectedProfile:   CreateCloudProfileReference(DefaultAWSCloudProfileName),
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -77,7 +85,7 @@ func TestExtendWithCloudProfile(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("test", "dev")
 
 			// when
-			err := ExtendWithCloudProfile(testCase.override)(runtime, &shoot)
+			err := ExtendWithCloudProfile(testCase.gdchOverride, testCase.openstackOverride)(runtime, &shoot)
 
 			// then
 			require.NoError(t, err)
@@ -103,7 +111,7 @@ func TestExtendWithCloudProfile(t *testing.T) {
 		shoot := testutils.FixEmptyGardenerShoot("test", "dev")
 
 		// when
-		err := ExtendWithCloudProfile("")(runtime, &shoot)
+		err := ExtendWithCloudProfile("", "")(runtime, &shoot)
 
 		// then
 		require.Error(t, err)
