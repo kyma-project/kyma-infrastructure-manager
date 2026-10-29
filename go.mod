@@ -9,20 +9,20 @@ require (
 	github.com/gardener/gardener-extension-provider-aws v1.68.3
 	github.com/gardener/gardener-extension-provider-gcp v1.50.0
 	github.com/gardener/gardener-extension-provider-openstack v1.53.1
-	github.com/gardener/gardener-extension-registry-cache v0.21.0
+	github.com/gardener/gardener-extension-registry-cache v0.23.1
 	github.com/gardener/gardener-extension-runtime-gvisor v0.33.0
 	github.com/gardener/gardener/pkg/apis v1.151.2
 	github.com/gardener/oidc-webhook-authenticator v0.42.0
 	github.com/go-logr/logr v1.4.4
-	github.com/go-playground/validator/v10 v10.30.3
+	github.com/go-playground/validator/v10 v10.30.5
 	github.com/google/uuid v1.6.0
 	github.com/kyma-project/lifecycle-manager/api v1.0.0
-	github.com/kyma-project/registry-cache v0.0.0-20260702083050-7fec976a2def
-	github.com/kyma-project/runtime-watcher/listener v1.4.3
+	github.com/kyma-project/registry-cache v0.0.0-20261022102408-6049effd6e34
+	github.com/kyma-project/runtime-watcher/listener v1.4.4
 	github.com/onsi/ginkgo/v2 v2.33.1
-	github.com/onsi/gomega v1.43.0
+	github.com/onsi/gomega v1.44.0
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.24.1
+	github.com/prometheus/client_golang v1.25.0
 	github.com/stretchr/testify v1.12.1
 	k8s.io/api v0.37.1
 	k8s.io/apiextensions-apiserver v0.37.1
@@ -42,7 +42,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.15 // indirect
 	github.com/gardener/cert-management/pkg/apis v0.27.0 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v1.0.2 // indirect
@@ -74,9 +74,9 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/open-telemetry/opentelemetry-operator/apis v0.158.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.71.0 // indirect
-	github.com/prometheus/procfs v0.21.1 // indirect
+	github.com/prometheus/client_model v0.6.3 // indirect
+	github.com/prometheus/common v0.72.0 // indirect
+	github.com/prometheus/procfs v0.22.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
@@ -103,7 +103,7 @@ require (
 	k8s.io/component-base v0.37.1 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect
-	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
+	sigs.k8s.io/json v0.0.0-20260909141634-11ed52e25bc5 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.2 // indirect
 )
