@@ -18,7 +18,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/kyma-project/lifecycle-manager/api v1.0.0
 	github.com/kyma-project/registry-cache v0.0.0-20261022102408-6049effd6e34
-	github.com/kyma-project/runtime-watcher/listener v1.4.3
+	github.com/kyma-project/runtime-watcher/listener v1.4.4
 	github.com/onsi/ginkgo/v2 v2.33.1
 	github.com/onsi/gomega v1.44.0
 	github.com/pkg/errors v0.9.1
