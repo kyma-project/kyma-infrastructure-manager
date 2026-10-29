@@ -287,6 +287,7 @@ func getPatchOptions(ctx context.Context, m *fsm, s *systemState, auditLogConfig
 		Resources:                       s.shoot.Spec.Resources,
 		InfrastructureConfig:            s.shoot.Spec.Provider.InfrastructureConfig,
 		ControlPlaneConfig:              s.shoot.Spec.Provider.ControlPlaneConfig,
+		ExistingCloudProfile:            s.shoot.Spec.CloudProfile,
 		ApiServerAclEnabled:             m.ApiServerAclEnabled,
 		ExistingDNS:                     s.shoot.Spec.DNS,
 		NetworkRestrictionGlobalEnabled: m.NetworkRestrictionGlobalEnabled,

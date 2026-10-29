@@ -29,7 +29,6 @@ func baseExtenders(converterConfig config.ConverterConfig) []Extend {
 		extender2.ExtendWithLabels,
 		extender2.ExtendWithSeedSelector,
 		extender2.NewOidcExtender(),
-		extender2.ExtendWithCloudProfile(converterConfig.Provider.GDCH.CloudProfileName, converterConfig.Provider.OpenStack.CloudProfileName),
 		extender2.ExtendWithExposureClassName,
 		restrictions.ExtendWithAccessRestriction(),
 		extender2.NewFeatureGatesExtender(converterConfig.Kubernetes.KubeApiServer.FeatureGates, converterConfig.Kubernetes.Kubelet.FeatureGates),
@@ -69,6 +68,7 @@ type PatchOpts struct {
 	Resources                       []gardener.NamedResourceReference
 	InfrastructureConfig            *runtime.RawExtension
 	ControlPlaneConfig              *runtime.RawExtension
+	ExistingCloudProfile            *gardener.CloudProfileReference
 	ApiServerAclEnabled             bool
 	NetworkRestrictionGlobalEnabled bool
 	ExistingDNS                     *gardener.DNS
@@ -79,6 +79,7 @@ func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
 	extendersForCreate := baseExtenders(opts.ConverterConfig)
 
 	extendersForCreate = append(extendersForCreate,
+		extender2.ExtendWithCloudProfile(nil, opts.Provider.GDCH.CloudProfileName, opts.Provider.OpenStack.CloudProfileName),
 		provider.NewProviderExtenderForCreateOperation(
 			opts.Networking.EnableDualStackIP,
 			opts.Provider.AWS.EnableIMDSv2,
@@ -117,6 +118,7 @@ func NewConverterPatch(ctx context.Context, opts PatchOpts) Converter {
 	extendersForPatch := baseExtenders(opts.ConverterConfig)
 
 	extendersForPatch = append(extendersForPatch,
+		extender2.ExtendWithCloudProfile(opts.ExistingCloudProfile, opts.Provider.GDCH.CloudProfileName, opts.Provider.OpenStack.CloudProfileName),
 		provider.NewProviderExtenderPatchOperation(
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.Workers,
