@@ -120,7 +120,7 @@ func TestProviderExtenderForCreateGDCH(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, config.GDCHConfig{})
+			extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, config.GDCHConfig{}, config.OpenStackConfig{})
 			err := extender(tc.Runtime, &shoot)
 
 			// then
@@ -183,7 +183,7 @@ func TestProviderExtenderForCreateGDCHErrors(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: "gardenlinux", DefaultVersion: "1312.3.0"}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, config.GDCHConfig{})
+			extender := NewProviderExtenderForCreateOperation(false, false, config.MachineImageConfig{DefaultName: "gardenlinux", DefaultVersion: "1312.3.0"}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, config.GDCHConfig{}, config.OpenStackConfig{})
 			err := extender(tc.Runtime, &shoot)
 
 			// then
@@ -248,7 +248,7 @@ func TestProviderExtenderForPatchWorkersUpdateGDCH(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("cluster", "kcp-system")
 
 			// when
-			extender := NewProviderExtenderPatchOperation(false, tc.CurrentShootWorkers, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig, config.GDCHConfig{})
+			extender := NewProviderExtenderPatchOperation(false, tc.CurrentShootWorkers, config.MachineImageConfig{DefaultName: tc.DefaultMachineImageName, DefaultVersion: tc.DefaultMachineImageVersion}, config.WorkerConfig{DefaultMaxEvictRetries: "2", DefaultMachineDrainTimeout: "15m"}, tc.ExistingInfraConfig, tc.ExistingControlPlaneConfig, config.GDCHConfig{}, config.OpenStackConfig{})
 			err := extender(tc.Runtime, &shoot)
 
 			// then

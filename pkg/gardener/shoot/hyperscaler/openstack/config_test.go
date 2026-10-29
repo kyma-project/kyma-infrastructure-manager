@@ -28,9 +28,9 @@ func TestControlPlaneConfig(t *testing.T) {
 }
 
 func TestInfrastructureConfig(t *testing.T) {
-	t.Run("Create Infrastructure config", func(t *testing.T) {
+	t.Run("Create Infrastructure config with the provided floating pool", func(t *testing.T) {
 		// when
-		infrastructureConfigBytes, err := GetInfrastructureConfig("10.250.0.0/22", nil)
+		infrastructureConfigBytes, err := GetInfrastructureConfig("10.250.0.0/22", "FloatingIP-external-iaas-sov-shared-01")
 
 		// then
 		require.NoError(t, err)
@@ -42,6 +42,20 @@ func TestInfrastructureConfig(t *testing.T) {
 		assert.Equal(t, apiVersion, infrastructureConfig.APIVersion)
 		assert.Equal(t, infrastructureConfigKind, infrastructureConfig.Kind)
 		assert.Equal(t, "10.250.0.0/22", infrastructureConfig.Networks.Workers)
-		assert.Equal(t, defaultFloatingPoolName, infrastructureConfig.FloatingPoolName)
+		assert.Equal(t, "FloatingIP-external-iaas-sov-shared-01", infrastructureConfig.FloatingPoolName)
+	})
+
+	t.Run("Create Infrastructure config with the default floating pool when none is provided", func(t *testing.T) {
+		// when
+		infrastructureConfigBytes, err := GetInfrastructureConfig("10.250.0.0/22", "")
+
+		// then
+		require.NoError(t, err)
+
+		var infrastructureConfig v1alpha1.InfrastructureConfig
+		err = json.Unmarshal(infrastructureConfigBytes, &infrastructureConfig)
+		require.NoError(t, err)
+
+		assert.Equal(t, DefaultFloatingPoolName, infrastructureConfig.FloatingPoolName)
 	})
 }

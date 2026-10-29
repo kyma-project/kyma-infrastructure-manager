@@ -18,9 +18,10 @@ type ClusterConfig struct {
 }
 
 type ProviderConfig struct {
-	AWS    AWSConfig    `json:"aws"`
-	GDCH   GDCHConfig   `json:"gdch"`
-	Worker WorkerConfig `json:"worker"`
+	AWS       AWSConfig       `json:"aws"`
+	GDCH      GDCHConfig      `json:"gdch"`
+	OpenStack OpenStackConfig `json:"openStack"`
+	Worker    WorkerConfig    `json:"worker"`
 }
 
 type WorkerConfig struct {
@@ -37,6 +38,11 @@ type GDCHConfig struct {
 	ParentReferenceName      string `json:"parentReferenceName"`
 	ParentReferenceNamespace string `json:"parentReferenceNamespace"`
 	ParentReferenceType      string `json:"parentReferenceType"`
+}
+
+type OpenStackConfig struct {
+	CloudProfileName string `json:"cloudProfileName"`
+	FloatingPoolName string `json:"floatingPoolName"`
 }
 
 type DNSConfig struct {

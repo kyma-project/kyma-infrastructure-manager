@@ -29,7 +29,7 @@ func baseExtenders(converterConfig config.ConverterConfig) []Extend {
 		extender2.ExtendWithLabels,
 		extender2.ExtendWithSeedSelector,
 		extender2.NewOidcExtender(),
-		extender2.ExtendWithCloudProfile(converterConfig.Provider.GDCH.CloudProfileName),
+		extender2.ExtendWithCloudProfile(converterConfig.Provider.GDCH.CloudProfileName, converterConfig.Provider.OpenStack.CloudProfileName),
 		extender2.ExtendWithExposureClassName,
 		restrictions.ExtendWithAccessRestriction(),
 		extender2.NewFeatureGatesExtender(converterConfig.Kubernetes.KubeApiServer.FeatureGates, converterConfig.Kubernetes.Kubelet.FeatureGates),
@@ -85,6 +85,7 @@ func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
 			opts.MachineImage,
 			opts.Provider.Worker,
 			opts.Provider.GDCH,
+			opts.Provider.OpenStack,
 		),
 		extender2.ExtendWithGVisorNetRawDefault,
 		extender2.NewTolerationsExtender(opts.Tolerations),
@@ -123,7 +124,8 @@ func NewConverterPatch(ctx context.Context, opts PatchOpts) Converter {
 			opts.Provider.Worker,
 			opts.InfrastructureConfig,
 			opts.ControlPlaneConfig,
-			opts.Provider.GDCH))
+			opts.Provider.GDCH,
+			opts.Provider.OpenStack))
 	extendersForPatch = append(extendersForPatch, extender2.ExtendWithGVisorNetRawDefault)
 
 	extendersForPatch = append(extendersForPatch,
