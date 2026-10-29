@@ -276,14 +276,6 @@ func updateStateFailedWithErrorAndStop(instance *imv1.Runtime,
 }
 
 func getPatchOptions(ctx context.Context, m *fsm, s *systemState, auditLogConfig auditlogs.AuditLogData) (gardener_shoot.PatchOpts, error) {
-	existingCloudProfile := s.shoot.Spec.CloudProfile
-	if existingCloudProfile == nil && s.shoot.Spec.CloudProfileName != nil { //nolint:staticcheck // SA1019: deprecated field read only as a fallback to preserve legacy shoots
-		existingCloudProfile = &gardener.CloudProfileReference{
-			Kind: "CloudProfile",
-			Name: *s.shoot.Spec.CloudProfileName, //nolint:staticcheck // SA1019: deprecated field read only as a fallback to preserve legacy shoots
-		}
-	}
-
 	patchOptions := gardener_shoot.PatchOpts{
 		KcpClient:                       m.KcpClient,
 		ConverterConfig:                 m.ConverterConfig,
@@ -295,7 +287,7 @@ func getPatchOptions(ctx context.Context, m *fsm, s *systemState, auditLogConfig
 		Resources:                       s.shoot.Spec.Resources,
 		InfrastructureConfig:            s.shoot.Spec.Provider.InfrastructureConfig,
 		ControlPlaneConfig:              s.shoot.Spec.Provider.ControlPlaneConfig,
-		ExistingCloudProfile:            existingCloudProfile,
+		ExistingCloudProfile:            s.shoot.Spec.CloudProfile,
 		ApiServerAclEnabled:             m.ApiServerAclEnabled,
 		ExistingDNS:                     s.shoot.Spec.DNS,
 		NetworkRestrictionGlobalEnabled: m.NetworkRestrictionGlobalEnabled,
