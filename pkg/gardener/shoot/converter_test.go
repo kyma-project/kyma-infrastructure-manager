@@ -87,12 +87,12 @@ func TestConverter(t *testing.T) {
 		}
 
 		converter := NewConverterPatch(context.Background(), PatchOpts{
-			ConverterConfig:          converterConfig,
-			Workers:                  fixWorkersWithReversedZones("gardenlinux", "1592.2.0"),
-			ShootK8SVersion:          "1.30",
-			InfrastructureConfig:     fixAWSInfrastructureConfig("10.250.0.0/16", []string{"eu-central-1c", "eu-central-1b", "eu-central-1a"}),
-			ControlPlaneConfig:       fixAWSControlPlaneConfig(),
-			ExistingCloudProfileName: existingCloudProfile.Name,
+			ConverterConfig:      converterConfig,
+			Workers:              fixWorkersWithReversedZones("gardenlinux", "1592.2.0"),
+			ShootK8SVersion:      "1.30",
+			InfrastructureConfig: fixAWSInfrastructureConfig("10.250.0.0/16", []string{"eu-central-1c", "eu-central-1b", "eu-central-1a"}),
+			ControlPlaneConfig:   fixAWSControlPlaneConfig(),
+			ExistingCloudProfile: existingCloudProfile,
 		})
 
 		// when

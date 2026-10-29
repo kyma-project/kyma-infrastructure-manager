@@ -85,7 +85,7 @@ func TestExtendWithCloudProfile(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("test", "dev")
 
 			// when
-			err := ExtendWithCloudProfile("", testCase.gdchOverride, testCase.openstackOverride)(runtime, &shoot)
+			err := ExtendWithCloudProfile(nil, testCase.gdchOverride, testCase.openstackOverride)(runtime, &shoot)
 
 			// then
 			require.NoError(t, err)
@@ -111,7 +111,7 @@ func TestExtendWithCloudProfile(t *testing.T) {
 		shoot := testutils.FixEmptyGardenerShoot("test", "dev")
 
 		// when
-		err := ExtendWithCloudProfile("", "", "")(runtime, &shoot)
+		err := ExtendWithCloudProfile(nil, "", "")(runtime, &shoot)
 
 		// then
 		require.Error(t, err)
@@ -123,44 +123,51 @@ func TestCloudProfileExtenderForPatch(t *testing.T) {
 	// cloud profile must always be preserved and re-stated, never re-derived from
 	// config, so a changed config value can never rewrite it on an existing shoot.
 	for _, testCase := range []struct {
-		name                     string
-		providerType             string
-		existingCloudProfileName string
-		gdchOverride             string
-		openstackOverride        string
-		expectedProfile          *gardener.CloudProfileReference
-		expectError              bool
+		name                 string
+		providerType         string
+		existingCloudProfile *gardener.CloudProfileReference
+		gdchOverride         string
+		openstackOverride    string
+		expectedProfile      *gardener.CloudProfileReference
+		expectError          bool
 	}{
 		{
-			name:                     "Preserve existing cloud profile on patch, ignoring config override",
-			providerType:             hyperscaler.TypeOpenStack,
-			existingCloudProfileName: "converged-cloud-iaas-de5955",
-			openstackOverride:        "converged-cloud-different",
-			expectedProfile:          CreateCloudProfileReference("converged-cloud-iaas-de5955"),
+			name:                 "Preserve existing cloud profile on patch, ignoring config override",
+			providerType:         hyperscaler.TypeOpenStack,
+			existingCloudProfile: CreateCloudProfileReference("converged-cloud-iaas-de5955"),
+			openstackOverride:    "converged-cloud-different",
+			expectedProfile:      CreateCloudProfileReference("converged-cloud-iaas-de5955"),
 		},
 		{
-			name:                     "Preserve existing cloud profile on patch for non-OpenStack provider",
-			providerType:             hyperscaler.TypeAWS,
-			existingCloudProfileName: "custom-aws-profile",
-			expectedProfile:          CreateCloudProfileReference("custom-aws-profile"),
+			name:                 "Preserve existing cloud profile on patch for non-OpenStack provider",
+			providerType:         hyperscaler.TypeAWS,
+			existingCloudProfile: CreateCloudProfileReference("custom-aws-profile"),
+			expectedProfile:      CreateCloudProfileReference("custom-aws-profile"),
 		},
 		{
-			name:                     "Keep existing cloud profile on patch when it matches the config-derived value",
-			providerType:             hyperscaler.TypeGDCH,
-			existingCloudProfileName: DefaultGDCHCloudProfileName,
-			expectedProfile:          CreateCloudProfileReference(DefaultGDCHCloudProfileName),
+			name:                 "Keep existing cloud profile on patch when it matches the config-derived value",
+			providerType:         hyperscaler.TypeGDCH,
+			existingCloudProfile: CreateCloudProfileReference(DefaultGDCHCloudProfileName),
+			expectedProfile:      CreateCloudProfileReference(DefaultGDCHCloudProfileName),
 		},
 		{
-			name:              "Fall back to config-derived profile when existing is empty",
+			name:                 "Preserve existing NamespacedCloudProfile kind on patch",
+			providerType:         hyperscaler.TypeOpenStack,
+			existingCloudProfile: &gardener.CloudProfileReference{Kind: "NamespacedCloudProfile", Name: "converged-cloud-iaas-de5955"},
+			openstackOverride:    "converged-cloud-different",
+			expectedProfile:      &gardener.CloudProfileReference{Kind: "NamespacedCloudProfile", Name: "converged-cloud-iaas-de5955"},
+		},
+		{
+			name:              "Fall back to config-derived profile when existing is nil",
 			providerType:      hyperscaler.TypeOpenStack,
 			openstackOverride: "converged-cloud-fallback",
 			expectedProfile:   CreateCloudProfileReference("converged-cloud-fallback"),
 		},
 		{
-			name:                     "Return error on patch when provider has no cloud profile",
-			providerType:             "unknown",
-			existingCloudProfileName: "some-existing-profile",
-			expectError:              true,
+			name:                 "Return error on patch when provider has no cloud profile",
+			providerType:         "unknown",
+			existingCloudProfile: CreateCloudProfileReference("some-existing-profile"),
+			expectError:          true,
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -178,7 +185,7 @@ func TestCloudProfileExtenderForPatch(t *testing.T) {
 			shoot := testutils.FixEmptyGardenerShoot("test", "dev")
 
 			// when
-			err := ExtendWithCloudProfile(testCase.existingCloudProfileName, testCase.gdchOverride, testCase.openstackOverride)(runtime, &shoot)
+			err := ExtendWithCloudProfile(testCase.existingCloudProfile, testCase.gdchOverride, testCase.openstackOverride)(runtime, &shoot)
 
 			// then
 			if testCase.expectError {

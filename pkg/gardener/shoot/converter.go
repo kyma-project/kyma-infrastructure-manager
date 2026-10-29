@@ -68,7 +68,7 @@ type PatchOpts struct {
 	Resources                       []gardener.NamedResourceReference
 	InfrastructureConfig            *runtime.RawExtension
 	ControlPlaneConfig              *runtime.RawExtension
-	ExistingCloudProfileName        string
+	ExistingCloudProfile            *gardener.CloudProfileReference
 	ApiServerAclEnabled             bool
 	NetworkRestrictionGlobalEnabled bool
 	ExistingDNS                     *gardener.DNS
@@ -79,7 +79,7 @@ func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
 	extendersForCreate := baseExtenders(opts.ConverterConfig)
 
 	extendersForCreate = append(extendersForCreate,
-		extender2.ExtendWithCloudProfile("", opts.Provider.GDCH.CloudProfileName, opts.Provider.OpenStack.CloudProfileName),
+		extender2.ExtendWithCloudProfile(nil, opts.Provider.GDCH.CloudProfileName, opts.Provider.OpenStack.CloudProfileName),
 		provider.NewProviderExtenderForCreateOperation(
 			opts.Networking.EnableDualStackIP,
 			opts.Provider.AWS.EnableIMDSv2,
@@ -118,7 +118,7 @@ func NewConverterPatch(ctx context.Context, opts PatchOpts) Converter {
 	extendersForPatch := baseExtenders(opts.ConverterConfig)
 
 	extendersForPatch = append(extendersForPatch,
-		extender2.ExtendWithCloudProfile(opts.ExistingCloudProfileName, opts.Provider.GDCH.CloudProfileName, opts.Provider.OpenStack.CloudProfileName),
+		extender2.ExtendWithCloudProfile(opts.ExistingCloudProfile, opts.Provider.GDCH.CloudProfileName, opts.Provider.OpenStack.CloudProfileName),
 		provider.NewProviderExtenderPatchOperation(
 			opts.Provider.AWS.EnableIMDSv2,
 			opts.Workers,

@@ -19,27 +19,27 @@ const (
 )
 
 // ExtendWithCloudProfile sets the shoot cloud profile. The cloud profile is immutable in Gardener,
-// so on patch (existingCloudProfileName non-empty) the existing value is preserved and never
-// re-derived from config; a changed config value cannot rewrite it on an existing shoot. If the
-// configured value differs from the existing one, a warning is logged that the change is ignored.
-// On create (existingCloudProfileName empty) the value is derived from config.
-func ExtendWithCloudProfile(existingCloudProfileName, gdchCloudProfileOverride, openstackCloudProfileOverride string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+// so on patch (existingCloudProfile non-nil) the existing reference is preserved exactly — including
+// its Kind, which may be CloudProfile or NamespacedCloudProfile — and a changed config value cannot
+// rewrite it on an existing shoot. The configured name is still derived for comparison (and a
+// derivation error is returned), and a warning is logged when it differs from the existing value.
+// On create (existingCloudProfile nil) the value is derived from config.
+func ExtendWithCloudProfile(existingCloudProfile *gardener.CloudProfileReference, gdchCloudProfileOverride, openstackCloudProfileOverride string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		configuredName, err := getCloudProfileName(runtime, gdchCloudProfileOverride, openstackCloudProfileOverride)
-
 		if err != nil {
 			return err
 		}
 
-		// On create (existingCloudProfileName empty) the config-derived name is used as-is.
-		// On patch the existing value is always kept, because the cloud profile is immutable; the
-		// configured name is then only used to detect and warn about an ignored change.
-		if existingCloudProfileName != "" && configuredName != existingCloudProfileName {
-			logf.Log.Info("Cloud profile is immutable and cannot be changed during patch; keeping the existing value",
-				"existingCloudProfileName", existingCloudProfileName,
-				"requestedCloudProfileName", configuredName,
-				"shoot", runtime.Spec.Shoot.Name)
-			configuredName = existingCloudProfileName
+		if existingCloudProfile != nil {
+			if configuredName != existingCloudProfile.Name {
+				logf.Log.Info("Cloud profile is immutable and cannot be changed during patch; keeping the existing value",
+					"existingCloudProfileName", existingCloudProfile.Name,
+					"requestedCloudProfileName", configuredName,
+					"shoot", runtime.Spec.Shoot.Name)
+			}
+			shoot.Spec.CloudProfile = existingCloudProfile
+			return nil
 		}
 
 		shoot.Spec.CloudProfile = CreateCloudProfileReference(configuredName)
