@@ -276,6 +276,11 @@ func updateStateFailedWithErrorAndStop(instance *imv1.Runtime,
 }
 
 func getPatchOptions(ctx context.Context, m *fsm, s *systemState, auditLogConfig auditlogs.AuditLogData) (gardener_shoot.PatchOpts, error) {
+	var existingCloudProfileName string
+	if s.shoot.Spec.CloudProfile != nil {
+		existingCloudProfileName = s.shoot.Spec.CloudProfile.Name
+	}
+
 	patchOptions := gardener_shoot.PatchOpts{
 		KcpClient:                       m.KcpClient,
 		ConverterConfig:                 m.ConverterConfig,
@@ -287,6 +292,7 @@ func getPatchOptions(ctx context.Context, m *fsm, s *systemState, auditLogConfig
 		Resources:                       s.shoot.Spec.Resources,
 		InfrastructureConfig:            s.shoot.Spec.Provider.InfrastructureConfig,
 		ControlPlaneConfig:              s.shoot.Spec.Provider.ControlPlaneConfig,
+		ExistingCloudProfileName:        existingCloudProfileName,
 		ApiServerAclEnabled:             m.ApiServerAclEnabled,
 		ExistingDNS:                     s.shoot.Spec.DNS,
 		NetworkRestrictionGlobalEnabled: m.NetworkRestrictionGlobalEnabled,

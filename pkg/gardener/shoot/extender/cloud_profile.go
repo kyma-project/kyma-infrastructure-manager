@@ -5,6 +5,7 @@ import (
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/hyperscaler"
 	"github.com/pkg/errors"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -17,15 +18,31 @@ const (
 	CloudProfileKind                 = "CloudProfile"
 )
 
-func ExtendWithCloudProfile(gdchCloudProfileOverride, openstackCloudProfileOverride string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+// ExtendWithCloudProfile sets the shoot cloud profile. The cloud profile is immutable in Gardener,
+// so on patch (existingCloudProfileName non-empty) the existing value is preserved and never
+// re-derived from config; a changed config value cannot rewrite it on an existing shoot. If the
+// configured value differs from the existing one, a warning is logged that the change is ignored.
+// On create (existingCloudProfileName empty) the value is derived from config.
+func ExtendWithCloudProfile(existingCloudProfileName, gdchCloudProfileOverride, openstackCloudProfileOverride string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		cloudProfileName, err := getCloudProfileName(runtime, gdchCloudProfileOverride, openstackCloudProfileOverride)
+		configuredName, err := getCloudProfileName(runtime, gdchCloudProfileOverride, openstackCloudProfileOverride)
+
 		if err != nil {
 			return err
 		}
 
-		shoot.Spec.CloudProfile = CreateCloudProfileReference(cloudProfileName)
+		// On create (existingCloudProfileName empty) the config-derived name is used as-is.
+		// On patch the existing value is always kept, because the cloud profile is immutable; the
+		// configured name is then only used to detect and warn about an ignored change.
+		if existingCloudProfileName != "" && configuredName != existingCloudProfileName {
+			logf.Log.Info("Cloud profile is immutable and cannot be changed during patch; keeping the existing value",
+				"existingCloudProfileName", existingCloudProfileName,
+				"requestedCloudProfileName", configuredName,
+				"shoot", runtime.Spec.Shoot.Name)
+			configuredName = existingCloudProfileName
+		}
 
+		shoot.Spec.CloudProfile = CreateCloudProfileReference(configuredName)
 		return nil
 	}
 }
