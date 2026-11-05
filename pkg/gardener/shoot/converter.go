@@ -22,7 +22,7 @@ import (
 
 type Extend func(imv1.Runtime, *gardener.Shoot) error
 
-func baseExtenders(converterConfig config.ConverterConfig) []Extend {
+func baseExtenders(converterConfig config.ConverterConfig, currentKubernetesVersion string) []Extend {
 
 	return []Extend{
 		extender2.ExtendWithAnnotations,
@@ -31,7 +31,7 @@ func baseExtenders(converterConfig config.ConverterConfig) []Extend {
 		extender2.NewOidcExtender(),
 		extender2.ExtendWithExposureClassName,
 		restrictions.ExtendWithAccessRestriction(),
-		extender2.NewFeatureGatesExtender(converterConfig.Kubernetes.KubeApiServer.FeatureGates, converterConfig.Kubernetes.Kubelet.FeatureGates, converterConfig.Kubernetes.DefaultVersion),
+		extender2.NewFeatureGatesExtender(converterConfig.Kubernetes.KubeApiServer.FeatureGates, converterConfig.Kubernetes.Kubelet.FeatureGates, converterConfig.Kubernetes.DefaultVersion, currentKubernetesVersion),
 		extender2.NewKubernetesRuntimeConfigExtender(converterConfig.Kubernetes.KubeApiServer.RuntimeConfig),
 	}
 }
@@ -76,7 +76,7 @@ type PatchOpts struct {
 }
 
 func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
-	extendersForCreate := baseExtenders(opts.ConverterConfig)
+	extendersForCreate := baseExtenders(opts.ConverterConfig, "")
 
 	extendersForCreate = append(extendersForCreate,
 		extender2.ExtendWithCloudProfile(nil, opts.Provider.GDCH.CloudProfileName, opts.Provider.OpenStack.CloudProfileName),
@@ -115,7 +115,7 @@ func NewConverterCreate(ctx context.Context, opts CreateOpts) Converter {
 }
 
 func NewConverterPatch(ctx context.Context, opts PatchOpts) Converter {
-	extendersForPatch := baseExtenders(opts.ConverterConfig)
+	extendersForPatch := baseExtenders(opts.ConverterConfig, opts.ShootK8SVersion)
 
 	extendersForPatch = append(extendersForPatch,
 		extender2.ExtendWithCloudProfile(opts.ExistingCloudProfile, opts.Provider.GDCH.CloudProfileName, opts.Provider.OpenStack.CloudProfileName),

@@ -13,7 +13,7 @@ const (
 	kubeletClusterTrustBundleMinVersion = "1.35"
 )
 
-func NewFeatureGatesExtender(apiServerFeatureGates map[string]bool, kubeletFeatureGates map[string]bool, defaultKubernetesVersion string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
+func NewFeatureGatesExtender(apiServerFeatureGates map[string]bool, kubeletFeatureGates map[string]bool, defaultKubernetesVersion, currentKubernetesVersion string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 		if shoot.Spec.Kubernetes.KubeAPIServer == nil {
 			shoot.Spec.Kubernetes.KubeAPIServer = &gardener.KubeAPIServerConfig{}
@@ -23,25 +23,16 @@ func NewFeatureGatesExtender(apiServerFeatureGates map[string]bool, kubeletFeatu
 		if shoot.Spec.Kubernetes.Kubelet == nil {
 			shoot.Spec.Kubernetes.Kubelet = &gardener.KubeletConfig{}
 		}
-		shoot.Spec.Kubernetes.Kubelet.FeatureGates = filterKubeletFeatureGates(kubeletFeatureGates, runtime, defaultKubernetesVersion)
+		shoot.Spec.Kubernetes.Kubelet.FeatureGates = filterKubeletFeatureGates(kubeletFeatureGates, EffectiveKubernetesVersion(runtime, defaultKubernetesVersion, currentKubernetesVersion))
 
 		return nil
 	}
 }
 
 // filterKubeletFeatureGates removes the kubelet ClusterTrustBundle feature gate for Kubernetes versions lower than 1.35.
-// The Runtime CR does not contain the actual (possibly auto-updated) Shoot version, so the requested version
-// (or the default one) is used. This never enables the gate on a cluster that is older than 1.35.
-// See: https://v1-35.docs.kubernetes.io/docs/concepts/storage/projected-volumes/#clustertrustbundle
-// This code can be removed once the minimum supported Kubernetes version is 1.35 or higher.
-func filterKubeletFeatureGates(kubeletFeatureGates map[string]bool, runtime imv1.Runtime, defaultKubernetesVersion string) map[string]bool {
+func filterKubeletFeatureGates(kubeletFeatureGates map[string]bool, kubernetesVersion string) map[string]bool {
 	if _, found := kubeletFeatureGates[kubeletClusterTrustBundleFeatureGate]; !found {
 		return kubeletFeatureGates
-	}
-
-	kubernetesVersion := defaultKubernetesVersion
-	if runtime.Spec.Shoot.Kubernetes.Version != nil && *runtime.Spec.Shoot.Kubernetes.Version != "" {
-		kubernetesVersion = *runtime.Spec.Shoot.Kubernetes.Version
 	}
 
 	result, err := CompareVersions(kubernetesVersion, kubeletClusterTrustBundleMinVersion)

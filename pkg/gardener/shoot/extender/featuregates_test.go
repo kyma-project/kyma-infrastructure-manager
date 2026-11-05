@@ -26,7 +26,7 @@ func TestFeatureGatesExtender(t *testing.T) {
 		}
 
 		// when
-		extender := NewFeatureGatesExtender(apiServerFeatureGates, kubeletFeatureGates, "1.34")
+		extender := NewFeatureGatesExtender(apiServerFeatureGates, kubeletFeatureGates, "1.34", "")
 		err := extender(runtime, &shoot)
 
 		// then
@@ -40,6 +40,7 @@ func TestFeatureGatesExtender(t *testing.T) {
 		name            string
 		runtimeVersion  *string
 		defaultVersion  string
+		currentVersion  string
 		expectedEnabled bool
 	}{
 		{name: "default version lower than 1.35", defaultVersion: "1.34.2", expectedEnabled: false},
@@ -49,6 +50,10 @@ func TestFeatureGatesExtender(t *testing.T) {
 		{name: "runtime version lower than 1.35 overrides default", runtimeVersion: ptr.To("1.33.5"), defaultVersion: "1.35.0", expectedEnabled: false},
 		{name: "runtime version greater than 1.35 overrides default", runtimeVersion: ptr.To("1.35.1"), defaultVersion: "1.34.0", expectedEnabled: true},
 		{name: "invalid version", runtimeVersion: ptr.To("invalid"), defaultVersion: "1.35.0", expectedEnabled: false},
+		{name: "auto-updated shoot version greater than default", defaultVersion: "1.34.2", currentVersion: "1.35.1", expectedEnabled: true},
+		{name: "auto-updated shoot version greater than runtime version", runtimeVersion: ptr.To("1.34.2"), defaultVersion: "1.34.2", currentVersion: "1.35.0", expectedEnabled: true},
+		{name: "current shoot version lower than runtime version", runtimeVersion: ptr.To("1.35.0"), defaultVersion: "1.34.2", currentVersion: "1.34.2", expectedEnabled: true},
+		{name: "current shoot version lower than 1.35", defaultVersion: "1.34.2", currentVersion: "1.34.3", expectedEnabled: false},
 	} {
 		t.Run("ClusterTrustBundle kubelet feature gate: "+tc.name, func(t *testing.T) {
 			// given
@@ -62,7 +67,7 @@ func TestFeatureGatesExtender(t *testing.T) {
 			}
 
 			// when
-			extender := NewFeatureGatesExtender(map[string]bool{}, kubeletFeatureGates, tc.defaultVersion)
+			extender := NewFeatureGatesExtender(map[string]bool{}, kubeletFeatureGates, tc.defaultVersion, tc.currentVersion)
 			err := extender(runtime, &shoot)
 
 			// then
