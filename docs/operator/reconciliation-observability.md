@@ -95,30 +95,51 @@ Visible via `kubectl describe runtime <name>`.
 | `CustomAuditLogConfigured` | Dedicated audit log setup |
 | `AuditLogCredentialsCopied` | Audit log read credential copy to Kyma cluster |
 
-#### Condition Reasons — error codes
+#### Condition Reasons
 
-| Reason | Condition | Severity |
+All condition reason strings, grouped by outcome. The `Category` column indicates whether the reason represents an error, a success/terminal state, or an in-progress state.
+
+| Reason | Condition | Category |
 |--------|-----------|----------|
-| `GardenerErr` | `Provisioned` | Transient / Permanent |
-| `ConversionErr` | `Provisioned` | Permanent |
-| `CreationErr` | `Provisioned` | Permanent |
-| `ProcessingErr` | `Provisioned` | Transient |
-| `SeedNotFound` | `Provisioned` | Permanent |
-| `AuditLogErr` | `Provisioned` | Permanent (if audit log is mandatory) |
-| `CustomAuditLogErr` | `CustomAuditLogConfigured` | Permanent |
-| `CredentialsCopyErr` | `AuditLogCredentialsCopied` | Transient |
-| `OidcConfigurationErr` | `OidcAndConfigMapConfigured` | Permanent |
-| `ConfigMapErr` | `OidcAndConfigMapConfigured` | Permanent |
-| `KubernetesErr` | `KubeconfigReady` | Transient |
-| `KymaSystemNSError` | `KymaSystemNSCreated` | Transient |
-| `ConfigurationError` | `Configured` | Transient |
-| `RegistryCacheError` | `RegistryCacheConfigured` | Transient |
-| `RegistryCacheGardenClusterConfigurationFailed` | `RegistryCacheConfigured` | Transient |
-| `RegistryCacheGardenClusterCleanupFailed` | `RegistryCacheConfigured` | Transient |
-| `RuntimeBootstrapperInstallationFailed` | `RuntimeBootstrapperReady` | Transient |
-| `RuntimeBootstrapperUpgradeFailed` | `RuntimeBootstrapperReady` | Transient |
-| `RuntimeBootstrapperConfigurationFailed` | `RuntimeBootstrapperReady` | Transient |
+| `Processing` | `Provisioned` | In-progress |
+| `Pending` | `Provisioned` | In-progress |
+| `ShootCreationCompleted` | `Provisioned` | Success |
+| `ConfigurationCompleted` | `Configured` | Success |
+| `GardenerErr` | `Provisioned` | Error — Transient / Permanent |
+| `ConversionErr` | `Provisioned` | Error — Permanent |
+| `CreationErr` | `Provisioned` | Error — Permanent |
+| `ProcessingErr` | `Provisioned` | Error — Transient |
+| `SeedNotFound` | `Provisioned` | Error — Permanent |
+| `AuditLogErr` | `Provisioned` | Error — Permanent (if audit log mandatory) |
+| `Initialised` | `Provisioned` | In-progress |
+| `GardenerClusterCRCreated` | `KubeconfigReady` | In-progress |
+| `GardenerClusterCRReady` | `KubeconfigReady` | Success |
+| `KubernetesErr` | `KubeconfigReady` | Error — Transient |
+| `OidcAndConfigMapsConfigured` | `OidcAndConfigMapConfigured` | Success |
+| `OidcConfigurationErr` | `OidcAndConfigMapConfigured` | Error — Permanent |
+| `ConfigMapErr` | `OidcAndConfigMapConfigured` | Error — Permanent |
+| `KymaSystemNSReady` | `KymaSystemNSCreated` | Success |
+| `KymaSystemNSError` | `KymaSystemNSCreated` | Error — Transient |
+| `AdministratorsConfigured` | `Configured` | Success |
+| `ConfigurationError` | `Configured` | Error — Transient |
+| `GardenerClusterCRDeleted` | `Deprovisioned` | Success |
+| `GardenerShootDeleted` | `Deprovisioned` | Success |
+| `StructuredConfigDeleted` | `Deprovisioned` | Success |
+| `RegistryCacheConfigured` | `RegistryCacheConfigured` | Success |
+| `RegistryCacheError` | `RegistryCacheConfigured` | Error — Transient |
+| `RegistryCacheGardenClusterConfigurationFailed` | `RegistryCacheConfigured` | Error — Transient |
+| `RegistryCacheGardenClusterCleanupFailed` | `RegistryCacheConfigured` | Error — Transient |
+| `RuntimeBootstrapperConfigured` | `RuntimeBootstrapperReady` | Success |
+| `RuntimeBootstrapperInstallationInProgress` | `RuntimeBootstrapperReady` | In-progress |
+| `RuntimeBootstrapperInstallationFailed` | `RuntimeBootstrapperReady` | Error — Transient |
+| `RuntimeBootstrapperUpgradeInProgress` | `RuntimeBootstrapperReady` | In-progress |
+| `RuntimeBootstrapperUpgradeFailed` | `RuntimeBootstrapperReady` | Error — Transient |
+| `RuntimeBootstrapperConfigurationFailed` | `RuntimeBootstrapperReady` | Error — Transient |
 | `RuntimeBootstrapperStatusUnknown` | `RuntimeBootstrapperReady` | Unknown |
+| `CustomAuditLogConfigured` | `CustomAuditLogConfigured` | Success |
+| `CustomAuditLogErr` | `CustomAuditLogConfigured` | Error — Permanent |
+| `CredentialsCopied` | `AuditLogCredentialsCopied` | Success |
+| `CredentialsCopyErr` | `AuditLogCredentialsCopied` | Error — Transient |
 
 ### 2.3 Kubernetes Events
 
@@ -140,7 +161,7 @@ Normal   ConfigurationCompleted    Runtime processing completed successfully: kc
 
 ### 2.4 Prometheus Metrics
 
-KIM exposes metrics at `:8080/metrics`. All metrics use the subsystem prefix `infrastructure_manager_`.
+KIM exposes metrics at `:8080/metrics`. Three of the four metrics use the subsystem prefix `infrastructure_manager_`; `unexpected_stops_total` is registered without a subsystem prefix and is queried by its bare name.
 
 #### `infrastructure_manager_im_runtime_state` (GaugeVec)
 
