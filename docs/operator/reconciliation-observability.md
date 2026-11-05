@@ -207,8 +207,7 @@ Reports kubeconfig expiration as a Unix epoch timestamp. Enables alerting before
 
 Counts FSM runs that ended with a permanent (non-retriable) error. Incremented whenever:
 
-- A permanent error causes `status.state = Failed`
-- The status update itself fails
+- An FSM path explicitly calls `IncRuntimeFSMStopCounter` — this covers permanent failures as well as some unexpected or retrying error paths across ~20 call sites in the FSM
 
 **Use case:** This is the primary metric for tracking unrecoverable provisioning failures. An increasing rate indicates a systemic problem.
 
@@ -225,19 +224,27 @@ KIM uses `logr` with a `zap` backend. Log format is JSON in production mode (def
 | `Error` | — | Unexpected failures requiring attention |
 | `Info` | 0 | Major events: reconciliation started/completed, errors, state changes, Gardener last errors |
 | `Debug` | 1 | Intermediate steps, status checks, retry scheduling |
-| `Trace` | 4+ | FSM state transitions (every function switch) |
+| `Trace` | 2 | FSM state transitions (every function switch) |
 
 Configure via `-zap-log-level`. For production, `Info` is the default. Set to `Debug` during incident investigation.
 
 ### 3.2 Common Structured Fields
 
-All log entries from the FSM include contextual fields:
+The reconciler-scoped logger adds three fields to every log entry for a given Runtime reconcile cycle:
 
 | Field | Source |
 |-------|--------|
-| `RuntimeCR` | Runtime CR name |
-| `shoot` | Gardener Shoot name |
-| `function` | FSM state function name (`sFnSelectShootProcessing`, etc.) |
+| `runtimeID` | Runtime ID label value (or CR name as fallback) |
+| `shootName` | `spec.shoot.name` from the Runtime CR |
+| `requestID` | Monotonically increasing counter per reconcile invocation |
+
+Selected FSM state functions add further per-message contextual fields, including:
+
+| Field | Source |
+|-------|--------|
+| `RuntimeCR` | Runtime CR name (added in specific states) |
+| `shoot` | Gardener Shoot name (added in specific states) |
+| `function` | FSM state function name (e.g. `sFnSelectShootProcessing`) |
 | `result` | Requeue result |
 | `err` | Error value |
 
@@ -289,13 +296,13 @@ infrastructure_manager_im_kubeconfig_expiration < (time() + 3600)
 
 ```bash
 # All log lines for a specific runtime
-kubectl logs -n kcp-system -l app=infrastructure-manager | grep <runtime-name>
+kubectl logs -n kcp-system -l control-plane=infrastructure-manager | grep <runtime-name>
 
 # All error-level logs
-kubectl logs -n kcp-system -l app=infrastructure-manager | jq 'select(.level=="error")'
+kubectl logs -n kcp-system -l control-plane=infrastructure-manager | jq 'select(.level=="error")'
 
 # Gardener last errors reported by FSM
-kubectl logs -n kcp-system -l app=infrastructure-manager | grep "last errors"
+kubectl logs -n kcp-system -l control-plane=infrastructure-manager | grep "last errors"
 ```
 
 ### Step 4 — Check Gardener Shoot directly
@@ -365,13 +372,13 @@ For dedicated audit log (`-dedicated-audit-logging-enabled`):
 
 ## 7. Reconciliation Suspension
 
-An operator can suspend reconciliation for a specific Runtime by adding the annotation:
+An operator can suspend **Shoot patch reconciliation** for a specific Runtime by adding the annotation:
 
 ```
-operator.kyma-project.io/suspend-reconcile: "true"
+operator.kyma-project.io/suspend-patch-reconciliation: "true"
 ```
 
-While suspended, KIM logs `Reconciliation is suspended` and takes no action. Remove the annotation to resume.
+While this annotation is present, KIM skips the Shoot patching step (the `shouldPatchShoot` check returns false) and logs `Reconciliation is suspended`. Other reconciliation steps — such as status updates and kubeconfig rotation — continue to run normally. Remove the annotation to resume Shoot patching.
 
 ---
 
@@ -431,8 +438,8 @@ Metrics from `controller-runtime`, covering both the `runtime` and `gardenerclus
 
 | Panel | Type | Query | Purpose |
 |-------|------|-------|---------|
-| **Kubeconfig expirations** (table) | Table | `avg by(expires, expirationDuration, rotationDuration, runtimeId, shootName)(infrastructure_manager_im_kubeconfig_expiration)` | Lists every Shoot with its expiration timestamp, rotation period, and effective expiration window. Columns renamed to `expires (timestamp)`, `expires (seconds)`, `rotate after (seconds)`. |
-| **Kubeconfig expirations** (time-series) | Time-series | `max by (shootName)(infrastructure_manager_im_kubeconfig_expiration - time())` | Time until expiry per Shoot (seconds remaining). Lets operators see which kubeconfigs are closest to expiry at a glance. |
+| **Kubeconfig expirations** (table) | Table | `avg by(expires, expirationDuration, rotationDuration, runtimeId, shoot)(infrastructure_manager_im_kubeconfig_expiration)` | Lists every Shoot with its expiration timestamp, rotation period, and effective expiration window. Columns renamed to `expires (timestamp)`, `expires (seconds)`, `rotate after (seconds)`. Note: the dashboard JSON uses `shootName` as the column alias; the underlying metric label is `shoot`. |
+| **Kubeconfig expirations** (time-series) | Time-series | `max by (shoot)(infrastructure_manager_im_kubeconfig_expiration - time())` | Time until expiry per Shoot (seconds remaining). Lets operators see which kubeconfigs are closest to expiry at a glance. Note: the dashboard JSON groups by `shootName` which does not match the metric label `shoot`; queries should use `shoot`. |
 
 ### 8.6 Dashboard Limitations and Gaps
 
@@ -452,15 +459,15 @@ The following gaps exist against the requirements for full operator and L3 suppo
 
 ### 9.1 Missing: End-to-End Provisioning Duration Metric
 
-**Current state:** No metric tracks how long a full reconciliation cycle takes (time from `sFnTakeSnapshot` to `sFnUpdateStatus` completion).
+**Current state:** No metric tracks end-to-end provisioning duration (time from initial `Pending` to terminal `Ready` or `Failed`), which spans many requeue cycles and separate FSM invocations.
 
-**Impact:** Operators cannot detect hung or slow reconciliations without manually correlating log timestamps. There is no SLA metric for "time to Ready".
+**Impact:** Operators cannot detect hung or slow provisioning without manually correlating log timestamps. There is no SLA metric for "time to Ready".
 
-**Recommendation:** Add a `Histogram` or `Summary` metric:
+**Recommendation:** Add a `Histogram` metric:
 ```
-infrastructure_manager_reconciliation_duration_seconds{runtimeId, provider, result}
+infrastructure_manager_provisioning_duration_seconds{runtimeId, provider, result}
 ```
-where `result` is `success`, `failure`, or `requeue`. Record the value in `sFnUpdateStatus`.
+where `result` is `success` or `failure`. Because each reconcile cycle is a separate FSM invocation, a simple timer in `sFnUpdateStatus` would only measure one cycle. The correct approach is to persist a provisioning start timestamp on the Runtime CR (e.g. as an annotation set when `status.state` first becomes `Pending`) and record the histogram only on the terminal `Ready` or `Failed` transition.
 
 ### 9.2 Missing: Per-Step Error Counters
 
