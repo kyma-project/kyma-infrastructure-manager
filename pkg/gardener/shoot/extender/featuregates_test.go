@@ -7,7 +7,6 @@ import (
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/ptr"
 )
 
 func TestFeatureGatesExtender(t *testing.T) {
@@ -46,13 +45,13 @@ func TestFeatureGatesExtender(t *testing.T) {
 		{name: "default version lower than 1.35", defaultVersion: "1.34.2", expectedEnabled: false},
 		{name: "default version equal to 1.35", defaultVersion: "1.35", expectedEnabled: true},
 		{name: "default version greater than 1.35", defaultVersion: "1.36.1", expectedEnabled: true},
-		{name: "empty runtime version falls back to default", runtimeVersion: ptr.To(""), defaultVersion: "1.35.0", expectedEnabled: true},
-		{name: "runtime version lower than 1.35 overrides default", runtimeVersion: ptr.To("1.33.5"), defaultVersion: "1.35.0", expectedEnabled: false},
-		{name: "runtime version greater than 1.35 overrides default", runtimeVersion: ptr.To("1.35.1"), defaultVersion: "1.34.0", expectedEnabled: true},
-		{name: "invalid version", runtimeVersion: ptr.To("invalid"), defaultVersion: "1.35.0", expectedEnabled: false},
+		{name: "empty runtime version falls back to default", runtimeVersion: new(""), defaultVersion: "1.35.0", expectedEnabled: true},
+		{name: "runtime version lower than 1.35 overrides default", runtimeVersion: new("1.33.5"), defaultVersion: "1.35.0", expectedEnabled: false},
+		{name: "runtime version greater than 1.35 overrides default", runtimeVersion: new("1.35.1"), defaultVersion: "1.34.0", expectedEnabled: true},
+		{name: "invalid version", runtimeVersion: new("invalid"), defaultVersion: "1.35.0", expectedEnabled: false},
 		{name: "auto-updated shoot version greater than default", defaultVersion: "1.34.2", currentVersion: "1.35.1", expectedEnabled: true},
-		{name: "auto-updated shoot version greater than runtime version", runtimeVersion: ptr.To("1.34.2"), defaultVersion: "1.34.2", currentVersion: "1.35.0", expectedEnabled: true},
-		{name: "current shoot version lower than runtime version", runtimeVersion: ptr.To("1.35.0"), defaultVersion: "1.34.2", currentVersion: "1.34.2", expectedEnabled: true},
+		{name: "auto-updated shoot version greater than runtime version", runtimeVersion: new("1.34.2"), defaultVersion: "1.34.2", currentVersion: "1.35.0", expectedEnabled: true},
+		{name: "current shoot version lower than runtime version", runtimeVersion: new("1.35.0"), defaultVersion: "1.34.2", currentVersion: "1.34.2", expectedEnabled: true},
 		{name: "current shoot version lower than 1.35", defaultVersion: "1.34.2", currentVersion: "1.34.3", expectedEnabled: false},
 	} {
 		t.Run("ClusterTrustBundle kubelet feature gate: "+tc.name, func(t *testing.T) {
