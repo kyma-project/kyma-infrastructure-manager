@@ -607,5 +607,7 @@ func enableClusterTrustBundleFeatureForSKR(converterConfig *config.ConverterConf
 	if converterConfig.Kubernetes.Kubelet.FeatureGates == nil {
 		converterConfig.Kubernetes.Kubelet.FeatureGates = make(map[string]bool)
 	}
+
 	converterConfig.Kubernetes.Kubelet.FeatureGates["ClusterTrustBundleProjection"] = true
+	converterConfig.Kubernetes.Kubelet.FeatureGates["ClusterTrustBundle"] = true
 }
