@@ -31,7 +31,7 @@ func baseExtenders(converterConfig config.ConverterConfig) []Extend {
 		extender2.NewOidcExtender(),
 		extender2.ExtendWithExposureClassName,
 		restrictions.ExtendWithAccessRestriction(),
-		extender2.NewFeatureGatesExtender(converterConfig.Kubernetes.KubeApiServer.FeatureGates, converterConfig.Kubernetes.Kubelet.FeatureGates),
+		extender2.NewFeatureGatesExtender(converterConfig.Kubernetes.KubeApiServer.FeatureGates, converterConfig.Kubernetes.Kubelet.FeatureGates, converterConfig.Kubernetes.DefaultVersion),
 		extender2.NewKubernetesRuntimeConfigExtender(converterConfig.Kubernetes.KubeApiServer.RuntimeConfig),
 	}
 }
