@@ -25,7 +25,7 @@ func TestFeatureGatesExtender(t *testing.T) {
 		}
 
 		// when
-		extender := NewFeatureGatesExtender(apiServerFeatureGates, kubeletFeatureGates)
+		extender := NewFeatureGatesExtender(apiServerFeatureGates, kubeletFeatureGates, nil)
 		err := extender(runtime, &shoot)
 
 		// then
@@ -33,5 +33,37 @@ func TestFeatureGatesExtender(t *testing.T) {
 		require.NotNil(t, shoot.Spec.Kubernetes.KubeAPIServer)
 		assert.Equal(t, apiServerFeatureGates, shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates)
 		assert.Equal(t, kubeletFeatureGates, shoot.Spec.Kubernetes.Kubelet.FeatureGates)
+		assert.Nil(t, shoot.Spec.Kubernetes.KubeControllerManager)
+	})
+
+	t.Run("KCM feature gates should be added to shoot when provided", func(t *testing.T) {
+		// given
+		shoot := testutils.FixEmptyGardenerShoot("test", "kcp-system")
+		runtime := imv1.Runtime{}
+
+		apiServerFeatureGates := map[string]bool{
+			"ClusterTrustBundle":           true,
+			"ClusterTrustBundleProjection": true,
+		}
+
+		kubeletFeatureGates := map[string]bool{
+			"ClusterTrustBundleProjection": true,
+		}
+
+		kcmFeatureGates := map[string]bool{
+			"ClusterTrustBundle": true,
+		}
+
+		// when
+		extender := NewFeatureGatesExtender(apiServerFeatureGates, kubeletFeatureGates, kcmFeatureGates)
+		err := extender(runtime, &shoot)
+
+		// then
+		require.NoError(t, err)
+		require.NotNil(t, shoot.Spec.Kubernetes.KubeAPIServer)
+		assert.Equal(t, apiServerFeatureGates, shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates)
+		assert.Equal(t, kubeletFeatureGates, shoot.Spec.Kubernetes.Kubelet.FeatureGates)
+		require.NotNil(t, shoot.Spec.Kubernetes.KubeControllerManager)
+		assert.Equal(t, kcmFeatureGates, shoot.Spec.Kubernetes.KubeControllerManager.FeatureGates)
 	})
 }

@@ -608,4 +608,10 @@ func enableClusterTrustBundleFeatureForSKR(converterConfig *config.ConverterConf
 		converterConfig.Kubernetes.Kubelet.FeatureGates = make(map[string]bool)
 	}
 	converterConfig.Kubernetes.Kubelet.FeatureGates["ClusterTrustBundleProjection"] = true
+
+	if converterConfig.Kubernetes.KubeControllerManager.FeatureGates == nil {
+		converterConfig.Kubernetes.KubeControllerManager.FeatureGates = make(map[string]bool)
+	}
+	// KubeAPIServerClusterTrustBundlePublisherController in KCM requires ClusterTrustBundle feature gate
+	converterConfig.Kubernetes.KubeControllerManager.FeatureGates["ClusterTrustBundle"] = true
 }

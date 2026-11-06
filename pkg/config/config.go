@@ -52,8 +52,9 @@ type DNSConfig struct {
 }
 
 type KubernetesConfig struct {
-	KubeApiServer                       KubeApiServer `json:"kubeApiServer"`
-	Kubelet                             Kubelet       `json:"kubelet"`
+	KubeApiServer                       KubeApiServer         `json:"kubeApiServer"`
+	Kubelet                             Kubelet               `json:"kubelet"`
+	KubeControllerManager               KubeControllerManager `json:"kubeControllerManager"`
 	DefaultVersion                      string        `json:"defaultVersion" validate:"required"`
 	EnableKubernetesVersionAutoUpdate   bool          `json:"enableKubernetesVersionAutoUpdate"`
 	EnableMachineImageVersionAutoUpdate bool          `json:"enableMachineImageVersionAutoUpdate"`
@@ -110,6 +111,10 @@ type KubeApiServer struct {
 }
 
 type Kubelet struct {
+	FeatureGates map[string]bool `json:"featureGates"`
+}
+
+type KubeControllerManager struct {
 	FeatureGates map[string]bool `json:"featureGates"`
 }
 
