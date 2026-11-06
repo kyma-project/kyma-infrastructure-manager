@@ -12,23 +12,28 @@ import (
 // If the current Kubernetes version on Shoot is greater than the version determined above, it sets the version to the current Kubernetes version.
 func NewKubernetesExtender(defaultKubernetesVersion, currentKubernetesVersion string) func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
 	return func(runtime imv1.Runtime, shoot *gardener.Shoot) error {
-		kubernetesVersion := runtime.Spec.Shoot.Kubernetes.Version
-		if kubernetesVersion == nil || *kubernetesVersion == "" {
-			kubernetesVersion = &defaultKubernetesVersion
-		}
-
-		shoot.Spec.Kubernetes.Version = *kubernetesVersion
-
-		// use current Kubernetes version from shoot when it is greater than determined above - autoupdate case
-		if currentKubernetesVersion != "" && currentKubernetesVersion != shoot.Spec.Kubernetes.Version {
-			result, err := CompareVersions(shoot.Spec.Kubernetes.Version, currentKubernetesVersion)
-			if err == nil && result < 0 {
-				shoot.Spec.Kubernetes.Version = currentKubernetesVersion
-			}
-		}
+		shoot.Spec.Kubernetes.Version = EffectiveKubernetesVersion(runtime, defaultKubernetesVersion, currentKubernetesVersion)
 
 		return nil
 	}
+}
+
+// EffectiveKubernetesVersion returns the Kubernetes version from the Runtime, or `defaultKubernetesVersion` if not set.
+// If `currentKubernetesVersion` (the version on the existing Shoot) is greater, it is returned instead - autoupdate case.
+func EffectiveKubernetesVersion(runtime imv1.Runtime, defaultKubernetesVersion, currentKubernetesVersion string) string {
+	kubernetesVersion := defaultKubernetesVersion
+	if runtime.Spec.Shoot.Kubernetes.Version != nil && *runtime.Spec.Shoot.Kubernetes.Version != "" {
+		kubernetesVersion = *runtime.Spec.Shoot.Kubernetes.Version
+	}
+
+	if currentKubernetesVersion != "" && currentKubernetesVersion != kubernetesVersion {
+		result, err := CompareVersions(kubernetesVersion, currentKubernetesVersion)
+		if err == nil && result < 0 {
+			return currentKubernetesVersion
+		}
+	}
+
+	return kubernetesVersion
 }
 
 func CompareVersions(prevVersion, currVersion string) (int, error) {

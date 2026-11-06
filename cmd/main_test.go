@@ -1,14 +1,90 @@
 package main
 
 import (
+	"maps"
 	"testing"
 
 	gardeneroidc "github.com/gardener/oidc-webhook-authenticator/apis/authentication/v1alpha1"
+	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	kyma "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	registrycacheapi "github.com/kyma-project/registry-cache/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
+
+func TestEnableClusterTrustBundleFeatureForSKR(t *testing.T) {
+	tests := []struct {
+		name                 string
+		initialFeatureGates  map[string]bool
+		initialRuntimeConfig map[string]bool
+		wantFeatureGates     map[string]bool
+		wantRuntimeConfig    map[string]bool
+	}{
+		{
+			name: "initializes nil maps",
+			wantFeatureGates: map[string]bool{
+				"ClusterTrustBundle":           true,
+				"ClusterTrustBundleProjection": true,
+			},
+			wantRuntimeConfig: map[string]bool{
+				"certificates.k8s.io/v1beta1/clustertrustbundles": true,
+			},
+		},
+		{
+			name: "enables disabled gates and preserves existing settings",
+			initialFeatureGates: map[string]bool{
+				"ClusterTrustBundle":           false,
+				"ClusterTrustBundleProjection": false,
+				"ExistingEnabledGate":          true,
+				"ExistingDisabledGate":         false,
+			},
+			initialRuntimeConfig: map[string]bool{
+				"certificates.k8s.io/v1beta1/clustertrustbundles": false,
+				"existing/enabled":  true,
+				"existing/disabled": false,
+			},
+			wantFeatureGates: map[string]bool{
+				"ClusterTrustBundle":           true,
+				"ClusterTrustBundleProjection": true,
+				"ExistingEnabledGate":          true,
+				"ExistingDisabledGate":         false,
+			},
+			wantRuntimeConfig: map[string]bool{
+				"certificates.k8s.io/v1beta1/clustertrustbundles": true,
+				"existing/enabled":  true,
+				"existing/disabled": false,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			converterConfig := config.ConverterConfig{
+				Kubernetes: config.KubernetesConfig{
+					KubeApiServer: config.KubeApiServer{
+						FeatureGates:  maps.Clone(tt.initialFeatureGates),
+						RuntimeConfig: maps.Clone(tt.initialRuntimeConfig),
+					},
+					Kubelet: config.Kubelet{
+						FeatureGates: maps.Clone(tt.initialFeatureGates),
+					},
+				},
+			}
+
+			enableClusterTrustBundleFeatureForSKR(&converterConfig)
+
+			if got := converterConfig.Kubernetes.KubeApiServer.FeatureGates; !maps.Equal(got, tt.wantFeatureGates) {
+				t.Errorf("KubeApiServer.FeatureGates = %v, want %v", got, tt.wantFeatureGates)
+			}
+			if got := converterConfig.Kubernetes.KubeApiServer.RuntimeConfig; !maps.Equal(got, tt.wantRuntimeConfig) {
+				t.Errorf("KubeApiServer.RuntimeConfig = %v, want %v", got, tt.wantRuntimeConfig)
+			}
+			if got := converterConfig.Kubernetes.Kubelet.FeatureGates; !maps.Equal(got, tt.wantFeatureGates) {
+				t.Errorf("Kubelet.FeatureGates = %v, want %v", got, tt.wantFeatureGates)
+			}
+		})
+	}
+}
 
 func TestPrebuiltRuntimeSchemeRegistersTypes(t *testing.T) {
 	// Build the scheme the same way main.go does
