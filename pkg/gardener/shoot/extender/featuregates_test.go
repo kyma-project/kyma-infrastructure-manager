@@ -36,23 +36,23 @@ func TestFeatureGatesExtender(t *testing.T) {
 	})
 
 	for _, tc := range []struct {
-		name            string
-		runtimeVersion  *string
-		defaultVersion  string
-		currentVersion  string
-		expectedEnabled bool
+		name                              string
+		runtimeVersion                    *string
+		defaultVersion                    string
+		currentVersion                    string
+		clusterTrustBundleExpectedEnabled bool
 	}{
-		{name: "default version lower than 1.35", defaultVersion: "1.34.2", expectedEnabled: false},
-		{name: "default version equal to 1.35", defaultVersion: "1.35", expectedEnabled: true},
-		{name: "default version greater than 1.35", defaultVersion: "1.36.1", expectedEnabled: true},
-		{name: "empty runtime version falls back to default", runtimeVersion: new(""), defaultVersion: "1.35.0", expectedEnabled: true},
-		{name: "runtime version lower than 1.35 overrides default", runtimeVersion: new("1.33.5"), defaultVersion: "1.35.0", expectedEnabled: false},
-		{name: "runtime version greater than 1.35 overrides default", runtimeVersion: new("1.35.1"), defaultVersion: "1.34.0", expectedEnabled: true},
-		{name: "invalid version", runtimeVersion: new("invalid"), defaultVersion: "1.35.0", expectedEnabled: false},
-		{name: "auto-updated shoot version greater than default", defaultVersion: "1.34.2", currentVersion: "1.35.1", expectedEnabled: true},
-		{name: "auto-updated shoot version greater than runtime version", runtimeVersion: new("1.34.2"), defaultVersion: "1.34.2", currentVersion: "1.35.0", expectedEnabled: true},
-		{name: "current shoot version lower than runtime version", runtimeVersion: new("1.35.0"), defaultVersion: "1.34.2", currentVersion: "1.34.2", expectedEnabled: true},
-		{name: "current shoot version lower than 1.35", defaultVersion: "1.34.2", currentVersion: "1.34.3", expectedEnabled: false},
+		{name: "default version lower than 1.35", defaultVersion: "1.34.2", clusterTrustBundleExpectedEnabled: false},
+		{name: "default version equal to 1.35", defaultVersion: "1.35", clusterTrustBundleExpectedEnabled: true},
+		{name: "default version greater than 1.35", defaultVersion: "1.36.1", clusterTrustBundleExpectedEnabled: true},
+		{name: "empty runtime version falls back to default", runtimeVersion: new(""), defaultVersion: "1.35.0", clusterTrustBundleExpectedEnabled: true},
+		{name: "runtime version lower than 1.35 overrides default", runtimeVersion: new("1.33.5"), defaultVersion: "1.35.0", clusterTrustBundleExpectedEnabled: false},
+		{name: "runtime version greater than 1.35 overrides default", runtimeVersion: new("1.35.1"), defaultVersion: "1.34.0", clusterTrustBundleExpectedEnabled: true},
+		{name: "invalid version", runtimeVersion: new("invalid"), defaultVersion: "1.35.0", clusterTrustBundleExpectedEnabled: false},
+		{name: "auto-updated shoot version greater than default", defaultVersion: "1.34.2", currentVersion: "1.35.1", clusterTrustBundleExpectedEnabled: true},
+		{name: "auto-updated shoot version greater than runtime version", runtimeVersion: new("1.34.2"), defaultVersion: "1.34.2", currentVersion: "1.35.0", clusterTrustBundleExpectedEnabled: true},
+		{name: "current shoot version lower than runtime version", runtimeVersion: new("1.35.0"), defaultVersion: "1.34.2", currentVersion: "1.34.2", clusterTrustBundleExpectedEnabled: true},
+		{name: "current shoot version lower than 1.35", defaultVersion: "1.34.2", currentVersion: "1.34.3", clusterTrustBundleExpectedEnabled: false},
 	} {
 		t.Run("ClusterTrustBundle kubelet feature gate: "+tc.name, func(t *testing.T) {
 			// given
@@ -73,7 +73,7 @@ func TestFeatureGatesExtender(t *testing.T) {
 			require.NoError(t, err)
 			assert.True(t, shoot.Spec.Kubernetes.Kubelet.FeatureGates["ClusterTrustBundleProjection"])
 			_, found := shoot.Spec.Kubernetes.Kubelet.FeatureGates["ClusterTrustBundle"]
-			assert.Equal(t, tc.expectedEnabled, found)
+			assert.Equal(t, tc.clusterTrustBundleExpectedEnabled, found)
 			// the input map shared between runtimes must not be modified
 			assert.Len(t, kubeletFeatureGates, 2)
 		})
