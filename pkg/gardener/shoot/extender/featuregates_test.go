@@ -25,7 +25,7 @@ func TestFeatureGatesExtender(t *testing.T) {
 		}
 
 		// when
-		extender := NewFeatureGatesExtender(apiServerFeatureGates, kubeletFeatureGates)
+		extender := NewFeatureGatesExtender(apiServerFeatureGates, kubeletFeatureGates, "1.34", "")
 		err := extender(runtime, &shoot)
 
 		// then
@@ -34,4 +34,48 @@ func TestFeatureGatesExtender(t *testing.T) {
 		assert.Equal(t, apiServerFeatureGates, shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates)
 		assert.Equal(t, kubeletFeatureGates, shoot.Spec.Kubernetes.Kubelet.FeatureGates)
 	})
+
+	for _, tc := range []struct {
+		name                              string
+		runtimeVersion                    *string
+		defaultVersion                    string
+		currentVersion                    string
+		clusterTrustBundleExpectedEnabled bool
+	}{
+		{name: "default version lower than 1.35", defaultVersion: "1.34.2", clusterTrustBundleExpectedEnabled: false},
+		{name: "default version equal to 1.35", defaultVersion: "1.35", clusterTrustBundleExpectedEnabled: true},
+		{name: "default version greater than 1.35", defaultVersion: "1.36.1", clusterTrustBundleExpectedEnabled: true},
+		{name: "empty runtime version falls back to default", runtimeVersion: new(""), defaultVersion: "1.35.0", clusterTrustBundleExpectedEnabled: true},
+		{name: "runtime version lower than 1.35 overrides default", runtimeVersion: new("1.33.5"), defaultVersion: "1.35.0", clusterTrustBundleExpectedEnabled: false},
+		{name: "runtime version greater than 1.35 overrides default", runtimeVersion: new("1.35.1"), defaultVersion: "1.34.0", clusterTrustBundleExpectedEnabled: true},
+		{name: "invalid version", runtimeVersion: new("invalid"), defaultVersion: "1.35.0", clusterTrustBundleExpectedEnabled: false},
+		{name: "auto-updated shoot version greater than default", defaultVersion: "1.34.2", currentVersion: "1.35.1", clusterTrustBundleExpectedEnabled: true},
+		{name: "auto-updated shoot version greater than runtime version", runtimeVersion: new("1.34.2"), defaultVersion: "1.34.2", currentVersion: "1.35.0", clusterTrustBundleExpectedEnabled: true},
+		{name: "current shoot version lower than runtime version", runtimeVersion: new("1.35.0"), defaultVersion: "1.34.2", currentVersion: "1.34.2", clusterTrustBundleExpectedEnabled: true},
+		{name: "current shoot version lower than 1.35", defaultVersion: "1.34.2", currentVersion: "1.34.3", clusterTrustBundleExpectedEnabled: false},
+	} {
+		t.Run("ClusterTrustBundle kubelet feature gate: "+tc.name, func(t *testing.T) {
+			// given
+			shoot := testutils.FixEmptyGardenerShoot("test", "kcp-system")
+			runtime := imv1.Runtime{}
+			runtime.Spec.Shoot.Kubernetes.Version = tc.runtimeVersion
+
+			kubeletFeatureGates := map[string]bool{
+				"ClusterTrustBundleProjection": true,
+				"ClusterTrustBundle":           true,
+			}
+
+			// when
+			extender := NewFeatureGatesExtender(map[string]bool{}, kubeletFeatureGates, tc.defaultVersion, tc.currentVersion)
+			err := extender(runtime, &shoot)
+
+			// then
+			require.NoError(t, err)
+			assert.True(t, shoot.Spec.Kubernetes.Kubelet.FeatureGates["ClusterTrustBundleProjection"])
+			_, found := shoot.Spec.Kubernetes.Kubelet.FeatureGates["ClusterTrustBundle"]
+			assert.Equal(t, tc.clusterTrustBundleExpectedEnabled, found)
+			// the input map shared between runtimes must not be modified
+			assert.Len(t, kubeletFeatureGates, 2)
+		})
+	}
 }

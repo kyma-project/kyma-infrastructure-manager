@@ -174,6 +174,7 @@ Operator arguments (set in `config/default/manager_gardener_secret_patch.yaml`):
 | `runtime-bootstrapper-manifests-config-map-name` | ConfigMap with Runtime Bootstrapper manifests | `runtime-bootstrapper-manifests` |
 | `runtime-bootstrapper-kcp-config-name` | Runtime bootstrapper ConfigMap to copy to SKR | `rt-bootstrapper-config` |
 | `runtime-bootstrapper-kcp-pull-secret-name` | Pull secret to copy to SKR | — |
+| `runtime-bootstrapper-kcp-cluster-trust-bundle` | ClusterTrustBundle to copy to SKR. When set, enables ClusterTrustBundle feature gates on the Shoot (the kubelet `ClusterTrustBundle` gate only for Kubernetes >= 1.35) | — |
 | `runtime-bootstrapper-skr-namespace` | Runtime bootstrapper namespace on SKR | `kyma-system` |
 ---
 
