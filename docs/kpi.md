@@ -64,8 +64,7 @@ sum(increase(infrastructure_manager_provisioning_duration_seconds_count[24h]))
 * 100
 ```
 
-Until the duration histogram is available, approximate via state gauge transitions recorded in logs:
-- Count log entries matching `"Reconciliation done"` with `state=Ready` vs `state=Failed` per 24-hour window.
+Until the duration histogram is available, this KPI cannot be derived from `Reconciliation done` logs: that entry is emitted at debug level (unavailable in production) and carries no `state` field. Instead, derive terminal transitions from Kubernetes Events on the Runtime CR (`Normal ConfigurationCompleted` → Ready, `Warning` with a permanent reason → Failed), or add a dedicated terminal-transition log/metric before operationalizing this KPI.
 
 **Thresholds:**
 
@@ -102,13 +101,13 @@ Until the duration histogram is available, approximate via state gauge transitio
 Once `infrastructure_manager_provisioning_duration_seconds{result, provider}` is implemented:
 ```promql
 # p50 provisioning time (seconds)
-histogram_quantile(0.50, rate(infrastructure_manager_provisioning_duration_seconds_bucket{result="success"}[1h]))
+histogram_quantile(0.50, sum by (le) (rate(infrastructure_manager_provisioning_duration_seconds_bucket{result="success"}[1h])))
 
 # p95 provisioning time (seconds)
-histogram_quantile(0.95, rate(infrastructure_manager_provisioning_duration_seconds_bucket{result="success"}[1h]))
+histogram_quantile(0.95, sum by (le) (rate(infrastructure_manager_provisioning_duration_seconds_bucket{result="success"}[1h])))
 ```
 
-Until the metric is available, measure from structured logs: timestamp of first `status.state=Pending` log entry to first `status.state=Ready` log entry per runtimeID.
+Until the metric is available, derive terminal transitions from Kubernetes Events on the Runtime CR (see KPI-1 note on log fallback).
 
 **Reference provisioning duration breakdown (expected):**
 
@@ -137,7 +136,7 @@ Until the metric is available, measure from structured logs: timestamp of first 
 1. Trigger a P2 incident and notify stakeholders.
 2. Check for seed saturation in Gardener.
 3. Identify if the bootstrapper is stalling: check `infrastructure_manager_im_runtime_state` for runtimes with `RuntimeBootstrapperInstallationInProgress` remaining > 30 minutes.
-4. If worker saturation is the cause, scale KIM workers as a temporary mitigation (runtime flag, no restart required after configuration hot-reload).
+4. If worker saturation is the cause, update `--runtime-ctrl-workers-cnt` and restart the KIM pods as a temporary mitigation.
 
 ---
 
@@ -184,7 +183,7 @@ This is the "Cumulative Failed Runtimes" panel in the Plutono dashboard (note: d
 
 **Definition:** The per-second rate of `unexpected_stops_total` counter increments, measured over a 5-minute sliding window.
 
-**Why this KPI:** `unexpected_stops_total` is incremented every time the FSM encounters a path that ends without reaching a stable, self-healing state. An increasing rate is the earliest systemic signal that something is wrong at the controller level — before it shows up as individual failed Runtimes visible to operators. This KPI is the primary early-warning indicator.
+**Why this KPI:** `unexpected_stops_total` is incremented on instrumented FSM stop and error paths. Note that not every increment represents a permanent, non-retriable failure — some retrying error paths (such as a namespace creation failure followed by a requeue) also increment this counter. Nevertheless, a sustained increasing rate is the earliest systemic signal that something is wrong at the controller level — before it shows up as individual failed Runtimes. This KPI is the primary early-warning indicator; correlate with KPI-3 to distinguish permanent failures from elevated transient retries.
 
 **How to measure:**
 ```promql
@@ -256,7 +255,7 @@ sum(infrastructure_manager_im_gardener_clusters_state) by (state)
 **Actions when Critical threshold is breached:**
 1. Trigger P1 security incident immediately.
 2. Notify the security team within 15 minutes.
-3. Manually trigger kubeconfig rotation for the affected cluster by patching the GardenerCluster CR or deleting and recreating the kubeconfig Secret.
+3. Manually trigger kubeconfig rotation by adding the `operator.kyma-project.io/force-kubeconfig-rotation: "true"` annotation to the affected GardenerCluster CR. This uses the controller's normal reconciliation path to fetch and publish the replacement, avoiding credential gaps that could occur from deleting the Secret directly.
 4. Conduct a post-incident review to understand why the rotation window was missed.
 
 ---
@@ -270,8 +269,9 @@ sum(infrastructure_manager_im_gardener_clusters_state) by (state)
 **How to measure:**
 ```promql
 # Error rate per controller
-rate(controller_runtime_reconcile_errors_total{job="infrastructure-manager-metrics"}[5m])
-  by (controller)
+sum by (controller) (
+  rate(controller_runtime_reconcile_errors_total{job="infrastructure-manager-metrics"}[5m])
+)
 ```
 
 **Thresholds:**
@@ -342,15 +342,23 @@ rate(workqueue_queue_duration_seconds_sum{name="runtime"}[5m])
 
 **Why this KPI:** KIM is a single-point-of-automation for all Kyma cluster provisioning and kubeconfig rotation. If all KIM pods are unavailable, no new clusters can be provisioned, no kubeconfigs are rotated (introducing a security risk over time), and no cluster updates are applied. Pod availability is the foundation on which all other KPIs depend.
 
+**Definition:** The percentage of the rolling 24-hour window during which at least one KIM Pod passes its readiness probe.
+
 **How to measure:**
 
-Via Kubernetes readiness probe on `:8081/readyz`. In Prometheus:
+Compute availability from a recording rule that tracks whether any KIM pod is ready:
 ```promql
-# KIM pod readiness (1 = ready, 0 = not ready)
-kube_pod_status_ready{namespace="kcp-system", pod=~"infrastructure-manager-.*", condition="true"}
+# Rolling 24-hour availability (requires a recording rule: kim_any_pod_ready)
+avg_over_time(kim_any_pod_ready[24h:]) * 100
 ```
 
-Target: at least one pod in `Ready` state at all times.
+Use the instantaneous readiness query separately for outage alerting:
+```promql
+# Instantaneous: 1 = at least one pod ready, 0 = full outage
+max(kube_pod_status_ready{namespace="kcp-system", pod=~"infrastructure-manager-.*", condition="true"})
+```
+
+The recording rule `kim_any_pod_ready` should evaluate `max(kube_pod_status_ready{namespace="kcp-system", pod=~"infrastructure-manager-.*", condition="true"})` at a 1-minute interval.
 
 **Thresholds:**
 
