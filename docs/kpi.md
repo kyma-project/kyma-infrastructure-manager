@@ -250,7 +250,7 @@ sum(infrastructure_manager_im_gardener_clusters_state) by (state)
 5. If a specific GardenerCluster CR is stuck, trigger manual re-reconciliation by patching an annotation.
 
 **Actions when Critical threshold is breached:**
-1. Trigger P1 security incident immediately.
+1. Trigger P1 incident immediately.
 2. Manually trigger kubeconfig rotation by adding the `operator.kyma-project.io/force-kubeconfig-rotation: "true"` annotation to the affected GardenerCluster CR. This uses the controller's normal reconciliation path to fetch and publish the replacement, avoiding credential gaps that could occur from deleting the Secret directly.
 3. Conduct a post-incident review to understand why the rotation window was missed.
 
