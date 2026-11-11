@@ -35,10 +35,14 @@ KPIs are reviewed quarterly and updated whenever architectural changes affect wh
    - [KPI-9 Work Queue Depth](#kpi-9--work-queue-depth)
 6. [Availability KPIs](#availability-kpis)
    - [KPI-10 KIM Pod Availability](#kpi-10--kim-pod-availability)
-7. [Measurement Cadence and Review](#measurement-cadence-and-review)
-8. [Missing Metrics — Implementation Priority](#missing-metrics--implementation-priority)
-9. [Stakeholder Alignment](#stakeholder-alignment)
-10. [References](#references)
+7. [Code Quality & Maintenance KPIs](#code-quality--maintenance-kpis)
+   - [KPI-11 Test Coverage](#kpi-11--test-coverage)
+   - [KPI-12 Critical Open Bug Age](#kpi-12--critical-open-bug-age)
+   - [KPI-13 Mean Time to Recovery (MTTR)](#kpi-13--mean-time-to-recovery-mttr)
+8. [Measurement Cadence and Review](#measurement-cadence-and-review)
+9. [Missing Metrics — Implementation Priority](#missing-metrics--implementation-priority)
+10. [Stakeholder Alignment](#stakeholder-alignment)
+11. [References](#references)
 
 ---
 
@@ -56,6 +60,9 @@ KPIs are reviewed quarterly and updated whenever architectural changes affect wh
 | KPI-8 | Kubeconfig Rotation Success Rate | Security | `im_kubeconfig_expiration` + `im_gardener_clusters_state` |
 | KPI-9 | Work Queue Depth | Scalability | `workqueue_depth` |
 | KPI-10 | KIM Pod Availability | Availability | Kubernetes Pod readiness |
+| KPI-11 | Test Coverage | Code Quality | `go test -coverprofile` (CI) |
+| KPI-12 | Critical Open Bug Age | Code Quality | GitHub Issues |
+| KPI-13 | Mean Time to Recovery (MTTR) | Code Quality | Incident records |
 
 ¹ This metric does not yet exist. See the [gap in reconciliation-observability.md §9.1](./reconciliation-observability.md) for the implementation recommendation. Until it is implemented, Time to Ready is approximated from Kubernetes Events.
 
@@ -489,6 +496,108 @@ The recording rule `kim_any_pod_ready` should evaluate `max(kube_pod_status_read
 3. Check for OOMKill events: `kubectl describe pod -n kcp-system <pod-name>`.
 4. If the pod cannot start, roll back to the last known-good image.
 5. Notify all dependent teams (KEB, SRE) that provisioning is suspended until recovery.
+
+---
+
+## Code Quality & Maintenance KPIs
+
+### KPI-11 — Test Coverage
+
+**Definition:** Percentage of KIM Go code (excluding generated files and test files themselves) covered by unit and integration tests.
+
+**Why this KPI:** KIM's FSM-based reconciler has complex branching across provisioning, patching, deletion, and error-recovery paths. Low coverage in these areas means regressions ship silently. This KPI tracks progress in closing test gaps — particularly in error recovery, deletion paths, and FSM state transitions — and maintains the discipline needed to keep the codebase maintainable long-term.
+
+**How to measure:**
+
+Run in CI on every pull request:
+```bash
+go test ./... -coverprofile cover.out
+go tool cover -func cover.out
+```
+
+Coverage is reported per package and as an aggregate. Tracked as a trend over releases.
+
+**Thresholds:**
+
+| Level | Value | Meaning |
+|-------|-------|---------|
+| Target | ≥ 80% | Healthy coverage |
+| Warning | 70% – 79% | Coverage slipping; add tests before next feature |
+| Critical | < 70% | Coverage too low; freeze new features until restored |
+
+**Actions when Warning threshold is breached:**
+1. Review recent PRs that reduced coverage — identify which paths are untested.
+2. Prioritise covering error paths: FSM permanent failure transitions, deletion/finalizer cleanup, Gardener API error handling.
+3. Add missing tests before merging the next feature PR.
+
+**Actions when Critical threshold is breached:**
+1. Freeze new feature work until coverage is restored above 70%.
+2. Identify and resolve the largest uncovered blocks as explicit sprint tasks.
+3. Treat as a quality incident — assign an owner and due date.
+
+---
+
+### KPI-12 — Critical Open Bug Age
+
+**Definition:** Number of days a bug labelled `priority/critical` or `priority/high` remains open in GitHub Issues without a fix merged.
+
+**Why this KPI:** Critical bugs left open degrade operational stability and customer trust. Without an explicit KPI, high-priority issues can accumulate behind feature work. This KPI enforces accountability and ensures the team maintains a healthy backlog.
+
+**How to measure:**
+
+- Source: GitHub Issues with `priority/critical` or `priority/high` labels in the KIM repository.
+- Measured as: age in calendar days from issue creation to PR merge or issue close.
+- Reported as the maximum open age in the weekly team review.
+
+**Thresholds:**
+
+| Level | Value | Meaning |
+|-------|-------|---------|
+| Target | ≤ 5 business days | Normal |
+| Warning | 6–10 business days | Overdue; assign owner immediately |
+| Critical | > 10 business days | Escalate to team lead |
+
+**Actions when Warning threshold is breached:**
+1. Assign the bug to a specific engineer at the next standup.
+2. Break the fix into a minimally scoped PR to avoid stalling.
+3. If blocked by an external dependency, document the blocker explicitly on the issue.
+
+**Actions when Critical threshold is breached:**
+1. Escalate to team lead.
+2. Re-evaluate whether the priority label is accurate — if truly critical, it displaces current sprint work.
+3. If the blocker is external (Gardener, KEB, infrastructure), escalate to the owning team with a documented reproduction case.
+
+---
+
+### KPI-13 — Mean Time to Recovery (MTTR)
+
+**Definition:** Average time from the point an incident is declared (or a critical alert fires) to the point the affected KPI returns within its normal threshold — measured as a rolling 90-day average.
+
+**Why this KPI:** MTTR is the most direct measure of the team's ability to respond to production issues. A high MTTR amplifies customer impact for every incident. It also drives investment decisions: if MTTR is consistently high, the team needs better runbooks, improved alerting context, or more automated recovery paths.
+
+**How to measure:**
+
+- Source: Incident records tracked as GitHub Issues tagged `incident` (or equivalent tracking system).
+- Measured from the timestamp of the first alert or incident declaration to the timestamp of confirmed resolution.
+- Reported as a rolling 90-day average, reviewed monthly.
+
+**Thresholds:**
+
+| Level | Value | Meaning |
+|-------|-------|---------|
+| Target | ≤ 4 h | Healthy response time |
+| Warning | 4–8 h (90-day average) | Response is slow; review process |
+| Critical | > 8 h (90-day average) or single incident > 24 h | Systemic gap; retrospective required |
+
+**Actions when Warning threshold is breached:**
+1. Review the last three incidents: which step consumed the most time — detection, diagnosis, or remediation?
+2. If diagnosis was slow: invest in better dashboards, richer alerting context, or updated runbooks.
+3. If remediation was slow: identify which manual steps could be automated or pre-approved for the on-call engineer.
+
+**Actions when Critical threshold is breached:**
+1. Hold a dedicated retrospective covering all incidents in the measurement window.
+2. Identify systemic gaps: missing runbook, insufficient alerting, unclear on-call responsibility, or external dependency delays.
+3. Create follow-up tasks with owners and due dates and track them to completion.
 
 ---
 
