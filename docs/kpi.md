@@ -20,21 +20,25 @@ KPIs are reviewed quarterly and updated whenever architectural changes affect wh
 ## Table of Contents
 
 1. [KPI Overview](#kpi-overview)
-2. [KPI Definitions](#kpi-definitions)
+2. [Reliability KPIs](#reliability-kpis)
    - [KPI-1 Provisioning Success Rate](#kpi-1--provisioning-success-rate)
-   - [KPI-2 Time to Ready](#kpi-2--time-to-ready-provisioning-duration)
    - [KPI-3 Failed Runtime Count](#kpi-3--failed-runtime-count)
    - [KPI-4 Unrecoverable FSM Stop Rate](#kpi-4--unrecoverable-fsm-stop-rate)
-   - [KPI-5 Kubeconfig Rotation Success Rate](#kpi-5--kubeconfig-rotation-success-rate)
    - [KPI-6 Controller Reconcile Error Rate](#kpi-6--controller-reconcile-error-rate)
-   - [KPI-7 Work Queue Depth](#kpi-7--work-queue-depth)
-   - [KPI-8 KIM Pod Availability](#kpi-8--kim-pod-availability)
    - [KPI-9 Gardener API Error Rate](#kpi-9--gardener-api-error-rate)
+3. [Performance KPIs](#performance-kpis)
+   - [KPI-2 Time to Ready](#kpi-2--time-to-ready-provisioning-duration)
    - [KPI-10 Pending Runtime Duration](#kpi-10--pending-runtime-duration)
-3. [Measurement Cadence and Review](#measurement-cadence-and-review)
-4. [Missing Metrics — Implementation Priority](#missing-metrics--implementation-priority)
-5. [Stakeholder Alignment](#stakeholder-alignment)
-6. [References](#references)
+4. [Security KPIs](#security-kpis)
+   - [KPI-5 Kubeconfig Rotation Success Rate](#kpi-5--kubeconfig-rotation-success-rate)
+5. [Scalability KPIs](#scalability-kpis)
+   - [KPI-7 Work Queue Depth](#kpi-7--work-queue-depth)
+6. [Availability KPIs](#availability-kpis)
+   - [KPI-8 KIM Pod Availability](#kpi-8--kim-pod-availability)
+7. [Measurement Cadence and Review](#measurement-cadence-and-review)
+8. [Missing Metrics — Implementation Priority](#missing-metrics--implementation-priority)
+9. [Stakeholder Alignment](#stakeholder-alignment)
+10. [References](#references)
 
 ---
 
@@ -53,11 +57,11 @@ KPIs are reviewed quarterly and updated whenever architectural changes affect wh
 | KPI-9 | Gardener API Error Rate | Reliability | `rest_client_requests_total` |
 | KPI-10 | Pending Runtime Duration | Performance | `im_runtime_state{state="Pending"}` age |
 
-¹ This metric does not yet exist. See the [gap in reconciliation-observability.md §9.1](./reconciliation-observability.md) for the implementation recommendation. Until it is implemented, Time to Ready is approximated from log timestamps.
+¹ This metric does not yet exist. See the [gap in reconciliation-observability.md §9.1](./reconciliation-observability.md) for the implementation recommendation. Until it is implemented, Time to Ready is approximated from Kubernetes Events.
 
 ---
 
-## KPI Definitions
+## Reliability KPIs
 
 ### KPI-1 — Provisioning Success Rate
 
@@ -107,56 +111,6 @@ Until the duration histogram is available, this KPI cannot be derived from `Reco
 2. Check whether the issue is systemic (all regions/providers) or isolated (single seed/tenant). If systemic, escalate to Gardener team.
 3. Evaluate whether to temporarily suspend new provisioning by coordinating with KEB team.
 4. Prepare a post-incident review within 48 hours of resolution.
-
----
-
-### KPI-2 — Time to Ready (Provisioning Duration)
-
-**Definition:** The p50 and p95 end-to-end provisioning duration — the time from when a Runtime CR first enters `Pending` state to when it reaches `Ready` state.
-
-**Why this KPI:** Cluster provisioning involves multiple sequential steps across KIM, Gardener, and the Kyma runtime. Slow provisioning erodes customer experience even when provisioning eventually succeeds. The p95 value captures outliers — long tail provisioning is often a signal of seed resource contention, misconfiguration, or stuck bootstrapper installations.
-
-**How to measure:**
-
-Once `infrastructure_manager_provisioning_duration_seconds{result, provider}` is implemented:
-```promql
-# p50 provisioning time (seconds)
-histogram_quantile(0.50, sum by (le) (rate(infrastructure_manager_provisioning_duration_seconds_bucket{result="success"}[1h])))
-
-# p95 provisioning time (seconds)
-histogram_quantile(0.95, sum by (le) (rate(infrastructure_manager_provisioning_duration_seconds_bucket{result="success"}[1h])))
-```
-
-Until the metric is available, derive terminal transitions from Kubernetes Events on the Runtime CR (see KPI-1 note on log fallback).
-
-**Reference provisioning duration breakdown (expected):**
-
-| Phase | Expected duration |
-|-------|------------------|
-| Shoot creation to Pending | ~2 min |
-| Gardener Shoot reconciliation | 10–20 min |
-| Bootstrapper installation | 2–5 min |
-| Total (expected) | 15–30 min |
-
-**Thresholds:**
-
-| Level | p50 | p95 |
-|-------|-----|-----|
-| Target | ≤ 20 min | ≤ 40 min |
-| Warning | 20–30 min | 40–60 min |
-| Critical | > 30 min | > 60 min |
-
-**Actions when Warning threshold is breached:**
-1. Check `workqueue_depth{name="runtime"}` — sustained high depth indicates worker saturation; consider increasing `--runtime-ctrl-workers-cnt`.
-2. Check `rate(rest_client_requests_total{code=~"4.."}[5m])` — rising 4xx rates suggest Gardener rate limiting; review `--gardener-ratelimiter-qps`.
-3. Identify which provider is contributing most to the slowdown via the Runtime CR states table in the Plutono dashboard.
-4. Check Gardener seed status for the affected regions.
-
-**Actions when Critical threshold is breached:**
-1. Trigger a P2 incident.
-2. Check for seed saturation in Gardener.
-3. Identify if the bootstrapper is stalling: check `infrastructure_manager_im_runtime_state` for runtimes with `RuntimeBootstrapperInstallationInProgress` remaining > 30 minutes.
-4. If worker saturation is the cause, update `--runtime-ctrl-workers-cnt` and restart the KIM pods as a temporary mitigation.
 
 ---
 
@@ -232,51 +186,6 @@ This is the "Unexpected Runtime processing stops" panel in the Plutono dashboard
 
 ---
 
-### KPI-5 — Kubeconfig Rotation Success Rate
-
-**Definition:** The percentage of kubeconfigs that are successfully rotated before their expiry deadline, measured as the proportion of kubeconfigs that never reach an expiration state.
-
-**Why this KPI:** Kubeconfig rotation is a core security requirement (QS-S1). An expired kubeconfig means the corresponding Kyma cluster is inaccessible from the control plane. This is a direct security and availability violation. The GardenerCluster controller must rotate kubeconfigs before expiry; failure to do so within the rotation window is a KIM defect.
-
-**How to measure:**
-
-Monitor kubeconfigs approaching expiry without having been rotated:
-```promql
-# Kubeconfigs expiring within the next 2 hours (warning)
-count(infrastructure_manager_im_kubeconfig_expiration < (time() + 7200))
-
-# Kubeconfigs already expired
-count(infrastructure_manager_im_kubeconfig_expiration < time())
-```
-
-Rotation health is also visible via `infrastructure_manager_im_gardener_clusters_state`:
-```promql
-# GardenerClusters not in a healthy state
-sum(infrastructure_manager_im_gardener_clusters_state) by (state)
-```
-
-**Thresholds:**
-
-| Level | Condition | Meaning |
-|-------|-----------|---------|
-| Target | 0 kubeconfigs expiring within rotation window | All rotations on schedule |
-| Warning | ≥ 1 kubeconfig expiring within 2 hours | Rotation delayed; investigate |
-| Critical | ≥ 1 kubeconfig expired (`expiration < time()`) | Security violation; immediate action |
-
-**Actions when Warning threshold is breached:**
-1. Identify the affected runtimes: `infrastructure_manager_im_kubeconfig_expiration < (time() + 7200)` — note the `runtimeId` and `shoot` labels.
-2. Check the GardenerCluster CR for the affected runtime: `kubectl describe gardenercluster <name> -n kcp-system`.
-3. Check KIM logs for GardenerCluster controller errors: filter by shoot name.
-4. Check whether the GardenerCluster controller workers are saturated: `workqueue_depth{name="gardenercluster"}`.
-5. If a specific GardenerCluster CR is stuck, trigger manual re-reconciliation by patching an annotation.
-
-**Actions when Critical threshold is breached:**
-1. Trigger P1 incident immediately.
-2. Manually trigger kubeconfig rotation by adding the `operator.kyma-project.io/force-kubeconfig-rotation: "true"` annotation to the affected GardenerCluster CR. This uses the controller's normal reconciliation path to fetch and publish the replacement, avoiding credential gaps that could occur from deleting the Secret directly.
-3. Conduct a post-incident review to understand why the rotation window was missed.
-
----
-
 ### KPI-6 — Controller Reconcile Error Rate
 
 **Definition:** The per-second rate of reconciliation loops (across all controllers) that returned an error, causing a requeue.
@@ -309,90 +218,6 @@ sum by (controller) (
 1. Trigger P2 incident.
 2. If Gardener API is unreachable, coordinate with the Gardener team.
 3. If the error rate is on the `gardenercluster` controller only, check whether kubeconfig rotation is being blocked by a specific API permission issue.
-
----
-
-### KPI-7 — Work Queue Depth
-
-**Definition:** The number of items waiting in the reconciliation work queue for the `runtime` and `gardenercluster` controllers at any given moment.
-
-**Why this KPI:** Queue depth is the primary scalability signal. When the queue grows faster than workers can drain it, new provisioning requests are delayed and customer-visible latency increases. A persistently non-zero queue depth means KIM is operating above its steady-state processing capacity. This KPI directly informs scaling decisions.
-
-**How to measure:**
-```promql
-workqueue_depth{name="runtime"}
-workqueue_depth{name="gardenercluster"}
-```
-
-Also consider queue wait latency:
-```promql
-rate(workqueue_queue_duration_seconds_sum{name="runtime"}[5m])
-/ rate(workqueue_queue_duration_seconds_count{name="runtime"}[5m])
-```
-
-**Thresholds:**
-
-| Level | Depth | Meaning |
-|-------|-------|---------|
-| Target | 0–5 | Normal; small transient bursts acceptable |
-| Warning | 6–25 | Growing backlog; monitor closely |
-| Critical | > 25 | Workers saturated; provisioning is delayed |
-
-**Actions when Warning threshold is breached:**
-1. Monitor whether the queue is draining (transient burst) or growing (sustained saturation).
-2. Check `controller_runtime_max_concurrent_reconciles` — verify worker count matches expectations.
-3. Check CPU and memory usage of KIM pods. If resource-constrained, adjust Pod resource limits.
-4. Check whether a specific provider or region is contributing a disproportionate number of items (burst provisioning event).
-
-**Actions when Critical threshold is breached:**
-1. Trigger P2 incident if the queue does not drain within 30 minutes of mitigation.
-2. Increase `--runtime-ctrl-workers-cnt` and restart KIM pods.
-3. If a batch provisioning event is the cause, coordinate with KEB to stagger requests.
-
----
-
-### KPI-8 — KIM Pod Availability
-
-**Definition:** The percentage of the rolling 24-hour window during which at least one KIM Pod passes its readiness probe.
-
-**Why this KPI:** KIM is a single-point-of-automation for all Kyma cluster provisioning and kubeconfig rotation. If all KIM pods are unavailable, no new clusters can be provisioned, no kubeconfigs are rotated (introducing a security risk over time), and no cluster updates are applied. Pod availability is the foundation on which all other KPIs depend.
-
-**How to measure:**
-
-Compute availability from a recording rule that tracks whether any KIM pod is ready:
-```promql
-# Rolling 24-hour availability (requires a recording rule: kim_any_pod_ready)
-avg_over_time(kim_any_pod_ready[24h:]) * 100
-```
-
-Use the instantaneous readiness query separately for outage alerting:
-```promql
-# Instantaneous: 1 = at least one pod ready, 0 = full outage
-max(kube_pod_status_ready{namespace="kcp-system", pod=~"infrastructure-manager-.*", condition="true"})
-```
-
-The recording rule `kim_any_pod_ready` should evaluate `max(kube_pod_status_ready{namespace="kcp-system", pod=~"infrastructure-manager-.*", condition="true"})` at a 1-minute interval.
-
-**Thresholds:**
-
-| Level | Condition | Meaning |
-|-------|-----------|---------|
-| Target | ≥ 1 pod ready at all times | Full availability |
-| Warning | Brief gap < 5 min (e.g., rolling update) | Expected; monitor |
-| Critical | No ready pod for > 5 min | Full outage; immediate action |
-
-**Actions when Warning threshold is breached:**
-1. Check pod status: `kubectl get pods -n kcp-system -l control-plane=infrastructure-manager`.
-2. Check pod logs for crash reasons: `kubectl logs -n kcp-system <pod-name> --previous`.
-3. Check whether a rolling update is in progress — expected disruption is acceptable.
-4. Verify liveness probe endpoint `:8081/healthz` responds.
-
-**Actions when Critical threshold is breached:**
-1. Trigger P1 incident immediately.
-2. Check node health for the nodes hosting KIM pods.
-3. Check for OOMKill events: `kubectl describe pod -n kcp-system <pod-name>`.
-4. If the pod cannot start, roll back to the last known-good image.
-5. Notify all dependent teams (KEB, SRE) that provisioning is suspended until recovery.
 
 ---
 
@@ -440,6 +265,58 @@ rate(rest_client_requests_total{job="infrastructure-manager-metrics", host=~".*g
 
 ---
 
+## Performance KPIs
+
+### KPI-2 — Time to Ready (Provisioning Duration)
+
+**Definition:** The p50 and p95 end-to-end provisioning duration — the time from when a Runtime CR first enters `Pending` state to when it reaches `Ready` state.
+
+**Why this KPI:** Cluster provisioning involves multiple sequential steps across KIM, Gardener, and the Kyma runtime. Slow provisioning erodes customer experience even when provisioning eventually succeeds. The p95 value captures outliers — long tail provisioning is often a signal of seed resource contention, misconfiguration, or stuck bootstrapper installations.
+
+**How to measure:**
+
+Once `infrastructure_manager_provisioning_duration_seconds{result, provider}` is implemented:
+```promql
+# p50 provisioning time (seconds)
+histogram_quantile(0.50, sum by (le) (rate(infrastructure_manager_provisioning_duration_seconds_bucket{result="success"}[1h])))
+
+# p95 provisioning time (seconds)
+histogram_quantile(0.95, sum by (le) (rate(infrastructure_manager_provisioning_duration_seconds_bucket{result="success"}[1h])))
+```
+
+Until the metric is available, derive terminal transitions from Kubernetes Events on the Runtime CR (see KPI-1 note on log fallback).
+
+**Reference provisioning duration breakdown (expected):**
+
+| Phase | Expected duration |
+|-------|------------------|
+| Shoot creation to Pending | ~2 min |
+| Gardener Shoot reconciliation | 10–20 min |
+| Bootstrapper installation | 2–5 min |
+| Total (expected) | 15–30 min |
+
+**Thresholds:**
+
+| Level | p50 | p95 |
+|-------|-----|-----|
+| Target | ≤ 20 min | ≤ 40 min |
+| Warning | 20–30 min | 40–60 min |
+| Critical | > 30 min | > 60 min |
+
+**Actions when Warning threshold is breached:**
+1. Check `workqueue_depth{name="runtime"}` — sustained high depth indicates worker saturation; consider increasing `--runtime-ctrl-workers-cnt`.
+2. Check `rate(rest_client_requests_total{code=~"4.."}[5m])` — rising 4xx rates suggest Gardener rate limiting; review `--gardener-ratelimiter-qps`.
+3. Identify which provider is contributing most to the slowdown via the Runtime CR states table in the Plutono dashboard.
+4. Check Gardener seed status for the affected regions.
+
+**Actions when Critical threshold is breached:**
+1. Trigger a P2 incident.
+2. Check for seed saturation in Gardener.
+3. Identify if the bootstrapper is stalling: check `infrastructure_manager_im_runtime_state` for runtimes with `RuntimeBootstrapperInstallationInProgress` remaining > 30 minutes.
+4. If worker saturation is the cause, update `--runtime-ctrl-workers-cnt` and restart the KIM pods as a temporary mitigation.
+
+---
+
 ### KPI-10 — Pending Runtime Duration
 
 **Definition:** The number of Runtime CRs that have been in `status.state = Pending` for longer than the expected provisioning window (> 40 minutes).
@@ -477,6 +354,141 @@ Until then: alert on Runtimes in `Pending` state combined with absence of recent
 1. Trigger P2 incident.
 2. Follow the investigation steps above.
 3. If Gardener has no information about the Shoot or the Shoot is in `Error` state, consider deleting the Runtime CR and re-provisioning (coordinate with KEB team).
+
+---
+
+## Security KPIs
+
+### KPI-5 — Kubeconfig Rotation Success Rate
+
+**Definition:** The percentage of kubeconfigs that are successfully rotated before their expiry deadline, measured as the proportion of kubeconfigs that never reach an expiration state.
+
+**Why this KPI:** Kubeconfig rotation is a core security requirement (QS-S1). An expired kubeconfig means the corresponding Kyma cluster is inaccessible from the control plane. This is a direct security and availability violation. The GardenerCluster controller must rotate kubeconfigs before expiry; failure to do so within the rotation window is a KIM defect.
+
+**How to measure:**
+
+Monitor kubeconfigs approaching expiry without having been rotated:
+```promql
+# Kubeconfigs expiring within the next 2 hours (warning)
+count(infrastructure_manager_im_kubeconfig_expiration < (time() + 7200))
+
+# Kubeconfigs already expired
+count(infrastructure_manager_im_kubeconfig_expiration < time())
+```
+
+Rotation health is also visible via `infrastructure_manager_im_gardener_clusters_state`:
+```promql
+# GardenerClusters not in a healthy state
+sum(infrastructure_manager_im_gardener_clusters_state) by (state)
+```
+
+**Thresholds:**
+
+| Level | Condition | Meaning |
+|-------|-----------|---------|
+| Target | 0 kubeconfigs expiring within rotation window | All rotations on schedule |
+| Warning | ≥ 1 kubeconfig expiring within 2 hours | Rotation delayed; investigate |
+| Critical | ≥ 1 kubeconfig expired (`expiration < time()`) | Security violation; immediate action |
+
+**Actions when Warning threshold is breached:**
+1. Identify the affected runtimes: `infrastructure_manager_im_kubeconfig_expiration < (time() + 7200)` — note the `runtimeId` and `shoot` labels.
+2. Check the GardenerCluster CR for the affected runtime: `kubectl describe gardenercluster <name> -n kcp-system`.
+3. Check KIM logs for GardenerCluster controller errors: filter by shoot name.
+4. Check whether the GardenerCluster controller workers are saturated: `workqueue_depth{name="gardenercluster"}`.
+5. If a specific GardenerCluster CR is stuck, trigger manual re-reconciliation by patching an annotation.
+
+**Actions when Critical threshold is breached:**
+1. Trigger P1 incident immediately.
+2. Manually trigger kubeconfig rotation by adding the `operator.kyma-project.io/force-kubeconfig-rotation: "true"` annotation to the affected GardenerCluster CR. This uses the controller's normal reconciliation path to fetch and publish the replacement, avoiding credential gaps that could occur from deleting the Secret directly.
+3. Conduct a post-incident review to understand why the rotation window was missed.
+
+---
+
+## Scalability KPIs
+
+### KPI-7 — Work Queue Depth
+
+**Definition:** The number of items waiting in the reconciliation work queue for the `runtime` and `gardenercluster` controllers at any given moment.
+
+**Why this KPI:** Queue depth is the primary scalability signal. When the queue grows faster than workers can drain it, new provisioning requests are delayed and customer-visible latency increases. A persistently non-zero queue depth means KIM is operating above its steady-state processing capacity. This KPI directly informs scaling decisions.
+
+**How to measure:**
+```promql
+workqueue_depth{name="runtime"}
+workqueue_depth{name="gardenercluster"}
+```
+
+Also consider queue wait latency:
+```promql
+rate(workqueue_queue_duration_seconds_sum{name="runtime"}[5m])
+/ rate(workqueue_queue_duration_seconds_count{name="runtime"}[5m])
+```
+
+**Thresholds:**
+
+| Level | Depth | Meaning |
+|-------|-------|---------|
+| Target | 0–5 | Normal; small transient bursts acceptable |
+| Warning | 6–25 | Growing backlog; monitor closely |
+| Critical | > 25 | Workers saturated; provisioning is delayed |
+
+**Actions when Warning threshold is breached:**
+1. Monitor whether the queue is draining (transient burst) or growing (sustained saturation).
+2. Check `controller_runtime_max_concurrent_reconciles` — verify worker count matches expectations.
+3. Check CPU and memory usage of KIM pods. If resource-constrained, adjust Pod resource limits.
+4. Check whether a specific provider or region is contributing a disproportionate number of items (burst provisioning event).
+
+**Actions when Critical threshold is breached:**
+1. Trigger P2 incident if the queue does not drain within 30 minutes of mitigation.
+2. Increase `--runtime-ctrl-workers-cnt` and restart KIM pods.
+3. If a batch provisioning event is the cause, coordinate with KEB to stagger requests.
+
+---
+
+## Availability KPIs
+
+### KPI-8 — KIM Pod Availability
+
+**Definition:** The percentage of the rolling 24-hour window during which at least one KIM Pod passes its readiness probe.
+
+**Why this KPI:** KIM is a single-point-of-automation for all Kyma cluster provisioning and kubeconfig rotation. If all KIM pods are unavailable, no new clusters can be provisioned, no kubeconfigs are rotated (introducing a security risk over time), and no cluster updates are applied. Pod availability is the foundation on which all other KPIs depend.
+
+**How to measure:**
+
+Compute availability from a recording rule that tracks whether any KIM pod is ready:
+```promql
+# Rolling 24-hour availability (requires a recording rule: kim_any_pod_ready)
+avg_over_time(kim_any_pod_ready[24h:]) * 100
+```
+
+Use the instantaneous readiness query separately for outage alerting:
+```promql
+# Instantaneous: 1 = at least one pod ready, 0 = full outage
+max(kube_pod_status_ready{namespace="kcp-system", pod=~"infrastructure-manager-.*", condition="true"})
+```
+
+The recording rule `kim_any_pod_ready` should evaluate `max(kube_pod_status_ready{namespace="kcp-system", pod=~"infrastructure-manager-.*", condition="true"})` at a 1-minute interval.
+
+**Thresholds:**
+
+| Level | Condition | Meaning |
+|-------|-----------|---------|
+| Target | ≥ 1 pod ready at all times | Full availability |
+| Warning | Brief gap < 5 min (e.g., rolling update) | Expected; monitor |
+| Critical | No ready pod for > 5 min | Full outage; immediate action |
+
+**Actions when Warning threshold is breached:**
+1. Check pod status: `kubectl get pods -n kcp-system -l control-plane=infrastructure-manager`.
+2. Check pod logs for crash reasons: `kubectl logs -n kcp-system <pod-name> --previous`.
+3. Check whether a rolling update is in progress — expected disruption is acceptable.
+4. Verify liveness probe endpoint `:8081/healthz` responds.
+
+**Actions when Critical threshold is breached:**
+1. Trigger P1 incident immediately.
+2. Check node health for the nodes hosting KIM pods.
+3. Check for OOMKill events: `kubectl describe pod -n kcp-system <pod-name>`.
+4. If the pod cannot start, roll back to the last known-good image.
+5. Notify all dependent teams (KEB, SRE) that provisioning is suspended until recovery.
 
 ---
 
