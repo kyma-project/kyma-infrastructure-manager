@@ -17,6 +17,27 @@ KPIs are reviewed quarterly and updated whenever architectural changes affect wh
 
 ---
 
+## Table of Contents
+
+1. [KPI Overview](#kpi-overview)
+2. [KPI Definitions](#kpi-definitions)
+   - [KPI-1 Provisioning Success Rate](#kpi-1--provisioning-success-rate)
+   - [KPI-2 Time to Ready](#kpi-2--time-to-ready-provisioning-duration)
+   - [KPI-3 Failed Runtime Count](#kpi-3--failed-runtime-count)
+   - [KPI-4 Unrecoverable FSM Stop Rate](#kpi-4--unrecoverable-fsm-stop-rate)
+   - [KPI-5 Kubeconfig Rotation Success Rate](#kpi-5--kubeconfig-rotation-success-rate)
+   - [KPI-6 Controller Reconcile Error Rate](#kpi-6--controller-reconcile-error-rate)
+   - [KPI-7 Work Queue Depth](#kpi-7--work-queue-depth)
+   - [KPI-8 KIM Pod Availability](#kpi-8--kim-pod-availability)
+   - [KPI-9 Gardener API Error Rate](#kpi-9--gardener-api-error-rate)
+   - [KPI-10 Pending Runtime Duration](#kpi-10--pending-runtime-duration)
+3. [Measurement Cadence and Review](#measurement-cadence-and-review)
+4. [Missing Metrics — Implementation Priority](#missing-metrics--implementation-priority)
+5. [Stakeholder Alignment](#stakeholder-alignment)
+6. [References](#references)
+
+---
+
 ## KPI Overview
 
 | ID | KPI Name | Category | Primary Metric |
