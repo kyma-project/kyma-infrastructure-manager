@@ -22,19 +22,19 @@ KPIs are reviewed quarterly and updated whenever architectural changes affect wh
 1. [KPI Overview](#kpi-overview)
 2. [Reliability KPIs](#reliability-kpis)
    - [KPI-1 Provisioning Success Rate](#kpi-1--provisioning-success-rate)
-   - [KPI-3 Failed Runtime Count](#kpi-3--failed-runtime-count)
-   - [KPI-4 Unrecoverable FSM Stop Rate](#kpi-4--unrecoverable-fsm-stop-rate)
-   - [KPI-6 Controller Reconcile Error Rate](#kpi-6--controller-reconcile-error-rate)
-   - [KPI-9 Gardener API Error Rate](#kpi-9--gardener-api-error-rate)
+   - [KPI-2 Failed Runtime Count](#kpi-2--failed-runtime-count)
+   - [KPI-3 Unrecoverable FSM Stop Rate](#kpi-3--unrecoverable-fsm-stop-rate)
+   - [KPI-4 Controller Reconcile Error Rate](#kpi-4--controller-reconcile-error-rate)
+   - [KPI-5 Gardener API Error Rate](#kpi-5--gardener-api-error-rate)
 3. [Performance KPIs](#performance-kpis)
-   - [KPI-2 Time to Ready](#kpi-2--time-to-ready-provisioning-duration)
-   - [KPI-10 Pending Runtime Duration](#kpi-10--pending-runtime-duration)
+   - [KPI-6 Time to Ready](#kpi-6--time-to-ready-provisioning-duration)
+   - [KPI-7 Pending Runtime Duration](#kpi-7--pending-runtime-duration)
 4. [Security KPIs](#security-kpis)
-   - [KPI-5 Kubeconfig Rotation Success Rate](#kpi-5--kubeconfig-rotation-success-rate)
+   - [KPI-8 Kubeconfig Rotation Success Rate](#kpi-8--kubeconfig-rotation-success-rate)
 5. [Scalability KPIs](#scalability-kpis)
-   - [KPI-7 Work Queue Depth](#kpi-7--work-queue-depth)
+   - [KPI-9 Work Queue Depth](#kpi-9--work-queue-depth)
 6. [Availability KPIs](#availability-kpis)
-   - [KPI-8 KIM Pod Availability](#kpi-8--kim-pod-availability)
+   - [KPI-10 KIM Pod Availability](#kpi-10--kim-pod-availability)
 7. [Measurement Cadence and Review](#measurement-cadence-and-review)
 8. [Missing Metrics — Implementation Priority](#missing-metrics--implementation-priority)
 9. [Stakeholder Alignment](#stakeholder-alignment)
@@ -47,15 +47,15 @@ KPIs are reviewed quarterly and updated whenever architectural changes affect wh
 | ID | KPI Name | Category | Primary Metric |
 |----|----------|----------|----------------|
 | KPI-1 | Provisioning Success Rate | Reliability | `im_runtime_state` |
-| KPI-2 | Time to Ready (Provisioning Duration) | Performance | `infrastructure_manager_provisioning_duration_seconds` ¹ |
-| KPI-3 | Failed Runtime Count | Reliability | `im_runtime_state{state="Failed"}` |
-| KPI-4 | Unrecoverable FSM Stop Rate | Reliability | `unexpected_stops_total` |
-| KPI-5 | Kubeconfig Rotation Success Rate | Security | `im_kubeconfig_expiration` + `im_gardener_clusters_state` |
-| KPI-6 | Controller Reconcile Error Rate | Reliability | `controller_runtime_reconcile_errors_total` |
-| KPI-7 | Work Queue Depth | Scalability | `workqueue_depth` |
-| KPI-8 | KIM Pod Availability | Availability | Kubernetes Pod readiness |
-| KPI-9 | Gardener API Error Rate | Reliability | `rest_client_requests_total` |
-| KPI-10 | Pending Runtime Duration | Performance | `im_runtime_state{state="Pending"}` age |
+| KPI-2 | Failed Runtime Count | Reliability | `im_runtime_state{state="Failed"}` |
+| KPI-3 | Unrecoverable FSM Stop Rate | Reliability | `unexpected_stops_total` |
+| KPI-4 | Controller Reconcile Error Rate | Reliability | `controller_runtime_reconcile_errors_total` |
+| KPI-5 | Gardener API Error Rate | Reliability | `rest_client_requests_total` |
+| KPI-6 | Time to Ready (Provisioning Duration) | Performance | `infrastructure_manager_provisioning_duration_seconds` ¹ |
+| KPI-7 | Pending Runtime Duration | Performance | `im_runtime_state{state="Pending"}` age |
+| KPI-8 | Kubeconfig Rotation Success Rate | Security | `im_kubeconfig_expiration` + `im_gardener_clusters_state` |
+| KPI-9 | Work Queue Depth | Scalability | `workqueue_depth` |
+| KPI-10 | KIM Pod Availability | Availability | Kubernetes Pod readiness |
 
 ¹ This metric does not yet exist. See the [gap in reconciliation-observability.md §9.1](./reconciliation-observability.md) for the implementation recommendation. Until it is implemented, Time to Ready is approximated from Kubernetes Events.
 
@@ -79,7 +79,7 @@ Provisioning Success Rate =
 
 **How to measure:**
 
-Using Prometheus (once KPI-2's metric is available):
+Using Prometheus (once KPI-6's metric is available):
 ```promql
 # Success count (result="success")
 sum(increase(infrastructure_manager_provisioning_duration_seconds_count{result="success"}[24h]))
@@ -114,7 +114,7 @@ Until the duration histogram is available, this KPI cannot be derived from `Reco
 
 ---
 
-### KPI-3 — Failed Runtime Count
+### KPI-2 — Failed Runtime Count
 
 **Definition:** The number of Runtime CRs currently in `status.state = Failed` (i.e., non-recoverable error, no automatic retry).
 
@@ -152,11 +152,11 @@ This is the "Cumulative Failed Runtimes" panel in the Plutono dashboard (note: d
 
 ---
 
-### KPI-4 — Unrecoverable FSM Stop Rate
+### KPI-3 — Unrecoverable FSM Stop Rate
 
 **Definition:** The per-second rate of `unexpected_stops_total` counter increments, measured over a 5-minute sliding window.
 
-**Why this KPI:** `unexpected_stops_total` is incremented on instrumented FSM stop and error paths. Note that not every increment represents a permanent, non-retriable failure — some retrying error paths (such as a namespace creation failure followed by a requeue) also increment this counter. Nevertheless, a sustained increasing rate is the earliest systemic signal that something is wrong at the controller level — before it shows up as individual failed Runtimes. This KPI is the primary early-warning indicator; correlate with KPI-3 to distinguish permanent failures from elevated transient retries.
+**Why this KPI:** `unexpected_stops_total` is incremented on instrumented FSM stop and error paths. Note that not every increment represents a permanent, non-retriable failure — some retrying error paths (such as a namespace creation failure followed by a requeue) also increment this counter. Nevertheless, a sustained increasing rate is the earliest systemic signal that something is wrong at the controller level — before it shows up as individual failed Runtimes. This KPI is the primary early-warning indicator; correlate with KPI-2 to distinguish permanent failures from elevated transient retries.
 
 **How to measure:**
 ```promql
@@ -175,7 +175,7 @@ This is the "Unexpected Runtime processing stops" panel in the Plutono dashboard
 
 **Actions when Warning threshold is breached:**
 1. Check KIM logs for the error paths being hit: `kubectl logs -n kcp-system -l control-plane=infrastructure-manager | jq 'select(.level=="error")'`.
-2. Correlate with KPI-3: are Failed Runtime counts also increasing?
+2. Correlate with KPI-2: are Failed Runtime counts also increasing?
 3. Check whether the rate is concentrated in a specific pod (pod-local issue) or all pods (systemic).
 4. If the rate is new and coincides with a recent KIM deployment, consider rolling back.
 
@@ -186,7 +186,7 @@ This is the "Unexpected Runtime processing stops" panel in the Plutono dashboard
 
 ---
 
-### KPI-6 — Controller Reconcile Error Rate
+### KPI-4 — Controller Reconcile Error Rate
 
 **Definition:** The per-second rate of reconciliation loops (across all controllers) that returned an error, causing a requeue.
 
@@ -221,7 +221,7 @@ sum by (controller) (
 
 ---
 
-### KPI-9 — Gardener API Error Rate
+### KPI-5 — Gardener API Error Rate
 
 **Definition:** The rate of 4xx and 5xx HTTP responses received by KIM from the Gardener API server, as a percentage of total outbound requests to Gardener.
 
@@ -267,7 +267,7 @@ rate(rest_client_requests_total{job="infrastructure-manager-metrics", host=~".*g
 
 ## Performance KPIs
 
-### KPI-2 — Time to Ready (Provisioning Duration)
+### KPI-6 — Time to Ready (Provisioning Duration)
 
 **Definition:** The p50 and p95 end-to-end provisioning duration — the time from when a Runtime CR first enters `Pending` state to when it reaches `Ready` state.
 
@@ -317,7 +317,7 @@ Until the metric is available, derive terminal transitions from Kubernetes Event
 
 ---
 
-### KPI-10 — Pending Runtime Duration
+### KPI-7 — Pending Runtime Duration
 
 **Definition:** The number of Runtime CRs that have been in `status.state = Pending` for longer than the expected provisioning window (> 40 minutes).
 
@@ -325,7 +325,7 @@ Until the metric is available, derive terminal transitions from Kubernetes Event
 
 **How to measure:**
 
-Currently approximated by correlating log timestamps (when `state=Pending` was first set) against current time. Once the end-to-end duration metric (KPI-2) is available:
+Currently approximated by correlating log timestamps (when `state=Pending` was first set) against current time. Once the end-to-end duration metric (KPI-6) is available:
 
 ```promql
 # Runtimes stuck in Pending > 40 minutes (derived once duration metric exists)
@@ -359,7 +359,7 @@ Until then: alert on Runtimes in `Pending` state combined with absence of recent
 
 ## Security KPIs
 
-### KPI-5 — Kubeconfig Rotation Success Rate
+### KPI-8 — Kubeconfig Rotation Success Rate
 
 **Definition:** The percentage of kubeconfigs that are successfully rotated before their expiry deadline, measured as the proportion of kubeconfigs that never reach an expiration state.
 
@@ -406,7 +406,7 @@ sum(infrastructure_manager_im_gardener_clusters_state) by (state)
 
 ## Scalability KPIs
 
-### KPI-7 — Work Queue Depth
+### KPI-9 — Work Queue Depth
 
 **Definition:** The number of items waiting in the reconciliation work queue for the `runtime` and `gardenercluster` controllers at any given moment.
 
@@ -447,7 +447,7 @@ rate(workqueue_queue_duration_seconds_sum{name="runtime"}[5m])
 
 ## Availability KPIs
 
-### KPI-8 — KIM Pod Availability
+### KPI-10 — KIM Pod Availability
 
 **Definition:** The percentage of the rolling 24-hour window during which at least one KIM Pod passes its readiness probe.
 
@@ -509,10 +509,10 @@ Several KPIs above reference metrics that do not yet exist. Their implementation
 
 | Missing Metric | Affects KPIs | Priority |
 |----------------|-------------|----------|
-| `infrastructure_manager_provisioning_duration_seconds` | KPI-1, KPI-2 | High |
-| `infrastructure_manager_runtime_pending_duration_seconds` | KPI-10 | Medium |
-| `infrastructure_manager_reconciliation_errors_total{step, reason, provider}` | KPI-4 | Medium |
-| `reason` label on `infrastructure_manager_im_runtime_state` | KPI-3, KPI-4 | Low |
+| `infrastructure_manager_provisioning_duration_seconds` | KPI-1, KPI-6 | High |
+| `infrastructure_manager_runtime_pending_duration_seconds` | KPI-7 | Medium |
+| `infrastructure_manager_reconciliation_errors_total{step, reason, provider}` | KPI-3 | Medium |
+| `reason` label on `infrastructure_manager_im_runtime_state` | KPI-2, KPI-3 | Low |
 
 Until these metrics are implemented, the affected KPIs are measured via log analysis or approximated using available signals as described in each KPI section.
 
