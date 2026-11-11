@@ -1,0 +1,681 @@
+# KIM Key Performance Indicators (KPIs)
+
+This document defines the Key Performance Indicators (KPIs) for the Kyma Infrastructure Manager (KIM). It specifies what each KPI measures, why it was chosen, how it is measured technically, and what actions must be taken when a threshold is breached.
+
+---
+
+## Purpose and Principles
+
+These KPIs are designed to:
+
+- Reflect **technical performance, reliability, scalability, and product health** in a way that maps directly to observable signals in production.
+- Provide a **shared understanding** across the KIM team, stakeholders (Varban, Artur), and dependent teams (KEB, SRE, L3 support) so that every person interprets a KPI the same way.
+- Define **operational action plans** — not just thresholds, but concrete steps owners must take when a KPI is breached.
+- Support **continuous improvement and proactive issue identification** by making degradation visible before it becomes a user-facing incident.
+
+KPIs are reviewed quarterly and updated whenever architectural changes affect what is measurable or what matters to the business.
+
+---
+
+## Table of Contents
+
+1. [KPI Overview](#kpi-overview)
+2. [Reliability KPIs](#reliability-kpis)
+   - [KPI-1 Provisioning Success Rate](#kpi-1--provisioning-success-rate)
+   - [KPI-2 Failed Runtime Count](#kpi-2--failed-runtime-count)
+   - [KPI-3 Unrecoverable FSM Stop Rate](#kpi-3--unrecoverable-fsm-stop-rate)
+   - [KPI-4 Controller Reconcile Error Rate](#kpi-4--controller-reconcile-error-rate)
+   - [KPI-5 Gardener API Error Rate](#kpi-5--gardener-api-error-rate)
+3. [Performance KPIs](#performance-kpis)
+   - [KPI-6 Time to Ready](#kpi-6--time-to-ready-provisioning-duration)
+   - [KPI-7 Pending Runtime Duration](#kpi-7--pending-runtime-duration)
+4. [Security KPIs](#security-kpis)
+   - [KPI-8 Kubeconfig Rotation Success Rate](#kpi-8--kubeconfig-rotation-success-rate)
+5. [Scalability KPIs](#scalability-kpis)
+   - [KPI-9 Work Queue Depth](#kpi-9--work-queue-depth)
+6. [Availability KPIs](#availability-kpis)
+   - [KPI-10 KIM Pod Availability](#kpi-10--kim-pod-availability)
+7. [Code Quality & Maintenance KPIs](#code-quality--maintenance-kpis)
+   - [KPI-11 Test Coverage](#kpi-11--test-coverage)
+   - [KPI-12 Critical Open Bug Age](#kpi-12--critical-open-bug-age)
+   - [KPI-13 Mean Time to Recovery (MTTR)](#kpi-13--mean-time-to-recovery-mttr)
+8. [Review Process and Stakeholder Alignment](#review-process-and-stakeholder-alignment)
+9. [Missing Metrics — Implementation Priority](#missing-metrics--implementation-priority)
+10. [References](#references)
+
+---
+
+## KPI Overview
+
+| ID | KPI Name | Category | Primary Metric |
+|----|----------|----------|----------------|
+| KPI-1 | Provisioning Success Rate | Reliability | `im_runtime_state` |
+| KPI-2 | Failed Runtime Count | Reliability | `im_runtime_state{state="Failed"}` |
+| KPI-3 | Unrecoverable FSM Stop Rate | Reliability | `unexpected_stops_total` |
+| KPI-4 | Controller Reconcile Error Rate | Reliability | `controller_runtime_reconcile_errors_total` |
+| KPI-5 | Gardener API Error Rate | Reliability | `rest_client_requests_total` |
+| KPI-6 | Time to Ready (Provisioning Duration) | Performance | `infrastructure_manager_provisioning_duration_seconds` ¹ |
+| KPI-7 | Pending Runtime Duration | Performance | `im_runtime_state{state="Pending"}` age |
+| KPI-8 | Kubeconfig Rotation Success Rate | Security | `im_kubeconfig_expiration` + `im_gardener_clusters_state` |
+| KPI-9 | Work Queue Depth | Scalability | `workqueue_depth` |
+| KPI-10 | KIM Pod Availability | Availability | Kubernetes Pod readiness |
+| KPI-11 | Test Coverage | Code Quality | `go test -coverprofile` (CI) |
+| KPI-12 | Critical Open Bug Age | Code Quality | GitHub Issues |
+| KPI-13 | Mean Time to Recovery (MTTR) | Code Quality | Incident records |
+
+¹ This metric does not yet exist. See the [gap in reconciliation-observability.md §9.1](./reconciliation-observability.md) for the implementation recommendation. Until it is implemented, Time to Ready is approximated from Kubernetes Events.
+
+---
+
+## Reliability KPIs
+
+### KPI-1 — Provisioning Success Rate
+
+**Definition:** The percentage of cluster provisioning requests that reach `status.state = Ready` within the agreed time window, out of all provisioning attempts that have reached a terminal state (`Ready` or `Failed`).
+
+**Why this KPI:** This is the primary end-user-visible outcome of KIM. Every time a customer provisions a Kyma runtime via BTP, KIM is responsible for delivering a functional cluster. A declining success rate directly translates to failed customer orders, SLA violations, and escalations to management. It is the single most important indicator of product health.
+
+**Formula:**
+```
+Provisioning Success Rate =
+  count(Runtimes that transitioned to Ready in the window)
+  ─────────────────────────────────────────────────────── × 100
+  count(Runtimes that reached Ready or Failed in the window)
+```
+
+**How to measure:**
+
+Using Prometheus (once KPI-6's metric is available):
+```promql
+# Success count (result="success")
+sum(increase(infrastructure_manager_provisioning_duration_seconds_count{result="success"}[24h]))
+/
+# Total terminal outcomes
+sum(increase(infrastructure_manager_provisioning_duration_seconds_count[24h]))
+* 100
+```
+
+Until the duration histogram is available, this KPI cannot be derived from `Reconciliation done` logs: that entry is emitted at debug level (unavailable in production) and carries no `state` field. Instead, derive terminal transitions from Kubernetes Events on the Runtime CR (`Normal ConfigurationCompleted` → Ready, `Warning` with a permanent reason → Failed), or add a dedicated terminal-transition log/metric before operationalizing this KPI.
+
+**Thresholds:**
+
+| Level | Value | Meaning |
+|-------|-------|---------|
+| Target | ≥ 99.5% | Normal operations |
+| Warning | 95.0% – 99.4% | Degraded; investigation required |
+| Critical | < 95.0% | Incident; immediate action required |
+
+**Actions when Warning threshold is breached:**
+1. Check `infrastructure_manager_im_runtime_state{state="Failed"}` to identify which Runtimes are failing.
+2. Use `kubectl describe runtime <name>` to read `status.conditions` and identify the failing condition reason.
+3. Check whether failures are clustered by provider, region, or tenant — this distinguishes infrastructure problems from configuration problems.
+4. Review KIM logs for recurring error patterns: `kubectl logs -n kcp-system -l control-plane=infrastructure-manager | grep -E "(error|AuditLogErr|SeedNotFound|ConversionErr)"`.
+5. Assign an owner and open a tracking issue within 4 hours.
+
+**Actions when Critical threshold is breached:**
+1. Trigger a P1 incident in the on-call rotation immediately.
+2. Check whether the issue is systemic (all regions/providers) or isolated (single seed/tenant). If systemic, escalate to Gardener team.
+3. Evaluate whether to temporarily suspend new provisioning by coordinating with KEB team.
+4. Prepare a post-incident review within 48 hours of resolution.
+
+---
+
+### KPI-2 — Failed Runtime Count
+
+**Definition:** The number of Runtime CRs currently in `status.state = Failed` (i.e., non-recoverable error, no automatic retry).
+
+**Why this KPI:** Every Runtime in `Failed` state represents a cluster that a customer cannot use and that requires explicit human intervention to recover. Unlike a transient error (which self-heals), `Failed` is a terminal state — it does not decrease on its own. A non-zero count is always an actionable signal.
+
+**How to measure:**
+```promql
+sum(infrastructure_manager_im_runtime_state{state="Failed"})
+```
+
+This is the "Cumulative Failed Runtimes" panel in the Plutono dashboard (note: despite the panel name, this shows the *current* count, not a cumulative total — see [reconciliation-observability.md §9.7](./reconciliation-observability.md)).
+
+**Thresholds:**
+
+| Level | Value | Meaning |
+|-------|-------|---------|
+| Target | 0 | No failures in terminal state |
+| Warning | 1–3 | Isolated failures; remediation within SLA |
+| Critical | > 3 | Systemic issue; escalate immediately |
+
+**Actions when Warning threshold is breached:**
+1. For each failed Runtime, run `kubectl describe runtime <name> -n kcp-system` and read `status.conditions`.
+2. Determine the condition reason:
+   - `SeedNotFound` → check seed availability; update Runtime spec region; coordinate with Gardener team.
+   - `AuditLogErr` → add tenant mapping to converter config; restart KIM.
+   - `ConversionErr` / `CreationErr` → check converter config and Runtime spec; fix and re-trigger by patching the CR.
+   - `OidcConfigurationErr` / `ConfigMapErr` → check OIDC config; verify kubeconfig Secret is valid.
+3. Notify the owning team of the failed Runtime (typically KEB creates them; track by `kyma-project.io/runtime-id` label).
+4. Record resolution in the tracking issue.
+
+**Actions when Critical threshold is breached:**
+1. Trigger P1 incident.
+2. Determine if failures share a common reason (systemic) or are isolated.
+3. If systemic (`SeedNotFound` in a specific region, or all `AuditLogErr`), escalate to the responsible sub-team and block new provisioning in that region/configuration via KEB until resolved.
+
+---
+
+### KPI-3 — Unrecoverable FSM Stop Rate
+
+**Definition:** The per-second rate of `unexpected_stops_total` counter increments, measured over a 5-minute sliding window.
+
+**Why this KPI:** `unexpected_stops_total` is incremented on instrumented FSM stop and error paths. Note that not every increment represents a permanent, non-retriable failure — some retrying error paths (such as a namespace creation failure followed by a requeue) also increment this counter. Nevertheless, a sustained increasing rate is the earliest systemic signal that something is wrong at the controller level — before it shows up as individual failed Runtimes. This KPI is the primary early-warning indicator; correlate with KPI-2 to distinguish permanent failures from elevated transient retries.
+
+**How to measure:**
+```promql
+rate(unexpected_stops_total{job="infrastructure-manager-metrics"}[5m])
+```
+
+This is the "Unexpected Runtime processing stops" panel in the Plutono dashboard. The annotation on the panel states: "should be always 0".
+
+**Thresholds:**
+
+| Level | Rate | Meaning |
+|-------|------|---------|
+| Target | 0 / s | No unrecoverable stops |
+| Warning | > 0 / s sustained for > 5 min | Ongoing failures; investigate |
+| Critical | > 0.1 / s sustained for > 5 min | High volume failure rate; incident |
+
+**Actions when Warning threshold is breached:**
+1. Check KIM logs for the error paths being hit: `kubectl logs -n kcp-system -l control-plane=infrastructure-manager | jq 'select(.level=="error")'`.
+2. Correlate with KPI-2: are Failed Runtime counts also increasing?
+3. Check whether the rate is concentrated in a specific pod (pod-local issue) or all pods (systemic).
+4. If the rate is new and coincides with a recent KIM deployment, consider rolling back.
+
+**Actions when Critical threshold is breached:**
+1. Trigger P1 incident immediately.
+2. Check if a recent deployment introduced a regression.
+3. Evaluate rollback of the last KIM deployment.
+
+---
+
+### KPI-4 — Controller Reconcile Error Rate
+
+**Definition:** The per-second rate of reconciliation loops (across all controllers) that returned an error, causing a requeue.
+
+**Why this KPI:** A sustained non-zero reconcile error rate means controllers are retrying work repeatedly without making progress. This can indicate a persistent external problem (Gardener API unavailable, permission issue) or a KIM bug. Unlike `unexpected_stops_total` (which counts permanent failures), reconcile errors also include transient failures. A baseline non-zero rate is expected during normal operations (e.g., Shoot still reconciling); the KPI targets a sustained elevated rate.
+
+**How to measure:**
+```promql
+# Error rate per controller
+sum by (controller) (
+  rate(controller_runtime_reconcile_errors_total{job="infrastructure-manager-metrics"}[5m])
+)
+```
+
+**Thresholds:**
+
+| Level | Rate per controller | Meaning |
+|-------|---------------------|---------|
+| Target | < 0.05 / s | Low baseline (transient retries) |
+| Warning | 0.05–0.2 / s sustained > 10 min | Elevated retry rate; investigate |
+| Critical | > 0.2 / s sustained > 10 min | Persistent failure loop; incident |
+
+**Actions when Warning threshold is breached:**
+1. Identify which controller (`runtime` or `gardenercluster`) has elevated error rate.
+2. Check `rest_client_requests_total` grouped by HTTP code — rising 4xx/5xx rates indicate API connectivity issues.
+3. Check Gardener API availability from within the KCP cluster.
+4. Review rate limiter settings: `--gardener-ratelimiter-qps` and `--gardener-ratelimiter-burst`.
+
+**Actions when Critical threshold is breached:**
+1. Trigger P2 incident.
+2. If Gardener API is unreachable, coordinate with the Gardener team.
+3. If the error rate is on the `gardenercluster` controller only, check whether kubeconfig rotation is being blocked by a specific API permission issue.
+
+---
+
+### KPI-5 — Gardener API Error Rate
+
+**Definition:** The rate of 4xx and 5xx HTTP responses received by KIM from the Gardener API server, as a percentage of total outbound requests to Gardener.
+
+**Why this KPI:** KIM's entire function depends on a healthy connection to the Gardener API. 4xx errors typically indicate permission, quota, or request-formation problems (usually KIM bugs or misconfiguration). 5xx errors indicate Gardener-side issues (outages, overload). Both have different remediation paths. Monitoring this rate provides early warning before Gardener issues cascade into provisioning failures.
+
+**How to measure:**
+```promql
+# 4xx error rate to Gardener
+rate(rest_client_requests_total{job="infrastructure-manager-metrics", host=~".*gardener.*", code=~"4.."}[5m])
+/
+rate(rest_client_requests_total{job="infrastructure-manager-metrics", host=~".*gardener.*"}[5m])
+
+# 5xx error rate to Gardener
+rate(rest_client_requests_total{job="infrastructure-manager-metrics", host=~".*gardener.*", code=~"5.."}[5m])
+/
+rate(rest_client_requests_total{job="infrastructure-manager-metrics", host=~".*gardener.*"}[5m])
+```
+
+**Thresholds:**
+
+| Level | 4xx rate | 5xx rate | Meaning |
+|-------|----------|----------|---------|
+| Target | < 1% | < 0.5% | Normal |
+| Warning | 1–5% | 0.5–2% | Elevated; investigate |
+| Critical | > 5% | > 2% | Systemic; incident |
+
+**Actions when Warning threshold is breached (4xx dominant):**
+1. Check for recent KIM deployments that changed API call patterns.
+2. Check whether the Gardener service account credentials (`--gardener-kubeconfig-path`) are still valid.
+3. Review specific request paths causing 4xx via KIM logs: `kubectl logs | grep "status.*4[0-9][0-9]"`.
+4. Check for Gardener quota exhaustion in the project namespace.
+
+**Actions when Warning threshold is breached (5xx dominant):**
+1. Check Gardener cluster health via the Gardener dashboard or SRE contacts.
+2. Review `--gardener-request-timeout` — if Gardener is slow, consider increasing it temporarily.
+3. The KIM rate limiter (`--gardener-ratelimiter-qps`) will back off automatically; no immediate action needed unless the rate persists.
+
+**Actions when Critical threshold is breached:**
+1. Trigger P1 incident and contact the Gardener team.
+2. If Gardener is confirmed unavailable, suspend new provisioning requests in coordination with KEB.
+
+---
+
+## Performance KPIs
+
+### KPI-6 — Time to Ready (Provisioning Duration)
+
+**Definition:** The p50 and p95 end-to-end provisioning duration — the time from when a Runtime CR first enters `Pending` state to when it reaches `Ready` state.
+
+**Why this KPI:** Cluster provisioning involves multiple sequential steps across KIM, Gardener, and the Kyma runtime. Slow provisioning erodes customer experience even when provisioning eventually succeeds. The p95 value captures outliers — long tail provisioning is often a signal of seed resource contention, misconfiguration, or stuck bootstrapper installations.
+
+**How to measure:**
+
+Once `infrastructure_manager_provisioning_duration_seconds{result, provider}` is implemented:
+```promql
+# p50 provisioning time (seconds)
+histogram_quantile(0.50, sum by (le) (rate(infrastructure_manager_provisioning_duration_seconds_bucket{result="success"}[1h])))
+
+# p95 provisioning time (seconds)
+histogram_quantile(0.95, sum by (le) (rate(infrastructure_manager_provisioning_duration_seconds_bucket{result="success"}[1h])))
+```
+
+Until the metric is available, derive terminal transitions from Kubernetes Events on the Runtime CR (see KPI-1 note on log fallback).
+
+**Reference provisioning duration breakdown (expected):**
+
+| Phase | Expected duration |
+|-------|------------------|
+| Shoot creation to Pending | ~2 min |
+| Gardener Shoot reconciliation | 10–20 min |
+| Bootstrapper installation | 2–5 min |
+| Total (expected) | 15–30 min |
+
+**Thresholds:**
+
+| Level | p50 | p95 |
+|-------|-----|-----|
+| Target | ≤ 20 min | ≤ 40 min |
+| Warning | 20–30 min | 40–60 min |
+| Critical | > 30 min | > 60 min |
+
+**Actions when Warning threshold is breached:**
+1. Check `workqueue_depth{name="runtime"}` — sustained high depth indicates worker saturation; consider increasing `--runtime-ctrl-workers-cnt`.
+2. Check `rate(rest_client_requests_total{code=~"4.."}[5m])` — rising 4xx rates suggest Gardener rate limiting; review `--gardener-ratelimiter-qps`.
+3. Identify which provider is contributing most to the slowdown via the Runtime CR states table in the Plutono dashboard.
+4. Check Gardener seed status for the affected regions.
+
+**Actions when Critical threshold is breached:**
+1. Trigger a P2 incident.
+2. Check for seed saturation in Gardener.
+3. Identify if the bootstrapper is stalling: check `infrastructure_manager_im_runtime_state` for runtimes with `RuntimeBootstrapperInstallationInProgress` remaining > 30 minutes.
+4. If worker saturation is the cause, update `--runtime-ctrl-workers-cnt` and restart the KIM pods as a temporary mitigation.
+
+---
+
+### KPI-7 — Pending Runtime Duration
+
+**Definition:** The number of Runtime CRs that have been in `status.state = Pending` for longer than the expected provisioning window (> 40 minutes).
+
+**Why this KPI:** A Runtime stuck in `Pending` for an abnormally long time is either waiting on a slow Gardener operation or has encountered a state from which it cannot progress but has not yet entered `Failed`. This is the "silent failure" scenario — KIM is not reporting an error, but the customer's cluster is not ready. This KPI catches these cases proactively.
+
+**How to measure:**
+
+Currently approximated by correlating log timestamps (when `state=Pending` was first set) against current time. Once the end-to-end duration metric (KPI-6) is available:
+
+```promql
+# Runtimes stuck in Pending > 40 minutes (derived once duration metric exists)
+infrastructure_manager_runtime_pending_duration_seconds > 2400
+```
+
+Until then: alert on Runtimes in `Pending` state combined with absence of recent log activity for that runtimeID over a 40-minute window.
+
+**Thresholds:**
+
+| Level | Stuck Runtimes | Meaning |
+|-------|----------------|---------|
+| Target | 0 | All provisioning within expected duration |
+| Warning | ≥ 1 Runtime Pending > 40 min | Potentially stuck; investigate |
+| Critical | ≥ 1 Runtime Pending > 90 min | Definitely stuck; incident |
+
+**Actions when Warning threshold is breached:**
+1. Identify the stuck Runtime from the Plutono dashboard "Runtime CR states" table.
+2. Run `kubectl describe runtime <name> -n kcp-system` and check the last condition transition time and reason.
+3. Check the corresponding Gardener Shoot: `kubectl get shoot <shoot-name> -n <project-namespace> -o jsonpath='{.status.lastOperation}'`.
+4. Check whether the reconciliation suspension annotation is present: `operator.kyma-project.io/suspend-patch-reconciliation`.
+5. If the Shoot is stuck in Gardener, escalate to the Gardener team.
+6. If the bootstrapper is stuck (`RuntimeBootstrapperInstallationInProgress` > 30 min), check bootstrapper logs on the Kyma runtime.
+
+**Actions when Critical threshold is breached:**
+1. Trigger P2 incident.
+2. Follow the investigation steps above.
+3. If Gardener has no information about the Shoot or the Shoot is in `Error` state, consider deleting the Runtime CR and re-provisioning (coordinate with KEB team).
+
+---
+
+## Security KPIs
+
+### KPI-8 — Kubeconfig Rotation Success Rate
+
+**Definition:** The percentage of kubeconfigs that are successfully rotated before their expiry deadline, measured as the proportion of kubeconfigs that never reach an expiration state.
+
+**Why this KPI:** Kubeconfig rotation is a core security requirement (QS-S1). An expired kubeconfig means the corresponding Kyma cluster is inaccessible from the control plane. This is a direct security and availability violation. The GardenerCluster controller must rotate kubeconfigs before expiry; failure to do so within the rotation window is a KIM defect.
+
+**How to measure:**
+
+Monitor kubeconfigs approaching expiry without having been rotated:
+```promql
+# Kubeconfigs expiring within the next 2 hours (warning)
+count(infrastructure_manager_im_kubeconfig_expiration < (time() + 7200))
+
+# Kubeconfigs already expired
+count(infrastructure_manager_im_kubeconfig_expiration < time())
+```
+
+Rotation health is also visible via `infrastructure_manager_im_gardener_clusters_state`:
+```promql
+# GardenerClusters not in a healthy state
+sum(infrastructure_manager_im_gardener_clusters_state) by (state)
+```
+
+**Thresholds:**
+
+| Level | Condition | Meaning |
+|-------|-----------|---------|
+| Target | 0 kubeconfigs expiring within rotation window | All rotations on schedule |
+| Warning | ≥ 1 kubeconfig expiring within 2 hours | Rotation delayed; investigate |
+| Critical | ≥ 1 kubeconfig expired (`expiration < time()`) | Security violation; immediate action |
+
+**Actions when Warning threshold is breached:**
+1. Identify the affected runtimes: `infrastructure_manager_im_kubeconfig_expiration < (time() + 7200)` — note the `runtimeId` and `shoot` labels.
+2. Check the GardenerCluster CR for the affected runtime: `kubectl describe gardenercluster <name> -n kcp-system`.
+3. Check KIM logs for GardenerCluster controller errors: filter by shoot name.
+4. Check whether the GardenerCluster controller workers are saturated: `workqueue_depth{name="gardenercluster"}`.
+5. If a specific GardenerCluster CR is stuck, trigger manual re-reconciliation by patching an annotation.
+
+**Actions when Critical threshold is breached:**
+1. Trigger P1 incident immediately.
+2. Manually trigger kubeconfig rotation by adding the `operator.kyma-project.io/force-kubeconfig-rotation: "true"` annotation to the affected GardenerCluster CR. This uses the controller's normal reconciliation path to fetch and publish the replacement, avoiding credential gaps that could occur from deleting the Secret directly.
+3. Conduct a post-incident review to understand why the rotation window was missed.
+
+---
+
+## Scalability KPIs
+
+### KPI-9 — Work Queue Depth
+
+**Definition:** The number of items waiting in the reconciliation work queue for the `runtime` and `gardenercluster` controllers at any given moment.
+
+**Why this KPI:** Queue depth is the primary scalability signal. When the queue grows faster than workers can drain it, new provisioning requests are delayed and customer-visible latency increases. A persistently non-zero queue depth means KIM is operating above its steady-state processing capacity. This KPI directly informs scaling decisions.
+
+**How to measure:**
+```promql
+workqueue_depth{name="runtime"}
+workqueue_depth{name="gardenercluster"}
+```
+
+Also consider queue wait latency:
+```promql
+rate(workqueue_queue_duration_seconds_sum{name="runtime"}[5m])
+/ rate(workqueue_queue_duration_seconds_count{name="runtime"}[5m])
+```
+
+**Thresholds:**
+
+| Level | Depth | Meaning |
+|-------|-------|---------|
+| Target | 0–5 | Normal; small transient bursts acceptable |
+| Warning | 6–25 | Growing backlog; monitor closely |
+| Critical | > 25 | Workers saturated; provisioning is delayed |
+
+**Actions when Warning threshold is breached:**
+1. Monitor whether the queue is draining (transient burst) or growing (sustained saturation).
+2. Check `controller_runtime_max_concurrent_reconciles` — verify worker count matches expectations.
+3. Check CPU and memory usage of KIM pods. If resource-constrained, adjust Pod resource limits.
+4. Check whether a specific provider or region is contributing a disproportionate number of items (burst provisioning event).
+
+**Actions when Critical threshold is breached:**
+1. Trigger P2 incident if the queue does not drain within 30 minutes of mitigation.
+2. Increase `--runtime-ctrl-workers-cnt` and restart KIM pods.
+3. If a batch provisioning event is the cause, coordinate with KEB to stagger requests.
+
+---
+
+## Availability KPIs
+
+### KPI-10 — KIM Pod Availability
+
+**Definition:** The percentage of the rolling 24-hour window during which at least one KIM Pod passes its readiness probe.
+
+**Why this KPI:** KIM is a single-point-of-automation for all Kyma cluster provisioning and kubeconfig rotation. If all KIM pods are unavailable, no new clusters can be provisioned, no kubeconfigs are rotated (introducing a security risk over time), and no cluster updates are applied. Pod availability is the foundation on which all other KPIs depend.
+
+**How to measure:**
+
+Compute availability from a recording rule that tracks whether any KIM pod is ready:
+```promql
+# Rolling 24-hour availability (requires a recording rule: kim_any_pod_ready)
+avg_over_time(kim_any_pod_ready[24h:]) * 100
+```
+
+Use the instantaneous readiness query separately for outage alerting:
+```promql
+# Instantaneous: 1 = at least one pod ready, 0 = full outage
+max(kube_pod_status_ready{namespace="kcp-system", pod=~"infrastructure-manager-.*", condition="true"})
+```
+
+The recording rule `kim_any_pod_ready` should evaluate `max(kube_pod_status_ready{namespace="kcp-system", pod=~"infrastructure-manager-.*", condition="true"})` at a 1-minute interval.
+
+**Thresholds:**
+
+| Level | Condition | Meaning |
+|-------|-----------|---------|
+| Target | ≥ 1 pod ready at all times | Full availability |
+| Warning | Brief gap < 5 min (e.g., rolling update) | Expected; monitor |
+| Critical | No ready pod for > 5 min | Full outage; immediate action |
+
+**Actions when Warning threshold is breached:**
+1. Check pod status: `kubectl get pods -n kcp-system -l control-plane=infrastructure-manager`.
+2. Check pod logs for crash reasons: `kubectl logs -n kcp-system <pod-name> --previous`.
+3. Check whether a rolling update is in progress — expected disruption is acceptable.
+4. Verify liveness probe endpoint `:8081/healthz` responds.
+
+**Actions when Critical threshold is breached:**
+1. Trigger P1 incident immediately.
+2. Check node health for the nodes hosting KIM pods.
+3. Check for OOMKill events: `kubectl describe pod -n kcp-system <pod-name>`.
+4. If the pod cannot start, roll back to the last known-good image.
+5. Notify all dependent teams (KEB, SRE) that provisioning is suspended until recovery.
+
+---
+
+## Code Quality & Maintenance KPIs
+
+### KPI-11 — Test Coverage
+
+**Definition:** Percentage of KIM Go code (excluding generated files and test files themselves) covered by unit and integration tests.
+
+**Why this KPI:** KIM's FSM-based reconciler has complex branching across provisioning, patching, deletion, and error-recovery paths. Low coverage in these areas means regressions ship silently. This KPI tracks progress in closing test gaps — particularly in error recovery, deletion paths, and FSM state transitions — and maintains the discipline needed to keep the codebase maintainable long-term.
+
+**How to measure:**
+
+Run in CI on every pull request:
+```bash
+go test ./... -coverprofile cover.out
+go tool cover -func cover.out
+```
+
+Coverage is reported per package and as an aggregate. Tracked as a trend over releases.
+
+**Thresholds:**
+
+| Level | Value | Meaning |
+|-------|-------|---------|
+| Target | ≥ 80% | Healthy coverage |
+| Warning | 70% – 79% | Coverage slipping; add tests before next feature |
+| Critical | < 70% | Coverage too low; freeze new features until restored |
+
+**Actions when Warning threshold is breached:**
+1. Review recent PRs that reduced coverage — identify which paths are untested.
+2. Prioritise covering error paths: FSM permanent failure transitions, deletion/finalizer cleanup, Gardener API error handling.
+3. Add missing tests before merging the next feature PR.
+
+**Actions when Critical threshold is breached:**
+1. Freeze new feature work until coverage is restored above 70%.
+2. Identify and resolve the largest uncovered blocks as explicit sprint tasks.
+3. Treat as a quality incident — assign an owner and due date.
+
+---
+
+### KPI-12 — Critical Open Bug Age
+
+**Definition:** Number of days a bug labelled `priority/critical` or `priority/high` remains open in GitHub Issues without a fix merged.
+
+**Why this KPI:** Critical bugs left open degrade operational stability and customer trust. Without an explicit KPI, high-priority issues can accumulate behind feature work. This KPI enforces accountability and ensures the team maintains a healthy backlog.
+
+**How to measure:**
+
+- Source: GitHub Issues with `priority/critical` or `priority/high` labels in the KIM repository.
+- Measured as: age in calendar days from issue creation to PR merge or issue close.
+- Reported as the maximum open age in the weekly team review.
+
+**Thresholds:**
+
+| Level | Value | Meaning |
+|-------|-------|---------|
+| Target | ≤ 5 business days | Normal |
+| Warning | 6–10 business days | Overdue; assign owner immediately |
+| Critical | > 10 business days | Escalate to team lead |
+
+**Actions when Warning threshold is breached:**
+1. Assign the bug to a specific engineer at the next standup.
+2. Break the fix into a minimally scoped PR to avoid stalling.
+3. If blocked by an external dependency, document the blocker explicitly on the issue.
+
+**Actions when Critical threshold is breached:**
+1. Escalate to team lead.
+2. Re-evaluate whether the priority label is accurate — if truly critical, it displaces current sprint work.
+3. If the blocker is external (Gardener, KEB, infrastructure), escalate to the owning team with a documented reproduction case.
+
+---
+
+### KPI-13 — Mean Time to Recovery (MTTR)
+
+**Definition:** Average time from the point an incident is declared (or a critical alert fires) to the point the affected KPI returns within its normal threshold — measured as a rolling 90-day average.
+
+**Why this KPI:** MTTR is the most direct measure of the team's ability to respond to production issues. A high MTTR amplifies customer impact for every incident. It also drives investment decisions: if MTTR is consistently high, the team needs better runbooks, improved alerting context, or more automated recovery paths.
+
+**How to measure:**
+
+- Source: Incident records tracked as GitHub Issues tagged `incident` (or equivalent tracking system).
+- Measured from the timestamp of the first alert or incident declaration to the timestamp of confirmed resolution.
+- Reported as a rolling 90-day average, reviewed monthly.
+
+**Thresholds:**
+
+| Level | Value | Meaning |
+|-------|-------|---------|
+| Target | ≤ 4 h | Healthy response time |
+| Warning | 4–8 h (90-day average) | Response is slow; review process |
+| Critical | > 8 h (90-day average) or single incident > 24 h | Systemic gap; retrospective required |
+
+**Actions when Warning threshold is breached:**
+1. Review the last three incidents: which step consumed the most time — detection, diagnosis, or remediation?
+2. If diagnosis was slow: invest in better dashboards, richer alerting context, or updated runbooks.
+3. If remediation was slow: identify which manual steps could be automated or pre-approved for the on-call engineer.
+
+**Actions when Critical threshold is breached:**
+1. Hold a dedicated retrospective covering all incidents in the measurement window.
+2. Identify systemic gaps: missing runbook, insufficient alerting, unclear on-call responsibility, or external dependency delays.
+3. Create follow-up tasks with owners and due dates and track them to completion.
+
+---
+
+## Review Process and Stakeholder Alignment
+
+### Regular KPI Review
+
+The team conducts a **quarterly KPI review** covering:
+
+1. **Status review** — traffic-light status for all KPIs against their targets.
+2. **Trend analysis** — which KPIs are improving, stable, or degrading over time?
+3. **Action item follow-up** — were action items from the previous quarter completed?
+4. **Stakeholder session** — Varban and Artur are invited to the quarterly review to:
+   - Validate that the KPIs still reflect business objectives and management expectations.
+   - Raise new requirements or adjust thresholds based on customer feedback.
+   - Review open incidents and their resolution quality.
+
+In addition, a **weekly dashboard review** is conducted during the team sync to catch emerging issues early.
+
+| Activity | Frequency | Owner |
+|----------|-----------|-------|
+| KPI dashboard review | Weekly (team sync) | KIM team lead |
+| Quarterly KPI review (full) | Quarterly | KIM team + Varban + Artur |
+| Threshold review | Quarterly | KIM team + Varban + Artur |
+| Alert rule validation | Each KIM release | On-call engineer |
+| KPI document update | As architecture changes | PR author + reviewer |
+
+### Stakeholders
+
+| Stakeholder | Role | Interest |
+|-------------|------|---------|
+| Varban | Management | Business impact, escalation thresholds, customer SLA alignment |
+| Artur | Management | Product health, roadmap prioritization, incident response expectations |
+| KIM team | Engineering | Technical accuracy, measurability, operational feasibility |
+| KEB team | Dependent service | Provisioning success rate and duration directly affect KEB's own SLA |
+| SRE / Platform Ops | Operations | Alert fatigue, actionability, on-call response clarity |
+| L3 Support | Incident response | Failure breakdown, runbook availability, signal-to-noise ratio |
+
+### Feedback Loop
+
+This document is a living specification. Changes to KPI definitions, thresholds, or action plans should be:
+
+- Proposed as a pull request to this file.
+- Reviewed by at least one team member and one stakeholder (Varban or Artur) before merging.
+- Announced to the team at the next standup after merging.
+
+### Continuous Improvement Commitment
+
+The KPIs defined here support continuous improvement by:
+
+- **Proactive issue identification:** Real-time alerting on warning thresholds catches degradation before it becomes customer-visible.
+- **Transparency across teams:** The shared dashboard and quarterly review ensure reliability and quality are visible to all stakeholders, not just engineers.
+- **Learning from incidents:** MTTR tracking (KPI-13) and post-mortems feed directly into improvements to runbooks, alerting, and architecture.
+- **Shared understanding:** KPI definitions, measurement methods, and action plans are documented here so any team member can interpret a metric consistently and act without ambiguity.
+
+KPI thresholds marked as "Target" represent the agreed operating standard. Breaching a "Warning" threshold does not require escalation to management unless the condition persists beyond the stated action window. Breaching a "Critical" threshold triggers the standard incident process; stakeholder communication is handled by the on-call engineer on a case-by-case basis.
+
+---
+
+## Missing Metrics — Implementation Priority
+
+Several KPIs above reference metrics that do not yet exist. Their implementation is tracked in [reconciliation-observability.md §9](./reconciliation-observability.md).
+
+| Missing Metric | Affects KPIs | Priority |
+|----------------|-------------|----------|
+| `infrastructure_manager_provisioning_duration_seconds` | KPI-1, KPI-6 | High |
+| `infrastructure_manager_runtime_pending_duration_seconds` | KPI-7 | Medium |
+| `infrastructure_manager_reconciliation_errors_total{step, reason, provider}` | KPI-3 | Medium |
+| `reason` label on `infrastructure_manager_im_runtime_state` | KPI-2, KPI-3 | Low |
+
+Until these metrics are implemented, the affected KPIs are measured via log analysis or approximated using available signals as described in each KPI section.
+
+---
+
+## References
+
+- [Reconciliation Observability Reference](./reconciliation-observability.md)
+- [KIM Configuration Parameters](./kim-configuration.md)
+- [Architecture: Quality Requirements](../contributor/architecture/01-100-quality-requirements.md)
+- [Architecture: Introduction and Goals](../contributor/architecture/01-10-introduction-and-goals.md)
+- [Plutono Dashboard: Infrastructure Manager](https://plutono.cp.kyma.cloud.sap/d/R0wzpHTSk/infrastructure-manager) (internal, requires SAP access)
+- Metrics source: `internal/controller/metrics/metrics.go`
