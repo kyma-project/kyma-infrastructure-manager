@@ -39,10 +39,9 @@ KPIs are reviewed quarterly and updated whenever architectural changes affect wh
    - [KPI-11 Test Coverage](#kpi-11--test-coverage)
    - [KPI-12 Critical Open Bug Age](#kpi-12--critical-open-bug-age)
    - [KPI-13 Mean Time to Recovery (MTTR)](#kpi-13--mean-time-to-recovery-mttr)
-8. [Measurement Cadence and Review](#measurement-cadence-and-review)
+8. [Review Process and Stakeholder Alignment](#review-process-and-stakeholder-alignment)
 9. [Missing Metrics — Implementation Priority](#missing-metrics--implementation-priority)
-10. [Stakeholder Alignment](#stakeholder-alignment)
-11. [References](#references)
+10. [References](#references)
 
 ---
 
@@ -601,14 +600,59 @@ Coverage is reported per package and as an aggregate. Tracked as a trend over re
 
 ---
 
-## Measurement Cadence and Review
+## Review Process and Stakeholder Alignment
+
+### Regular KPI Review
+
+The team conducts a **quarterly KPI review** covering:
+
+1. **Status review** — traffic-light status for all KPIs against their targets.
+2. **Trend analysis** — which KPIs are improving, stable, or degrading over time?
+3. **Action item follow-up** — were action items from the previous quarter completed?
+4. **Stakeholder session** — Varban and Artur are invited to the quarterly review to:
+   - Validate that the KPIs still reflect business objectives and management expectations.
+   - Raise new requirements or adjust thresholds based on customer feedback.
+   - Review open incidents and their resolution quality.
+
+In addition, a **weekly dashboard review** is conducted during the team sync to catch emerging issues early.
 
 | Activity | Frequency | Owner |
 |----------|-----------|-------|
 | KPI dashboard review | Weekly (team sync) | KIM team lead |
+| Quarterly KPI review (full) | Quarterly | KIM team + Varban + Artur |
 | Threshold review | Quarterly | KIM team + Varban + Artur |
 | Alert rule validation | Each KIM release | On-call engineer |
 | KPI document update | As architecture changes | PR author + reviewer |
+
+### Stakeholders
+
+| Stakeholder | Role | Interest |
+|-------------|------|---------|
+| Varban | Management | Business impact, escalation thresholds, customer SLA alignment |
+| Artur | Management | Product health, roadmap prioritization, incident response expectations |
+| KIM team | Engineering | Technical accuracy, measurability, operational feasibility |
+| KEB team | Dependent service | Provisioning success rate and duration directly affect KEB's own SLA |
+| SRE / Platform Ops | Operations | Alert fatigue, actionability, on-call response clarity |
+| L3 Support | Incident response | Failure breakdown, runbook availability, signal-to-noise ratio |
+
+### Feedback Loop
+
+This document is a living specification. Changes to KPI definitions, thresholds, or action plans should be:
+
+- Proposed as a pull request to this file.
+- Reviewed by at least one team member and one stakeholder (Varban or Artur) before merging.
+- Announced to the team at the next standup after merging.
+
+### Continuous Improvement Commitment
+
+The KPIs defined here support continuous improvement by:
+
+- **Proactive issue identification:** Real-time alerting on warning thresholds catches degradation before it becomes customer-visible.
+- **Transparency across teams:** The shared dashboard and quarterly review ensure reliability and quality are visible to all stakeholders, not just engineers.
+- **Learning from incidents:** MTTR tracking (KPI-13) and post-mortems feed directly into improvements to runbooks, alerting, and architecture.
+- **Shared understanding:** KPI definitions, measurement methods, and action plans are documented here so any team member can interpret a metric consistently and act without ambiguity.
+
+KPI thresholds marked as "Target" represent the agreed operating standard. Breaching a "Warning" threshold does not require escalation to management unless the condition persists beyond the stated action window. Breaching a "Critical" threshold triggers the standard incident process; stakeholder communication is handled by the on-call engineer on a case-by-case basis.
 
 ---
 
@@ -624,23 +668,6 @@ Several KPIs above reference metrics that do not yet exist. Their implementation
 | `reason` label on `infrastructure_manager_im_runtime_state` | KPI-2, KPI-3 | Low |
 
 Until these metrics are implemented, the affected KPIs are measured via log analysis or approximated using available signals as described in each KPI section.
-
----
-
-## Stakeholder Alignment
-
-This document reflects input from the following stakeholders:
-
-| Stakeholder | Role | Interest |
-|-------------|------|---------|
-| Varban | Management | Business impact, escalation thresholds, customer SLA alignment |
-| Artur | Management | Product health, roadmap prioritization, incident response expectations |
-| KIM team | Engineering | Technical accuracy, measurability, operational feasibility |
-| KEB team | Dependent service | Provisioning success rate and duration directly affect KEB's own SLA |
-| SRE / Platform Ops | Operations | Alert fatigue, actionability, on-call response clarity |
-| L3 Support | Incident response | Failure breakdown, runbook availability, signal-to-noise ratio |
-
-KPI thresholds marked as "Target" represent the agreed operating standard. Breaching a "Warning" threshold does not require escalation to management unless the condition persists beyond the stated action window. Breaching a "Critical" threshold triggers the standard incident process; stakeholder communication is handled by the on-call engineer on a case-by-case basis.
 
 ---
 
