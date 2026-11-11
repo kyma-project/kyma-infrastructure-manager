@@ -71,8 +71,8 @@ Until the duration histogram is available, this KPI cannot be derived from `Reco
 | Level | Value | Meaning |
 |-------|-------|---------|
 | Target | ≥ 99.5% | Normal operations |
-| Warning | 98.0% – 99.4% | Degraded; investigation required |
-| Critical | < 98.0% | Incident; immediate action required |
+| Warning | 95.0% – 99.4% | Degraded; investigation required |
+| Critical | < 95.0% | Incident; immediate action required |
 
 **Actions when Warning threshold is breached:**
 1. Check `infrastructure_manager_im_runtime_state{state="Failed"}` to identify which Runtimes are failing.
