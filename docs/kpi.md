@@ -83,10 +83,9 @@ Until the duration histogram is available, this KPI cannot be derived from `Reco
 
 **Actions when Critical threshold is breached:**
 1. Trigger a P1 incident in the on-call rotation immediately.
-2. Notify stakeholders (Varban, Artur) within 30 minutes.
-3. Check whether the issue is systemic (all regions/providers) or isolated (single seed/tenant). If systemic, escalate to Gardener team.
-4. Evaluate whether to temporarily suspend new provisioning by coordinating with KEB team.
-5. Prepare a post-incident review within 48 hours of resolution.
+2. Check whether the issue is systemic (all regions/providers) or isolated (single seed/tenant). If systemic, escalate to Gardener team.
+3. Evaluate whether to temporarily suspend new provisioning by coordinating with KEB team.
+4. Prepare a post-incident review within 48 hours of resolution.
 
 ---
 
@@ -133,7 +132,7 @@ Until the metric is available, derive terminal transitions from Kubernetes Event
 4. Check Gardener seed status for the affected regions.
 
 **Actions when Critical threshold is breached:**
-1. Trigger a P2 incident and notify stakeholders.
+1. Trigger a P2 incident.
 2. Check for seed saturation in Gardener.
 3. Identify if the bootstrapper is stalling: check `infrastructure_manager_im_runtime_state` for runtimes with `RuntimeBootstrapperInstallationInProgress` remaining > 30 minutes.
 4. If worker saturation is the cause, update `--runtime-ctrl-workers-cnt` and restart the KIM pods as a temporary mitigation.
@@ -175,7 +174,6 @@ This is the "Cumulative Failed Runtimes" panel in the Plutono dashboard (note: d
 1. Trigger P1 incident.
 2. Determine if failures share a common reason (systemic) or are isolated.
 3. If systemic (`SeedNotFound` in a specific region, or all `AuditLogErr`), escalate to the responsible sub-team and block new provisioning in that region/configuration via KEB until resolved.
-4. Notify stakeholders within 30 minutes.
 
 ---
 
@@ -210,7 +208,6 @@ This is the "Unexpected Runtime processing stops" panel in the Plutono dashboard
 1. Trigger P1 incident immediately.
 2. Check if a recent deployment introduced a regression.
 3. Evaluate rollback of the last KIM deployment.
-4. Notify stakeholders (Varban, Artur) within 15 minutes.
 
 ---
 
@@ -254,9 +251,8 @@ sum(infrastructure_manager_im_gardener_clusters_state) by (state)
 
 **Actions when Critical threshold is breached:**
 1. Trigger P1 security incident immediately.
-2. Notify the security team within 15 minutes.
-3. Manually trigger kubeconfig rotation by adding the `operator.kyma-project.io/force-kubeconfig-rotation: "true"` annotation to the affected GardenerCluster CR. This uses the controller's normal reconciliation path to fetch and publish the replacement, avoiding credential gaps that could occur from deleting the Secret directly.
-4. Conduct a post-incident review to understand why the rotation window was missed.
+2. Manually trigger kubeconfig rotation by adding the `operator.kyma-project.io/force-kubeconfig-rotation: "true"` annotation to the affected GardenerCluster CR. This uses the controller's normal reconciliation path to fetch and publish the replacement, avoiding credential gaps that could occur from deleting the Secret directly.
+3. Conduct a post-incident review to understand why the rotation window was missed.
 
 ---
 
@@ -292,7 +288,6 @@ sum by (controller) (
 1. Trigger P2 incident.
 2. If Gardener API is unreachable, coordinate with the Gardener team.
 3. If the error rate is on the `gardenercluster` controller only, check whether kubeconfig rotation is being blocked by a specific API permission issue.
-4. Notify stakeholders if the situation persists beyond 30 minutes.
 
 ---
 
@@ -329,20 +324,17 @@ rate(workqueue_queue_duration_seconds_sum{name="runtime"}[5m])
 4. Check whether a specific provider or region is contributing a disproportionate number of items (burst provisioning event).
 
 **Actions when Critical threshold is breached:**
-1. Increase `--runtime-ctrl-workers-cnt` (requires KIM pod restart or configuration hot-reload if configured).
-2. If a batch provisioning event is the cause, coordinate with KEB to stagger requests.
-3. Trigger P2 incident if the queue does not drain within 30 minutes of mitigation.
-4. Notify stakeholders of expected provisioning delays.
+1. Trigger P2 incident if the queue does not drain within 30 minutes of mitigation.
+2. Increase `--runtime-ctrl-workers-cnt` and restart KIM pods.
+3. If a batch provisioning event is the cause, coordinate with KEB to stagger requests.
 
 ---
 
 ### KPI-8 — KIM Pod Availability
 
-**Definition:** The percentage of time that at least one KIM Pod passes its readiness probe, measured over a rolling 24-hour window.
+**Definition:** The percentage of the rolling 24-hour window during which at least one KIM Pod passes its readiness probe.
 
 **Why this KPI:** KIM is a single-point-of-automation for all Kyma cluster provisioning and kubeconfig rotation. If all KIM pods are unavailable, no new clusters can be provisioned, no kubeconfigs are rotated (introducing a security risk over time), and no cluster updates are applied. Pod availability is the foundation on which all other KPIs depend.
-
-**Definition:** The percentage of the rolling 24-hour window during which at least one KIM Pod passes its readiness probe.
 
 **How to measure:**
 
@@ -380,7 +372,6 @@ The recording rule `kim_any_pod_ready` should evaluate `max(kube_pod_status_read
 3. Check for OOMKill events: `kubectl describe pod -n kcp-system <pod-name>`.
 4. If the pod cannot start, roll back to the last known-good image.
 5. Notify all dependent teams (KEB, SRE) that provisioning is suspended until recovery.
-6. Notify stakeholders (Varban, Artur) within 15 minutes.
 
 ---
 
@@ -425,7 +416,6 @@ rate(rest_client_requests_total{job="infrastructure-manager-metrics", host=~".*g
 **Actions when Critical threshold is breached:**
 1. Trigger P1 incident and contact the Gardener team.
 2. If Gardener is confirmed unavailable, suspend new provisioning requests in coordination with KEB.
-3. Notify stakeholders within 30 minutes.
 
 ---
 
@@ -466,7 +456,6 @@ Until then: alert on Runtimes in `Pending` state combined with absence of recent
 1. Trigger P2 incident.
 2. Follow the investigation steps above.
 3. If Gardener has no information about the Shoot or the Shoot is in `Error` state, consider deleting the Runtime CR and re-provisioning (coordinate with KEB team).
-4. Notify stakeholders.
 
 ---
 
@@ -509,7 +498,7 @@ This document reflects input from the following stakeholders:
 | SRE / Platform Ops | Operations | Alert fatigue, actionability, on-call response clarity |
 | L3 Support | Incident response | Failure breakdown, runbook availability, signal-to-noise ratio |
 
-KPI thresholds marked as "Target" represent the agreed operating standard. Breaching a "Warning" threshold does not require escalation to management unless the condition persists beyond the stated action window. Breaching a "Critical" threshold always requires stakeholder notification within the times specified.
+KPI thresholds marked as "Target" represent the agreed operating standard. Breaching a "Warning" threshold does not require escalation to management unless the condition persists beyond the stated action window. Breaching a "Critical" threshold triggers the standard incident process; stakeholder communication is handled by the on-call engineer on a case-by-case basis.
 
 ---
 
