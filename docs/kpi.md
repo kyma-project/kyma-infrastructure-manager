@@ -674,7 +674,7 @@ Until these metrics are implemented, the affected KPIs are measured via log anal
 ## References
 
 - [Reconciliation Observability Reference](./reconciliation-observability.md)
-- [KIM Configuration Parameters](./kim-configuration.md)
+- [KIM Configuration Parameters](./operator/kim-configuration.md)
 - [Architecture: Quality Requirements](../contributor/architecture/01-100-quality-requirements.md)
 - [Architecture: Introduction and Goals](../contributor/architecture/01-10-introduction-and-goals.md)
 - [Plutono Dashboard: Infrastructure Manager](https://plutono.cp.kyma.cloud.sap/d/R0wzpHTSk/infrastructure-manager) (internal, requires SAP access)
