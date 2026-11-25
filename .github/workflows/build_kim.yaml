@@ -32,7 +32,7 @@ permissions:
 jobs:
   gate:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request_target' && github.actor != 'renovate[bot]'
+    if: github.event_name == 'pull_request_target'
     environment: ${{ vars.PROTECTED_ENVIRONMENT }}
     steps:
       - name: Approve fork PR image build
@@ -40,7 +40,7 @@ jobs:
 
   setup:
     needs: [gate]
-    if: ${{ !cancelled() && (needs.gate.result == 'success' || needs.gate.result == 'skipped') }}
+    if: ${{ !cancelled() && needs.gate.result == 'success' }}
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -67,8 +67,8 @@ jobs:
 
   build-image:
     needs: [setup, gate]
-    if: ${{ !cancelled() && needs.setup.result == 'success' && (needs.gate.result == 'success' || needs.gate.result == 'skipped') }}
-    uses: kyma-project/test-infra/.github/workflows/image-builder.yml@main # Usage: kyma-project/test-infra/.github/workflows/image-builder.yml@main
+    if: ${{ !cancelled() && needs.setup.result == 'success' && needs.gate.result == 'success' }}
+    uses: kyma-project/test-infra/.github/workflows/image-builder.yml@9573e9cfdb9e9a933a1b0cfdfd067f8ba465093c # main
     with:
       name: infrastructure-manager
       dockerfile: Dockerfile
